@@ -128,13 +128,11 @@ export class Utils {
             this.app.dom.favOnlyBtn?.classList.replace('btn-outline-warning', 'btn-warning');
             this.app.filterManager.apply();
         } else if (hash === '#feedback') {
-            bootstrap.Modal.getOrCreateInstance(this.app.dom.feedbackModal).show();
             this.trackEvent('feedback-modal-open', { source: 'hash' });
         } else if (hash === '#changelog') {
-            bootstrap.Modal.getOrCreateInstance(this.app.dom.changelogModal).show();
             this.trackEvent('changelog-modal-open', { source: 'hash' });
         } else if (hash && !['#feedbackModal', '#feedback', '#changelogModal', '#changelog'].includes(hash)) {
-            this.app.uiManager.openModal(hash.slice(1), 'hash');
+            // 在 React 版本中，Hash 開啟 Modal 邏輯已移至 App.jsx 的 useEffect
         }
     }
 

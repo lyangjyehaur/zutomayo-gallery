@@ -33,16 +33,6 @@ body {
     width: auto !important;
 }
 
-/* 3. 卡片樣式優化 */
-.card {
-    background: var(--card-bg);
-    color: #f2f2f5;
-    cursor: pointer;
-    border: none;
-    overflow: hidden;
-    transition: transform var(--transition-base);
-}
-
 @media (max-width: 768px) {
     .card-title {
         font-size: 0.9rem;
@@ -130,11 +120,6 @@ body {
 }
 
 /* 5. 詳情彈窗與畫廊佈局 */
-.modal-content {
-    background: #1a1a20;
-    color: #eee;
-}
-
 #ztmy-gallery-container {
     width: 100% !important;
     position: relative;
@@ -337,5 +322,3 @@ body {
     scrollbar-width: thin;
     scrollbar-color: rgba(13, 202, 240, 0.3) rgba(255, 255, 255, 0.05);
 }
-
-
