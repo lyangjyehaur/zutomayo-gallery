@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>ZUTOMAYO MV Gallery</title>
+    <meta name="description" content="ZUTOMAYO (ずっと真夜中でいいのに。) 粉絲自建 MV 設定圖資料庫。收錄歷年作品設定資料與高品質預覽。">
+    <meta name="keywords" content="ZUTOMAYO, ずっと真夜中でいいのに, ACAね, MV, 設定圖">
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0d0d0f">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <meta property="og:title" content="ZUTOMAYO MV Gallery">
+    <meta property="og:description" content="收錄 ZTMY 歷年 MV 設定資料。">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://img.ztmr.club/f:webp/rs:fill:800/raw:1/your-default-og-image.jpg">
+    <link rel="stylesheet" href="assets/css/vendor/bootstrap-5.3.0.min.css" />
+    <link rel="stylesheet" href="assets/css/vendor/photoswipe.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="assets/css/vendor/photoswipe-dynamic-caption-plugin.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/@waline/client@v3/dist/waline.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@waline/client@v3/dist/waline-meta.css" />
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/fonts.css">
+    <link rel="stylesheet" href="assets/css/vendor/fontawesome-free-7.2.0.all.min.css">
+    <!-- <link rel="stylesheet" href="src/tailwind.css"> -->
+</head>
+
+<body>
+
+    <!-- 頁首：SEO 標題 -->
+    <header class="py-4 text-center">
+        <h1 class="h4 mb-3">
+            <span>ZUTOMAYO MV Gallery Test</span>
+            <a id="version-badge" style="font-size: 0.5em;" href="javascript:void(0)"
+                class="d-inline-flex mb-1 px-2 py-1 fw-semibold text-success-emphasis bg-success-subtle border border-success-subtle rounded-2 text-decoration-none align-middle">
+                V2.7
+            </a>
+        </h1>
+        <h5 class="h6 px-4"><span lang="ja">日々研磨爆裂中！</span>正在努力完善內容… 勘誤、捉蟲或有體驗改善建議歡迎 <a href="javascript:void(0)"
+                class="link-info link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover"
+                data-bs-toggle="modal" data-bs-target="#feedbackModal" data-umami-event="feedback-modal-open"
+                data-umami-event-type="interaction">點此</a> 反饋。</h5>
+    </header>
+
+    <!-- 主要內容區 -->
+    <main class="container py-3">
+
+        <!-- 搜尋與過濾列 (優化：加入隱藏標籤供無障礙使用) -->
+        <div class="row g-2 mb-4">
+            <div class="col-8 col-lg-3">
+                <label for="searchInput" class="visually-hidden">關鍵字檢索</label>
+                <input id="searchInput" class="form-control" type="text" placeholder="關鍵字檢索…">
+            </div>
+            <div class="col-4 col-lg-2">
+                <label for="yearFilter" class="visually-hidden">年份篩選</label>
+                <select id="yearFilter" class="form-select">
+                    <option value="">年份（所有）</option>
+                    <option value="2018">2018</option>
+                    <option value="2019">2019</option>
+                    <option value="2020">2020</option>
+                    <option value="2021">2021</option>
+                    <option value="2022">2022</option>
+                    <option value="2023">2023</option>
+                    <option value="2024">2024</option>
+                    <option value="2025">2025</option>
+                    <option value="2026">2026</option>
+                    <option value="..." disabled>...</option>
+                </select>
+            </div>
+            <div class="col-4 col-lg-3">
+                <label for="albumFilter" class="visually-hidden">專輯篩選</label>
+                <select id="albumFilter" class="form-select">
+                    <option value="">專輯（所有）</option>
+                    <option value="-" disabled> - 迷你專輯 - </option>
+                    <option value="正しい偽りからの起床">正しい偽りからの起床</option>
+                    <option value="今は今で誓いは笑みで">今は今で誓いは笑みで</option>
+                    <option value="朗らかな皮膚とて不服">朗らかな皮膚とて不服</option>
+                    <option value="伸び仕草懲りて暇乞い">伸び仕草懲りて暇乞い</option>
+                    <option value="虚仮の一念海馬に託す">虚仮の一念海馬に託す</option>
+                    <option value="-" disabled> - 正式專輯 - </option>
+                    <option value="潜潜話">潜潜話</option>
+                    <option value="ぐされ">ぐされ</option>
+                    <option value="沈香学">沈香学</option>
+                    <option value="形藻土">形藻土</option>
+                    <option value="暫未收錄"> - 暫未收錄 - </option>
+                    <option value="聯動"> - 聯動 - </option>
+                </select>
+            </div>
+            <div class="col-4 col-lg-2">
+                <label for="artistFilter" class="visually-hidden">MV製作篩選</label>
+                <select id="artistFilter" class="form-select">
+                    <option value="">MV製作（所有）</option>
+                    <option value="Waboku">Waboku</option>
+                    <option value="sakiyama">sakiyama</option>
+                    <option value="革蝉">革蝉</option>
+                    <option value="すとレ">すとレ</option>
+                    <option value="はなぶし">はなぶし</option>
+                    <option value="ゴル">ゴル</option>
+                    <option value="こむぎこ2000">こむぎこ2000</option>
+                    <option value="安田現象">安田現象</option>
+                    <option value="しの">しの</option>
+                    <option value="えいりな刃物">えいりな刃物</option>
+                    <option value="TV♡CHANY">TV♡CHANY</option>
+                    <option value="YP">YP</option>
+                    <option value="G子">G子</option>
+                    <option value="石田祐康">石田祐康</option>
+                    <option value="三皷梨菜">三皷梨菜</option>
+                    <option value="notai">notai</option>
+                    <option value="のをか">のをか</option>
+                </select>
+            </div>
+            <div class="col-2 col-lg-1">
+                <button title="排序" id="reverseBtn" class="btn btn-outline-light w-100"><i
+                        class="fa-solid fa-sort"></i></button>
+            </div>
+            <div class="col-2 col-lg-1">
+                <button title="查看收藏" id="favOnlyBtn" class="btn btn-outline-warning w-100"><i
+                        class="fa-solid fa-star"></i></button>
+            </div>
+        </div>
+
+        <!-- 卡片列表區 -->
+        <section id="songCards" class="row row-cols-2 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-2" lang="ja">
+            <!-- 由 JS 渲染 -->
+        </section>
+
+        <!-- 無限滾動觸發器與提示 -->
+        <div id="scroll-anchor" style="height: 10px; margin-top: 40px;"></div>
+        <div id="no-more-data" class="text-center py-4 text-white-50 hidden">
+            已經到底囉
+        </div>
+
+        <!-- 收藏提示 -->
+        <div id="fav-notice" class="text-center small text-warning mt-4 px-3 hidden">
+            <i class="fa-solid fa-circle-info"></i>
+            請注意：收藏功能基於瀏覽器本地存儲實現，若清除瀏覽器數據或更換設備，收藏項目將會丟失。
+        </div>
+    </main>
+
+    <!-- 頁腳：內容聲明 -->
+    <footer class="container-fluid py-5 mt-5 border-top border-secondary bg-dark text-secondary text-center small">
+        <div class="container">
+            <p class="mb-2" lang="zh-Hant">本站非官方設立之網站，僅為粉絲自發建立供同好交流與內容整理之用。本站伺服器不存儲任何原始圖片檔案，所有圖片及影音資料之版權均歸原作者及官方所有。</p>
+            <p class="mb-2" lang="ja">
+                当サイトはファンによって運営されている非公式のサイトであり、コンテンツの整理および交流を目的としています。当サイトのサーバーには元の画像ファイルは保存されておりません。掲載されているすべての画像、動画等の著作権は、原作者および公式に帰属します。
+            </p>
+            <p class="pb-2" lang="en">This is an unofficial fan-made website created for content organization and
+                community exchange. No original image files are stored on our servers. All copyrights for images,
+                videos, and other media belong to their respective owners and official entities.</p>
+            <hr class="border-secondary my-3 w-25 mx-auto">
+            <div class="small text-center lh-lg">Made with ❤️ by <a href="https://dan.tw/" target="_blank"
+                    class="link-info link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover"
+                    data-umami-event="footer-dan-link" data-umami-event-type="link">飯糰</a> from <a
+                    href="https://ztmr.club/" target="_blank"
+                    class="link-info link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover"
+                    data-umami-event="footer-ztmr-link" data-umami-event-type="link"><ruby>紫頭嗎嘍同窗會<rt>ZUTOMARO DOSOKAI
+                        </rt></ruby> ZTMR.CLUB</a>.<br>Special thanks to <a href="https://gemini.google.com/"
+                    target="_blank"
+                    class="link-info link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover"
+                    data-umami-event="footer-gemini-link" data-umami-event-type="link">Gemini</a>.<br>
+                Images via X/YouTube. All rights reserved by <a href="https://zutomayo.net/" target="_blank"
+                    class="link-info link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover"
+                    data-umami-event="footer-zutomayo-link" data-umami-event-type="link">ZUTOMAYO</a>.</div>
+        </div>
+    </footer>
+
+    <!-- 詳情彈窗 (Modal) -->
+    <div class="modal fade" id="songModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header border-secondary p-4">
+                    <div class="d-flex flex-column">
+                        <h2 class="h5 modal-title d-flex align-items-center">
+                            <button id="favIconContainer" type="button" class="btn" style="border: none;"></button>
+                            <span id="modalTitle"></span>
+                        </h2>
+                        <div id="modalHeaderSubtitle" class="small mt-1"></div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        data-umami-event="mv-modal-close" data-umami-event-type="interaction"
+                        aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <div class="row g-4">
+                        <!-- 左側：畫廊與評論 (PC) / 中間：圖廊與評論 (Mobile) -->
+                        <div class="col-12 col-lg-5 order-2 order-lg-1 d-flex flex-column">
+                            <div id="ztmy-gallery-container" class="pswp-gallery mb-4"></div>
+                            <!-- 載入更多按鈕 (用於手動模式) -->
+                            <div id="modal-load-more-container" class="text-center mb-4 hidden">
+                                <button id="modal-load-more-btn" class="btn btn-outline-info px-4 py-2">載入更多設定圖</button>
+                            </div>
+                            <!-- 手機端描述：位於圖廊之後 -->
+                            <div id="mvDescriptionMobile" class="mv-description-content mb-4 d-lg-none"></div>
+                            <!-- MV 專屬評論區 -->
+                            <div id="waline-mv" class="mt-auto"></div>
+                        </div>
+                        <!-- 右側：影片播放器與描述 (PC) / 頂部：影片 (Mobile) -->
+                        <div class="col-12 col-lg-7 order-1 order-lg-2">
+                            <div class="sticky-lg-top" style="top: 1rem;">
+                                <div id="videoContainer"></div>
+                                <!-- 電腦端描述：位於播放器下方，固定並可捲動 -->
+                                <div id="mvDescriptionPC"
+                                    class="mv-description-content mt-3 d-none d-lg-block custom-scrollbar"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 更新日誌彈窗 (Changelog Modal) -->
+    <div class="modal fade" id="changelogModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header border-secondary p-4">
+                    <h5 class="modal-title"><i class="fa-solid fa-list-ul me-2"></i>更新日誌 Changelog
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="changelog-item mb-4">
+                        <h6 class="fw-bold text-info border-bottom border-secondary pb-2">V2.7 <small
+                                class="text-white-50 ms-2">2026/04/11</small></h6>
+                        <ul class="small lh-lg">
+                            <li>新增更新日誌彈窗（就是現在這個）。</li>
+                            <li>優化播放器交互，改為點擊封面後加載 iframe 以提升網頁加載性能。</li>
+                            <li>遷移圖標至 Font Awesome 7.2。</li>
+                        </ul>
+                    </div>
+                    <div class="changelog-item mb-4">
+                        <h6 class="fw-bold text-info border-bottom border-secondary pb-2">V2.6 <small
+                                class="text-white-50 ms-2">2026/04/11</small></h6>
+                        <ul class="small lh-lg">
+                            <li>重構圖片分批加載邏輯，解決 Masonry 佈局圖片顯示重疊問題。</li>
+                            <li>新增圖片淡入動畫效果與佈局鎖機制。</li>
+                            <li>整合 Waline 以提供問題反饋及評論留言功能。</li>
+                        </ul>
+                    </div>
+                    <div class="changelog-item">
+                        <h6 class="fw-bold text-info border-bottom border-secondary pb-2">V2.5 <small
+                                class="text-white-50 ms-2">2026/04/10</small></h6>
+                        <ul class="small lh-lg">
+                            <li>核心架構重構，改為類別化管理提升擴展性。</li>
+                            <li>優化搜尋防抖與過濾效能。</li>
+                        </ul>
+                    </div>
+                    <div class="changelog-item">
+                        <h6 class="fw-bold text-info border-bottom border-secondary pb-2">V?.? <small
+                                class="text-white-50 ms-2">2026/04/0?</small></h6>
+                        <ul class="small lh-lg">
+                            <li class="text-decoration-line-through">太早的沒記，想不起來了。</li>
+                        </ul>
+                    </div>
+                    <p style="font-size: 0.7em;" class="text-light text-opacity-25 mb-0 text-center">隱藏得這麼深都被你發現了 (°∀°)ﾉ
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 反饋彈窗 (Feedback Modal) -->
+    <div class="modal fade" id="feedbackModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header border-secondary p-4">
+                    <h5 class="modal-title">反饋 Feedback</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"
+                        data-umami-event="feedback-modal-close" data-umami-event-type="interaction"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="container" style="max-width: 900px;">
+                        <div id="waline"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 提示組件 -->
+    <div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3">
+        <div id="favToast" class="toast align-items-center text-white bg-dark border-0 shadow" role="alert"
+            aria-live="polite">
+            <div class="d-flex">
+                <div class="toast-body d-flex align-items-center justify-content-between w-100">
+                    <span id="toastMessage"></span>
+                    <a href="javascript:void(0);" id="undoFavBtn" class="text-white fw-bold ms-3"
+                        style="text-decoration: underline; display: none;">撤銷</a>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                    data-umami-event="toast-dismiss" data-umami-event-type="interaction"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 影片 Tabs 模板 -->
+    <template id="video-tabs-template">
+        <ul class="nav nav-tabs border-secondary mb-3" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active text-light border-secondary bg-transparent" data-bs-toggle="tab"
+                    data-bs-target="#bilibili-pane" type="button" role="tab" data-umami-event="bilibili-tab"
+                    data-umami-event-type="interaction">
+                    <i class="fa-brands fa-bilibili" style="color:#FB7299"></i> Bilibili
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link text-light border-secondary bg-transparent" data-bs-toggle="tab"
+                    data-bs-target="#youtube-pane" type="button" role="tab" data-umami-event="youtube-tab"
+                    data-umami-event-type="interaction">
+                    <i class="fa-brands fa-youtube" style="color:#FF0000"></i> YouTube
+                </button>
+            </li>
+        </ul>
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="bilibili-pane" role="tabpanel">
+                <div class="ratio ratio-16x9 placeholder-glow bg-dark"></div>
+            </div>
+            <div class="tab-pane fade" id="youtube-pane" role="tabpanel">
+                <div class="ratio ratio-16x9 placeholder-glow bg-dark"></div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Iframe 模板 -->
+    <template id="iframe-template">
+        <iframe allowfullscreen="true" scrolling="no" border="0" frameborder="no" framespacing="0"
+            loading="lazy"></iframe>
+    </template>
+
+    <!-- 腳本引入 (保持順序) -->
+    <script src="assets/js/vendor/bootstrap.bundle-5.3.0.min.js"></script>
+    <script src="assets/js/data.js?260412_1"></script>
+    <script type="module" src="assets/js/main.js?260412_1"></script>
+</body>
+
+</html>

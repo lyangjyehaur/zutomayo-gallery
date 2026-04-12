@@ -1,0 +1,18 @@
+如何在 `data-manager.js` 中優化搜尋邏輯，讓它支援多關鍵字搜尋（例如「Waboku 2021」）？
+燈箱大圖寬高
+如何為 UIManager 加入一個全屏加載動畫（Loading Spinner）的顯示與隱藏功能？
+如果我想在不同的分頁（Gallery vs Modal）中使用不同的 Toast 顯示位置，該如何調整 UIManager？
+
+
+1. index中存在一些獨立的函數，可以整合到js文件中嗎？
+2. 還有photoswipe可以改成esm引用方式
+import PhotoSwipeLightbox from 'photoswipe/dist/photoswipe-lightbox.esm.js';
+const lightbox = new PhotoSwipeLightbox({
+  gallery: '#my-gallery',
+  children: 'a',
+  pswpModule: () => import('photoswipe/dist/photoswipe.esm.js')
+});
+lightbox.init();
+還有PhotoSwipeDynamicCaption也改成esm引用方式，如何整合
+import PhotoSwipeDynamicCaption from 'https://unpkg.com/photoswipe-dynamic-caption-plugin/photoswipe-dynamic-caption-plugin.esm.js';
+3. 另外masonry和imagesloaded我看官網沒查到有ESM的版本，也可以改嗎？

@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ZTMY Gallery - 數據管理後台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --ztmy-green: #00ff00;
+            --ztmy-bg: #121212;
+            --ztmy-card: #1e1e1e;
+        }
+
+        body {
+            background: var(--ztmy-bg);
+            color: #e0e0e0;
+            font-family: sans-serif;
+            padding-bottom: 50px;
+        }
+
+        .dotgothic16-regular {
+            font-family: "DotGothic16", sans-serif;
+        }
+
+        /* 側邊欄列表 */
+        .data-list-container {
+            height: 70vh;
+            overflow-y: auto;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: #181818;
+        }
+
+        .list-group-item {
+            background: transparent;
+            color: #ccc;
+            border-color: #333;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .list-group-item:hover {
+            background: #252525;
+            color: var(--ztmy-green);
+        }
+
+        .list-group-item.active {
+            background: var(--ztmy-green) !important;
+            color: #000 !important;
+            border-color: var(--ztmy-green);
+        }
+
+        /* 編輯區 */
+        .edit-card {
+            background: var(--ztmy-card);
+            border: 1px solid #444;
+            position: sticky;
+            top: 20px;
+        }
+
+        .form-label {
+            color: var(--ztmy-green);
+            font-size: 0.85rem;
+            margin-bottom: 2px;
+        }
+
+        .form-control {
+            background: #2b2b2b;
+            border: 1px solid #444;
+            color: white;
+            border-radius: 4px;
+        }
+
+        .form-control:focus {
+            background: #333;
+            color: white;
+            border-color: var(--ztmy-green);
+            box-shadow: none;
+        }
+
+        /* 代碼輸出區 */
+        pre {
+            background: #000;
+            padding: 15px;
+            border-radius: 8px;
+            color: #adff2f;
+            font-size: 0.8rem;
+            max-height: 300px;
+        }
+
+        .btn-ztmy {
+            background: var(--ztmy-green);
+            color: #000;
+            font-weight: bold;
+            border: none;
+        }
+
+        .btn-ztmy:hover {
+            background: #00cc00;
+        }
+
+        .sticky-bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #000;
+            padding: 10px;
+            border-top: 1px solid var(--ztmy-green);
+            z-index: 1000;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container-fluid px-4 py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="dotgothic16-regular text-white mb-0">數據管理系統 <small class="fs-6 text-muted">v2.0</small></h2>
+            <div>
+                <button class="btn btn-outline-light btn-sm me-2" onclick="createNewItem()"><i
+                        class="bi bi-plus-lg"></i> 新增數據</button>
+                <button class="btn btn-outline-warning btn-sm" onclick="syncNewField()"><i
+                        class="bi bi-columns-gap"></i> 同步新欄位</button>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-3">
+                <div class="card p-3 border-secondary mb-4" style="background: #1a1a1a;">
+                    <label class="form-label text-info"><i class="bi bi-cloud-download"></i> 數據來源</label>
+                    <div class="input-group input-group-sm mb-2">
+                        <span class="input-group-text bg-dark text-white border-secondary">檔案</span>
+                        <input type="text" id="dataUrl" class="form-control" value="data_new.js">
+                    </div>
+                    <button class="btn btn-primary btn-sm w-100" onclick="loadDataFromScript()">從 URL 載入數據</button>
+                    <div id="loadStatus" class="small mt-2 text-muted text-center">尚未載入</div>
+                </div>
+
+                <label class="form-label text-success">歌曲列表 (<span id="count">0</span>)</label>
+                <div class="data-list-container list-group" id="dataList" style="position: sticky;top: 0;">
+                    <div class="p-4 text-center text-muted">點擊上方按鈕載入</div>
+                </div>
+            </div>
+
+            <div class="col-md-5">
+                <div class="card edit-card p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="dotgothic16-regular mb-0 text-white">編輯詳情</h5>
+                        <span id="editStatus" class="badge bg-secondary">未選擇項目</span>
+                    </div>
+
+                    <div id="dynamicForm">
+                        <p class="text-muted">請從左側點選歌曲進行編輯，或點擊「新增數據」。</p>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-top d-flex gap-2">
+                        <button class="btn btn-ztmy flex-grow-1" onclick="saveCurrentEdit()">暫存修改</button>
+                        <button class="btn btn-outline-danger" onclick="deleteCurrentItem()"><i
+                                class="bi bi-trash"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label text-info">3. 預覽輸出格式 (JSON)</label>
+                <pre id="outputCode">// 這裡會即時生成最新的數據結構</pre>
+                <button class="btn btn-copy btn-ztmy w-100" onclick="copyFinalCode()" style="position: sticky;top: 0;">複製全部代碼到剪貼簿</button>
+
+                <div class="alert alert-dark mt-4 small">
+                    <strong>使用說明：</strong><br>
+                    1. 貼上 `data.js` 內容後點解析。<br>
+                    2. 修改後點「暫存修改」更新至內存。<br>
+                    3. 最後點複製代碼，覆蓋回原檔案。
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- <script src="data.js"></script> -->
+    <script>
+        let localData = [];
+        let currentIndex = -1;
+
+        // --- 新的載入邏輯：動態讀取 JS 檔案 ---
+        function loadDataFromScript() {
+            const url = document.getElementById('dataUrl').value.trim();
+            const statusEl = document.getElementById('loadStatus');
+
+            // 加上時間戳破除快取，確保拿到的是最新版
+            const timestamp = new Date().getTime();
+            const scriptUrl = `${url}?v=${timestamp}`;
+
+            statusEl.innerHTML = `<span class="spinner-border spinner-border-sm"></span> 載入中...`;
+
+            // 建立 script 標籤
+            const script = document.createElement('script');
+            script.src = scriptUrl;
+
+            // script.onload = () => {
+            //     // 檢查全域變數 MV_DATA 是否存在
+            //     if (typeof MV_DATA !== 'undefined') {
+            //         // 深拷貝一份數據到 localData，避免直接改動原始全域變數
+            //         localData = JSON.parse(JSON.stringify(MV_DATA));
+            //         currentIndex = -1;
+            //         renderList();
+            //         updateOutput();
+            //         statusEl.innerHTML = `<span class="text-success"><i class="bi bi-check-circle"></i> 載入成功</span>`;
+            //         alert(`已從 ${url} 成功讀取 ${localData.length} 筆數據！`);
+            //     } else {
+            //         statusEl.innerHTML = `<span class="text-danger">找不到 MV_DATA 變數</span>`;
+            //     }
+            //     // 移除標記，保持 DOM 乾淨
+            //     document.body.removeChild(script);
+            // };
+
+            // --- 修改後的載入邏輯 ---
+            script.onload = () => {
+                if (typeof MV_DATA !== 'undefined') {
+                    // 1. 深拷貝原始數據
+                    let rawData = JSON.parse(JSON.stringify(MV_DATA));
+
+                    // 2. 自動遷移邏輯：檢查並轉換舊格式
+                    localData = rawData.map(item => {
+                        if (item.images && Array.isArray(item.images)) {
+                            item.images = item.images.map(img => {
+                                // 如果是字串，則包裝成新對象；如果是對象則保留
+                                if (typeof img === 'string') {
+                                    return {
+                                        url: img,
+                                        caption: "", // 預設空描述
+                                        richText: "",
+                                        alt: ""
+                                    };
+                                }
+                                return img;
+                            });
+                        }
+                        return item;
+                    });
+
+                    currentIndex = -1;
+                    renderList();
+                    updateOutput();
+                    statusEl.innerHTML = `<span class="text-success"><i class="bi bi-check-circle"></i> 載入並已自動遷移格式</span>`;
+                    alert(`成功讀取 ${localData.length} 筆數據，並已自動將舊版圖片路徑升級為對象結構！`);
+                } else {
+                    statusEl.innerHTML = `<span class="text-danger">找不到 MV_DATA 變數</span>`;
+                }
+                document.body.removeChild(script);
+            };
+
+            script.onerror = () => {
+                statusEl.innerHTML = `<span class="text-danger">讀取失敗 (請檢查路徑)</span>`;
+                alert("無法讀取檔案，請確保 admin.html 與 data.js 放在同一個目錄下，且路徑正確。");
+            };
+
+            document.body.appendChild(script);
+        }
+
+        // --- 渲染列表 (全面健檢版本) ---
+        function renderList() {
+            const container = document.getElementById('dataList');
+            const countEl = document.getElementById('count');
+            countEl.textContent = localData.length;
+
+            if (localData.length === 0) {
+                container.innerHTML = `<div class="p-4 text-center text-muted">暫無數據</div>`;
+                return;
+            }
+
+            container.innerHTML = localData.map((item, index) => {
+                // --- 全面檢查邏輯 ---
+                const missingFields = [];
+
+                // 遍歷該物件的所有 Key
+                Object.keys(item).forEach(key => {
+                    const value = item[key];
+
+                    // 判斷條件：
+                    // 1. 如果是陣列且長度為 0
+                    // 2. 如果是字串且去掉空白後長度為 0
+                    // 3. 如果是 null 或 undefined
+                    if (Array.isArray(value)) {
+                        if (value.length === 0) missingFields.push(key);
+                    } else if (value === null || value === undefined || String(value).trim() === "") {
+                        missingFields.push(key);
+                    }
+                });
+
+                const isIncomplete = missingFields.length > 0;
+
+                return `
+            <div class="list-group-item d-flex justify-content-between align-items-center ${currentIndex === index ? 'active' : ''}" 
+                 onclick="selectItem(${index})">
+                <div class="text-truncate me-2" style="max-width: 80%;">
+                    <div class="fw-bold text-white">${item.id || 'N/A'}</div>
+                    <div class="small opacity-75 text-truncate">${item.title || '(未命名標題)'}</div>
+                </div>
+                
+                ${isIncomplete ? `
+                    <span class="badge rounded-pill bg-danger" 
+                          style="cursor: help;"
+                          title="缺失或空白欄位: ${missingFields.join(', ')}">
+                        <i class="bi bi-exclamation-circle-fill"></i> ${missingFields.length}
+                    </span>
+                ` : `
+                    <span class="text-success small"><i class="bi bi-check-circle-fill"></i></span>
+                `}
+            </div>
+        `;
+            }).join('');
+        }
+
+        // --- 選擇並動態生成表單 (支援 keywords 為 textarea) ---
+        // function selectItem(index) {
+        //     currentIndex = index;
+        //     renderList(); 
+
+        //     const item = localData[index];
+        //     document.getElementById('editStatus').textContent = `正在編輯: ${item.id}`;
+        //     document.getElementById('editStatus').className = "badge bg-primary";
+
+        //     const formHtml = Object.keys(item).map(key => {
+        //         const val = item[key];
+
+        //         // 1. 擴充判斷：只要 key 是 description, keywords, tags 或本身是陣列，就用 textarea
+        //         const isLongText = key === 'description' || 
+        //                            key === 'keywords' || 
+        //                            key === 'images' || 
+        //                            key === 'album' || 
+        //                            Array.isArray(val);
+
+        //         // 2. 判斷是否為空
+        //         const isEmpty = Array.isArray(val) ? val.length === 0 : (val === null || val === undefined || String(val).trim() === "");
+
+        //         const inputClass = `form-control form-field ${isEmpty ? 'border-danger-subtle' : ''}`;
+
+        //         const labelHtml = `<label class="form-label ${isEmpty ? 'text-danger' : ''}">
+        //             ${key} ${isEmpty ? '<small class="fw-normal">(待填寫)</small>' : ''}
+        //         </label>`;
+
+        //         return `
+        //             <div class="mb-3">
+        //                 ${labelHtml}
+        //                 ${isLongText 
+        //                     ? `<textarea class="${inputClass}" data-key="${key}" rows="${Array.isArray(val) || key==='keywords' || key === 'description' || key === 'images' ? 4 : 2}" placeholder="請輸入 ${key} (多項內容請換行)">${Array.isArray(val) ? val.join('\n') : val}</textarea>`
+        //                     : `<input type="text" class="${inputClass}" data-key="${key}" value="${val}" placeholder="請輸入 ${key}">`
+        //                 }
+        //             </div>
+        //         `;
+        //     }).join('');
+
+        //     document.getElementById('dynamicForm').innerHTML = formHtml;
+        // }
+        // --- 選擇並動態生成表單 ---
+        function selectItem(index) {
+            currentIndex = index;
+            renderList();
+
+            const item = localData[index];
+            document.getElementById('editStatus').textContent = `正在編輯: ${item.id}`;
+            document.getElementById('editStatus').className = "badge bg-primary";
+
+            const formHtml = Object.keys(item).map(key => {
+                const val = item[key];
+
+                // 特殊處理 images 結構 (對象數組)
+                if (key === 'images' && Array.isArray(val)) {
+                    let imagesHtml = `<label class="form-label text-info">images (圖片對象列表)</label>
+                              <div id="image-container" class="border border-secondary p-2 rounded mb-3">`;
+
+                    val.forEach((img, imgIndex) => {
+                        imagesHtml += `
+                <div class="image-item-group mb-3 pb-2 border-bottom border-secondary position-relative">
+                    <button type="button" class="btn btn-sm btn-outline-danger position-absolute end-0 top-0" onclick="removeImageField(${imgIndex})"><i class="bi bi-x"></i></button>
+                    <div class="row g-2 mt-1">
+                        <div class="col-12"><input type="text" class="form-control form-control-sm img-url" placeholder="URL" value="${img.url || ''}"></div>
+                        <div class="col-6"><input type="text" class="form-control form-control-sm img-caption" placeholder="Caption" value="${img.caption || ''}"></div>
+                        <div class="col-6"><input type="text" class="form-control form-control-sm img-alt" placeholder="Alt" value="${img.alt || ''}"></div>
+                        <div class="col-12"><textarea class="form-control form-control-sm img-richText" placeholder="RichText (HTML)" rows="10">${img.richText || ''}</textarea></div>
+                    </div>
+                </div>`;
+                    });
+
+                    imagesHtml += `<button type="button" class="btn btn-sm btn-outline-info w-100" onclick="addImageField()">+ 新增圖片對象</button></div>`;
+                    return imagesHtml;
+                }
+
+                // 以下為原始邏輯 (處理普通字段)
+                const isLongText = key === 'description' || key === 'keywords' || key === 'album' || Array.isArray(val);
+                const isEmpty = Array.isArray(val) ? val.length === 0 : (val === null || val === undefined || String(val).trim() === "");
+                const inputClass = `form-control form-field ${isEmpty ? 'border-danger-subtle' : ''}`;
+                const labelHtml = `<label class="form-label ${isEmpty ? 'text-danger' : ''}">${key} ${isEmpty ? '<small class="fw-normal">(待填寫)</small>' : ''}</label>`;
+
+                return `
+            <div class="mb-3">
+                ${labelHtml}
+                ${isLongText
+                        ? `<textarea class="${inputClass}" data-key="${key}" rows="3" placeholder="請輸入 ${key}">${Array.isArray(val) ? val.join('\n') : val}</textarea>`
+                        : `<input type="text" class="${inputClass}" data-key="${key}" value="${val}" placeholder="請輸入 ${key}">`
+                    }
+            </div>
+        `;
+            }).join('');
+
+            document.getElementById('dynamicForm').innerHTML = formHtml;
+        }
+
+        // --- 同步新欄位 (Schema Update) ---
+        function syncNewField() {
+            const fieldName = prompt("請輸入要新增的欄位名稱 (例如: tags, artist):");
+            if (!fieldName) return;
+
+            const defaultValue = prompt(`請輸入 ${fieldName} 的預設值 (若要設為陣列請輸入 [])`, "");
+            const parsedDefault = (defaultValue === "[]") ? [] : defaultValue;
+
+            localData = localData.map(item => {
+                if (!(fieldName in item)) {
+                    return { ...item, [fieldName]: parsedDefault };
+                }
+                return item;
+            });
+
+            if (currentIndex !== -1) selectItem(currentIndex);
+            updateOutput();
+            alert(`已同步新增欄位 "${fieldName}" 到所有數據中。`);
+        }
+
+        // --- 保存暫存 ---
+        function saveCurrentEdit() {
+            if (currentIndex === -1) {
+                // 如果是新增狀態
+                const newItem = {};
+                const fields = document.querySelectorAll('.form-field');
+                fields.forEach(f => {
+                    const key = f.getAttribute('data-key');
+                    newItem[key] = inferType(key, f.value);
+                });
+                newItem['images'] = collectImagesData();
+                localData.unshift(newItem); // 加到最前面
+                currentIndex = 0;
+            } else {
+                // 更新現有項目
+                const fields = document.querySelectorAll('.form-field');
+                fields.forEach(f => {
+                    const key = f.getAttribute('data-key');
+                    localData[currentIndex][key] = inferType(key, f.value);
+                });
+                localData[currentIndex]['images'] = collectImagesData();
+            }
+
+            renderList();
+            updateOutput();
+            alert("暫存成功！");
+        }
+        function collectImagesData() {
+            const images = [];
+            const groups = document.querySelectorAll('.image-item-group');
+            groups.forEach(group => {
+                images.push({
+                    url: group.querySelector('.img-url').value,
+                    caption: group.querySelector('.img-caption').value,
+                    richText: group.querySelector('.img-richText').value,
+                    alt: group.querySelector('.img-alt').value
+                });
+            });
+            return images;
+        }
+        // 新增圖片輸入項
+        function addImageField() {
+            if (currentIndex === -1) return;
+            if (!localData[currentIndex].images) localData[currentIndex].images = [];
+            localData[currentIndex].images.push({ url: "", caption: "", richText: "", alt: "" });
+            selectItem(currentIndex); // 重新渲染表單
+        }
+
+        // 移除圖片輸入項
+        function removeImageField(imgIndex) {
+            const groups = document.querySelectorAll('.image-item-group');
+            if (groups[imgIndex]) {
+                groups[imgIndex].remove();
+                // 這裡不需要重新 render，保存時 collectImagesData 會抓取剩餘的 DOM
+            }
+        }
+        function inferType(key, value) {
+            // 移除 images，因為它現在是對象數組，已由 collectImagesData 處理
+            const arrayFields = ['coverimages', 'keywords', 'album'];
+
+            if (arrayFields.some(field => key.toLowerCase().includes(field))) {
+                return value.split('\n')
+                    .map(v => v.trim())
+                    .filter(v => v !== '');
+            }
+            return value;
+        }
+        // --- 新增空白項目 ---
+        function createNewItem() {
+            // 以第一筆數據為模板，創建空值
+            if (localData.length === 0) {
+                localData = [{ id: "new-01", title: "", date: "", year: "", youtubeId: "", bilibili: "", coverImages: [], description: "" }];
+            }
+
+            currentIndex = 0;
+            const template = { ...localData[0] };
+            Object.keys(template).forEach(key => {
+                template[key] = Array.isArray(template[key]) ? [] : "";
+            });
+            template.id = "new-id";
+
+            localData.unshift(template);
+            selectItem(0);
+            renderList();
+        }
+
+        // --- 刪除項目 ---
+        function deleteCurrentItem() {
+            if (currentIndex === -1 || !confirm("確定要刪除這筆數據嗎？")) return;
+            localData.splice(currentIndex, 1);
+            currentIndex = -1;
+            document.getElementById('dynamicForm').innerHTML = `<p class="text-muted text-center">已刪除</p>`;
+            renderList();
+            updateOutput();
+        }
+
+        // --- 輸出代碼 ---
+        function updateOutput() {
+            const code = `const MV_DATA = ${JSON.stringify(localData, null, 4)};`;
+            document.getElementById('outputCode').textContent = code;
+        }
+
+        function copyFinalCode() {
+            const code = document.getElementById('outputCode').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                alert("完整代碼已複製！請打開 data.js 覆蓋全部內容。");
+            });
+        }
+
+        // 監聽鍵盤事件：Ctrl + S (或 Mac 的 Command + S)
+        window.addEventListener('keydown', function (e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+                e.preventDefault(); // 阻止瀏覽器原生的儲存網頁行為
+                saveCurrentEdit();
+            }
+        });
+    </script>
+
+</body>
+
+</html>
