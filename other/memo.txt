@@ -16,3 +16,8 @@ lightbox.init();
 還有PhotoSwipeDynamicCaption也改成esm引用方式，如何整合
 import PhotoSwipeDynamicCaption from 'https://unpkg.com/photoswipe-dynamic-caption-plugin/photoswipe-dynamic-caption-plugin.esm.js';
 3. 另外masonry和imagesloaded我看官網沒查到有ESM的版本，也可以改嗎？
+
+你知道https://www.neobrutalism.dev/這個組件庫嗎，如果我需要從bootstrap遷移到neobrutalism需要做哪些準備，先不動代碼，想了解怎麼實現
+
+但是neobrutalism跟bootstrap不一樣，我看官網說是基於shadcn這個組件庫，這個組件庫不是單純引用CSS和JS，需要使用NPM，這樣該如何整合
+

@@ -1,3 +1,5 @@
+import { MV_DATA } from '../data.js';
+
 export class FilterManager {
     constructor(app) {
         this.app = app;

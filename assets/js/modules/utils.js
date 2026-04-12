@@ -17,7 +17,9 @@ export class Utils {
             return;
         }
 
-        this._trackBuffer.push({ name, data });
+        if (Array.isArray(this._trackBuffer)) {
+            this._trackBuffer.push({ name, data });
+        }
 
         if (!this._isPollingUmami) {
             this._isPollingUmami = true;

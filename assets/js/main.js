@@ -1,6 +1,7 @@
 /**
  * ZUTOMAYO MV Gallery
  */
+import { MV_DATA } from './data.js';
 import { CONFIG } from './modules/config.js';
 import { Utils } from './modules/utils.js';
 import { UIManager } from './modules/ui-manager.js';
@@ -10,10 +11,7 @@ import { PluginManager } from './modules/plugin-manager.js';
 
 class ZTMYMVApp {
     constructor() {
-        if (typeof MV_DATA === 'undefined') {
-            console.error('MV_DATA 未定義，請確保 data.js 已正確加載');
-            return;
-        }
+
 
         this.CONFIG = CONFIG;
         this.utils = new Utils(this);

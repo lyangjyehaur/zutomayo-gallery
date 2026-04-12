@@ -13,7 +13,9 @@ export default {
         ztmyYellow: '#ffcf00',
       },
       boxShadow: {
-        'neo': '4px 4px 0px 0px rgba(0,0,0,1)',
+        'neo': '5px 5px 0px 0px rgba(0,0,0,1)',
+        'neo-lg': '10px 10px 0px 0px rgba(0,0,0,1)',
+        'neo-sm': '2px 2px 0px 0px rgba(0,0,0,1)',
       },
       borderWidth: {
         '3': '3px',

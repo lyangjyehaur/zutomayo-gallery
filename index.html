@@ -25,7 +25,7 @@
     <link rel="stylesheet" href="assets/css/main.css">
     <link rel="stylesheet" href="assets/css/fonts.css">
     <link rel="stylesheet" href="assets/css/vendor/fontawesome-free-7.2.0.all.min.css">
-    <!-- <link rel="stylesheet" href="src/tailwind.css"> -->
+    <link rel="stylesheet" href="src/tailwind.css">
 </head>
 
 <body>
@@ -52,11 +52,11 @@
         <div class="row g-2 mb-4">
             <div class="col-8 col-lg-3">
                 <label for="searchInput" class="visually-hidden">關鍵字檢索</label>
-                <input id="searchInput" class="form-control" type="text" placeholder="關鍵字檢索…">
+                <input id="searchInput" class="form-control border-3 border-black rounded-none shadow-neo focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all" type="text" placeholder="關鍵字檢索…">
             </div>
             <div class="col-4 col-lg-2">
                 <label for="yearFilter" class="visually-hidden">年份篩選</label>
-                <select id="yearFilter" class="form-select">
+                <select id="yearFilter" class="form-select border-3 border-black rounded-none shadow-neo cursor-pointer">
                     <option value="">年份（所有）</option>
                     <option value="2018">2018</option>
                     <option value="2019">2019</option>
@@ -334,7 +334,6 @@
 
     <!-- 腳本引入 (保持順序) -->
     <script src="assets/js/vendor/bootstrap.bundle-5.3.0.min.js"></script>
-    <script src="assets/js/data.js?260412_1"></script>
     <script type="module" src="assets/js/main.js?260412_1"></script>
 </body>
 

@@ -1,4 +1,4 @@
-const MV_DATA = [
+export const MV_DATA = [
     {
         "id": "byoushinwo-kamu",
         "title": "秒針を噛む",

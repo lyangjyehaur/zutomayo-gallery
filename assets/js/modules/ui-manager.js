@@ -1,3 +1,4 @@
+import { MV_DATA } from '../data.js';
 import imagesLoaded from 'https://esm.sh/imagesloaded';
 import Masonry from 'https://esm.sh/masonry-layout';
 
@@ -54,10 +55,18 @@ export class UIManager {
             imgSection = `<img src="${thumbUrl}" class="card-img-top w-100" style="aspect-ratio:16/9; object-fit:cover; background:#2a2a30;" alt="${mv.title}" loading="lazy">`;
         }
 
-        return `<div class="col" id="mv-card-${mv.id}"><div class="card song-item h-100" data-mv-id="${mv.id}">
-            <button title="收藏" class="favorite-btn ${isFav ? 'active' : ''}">${isFav ? '<i class="fa-solid fa-star"></i>' : '<i class="fa-regular fa-star"></i>'}</button>
-            ${imgSection}<div class="card-body text-center"><div class="card-title-container marquee-wrapper"><h5 class="card-title mb-1 dotgothic16-regular marquee-content">${mv.title}</h5></div>
-            <p class="card-text small dotgothic16-regular">${mv.date}</p></div></div></div>`;
+        return `<div class="col" id="mv-card-${mv.id}">
+            <div class="card song-item h-100 border-3 border-black rounded-none shadow-neo bg-[#15151a] hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-none transition-all overflow-hidden" data-mv-id="${mv.id}">
+                <button title="收藏" class="favorite-btn z-10 border-2 border-black shadow-neo-sm ${isFav ? 'active' : ''}">${isFav ? '<i class="fa-solid fa-star"></i>' : '<i class="fa-regular fa-star"></i>'}</button>
+                ${imgSection}
+                <div class="card-body p-3 text-center border-t-3 border-black">
+                    <div class="card-title-container marquee-wrapper mb-1">
+                        <h5 class="card-title mb-0 dotgothic16-regular font-bold marquee-content">${mv.title}</h5>
+                    </div>
+                    <p class="card-text small dotgothic16-regular opacity-75 mb-0">${mv.date}</p>
+                </div>
+            </div>
+        </div>`;
     }
 
     openModal(id, source) {
