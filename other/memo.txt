@@ -21,3 +21,8 @@ import PhotoSwipeDynamicCaption from 'https://unpkg.com/photoswipe-dynamic-capti
 
 但是neobrutalism跟bootstrap不一樣，我看官網說是基於shadcn這個組件庫，這個組件庫不是單純引用CSS和JS，需要使用NPM，這樣該如何整合
 
+建議： 安裝 @tanstack/react-query。它可以自動處理 Loading 狀態、錯誤重試、以及分頁數據的快取。
+
+更好的方式： 結合 虛擬滾動 (Virtual List)。只渲染畫面上看得到的 Card。這對於畫廊類應用是頂級的優化。
+
+如果你的圖片高度不一（真正的瀑布流）： 推薦使用 react-masonry-css。它基於 CSS 欄位（Columns）實現，比傳統的 Masonry.js 快得多且更符合 React 宣告式寫法。
