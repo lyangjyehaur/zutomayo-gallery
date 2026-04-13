@@ -18,6 +18,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+// 像素風格心形圖標
+const PixelHeart = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+    <path d="M4 8h2v2H4V8zm2-2h2v2H6V6zm2-2h2v2H8V4zm2 0h4v2h-4V4zm4 0h2v2h-2V4zm2 2h2v2h-2V6zm2 2h2v2h-2V8zm0 2h-2v2h2v-2zm-2 2h-2v2h2v-2zm-2 2h-2v2h2v-2zm-2 2h-2v2h2v-2zm-2-2H8v-2h2v2zm-2-2H6v-2h2v2z" />
+  </svg>
+);
+
 function App({ mvData, isLoading, error }: { mvData: MVItem[], isLoading: boolean, error: string | null }) {
   // 初始化工具類 (傳入一個模擬的 app 對象)
   const utils = useMemo(() => new (Utils as any)({ CONFIG: {}, state: {} }), []);
@@ -131,7 +138,7 @@ function App({ mvData, isLoading, error }: { mvData: MVItem[], isLoading: boolea
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-base selection:bg-main selection:text-main-foreground dark">
+    <div className="min-h-screen bg-background text-foreground font-base font-normal selection:bg-main selection:text-main-foreground dark">
       {/* 頁首 */}
       <header className="py-12 text-center border-b-4 border-border bg-card shadow-shadow mb-8 relative overflow-hidden">
         <div className="absolute inset-0 opacity-5 pointer-events-none crt-lines"></div>
@@ -228,6 +235,73 @@ function App({ mvData, isLoading, error }: { mvData: MVItem[], isLoading: boolea
           ))}
         </div>
       </main>
+
+      {/* 頁尾 Footer */}
+      <footer className="mt-24 border-t-4 border-border bg-card relative overflow-hidden">
+        <div className="absolute inset-0 opacity-5 pointer-events-none crt-lines"></div>
+        <div className="container mx-auto px-4 py-16 max-w-7xl relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-start">
+            {/* 品牌資訊 */}
+            {/* <div className="space-y-4">
+              <div className="text-2xl font-black uppercase tracking-tighter inline-block border-b-4 border-main pb-1">
+                ZTMY_GALLERY
+              </div>
+              <p className="text-[10px] font-mono opacity-50 uppercase leading-loose">
+                STATUS: ONLINE<br/>
+                CONNECTION: SECURED<br/>
+                ENCRYPTION: AES-256-ZTMY<br/>
+                LOCATION: UNKNOWN_SECTOR
+              </p>
+            </div> */}
+
+            {/* 快速導航 */}
+            {/* <div className="flex flex-col gap-2">
+              <span className="text-xs font-black uppercase tracking-widest mb-2 opacity-30">Internal_Links</span>
+              <button onClick={() => navigate('/')} className="text-xs font-bold hover:text-main transition-colors uppercase text-left w-fit">//_Home_Base</button>
+              <button onClick={() => navigate('/favorites')} className="text-xs font-bold hover:text-main transition-colors uppercase text-left w-fit">//_Favorites_List</button>
+              <button onClick={() => navigate('/admin')} className="text-xs font-bold hover:text-main transition-colors uppercase text-left w-fit">//_Maintenance_Terminal</button>
+            </div> */}
+
+            {/* 操作與聲明 */}
+            <div className="flex flex-col items-start md:items-end gap-6">
+              <Button 
+                variant="neutral" 
+                className="border-3 border-black shadow-neo-sm bg-main text-black font-black italic text-xs"
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              >
+                SCROLL_TO_TOP_SIGNAL
+              </Button>
+              <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest bg-black text-white px-3 py-1 border-2 border-main">
+                MADE_WITH <PixelHeart className="size-4 text-red-500 animate-pulse" /> BY_ACA-NE_FANS
+              </div>
+            </div>
+          </div>
+
+                    {/* 三語版權聲明區塊 */}
+                    <div className="mt-16 p-8 border-4 border-black bg-black/5 relative group">
+                      <div className="absolute -top-4 left-6 bg-black text-main px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] border-2 border-main">
+                        Legal_Signal_Broadcast
+                      </div>
+                      
+                      <div className="grid grid-cols-1  gap-10">
+                        {/* 中文 */}
+                        <div className="space-y-3">
+                          <p className="text-[10px] leading-relaxed opacity-60">
+                            本站為「<span lang="ja">ずっと真夜中でいいのに。</span>」（ZUTOMAYO）粉絲建立之非官方資料庫，僅供同好交流與內容整理之用，無任何商業營利行為。<br />本站伺服器不存儲任何原始檔案，所收錄之影片、圖片、設定圖、插圖及相關視覺素材版權均屬原作者及其所屬機構所有。<br />若版權方有任何疑慮或下架要求，請與我們聯繫。</p>
+                          <p lang="ja" className="text-[10px] leading-relaxed opacity-60">
+                            本サイトは「ずっと真夜中でいいのに。」（ZUTOMAYO）のファンによって運営されている非公式アーカイブであり、ファン同士の交流およびコンテンツの整理を目的としています。営利目的の運営は一切行っておりません。<br />本サイトのサーバーにはオリジナルのファイルは保存されておらず、掲載されている動画、画像、設定画、イラスト、その他の視覚素材の著作権は、すべて原作者および権利所有者に帰属します。<br />権利者様の方で掲載に問題がある場合や削除をご希望の際は、お手数ですがご連絡いただけますようお願い申し上げます。</p>
+                          <p lang="en" className="text-[10px] leading-relaxed opacity-60">
+                            This is an unofficial fan-made archive site for "ZUTOMAYO" (Zutto Mayonaka de ii Noni.), created for community exchange and content organization with no commercial intent. <br />No original image files are stored on our servers. All copyrights to the videos, images, concept art, illustrations, and related visual materials belong to their respective creators and organizations. <br />If you are a copyright holder and have concerns or requests for content removal, please contact us.</p>
+                        </div>
+                      </div>
+                    </div>
+          
+          <div className="mt-16 pt-8 border-t-2 border-black/5 flex flex-col md:flex-row justify-between items-center gap-4 opacity-30 text-[8px] font-mono uppercase tracking-[0.2em]">
+            <span>© 2024 ZTMY_MV_ARCHIVE_SYSTEM_v3</span>
+            <span className="text-center md:text-right">THIS_IS_A_FAN_MADE_PROJECT_FOR_EDUCATIONAL_PURPOSES</span>
+          </div>
+        </div>
+      </footer>
 
       {/* 詳情彈窗 */}
       <MVDetailsModal 

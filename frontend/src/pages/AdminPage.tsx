@@ -325,7 +325,7 @@ const currentMV = data[activeIndex];
   if (!currentMV) return null;
   return (
 
-    <div className="h-screen bg-background text-foreground flex flex-col font-mono overflow-hidden">
+    <div className="h-screen bg-background text-foreground flex flex-col font-mono font-normal overflow-hidden">
       {/* 頂部控制欄 */}
       <div className="h-20 border-b-4 border-black bg-card flex items-center justify-between px-8 shadow-neo-sm z-50">
         <div className="flex items-center gap-4">
