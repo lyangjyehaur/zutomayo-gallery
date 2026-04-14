@@ -7,9 +7,14 @@
     "allowJs": true,
     "checkJs": false,
     "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "strict": false,
+    "noImplicitAny": false,
     "paths": {
       "@/*": ["./src/*"]
     },
-    "skipLibCheck": true
-  }
+    "skipLibCheck": true,
+    "types": ["react", "react-dom"]
+  },
+  "include": ["src/**/*"]
 }

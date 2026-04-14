@@ -1577,19 +1577,41 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/FkGIAJLUUAAflBF?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1152
             },
             {
                 "url": "https://pbs.twimg.com/media/FkGIAJQUYAYSZgz?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1152
             },
             {
                 "url": "https://pbs.twimg.com/media/Fp3S6t2aIAAtXhg?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1452,
+                "height": 2048
+            },
+            {
+                "url": "https://pbs.twimg.com/media/FxXaPgnaMAEMXIX?format=jpg&name=large",
+                "caption": "女僕Kira卡牌",
+                "alt": "女僕Kira卡牌",
+                "richText": "https://x.com/komugiko_2000/status/1663475601326616576/",
+                "width": 1446,
+                "height": 2048
+            },
+            {
+                "url": "https://pbs.twimg.com/media/HBlufJOaoAAphsu?format=jpg&name=large",
+                "caption": "卡牌",
+                "alt": "卡牌",
+                "richText": "https://x.com/komugiko_2000/status/2024770998852296835",
+                "width": 1451,
+                "height": 2048
             }
         ],
         "coverImages": [
@@ -2205,7 +2227,17 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/EoNhUnaVgAA1RZR?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 988
+            },
+            {
+                "url": "https://pbs.twimg.com/media/FdU4ZNdagAAhHyS?format=jpg&name=large",
+                "caption": "卡牌",
+                "alt": "卡牌",
+                "richText": "https://x.com/komugiko_2000/status/1573225655994830849",
+                "width": 1446,
+                "height": 2048
             }
         ],
         "coverImages": [

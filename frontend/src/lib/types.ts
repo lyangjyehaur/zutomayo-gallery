@@ -3,6 +3,8 @@ export interface MVImage {
   caption: string;
   richText?: string;
   alt?: string;
+  width?: number;
+  height?: number;
 }
 
 export interface MVItem {
