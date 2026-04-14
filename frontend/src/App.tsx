@@ -7,6 +7,9 @@ import { MVDetailsModal } from '@/components/MVDetailsModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AdminPage } from '@/pages/AdminPage'; // 引入管理頁
+// import DebugGallery from '@/pages/DebugGallery';
+import Hello from '@/debug/index';
+import DebugLightGallery from '@/debug/DebugLightGallery';
 
 import {
   Select,
@@ -354,6 +357,9 @@ export default function RootApp() {
       <Route path="/favorites" element={<App {...commonProps} />} />
       <Route path="/mv/:id" element={<App {...commonProps} />} />
       <Route path="/admin" element={<AdminPage mvData={mvData} onRefresh={() => window.location.href = window.location.href} />} />
+      <Route path="/debug/lg/:mvid?" element={<DebugLightGallery />} />
+      {/* <Route path="/debug/:mvid?" element={<DebugFancyBox mvData={mvData} />} /> */}
+      {/* <Route path="/debug" element={<Hello {...commonProps} />} /> */}
     </Routes>
   );
 }

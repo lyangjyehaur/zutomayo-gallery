@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -8,7 +8,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog"
 import { Button } from '@/components/ui/button';
-import { MVItem } from '@/lib/types';
+import { MVItem, MVImage } from '@/lib/types';
 import { getProxyImgUrl, ProxyMode } from '@/lib/image';
 import { MasonryPhotoAlbum } from "react-photo-album";
 import "react-photo-album/masonry.css";
@@ -16,6 +16,7 @@ import { Gallery, Item } from 'react-photoswipe-gallery';
 import 'photoswipe/style.css';
 import PhotoSwipeDynamicCaption from 'photoswipe-dynamic-caption-plugin';
 import 'photoswipe-dynamic-caption-plugin/photoswipe-dynamic-caption-plugin.css';
+import './MVDetailsModal.css';
 
 // 像素風圖標組件庫
 const PixelPlay = ({ className }: { className?: string }) => (
@@ -59,40 +60,10 @@ interface MVDetailsModalProps {
   onClose: () => void;
 }
 
-// 內部使用的圖片視覺組件，處理載入狀態與動畫
-function GalleryItemContent({ img, index, getProxyImgUrl }: { 
-  img: any; 
-  index: number; 
-  getProxyImgUrl: (rawUrl: string, mode?: ProxyMode) => string 
-}) {
-  const [isLoaded, setIsLoaded] = useState(false);
-  return (
-    <>
-      {!isLoaded && (
-        <div className="absolute inset-0 bg-main/5 animate-pulse flex flex-col items-center justify-center gap-2 z-10">
-          <div className="size-6 border-2 border-black/10 border-t-black animate-spin rounded-full" />
-          <span className="text-[8px] font-black opacity-20 uppercase font-mono tracking-widest">Asset_Loading...</span>
-        </div>
-      )}
-      <img 
-        src={getProxyImgUrl(img.url, 'thumb')} 
-        alt={img.alt || `setting-${index}`}
-        onLoad={() => setIsLoaded(true)}
-        style={{ aspectRatio: img.width && img.height ? `${img.width}/${img.height}` : 'auto' }}
-        className={`w-full h-auto block transition-all duration-700 group-hover:scale-105 ${isLoaded ? 'opacity-100 blur-0 scale-100' : 'opacity-0 blur-2xl scale-110'}`}
-      />
-      {img.caption && (
-        <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-[10px] p-1 text-white opacity-0 group-hover:opacity-100 transition-opacity z-20">
-          {img.caption}
-        </div>
-      )}
-    </>
-  );
-}
 
 export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
-  // 分批加載狀態 (初始 12 張)
-  const [displayLimit, setDisplayLimit] = useState(12);
+ // 分批加載狀態
+  const [displayLimit, setDisplayLimit] = useState(8);
 
   // 影片播放狀態
   const [videoPlatform, setVideoPlatform] = useState<'youtube' | 'bilibili'>('bilibili');
@@ -121,6 +92,48 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
       key: img.url,
     }));
   }, [visibleImages]);
+
+  // 使用 PhotoAlbum v3 的 renderPhoto 邏輯進行重構
+  const renderPhoto = useCallback(({ 
+    photo, 
+    wrapperStyle, 
+    renderDefaultPhoto 
+  }: any) => (
+    <div style={{ ...wrapperStyle, position: "relative" }}>
+      <Item
+        original={getProxyImgUrl(photo.url, 'full')}
+        thumbnail={photo.src}
+        width={photo.width}
+        height={photo.height}
+      >
+        {({ ref, open }) => (
+          <div
+            ref={ref as React.MutableRefObject<HTMLDivElement>}
+            onClick={(e) => {
+              e.preventDefault();
+              open(e);
+            }}
+            className="cursor-zoom-in overflow-hidden border-[3px] border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:translate-y-1 transition-all group bg-secondary-background"
+            data-raw-src={photo.url}
+            data-caption={photo.caption || ''}
+          >
+            {/* 使用 PhotoAlbum 內置渲染以獲取 srcset 支持 */}
+            {renderDefaultPhoto({ wrapped: true })}
+            
+            {/* PhotoSwipe 插件標題容器 */}
+            <div className="pswp-caption-content hidden">
+              <div className="font-black text-[10px] uppercase tracking-widest text-main bg-black px-2 py-0.5 mb-2 inline-block">Asset_Metadata_Source</div>
+              {photo.richText ? (
+                <div className="rich-text-content" dangerouslySetInnerHTML={{ __html: photo.richText }} />
+              ) : (
+                <div className="font-bold">{photo.caption}</div>
+              )}
+            </div>
+          </div>
+        )}
+      </Item>
+    </div>
+  ), []);
 
   // 手動加載更多圖片
   const handleLoadMore = () => setDisplayLimit(prev => prev + 8);
@@ -163,166 +176,6 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
           onPointerDownOutside={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}
         >
-          <style>{`
-            /* Global Neo-brutalism Scrollbar */
-            ::-webkit-scrollbar {
-              width: 16px;
-              height: 16px;
-            }
-            ::-webkit-scrollbar-track {
-              background: #ffffff;
-              border-left: 3px solid #000000;
-            }
-            ::-webkit-scrollbar-thumb {
-              background: #bcff00; /* ZTMY Signature Green */
-              border: 3px solid #000000;
-              box-shadow: none;
-            }
-            ::-webkit-scrollbar-thumb:hover {
-              background: #000000;
-            }
-            ::-webkit-scrollbar-corner {
-              background: #ffffff;
-            }
-
-            .pswp { z-index: 10000 !important; }
-                        /* Lightbox Controls Neo-brutalism Overrides */
-            .pswp__button {
-              background: #ffffff !important;
-              border: 3px solid #000000 !important;
-              box-shadow: 4px 4px 0px 0px #000000 !important;
-              margin: 12px !important;
-              opacity: 1 !important;
-              transition: all 0.1s ease-out !important;
-              width: 44px !important;
-              height: 44px !important;
-            }
-
-            .pswp__button:hover {
-              background: #bcff00 !important;
-              transform: translate(-2px, -2px);
-              box-shadow: 6px 6px 0px 0px #000000 !important;
-            }
-
-            .pswp__button:active {
-              transform: translate(2px, 2px);
-              box-shadow: none !important;
-            }
-
-            .pswp__icn {
-              fill: #000000 !important;
-              transform: scale(0.8);
-            }
-
-            .pswp__counter {
-              height: auto !important;
-              line-height: 1 !important;
-              padding: 8px 12px !important;
-              background: #000000 !important;
-              color: #ffffff !important;
-              border: 2px solid #bcff00 !important;
-              font-weight: 900 !important;
-              font-family: 'Mono', monospace !important;
-              margin-top: 20px !important;
-              margin-left: 20px !important;
-              opacity: 1 !important;
-              font-size: 12px !important;
-              letter-spacing: 0.1em;
-            }
-
-            .pswp__bg {
-              background: rgba(0, 0, 0, 0.95) !important;
-            }
-
-            /* Dynamic Caption Neo-brutalism 風格化 */
-            .pswp__dynamic-caption {
-              background: #ffffff !important;
-              color: #000000 !important;
-              border: 3px solid #000000 !important;
-              box-shadow: 8px 8px 0px 0px #000000 !important;
-              padding: 16px !important;
-              max-width: 350px !important;
-              font-family: 'Mono', monospace !important;
-              font-size: 11px !important;
-            }
-            .pswp__dynamic-caption a {
-              color: #000000 !important;
-              text-decoration: underline !important;
-              font-weight: 900 !important;
-            }
-            .rich-text-content {
-              line-height: 1.5;
-            }
-            .rich-text-content strong { font-weight: 900; color: #000; }
-
-            @keyframes glitch-anim-1 {
-              0%, 100% { clip-path: inset(50% 0 30% 0); transform: translate(0); }
-              7% { clip-path: inset(15% 0 65% 0); transform: translate(-8px, 4px); }
-              13% { clip-path: inset(80% 0 5% 0); transform: translate(8px, -4px); }
-              19% { clip-path: inset(40% 0 40% 0); transform: translate(-3px, 8px); }
-              25% { clip-path: inset(0% 0 95% 0); transform: translate(0); }
-              50% { clip-path: inset(50% 0 30% 0); transform: translate(0); }
-            }
-
-            @keyframes glitch-anim-2 {
-              0%, 100% { clip-path: inset(20% 0 60% 0); transform: translate(0); }
-              11% { clip-path: inset(60% 0 10% 0); transform: translate(6px, -6px); }
-              18% { clip-path: inset(10% 0 80% 0); transform: translate(-6px, 6px); }
-              22% { clip-path: inset(45% 0 35% 0); transform: translate(4px, 4px); }
-              35% { clip-path: inset(20% 0 60% 0); transform: translate(0); }
-            }
-
-            @keyframes glitch-skew {
-              0% { transform: skew(0deg); filter: contrast(100%); }
-              15% { transform: skew(0deg); }
-              16% { transform: skew(10deg); filter: contrast(180%) brightness(1.2); }
-              17% { transform: skew(-10deg); }
-              18% { transform: skew(0deg); filter: contrast(100%); }
-              45% { transform: skew(0deg); }
-              46% { transform: skew(5deg); }
-              47% { transform: skew(0deg); }
-              100% { transform: skew(0deg); }
-            }
-
-            @keyframes glitch-flicker {
-              0% { opacity: 0.8; }
-              5% { opacity: 0.2; }
-              10% { opacity: 1; }
-              15% { opacity: 0.4; }
-              20% { opacity: 0.9; }
-              25% { opacity: 0; }
-              100% { transform: skew(0deg); }
-            }
-
-            .glitch-layer {
-              display: none;
-              mix-blend-mode: hard-light;
-            }
-            
-            .group:hover .glitch-base {
-              animation: glitch-skew 1s infinite steps(1);
-            }
-
-            .group:hover .glitch-layer {
-              display: block;
-            }
-
-            .glitch-red { 
-              animation: glitch-anim-1 0.23s infinite linear alternate-reverse, glitch-flicker 3.7s infinite step-end;
-              filter: sepia(1) hue-rotate(320deg) saturate(5);
-              opacity: 0.6;
-            }
-
-            .glitch-blue { 
-              animation: glitch-anim-2 0.17s infinite linear alternate, glitch-flicker 2.9s infinite step-end;
-              filter: invert(0.5) hue-rotate(180deg) saturate(5);
-              opacity: 0.6;
-            }
-
-            .group:hover .glitch-text {
-              animation: glitch 0.3s infinite;
-            }
-          `}</style>
         <DialogHeader className="relative z-30 pt-10 px-8 pb-6 border-b-4 border-border">
           <DialogClose className="absolute top-6 right-8 z-50 bg-white text-black border-3 border-black p-2 shadow-neo-sm hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all">
             <PixelX className="size-6" />
@@ -460,37 +313,7 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                           return 4;
                         }}
                         spacing={16}
-                        renderPhoto={({ photo, wrapperStyle }) => (
-                          <div style={wrapperStyle}>
-                            <Item
-                              original={getProxyImgUrl(photo.url, 'full')}
-                              thumbnail={photo.src}
-                              width={photo.width}
-                              height={photo.height}
-                            >
-                              {({ ref, open }) => (
-                                <div
-                                  ref={ref}
-                                  onClick={open}
-                                  data-raw-src={photo.url}
-                                  data-caption={photo.caption || ''}
-                                  className="pswp-item block border-2 border-black overflow-hidden cursor-zoom-in group relative bg-secondary-background h-full w-full"
-                                >
-                                  {/* PhotoSwipe 動態標題內容容器 */}
-                                  <div className="pswp-caption-content hidden">
-                                    <div className="font-black text-[10px] uppercase tracking-widest text-main bg-black px-2 py-0.5 mb-2 inline-block">Asset_Metadata_Source</div>
-                                    {photo.richText ? (
-                                      <div className="rich-text-content" dangerouslySetInnerHTML={{ __html: photo.richText }} />
-                                    ) : (
-                                      <div className="font-bold">{photo.caption}</div>
-                                    )}
-                                  </div>
-                                  <GalleryItemContent img={photo} index={0} getProxyImgUrl={getProxyImgUrl} />
-                                </div>
-                              )}
-                            </Item>
-                          </div>
-                        )}
+                        renderPhoto={renderPhoto}
                       />
                     </Gallery>
                     

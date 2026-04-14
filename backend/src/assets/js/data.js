@@ -1065,13 +1065,17 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/GiTy-fYW8AA9igy?format=jpg&name=4096x4096",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1896,
+                "height": 2048
             },
             {
                 "url": "https://pbs.twimg.com/media/GiTy-fgXoAAgSwN?format=jpg&name=4096x4096",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1896,
+                "height": 2048
             }
         ],
         "coverImages": [
@@ -1105,43 +1109,57 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/GeBnQ18a0AI0piI?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1258
             },
             {
                 "url": "https://pbs.twimg.com/media/Gfpk17IaUAAcVEV?format=jpg&name=large",
                 "caption": "圖",
                 "richText": "https://x.com/goru_777/status/1871919477413326878",
-                "alt": "圖"
+                "alt": "圖",
+                "width": 1399,
+                "height": 1922
             },
             {
                 "url": "https://pbs.twimg.com/media/G1POz65bQAAWkxN?format=jpg&name=large",
                 "caption": "4000萬",
                 "richText": "https://x.com/goru_777/status/1969144860159471992",
-                "alt": "4000萬"
+                "alt": "4000萬",
+                "width": 1838,
+                "height": 2048
             },
             {
                 "url": "https://pbs.twimg.com/media/G7Y3oc-b0AIGlMR?format=jpg&name=medium",
                 "caption": "1周年",
                 "richText": "https://x.com/goru_777/status/1996844657834414159",
-                "alt": "1周年"
+                "alt": "1周年",
+                "width": 972,
+                "height": 958
             },
             {
                 "url": "https://pbs.twimg.com/media/HBXHRNlaAAA-j9Q?format=jpg&name=large",
                 "caption": "卡牌",
                 "richText": "https://x.com/goru_777/status/2023742713544536527",
-                "alt": "卡牌"
+                "alt": "卡牌",
+                "width": 1190,
+                "height": 1683
             },
             {
                 "url": "https://pbs.twimg.com/media/HBXHRNXbcAYI8hl?format=jpg&name=large",
                 "caption": "卡牌",
                 "richText": "https://x.com/goru_777/status/2023742713544536527",
-                "alt": "卡牌"
+                "alt": "卡牌",
+                "width": 1191,
+                "height": 1684
             },
             {
                 "url": "https://pbs.twimg.com/media/HBgwb4PaQAAHQJI?format=jpg&name=medium",
                 "caption": "卡牌",
                 "richText": "https://x.com/goru_777/status/2024421294029328668",
-                "alt": "卡牌"
+                "alt": "卡牌",
+                "width": 700,
+                "height": 975
             }
         ],
         "coverImages": [

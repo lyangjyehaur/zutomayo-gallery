@@ -1,0 +1,193 @@
+/* Global Neo-brutalism Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #ffffff;
+  border-left: 3px solid #000000;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #bcff00; /* ZTMY Signature Green */
+  border: 3px solid #000000;
+  box-shadow: none;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #000000;
+}
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: #ffffff;
+}
+
+.pswp { z-index: 10000 !important; }
+
+/* Lightbox Controls Neo-brutalism Overrides */
+.pswp__button {
+  background: #ffffff !important;
+  border: 3px solid #000000 !important;
+  box-shadow: 4px 4px 0px 0px #000000 !important;
+  margin: 12px !important;
+  opacity: 1 !important;
+  transition: all 0.1s ease-out !important;
+  width: 44px !important;
+  height: 44px !important;
+}
+
+.pswp__button:hover {
+  background: #bcff00 !important;
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px 0px #000000 !important;
+}
+
+.pswp__button:active {
+  transform: translate(2px, 2px);
+  box-shadow: none !important;
+}
+
+.pswp__icn {
+  fill: #000000 !important;
+  transform: scale(0.8);
+}
+
+.pswp__counter {
+  height: auto !important;
+  line-height: 1 !important;
+  padding: 8px 12px !important;
+  background: #000000 !important;
+  color: #ffffff !important;
+  border: 2px solid #bcff00 !important;
+  font-weight: 900 !important;
+  font-family: 'Mono', monospace !important;
+  margin-top: 20px !important;
+  margin-left: 20px !important;
+  opacity: 1 !important;
+  font-size: 12px !important;
+  letter-spacing: 0.1em;
+}
+
+.pswp__bg {
+  background: rgba(0, 0, 0, 0.95) !important;
+}
+
+/* Dynamic Caption Neo-brutalism 風格化 */
+.pswp__dynamic-caption {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 3px solid #000000 !important;
+  box-shadow: 8px 8px 0px 0px #000000 !important;
+  padding: 16px !important;
+  max-width: 350px !important;
+  font-family: 'Mono', monospace !important;
+  font-size: 11px !important;
+}
+.pswp__dynamic-caption a {
+  color: #000000 !important;
+  text-decoration: underline !important;
+  font-weight: 900 !important;
+}
+.rich-text-content {
+  line-height: 1.5;
+}
+.rich-text-content strong { font-weight: 900; color: #000; }
+
+@keyframes glitch-anim-1 {
+  0%, 100% { clip-path: inset(50% 0 30% 0); transform: translate(0); }
+  7% { clip-path: inset(15% 0 65% 0); transform: translate(-8px, 4px); }
+  13% { clip-path: inset(80% 0 5% 0); transform: translate(8px, -4px); }
+  19% { clip-path: inset(40% 0 40% 0); transform: translate(-3px, 8px); }
+  25% { clip-path: inset(0% 0 95% 0); transform: translate(0); }
+  50% { clip-path: inset(50% 0 30% 0); transform: translate(0); }
+}
+
+@keyframes glitch-anim-2 {
+  0%, 100% { clip-path: inset(20% 0 60% 0); transform: translate(0); }
+  11% { clip-path: inset(60% 0 10% 0); transform: translate(6px, -6px); }
+  18% { clip-path: inset(10% 0 80% 0); transform: translate(-6px, 6px); }
+  22% { clip-path: inset(45% 0 35% 0); transform: translate(4px, 4px); }
+  35% { clip-path: inset(20% 0 60% 0); transform: translate(0); }
+}
+
+@keyframes glitch-skew {
+  0% { transform: skew(0deg); filter: contrast(100%); }
+  15% { transform: skew(0deg); }
+  16% { transform: skew(10deg); filter: contrast(180%) brightness(1.2); }
+  17% { transform: skew(-10deg); }
+  18% { transform: skew(0deg); filter: contrast(100%); }
+  45% { transform: skew(0deg); }
+  46% { transform: skew(5deg); }
+  47% { transform: skew(0deg); }
+  100% { transform: skew(0deg); }
+}
+
+@keyframes glitch-flicker {
+  0% { opacity: 0.8; }
+  5% { opacity: 0.2; }
+  10% { opacity: 1; }
+  15% { opacity: 0.4; }
+  20% { opacity: 0.9; }
+  25% { opacity: 0; }
+  100% { transform: skew(0deg); }
+}
+
+.glitch-layer {
+  display: none;
+  mix-blend-mode: hard-light;
+}
+
+.group:hover .glitch-base {
+  animation: glitch-skew 1s infinite steps(1);
+}
+
+.group:hover .glitch-layer {
+  display: block;
+}
+
+.glitch-red { 
+  animation: glitch-anim-1 0.23s infinite linear alternate-reverse, glitch-flicker 3.7s infinite step-end;
+  filter: sepia(1) hue-rotate(320deg) saturate(5);
+  opacity: 0.6;
+}
+
+.glitch-blue { 
+  animation: glitch-anim-2 0.17s infinite linear alternate, glitch-flicker 2.9s infinite step-end;
+  filter: invert(0.5) hue-rotate(180deg) saturate(5);
+  opacity: 0.6;
+}
+
+.group:hover .glitch-text {
+  animation: glitch 0.3s infinite;
+}
+
+/* Fancybox Sidebar Neo-brutalism Layout */
+.fancybox__container {
+  --ztmy-green: #bcff00;
+}
+
+.fancybox__sidebar {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-left: 8px solid #000000 !important;
+  box-shadow: -10px 0px 30px rgba(0,0,0,0.1) !important;
+}
+
+.fancybox__sidebar__content {
+  padding: 40px !important;
+  font-family: 'Mono', monospace !important;
+}
+
+/* 移除原本對 caption 的強制側邊欄改動，讓它回歸插件控制 */
+.fancybox__caption {
+  width: 100% !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* 行動端自動回退到下方顯示 */
+@media (max-width: 1024px) {
+  .fancybox__sidebar {
+    border-left: none !important;
+    border-top: 8px solid #000000 !important;
+  }
+}
