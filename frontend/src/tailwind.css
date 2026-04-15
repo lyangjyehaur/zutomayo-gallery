@@ -102,4 +102,36 @@
     pointer-events: none;
     animation: var(--animate-scanline);
   }
+
+  /* 標題文字滾動動畫 - 無遮罩版本 */
+  @keyframes marquee-title {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(calc(-100% - 1rem));
+    }
+  }
+  .animate-marquee-title {
+    animation: marquee-title 8s linear infinite;
+    will-change: transform;
+  }
+  
+  /* 滾動標題容器遮罩（可選） */
+  .card-title-mask {
+    mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      black 1rem,
+      black calc(100% - 1rem),
+      transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      black 1rem,
+      black calc(100% - 1rem),
+      transparent 100%
+    );
+  }
 }

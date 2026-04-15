@@ -508,7 +508,7 @@ export default function LightGalleryViewer({
         /* 燈箱內部標題樣式 */
         .lg-sub-html {
           margin: 0 auto;
-          max-width: 500px;
+          max-width: 768px;
           width: 90%;
           background: rgba(0, 0, 0, 0.75);
           backdrop-filter: blur(8px);
@@ -630,7 +630,6 @@ export default function LightGalleryViewer({
           onInit={onInit}
           onAfterOpen={handleAfterOpen}
           onAfterClose={handleAfterClose}
-          mode="lg-fade"
           speed={300}
           download={true}
           counter={true}
@@ -640,7 +639,7 @@ export default function LightGalleryViewer({
           swipeThreshold={50}
           enableSwipe={true}
           enableDrag={true}
-          toggleThumb={true}
+          showZoomInOutIcons={true}
         >
           <ResponsiveMasonry
             breakpointColumns={breakpointColumns}

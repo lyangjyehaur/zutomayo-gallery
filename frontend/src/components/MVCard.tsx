@@ -27,14 +27,9 @@ export function MVCard({ mv, isFav, onToggleFav, onClick }: MVCardProps) {
         caption={mv.title}
         className="transition-all bg-card text-foreground hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] cursor-pointer border-3"
       >
-        <div className="text-center py-1">
-          <h3 className="font-heading truncate mb-1 text-sm md:text-base tracking-tight" title={mv.title}>
-            {mv.title}
-          </h3>
-          <p className="text-[10px] md:text-xs dotgothic16-regular opacity-60">
-            {mv.date}
-          </p>
-        </div>
+        <p className="text-[10px] md:text-xs dotgothic16-regular opacity-60 mt-1">
+          {mv.date}
+        </p>
       </ImageCard>
     </div>
   );

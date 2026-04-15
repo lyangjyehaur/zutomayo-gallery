@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -6,13 +6,24 @@ import {
   DialogHeader,
   DialogTitle,
   DialogClose,
-} from "@/components/ui/dialog"
-import { Button } from '@/components/ui/button';
+} from "@/components/ui/dialog";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { MVItem } from '@/lib/types';
 import { getProxyImgUrl } from '@/lib/image';
 import LightGalleryViewer, { GALLERY_BREAKPOINTS } from '@/components/LightGalleryViewer';
 import { WalineComments } from '@/components/WalineComments';
+import { VERSION_CONFIG } from '@/config/version';
 import './MVDetailsModal.css';
+
 
 // 像素風圖標組件庫
 const PixelPlay = ({ className }: { className?: string }) => (
@@ -121,53 +132,64 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
             {/* 左側/上方區域：影片 + 描述 + 畫廊 */}
             <div className="space-y-4 lg:sticky lg:top-0 lg:h-[calc(100vh-240px)] flex flex-col">
               {/* 影片播放區 */}
-              <div className="aspect-video border-4 border-black shadow-shadow bg-black overflow-hidden relative group isolate">
-                {!isVideoActivated ? (
-                  /* 播放遮罩 */
-                  <div 
-                    className="absolute inset-0 z-20 cursor-pointer flex items-center justify-center overflow-hidden"
-                    onClick={() => setIsVideoActivated(true)}
-                  >
-                    {/* 封面背景圖 */}
-                    <div 
-                      className="glitch-base absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
-                      style={{ backgroundImage: `url(${getProxyImgUrl(mv?.coverImages?.[0] || '', 'small')})` }}
-                    />
-                    {/* Glitch 疊加層 */}
-                    <div 
-                      className="glitch-layer glitch-red absolute inset-0 bg-cover bg-center"
-                      style={{ backgroundImage: `url(${getProxyImgUrl(mv?.coverImages?.[0] || '', 'small')})` }}
-                    />
-                    <div 
-                      className="glitch-layer glitch-blue absolute inset-0 bg-cover bg-center"
-                      style={{ backgroundImage: `url(${getProxyImgUrl(mv?.coverImages?.[0] || '', 'small')})` }}
-                    />
-                    {/* 黑色疊加層 */}
-                    <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors z-10" />
-                    <div className="absolute inset-0 opacity-20 pointer-events-none crt-lines z-15"></div>
-                    
-                    {/* 播放按 */}
-                    <div className="relative z-40 flex flex-col items-center gap-4">
-                      <div className="bg-main p-6 rounded-full shadow-neo transform transition-transform group-hover:scale-110 active:scale-95 border-4 border-black">
-                        <PixelPlay className="size-12 text-black" />
+              <Tabs value={videoPlatform} onValueChange={(v) => { setVideoPlatform(v as 'youtube' | 'bilibili'); setIsVideoActivated(false); }} className="w-full">
+                <TabsList className="grid w-full grid-cols-2 border-4 border-black shadow-neo-sm bg-black/20">
+                  {mv?.bilibili && (
+                    <TabsTrigger 
+                      value="bilibili" 
+                      className="gap-2 font-black text-xs data-[state=active]:bg-[#00aeec] data-[state=active]:text-white data-[state=active]:border-b-4 data-[state=active]:border-black"
+                    >
+                      <PixelTV className="size-5" /> BILIBILI
+                    </TabsTrigger>
+                  )}
+                  {mv?.youtube && (
+                    <TabsTrigger 
+                      value="youtube" 
+                      className="gap-2 font-black text-xs data-[state=active]:bg-main data-[state=active]:text-black data-[state=active]:border-b-4 data-[state=active]:border-black"
+                    >
+                      <PixelYoutube className="size-5" /> YOUTUBE
+                    </TabsTrigger>
+                  )}
+                </TabsList>
+
+                <TabsContent value="bilibili" className="mt-2">
+                  <div className="aspect-video border-4 border-black shadow-shadow bg-black overflow-hidden relative group isolate">
+                    {!isVideoActivated ? (
+                      /* 播放遮罩 */
+                      <div 
+                        className="absolute inset-0 z-20 cursor-pointer flex items-center justify-center overflow-hidden"
+                        onClick={() => setIsVideoActivated(true)}
+                      >
+                        {/* 封面背景圖 */}
+                        <div 
+                          className="glitch-base absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
+                          style={{ backgroundImage: `url(${getProxyImgUrl(mv?.coverImages?.[0] || '', 'small')})` }}
+                        />
+                        {/* Glitch 疊加層 */}
+                        <div 
+                          className="glitch-layer glitch-red absolute inset-0 bg-cover bg-center"
+                          style={{ backgroundImage: `url(${getProxyImgUrl(mv?.coverImages?.[0] || '', 'small')})` }}
+                        />
+                        <div 
+                          className="glitch-layer glitch-blue absolute inset-0 bg-cover bg-center"
+                          style={{ backgroundImage: `url(${getProxyImgUrl(mv?.coverImages?.[0] || '', 'small')})` }}
+                        />
+                        {/* 黑色疊加層 */}
+                        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors z-10" />
+                        <div className="absolute inset-0 opacity-20 pointer-events-none crt-lines z-15"></div>
+                        
+                        {/* 播放按 */}
+                        <div className="relative z-40 flex flex-col items-center gap-4">
+                          <div className="bg-main p-6 rounded-full shadow-neo transform transition-transform group-hover:scale-110 active:scale-95 border-4 border-black">
+                            <PixelPlay className="size-12 text-black" />
+                          </div>
+                          <span className="glitch-text text-white font-black tracking-widest text-[10px] bg-black px-4 py-1 border-2 border-main uppercase">
+                            Initialize_Signal_Stream
+                          </span>
+                        </div>
                       </div>
-                      <span className="glitch-text text-white font-black tracking-widest text-[10px] bg-black px-4 py-1 border-2 border-main uppercase">
-                        Initialize_Signal_Stream
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  /* 實際加載 iframe */
-                  <div className="w-full h-full">
-                    {videoPlatform === 'youtube' && mv?.youtube ? (
-                      <iframe 
-                        src={`https://www.youtube.com/embed/${mv.youtube}?autoplay=1&rel=0`}
-                        className="w-full h-full"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                        title={mv.title}
-                      />
                     ) : (
+                      /* Bilibili iframe */
                       <iframe 
                         src={`//player.bilibili.com/player.html?bvid=${mv?.bilibili}&page=1&high_quality=1&autoplay=1`}
                         className="w-full h-full"
@@ -175,30 +197,57 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                       />
                     )}
                   </div>
-                )}
-              </div>
+                </TabsContent>
 
-              {/* 平台切換按 */}
-              <div className="flex gap-2">
-                {mv?.bilibili && (
-                  <Button 
-                    variant={videoPlatform === 'bilibili' ? 'default' : 'neutral'}
-                    className={`flex-1 gap-2 font-black text-xs ${videoPlatform === 'bilibili' ? 'bg-[#00aeec] text-white border-3 border-black' : 'opacity-50'}`}
-                    onClick={() => { setVideoPlatform('bilibili'); setIsVideoActivated(false); }}
-                  >
-                    <PixelTV className="size-5" /> BILIBILI
-                  </Button>
-                )}
-                {mv?.youtube && (
-                  <Button 
-                    variant={videoPlatform === 'youtube' ? 'default' : 'neutral'}
-                    className={`flex-1 gap-2 font-black text-xs ${videoPlatform === 'youtube' ? 'bg-main text-black border-3 border-black' : 'opacity-50'}`}
-                    onClick={() => { setVideoPlatform('youtube'); setIsVideoActivated(false); }}
-                  >
-                    <PixelYoutube className="size-5" /> YOUTUBE
-                  </Button>
-                )}
-              </div>
+                <TabsContent value="youtube" className="mt-2">
+                  <div className="aspect-video border-4 border-black shadow-shadow bg-black overflow-hidden relative group isolate">
+                    {!isVideoActivated ? (
+                      /* 播放遮罩 */
+                      <div 
+                        className="absolute inset-0 z-20 cursor-pointer flex items-center justify-center overflow-hidden"
+                        onClick={() => setIsVideoActivated(true)}
+                      >
+                        {/* 封面背景圖 */}
+                        <div 
+                          className="glitch-base absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
+                          style={{ backgroundImage: `url(${getProxyImgUrl(mv?.coverImages?.[0] || '', 'small')})` }}
+                        />
+                        {/* Glitch 疊加層 */}
+                        <div 
+                          className="glitch-layer glitch-red absolute inset-0 bg-cover bg-center"
+                          style={{ backgroundImage: `url(${getProxyImgUrl(mv?.coverImages?.[0] || '', 'small')})` }}
+                        />
+                        <div 
+                          className="glitch-layer glitch-blue absolute inset-0 bg-cover bg-center"
+                          style={{ backgroundImage: `url(${getProxyImgUrl(mv?.coverImages?.[0] || '', 'small')})` }}
+                        />
+                        {/* 黑色疊加層 */}
+                        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors z-10" />
+                        <div className="absolute inset-0 opacity-20 pointer-events-none crt-lines z-15"></div>
+                        
+                        {/* 播放按 */}
+                        <div className="relative z-40 flex flex-col items-center gap-4">
+                          <div className="bg-main p-6 rounded-full shadow-neo transform transition-transform group-hover:scale-110 active:scale-95 border-4 border-black">
+                            <PixelPlay className="size-12 text-black" />
+                          </div>
+                          <span className="glitch-text text-white font-black tracking-widest text-[10px] bg-black px-4 py-1 border-2 border-main uppercase">
+                            Initialize_Signal_Stream
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      /* YouTube iframe */
+                      <iframe 
+                        src={`https://www.youtube.com/embed/${mv?.youtube}?autoplay=1&rel=0`}
+                        className="w-full h-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        title={mv.title}
+                      />
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
 
               {/* 設定圖畫廊區 - 使用 order 調整布局順序 */}
               <div className="space-y-4 order-2 lg:order-none">
@@ -228,10 +277,10 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
               </div>
 
               {/* 描述區域 - 使用 order 調整為最後（上下布局時） */}
-              <div className="p-8 bg-card border-4 border-border shadow-shadow flex-1 overflow-y-auto custom-scrollbar lg:flex-1 order-3 lg:order-none">
-                <h4 className="text-xs font-black uppercase tracking-widest text-main mb-6 opacity-50 border-b-2 border-border pb-2 inline-block">File_Description_v3.0</h4>
+              <ScrollArea className="p-8 bg-card border-4 border-border shadow-shadow flex-1 overflow-y-auto custom-scrollbar lg:flex-1 order-3 lg:order-none">
+                <h4 className="text-xs font-black uppercase tracking-widest text-main mb-6 opacity-50 border-b-2 border-border pb-2 inline-block">File_Description_v{VERSION_CONFIG.app}</h4>
                 <p className="text-sm leading-relaxed whitespace-pre-wrap opacity-90 font-base">{mv?.description}</p>
-              </div>
+              </ScrollArea>
             </div>
 
             {/* 設定圖畫廊區 - 在左右布局時顯示在右側 */}

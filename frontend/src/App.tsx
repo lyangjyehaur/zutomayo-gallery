@@ -7,8 +7,10 @@ import { MVDetailsModal } from '@/components/MVDetailsModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AdminPage } from '@/pages/AdminPage';
+import { Toaster } from '@/components/ui/sonner';
 import DebugLightGallery from '@/debug/DebugLightGallery';
 import { STORAGE_KEYS, storage } from '@/config/storage';
+import { VERSION_CONFIG } from '@/config/version';
 
 import {
   Select,
@@ -164,7 +166,7 @@ function App({ mvData, isLoading, error }: { mvData: MVItem[], isLoading: boolea
         <div className="absolute inset-0 opacity-5 pointer-events-none crt-lines"></div>
         <h1 className="text-5xl font-black flex items-center justify-center gap-4 tracking-tighter">
           ZUTOMAYO MV Gallery
-          <span className="text-xs bg-main/20 text-main border-3 border-main px-2 py-1 animate-pulse">V3.0 (TSX)</span>
+          <span className="text-xs bg-main/20 text-main border-3 border-main px-2 py-1 animate-pulse">V{VERSION_CONFIG.app}</span>
         </h1>
         <p className="mt-2 text-sm opacity-70">日々研磨爆裂中！</p>
       </header>
@@ -370,6 +372,7 @@ export default function RootApp() {
   const commonProps = { mvData, isLoading, error };
 
   return (
+    <>
     <Routes>
       <Route path="/" element={<App {...commonProps} />} />
       <Route path="/favorites" element={<App {...commonProps} />} />
@@ -379,5 +382,7 @@ export default function RootApp() {
       {/* <Route path="/debug/:mvid?" element={<DebugFancyBox mvData={mvData} />} /> */}
       {/* <Route path="/debug" element={<Hello {...commonProps} />} /> */}
     </Routes>
+    <Toaster/>
+    </>
   );
 }

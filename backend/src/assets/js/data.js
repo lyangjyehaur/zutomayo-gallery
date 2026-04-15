@@ -121,13 +121,16 @@ export const MV_DATA = [
         "title": "海馬成長痛 × Mass Destruction -Reload-",
         "year": "2026",
         "date": "2026/02/01",
-        "album": [
-            "聯動"
-        ],
-        "artist": "",
+        "description": "「ずっと真夜中でいいのに。」の人気曲「海馬成長痛」と、\n『ペルソナ３ リロード』の人気曲「Mass Destruction -Reload-」をマッシュアップした楽曲が登場！\n公式タイアップのために描き下ろされたオリジナルアニメーションと合わせて、ぜひお楽しみください。\n\n推出將「ZUTOMAYO（永遠是深夜有多好）」大受歡迎的曲目「海馬成長痛 」與《P3R》廣受喜愛的曲目「Mass Destruction -Reload-」混搭的樂曲。\n還請務必搭配專為本次合作所製作的原創動畫，一同暢享其中的樂趣。",
         "youtube": "3ytqnteXfjw",
         "bilibili": "BV1EZFPzFEPz",
-        "description": "「ずっと真夜中でいいのに。」の人気曲「海馬成長痛」と、\n『ペルソナ３ リロード』の人気曲「Mass Destruction -Reload-」をマッシュアップした楽曲が登場！\n公式タイアップのために描き下ろされたオリジナルアニメーションと合わせて、ぜひお楽しみください。\n\n推出將「ZUTOMAYO（永遠是深夜有多好）」大受歡迎的曲目「海馬成長痛 」與《P3R》廣受喜愛的曲目「Mass Destruction -Reload-」混搭的樂曲。\n還請務必搭配專為本次合作所製作的原創動畫，一同暢享其中的樂趣。",
+        "keywords": [
+            "Hippocampal Pain P3R",
+            "Kaiba Seichoutsu P3R",
+            "女神异闻录３ Reload",
+            "女神異聞錄３ Reload",
+            "海马成长痛 P3R"
+        ],
         "images": [
             {
                 "url": "https://pbs.twimg.com/media/HBgIWpQbUAAVrBX?format=jpg&name=large",
@@ -168,13 +171,10 @@ export const MV_DATA = [
             "https://i.ytimg.com/vi/3ytqnteXfjw/maxres2.jpg",
             "https://i.ytimg.com/vi/3ytqnteXfjw/maxres3.jpg"
         ],
-        "keywords": [
-            "Hippocampal Pain P3R",
-            "Kaiba Seichoutsu P3R",
-            "女神异闻录３ Reload",
-            "女神異聞錄３ Reload",
-            "海马成长痛 P3R"
-        ]
+        "album": [
+            "聯動"
+        ],
+        "artist": "1"
     },
     {
         "id": "medianoche",
@@ -1480,13 +1480,15 @@ export const MV_DATA = [
         "title": "花一匁",
         "year": "2023",
         "date": "2023/06/04",
-        "album": [
-            "沈香学"
-        ],
-        "artist": "革蟬",
+        "description": "Lyrics & Music - ACA ね\nArrangement - 100 回嘔吐, ZTMY\nDrums - Jumpei Kamiya\nBass - Ryosuke Nikamoto\nPiano - Yuki Kishida\nGuitar - Yuya Komoguchi\nTrumpet - Tatsuhiko Yoshizawa\nTrombone - Nobuhide Handa\nSaxophone – Kazuya Hashimoto\n\nMV – 革蝉",
         "youtube": "H88kps8X4Mk",
         "bilibili": "BV1tW4y1R7Tk",
-        "description": "Lyrics & Music - ACA ね\nArrangement - 100 回嘔吐, ZTMY\nDrums - Jumpei Kamiya\nBass - Ryosuke Nikamoto\nPiano - Yuki Kishida\nGuitar - Yuya Komoguchi\nTrumpet - Tatsuhiko Yoshizawa\nTrombone - Nobuhide Handa\nSaxophone – Kazuya Hashimoto\n\nMV – 革蝉",
+        "keywords": [
+            "Hanaichi Monnme",
+            "花一两",
+            "花15",
+            "하나이치몬메"
+        ],
         "images": [
             {
                 "url": "https://pbs.twimg.com/media/FyBHQ9ragAEyQdn?format=jpg&name=large",
@@ -1535,12 +1537,10 @@ export const MV_DATA = [
             "https://i.ytimg.com/vi/H88kps8X4Mk/maxres2.jpg",
             "https://i.ytimg.com/vi/H88kps8X4Mk/maxres3.jpg"
         ],
-        "keywords": [
-            "Hanaichi Monnme",
-            "花一两",
-            "花15",
-            "하나이치몬메"
-        ]
+        "album": [
+            "沈香学"
+        ],
+        "artist": "革蟬"
     },
     {
         "id": "intrusion",

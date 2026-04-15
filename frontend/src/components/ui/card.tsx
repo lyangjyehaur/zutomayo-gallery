@@ -34,15 +34,57 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
+  const [isOverflow, setIsOverflow] = React.useState(false)
+  const outerRef = React.useRef<HTMLDivElement>(null)
+  const innerRef = React.useRef<HTMLSpanElement>(null)
+  const [isHovered, setIsHovered] = React.useState(false)
+
+  React.useEffect(() => {
+    const outer = outerRef.current
+    const inner = innerRef.current
+    if (!outer || !inner) return
+
+    const check = () => {
+      setIsOverflow(inner.scrollWidth > outer.clientWidth)
+    }
+
+    check()
+    const observer = new ResizeObserver(check)
+    observer.observe(outer)
+    return () => observer.disconnect()
+  }, [props.children])
+
   return (
     <div
       data-slot="card-title"
+      ref={outerRef}
       className={cn(
-        "font-heading text-base leading-snug font-medium group-data-[size=sm]/card:text-sm",
+        "font-heading text-base leading-snug font-medium group-data-[size=sm]/card:text-sm overflow-hidden relative",
         className
       )}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       {...props}
-    />
+    >
+      <span
+        ref={innerRef}
+        className={cn(
+          "inline-block whitespace-nowrap",
+          isOverflow ? "animate-marquee-title" : "truncate"
+        )}
+        style={isOverflow ? {
+          animationPlayState: isHovered ? "paused" : "running"
+        } : undefined}
+      >
+        {props.children}
+        {isOverflow && (
+          <>
+            <span className="inline-block w-4">&nbsp;</span>
+            {props.children}
+          </>
+        )}
+      </span>
+    </div>
   )
 }
 

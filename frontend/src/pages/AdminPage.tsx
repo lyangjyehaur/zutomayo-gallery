@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { VERSION_CONFIG } from '@/config/version';
+import { toast } from "sonner"
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useNavigate } from 'react-router-dom';
 import { MVItem } from '@/lib/types';
 import { getProxyImgUrl } from '@/lib/image';
-import { Plus, Trash2, Save, ArrowLeft, Image as ImageIcon, Hash, Disc, Youtube, Tv, Ruler, CheckCircle2, AlertCircle, RefreshCw, Play, AlertTriangle, Filter, HelpCircle, Code, LayoutTemplate, FileCode, Star, X, Plus as PlusIcon, Wand2 } from 'lucide-react';
+import { Plus, Trash2, Save, ArrowLeft, Image as ImageIcon, Hash, Disc, Youtube, Tv, Ruler, RefreshCw, Play, AlertTriangle, Filter, HelpCircle, Code, LayoutTemplate, FileCode, Plus as PlusIcon, Wand2 } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import {
   Dialog,
@@ -15,6 +17,26 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Progress } from '@/components/ui/progress';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+ 
 
 // 模板類型
 interface Template {
@@ -160,8 +182,15 @@ function RichTextEditor({ value, onChange }: RichTextEditorProps) {
   };
 
   // 刪除模板
+  const [deleteTemplateId, setDeleteTemplateId] = useState<string | null>(null);
   const handleDeleteTemplate = (id: string) => {
-    setTemplates(prev => prev.filter(t => t.id !== id));
+    setDeleteTemplateId(id);
+  };
+  const confirmDeleteTemplate = () => {
+    if (deleteTemplateId) {
+      setTemplates(prev => prev.filter(t => t.id !== deleteTemplateId));
+      setDeleteTemplateId(null);
+    }
   };
 
   // 更新模板
@@ -224,105 +253,74 @@ function RichTextEditor({ value, onChange }: RichTextEditorProps) {
       <div className="flex items-center justify-between">
         <label className="text-xs font-bold opacity-50 uppercase">富文本內容 (RichText)</label>
         <div className="flex items-center gap-2">
-          {/* 模板按鈕 */}
-          <div className="relative">
-            <button
-              onClick={() => setShowTemplates(!showTemplates)}
-              className={`flex items-center gap-1 px-2 py-1 text-xs font-bold uppercase rounded transition-colors ${
-                showTemplates 
-                  ? 'bg-ztmy-green text-black' 
-                  : 'bg-black/10 text-black/70 hover:bg-black/20'
-              }`}
-              title="插入模板"
-            >
-              <LayoutTemplate className="size-3" />
-              模板
-            </button>
-            
-            {/* 模板下拉菜單 */}
-            {showTemplates && (
-              <div className="absolute right-0 top-full mt-1 z-50 w-[180px] bg-white border-2 border-black shadow-neo rounded overflow-hidden">
-                <div className="flex items-center justify-between px-3 py-1 border-b border-black/10 bg-gray-50">
-                  <span className="text-[10px] font-bold uppercase opacity-50">選擇模板</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowTemplates(false);
-                      setShowTemplateManager(true);
-                    }}
-                    className="text-[10px] text-blue-600 hover:underline"
+          {/* 模板下拉選單 */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={`flex items-center gap-1 px-3 py-1.5 text-xs font-bold uppercase border-2 border-black rounded shadow-neo-sm transition-all ${
+                  showTemplates 
+                    ? 'bg-ztmy-green text-black' 
+                    : 'bg-white text-black hover:bg-ztmy-green hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-neo'
+                }`}
+                title="插入模板"
+              >
+                <LayoutTemplate className="size-4" />
+                模板
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-[200px] border-2 border-black shadow-neo bg-white text-black">
+              <DropdownMenuLabel className="text-[10px] font-bold uppercase opacity-50">選擇模板</DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-black/20" />
+              {templates.length === 0 ? (
+                <div className="px-3 py-2 text-xs text-gray-400 italic">暫無模板</div>
+              ) : (
+                templates.map((template) => (
+                  <DropdownMenuItem
+                    key={template.id}
+                    onClick={() => applyTemplate(template)}
+                    className="flex items-center gap-2 cursor-pointer focus:bg-ztmy-green/20"
                   >
-                    管理
-                  </button>
-                </div>
-                <div className="max-h-[200px] overflow-y-auto">
-                  {templates.length === 0 ? (
-                    <div className="px-3 py-2 text-xs text-gray-400 italic">暫無模板</div>
-                  ) : (
-                    templates.map((template) => (
-                      <button
-                        key={template.id}
-                        onClick={() => applyTemplate(template)}
-                        className="w-full text-left px-3 py-2 text-xs hover:bg-ztmy-green/20 transition-colors border-b border-black/5 last:border-0"
-                      >
-                        <div className="flex items-center gap-2 truncate">
-                          <FileCode className="size-3 opacity-50 shrink-0" />
-                          <span className="truncate">{template.name}</span>
-                        </div>
-                      </button>
-                    ))
-                  )}
-                </div>
-                <div className="border-t border-black/10 p-2 bg-gray-50">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowTemplates(false);
-                      setShowTemplateManager(true);
-                    }}
-                    className="w-full flex items-center justify-center gap-1 px-2 py-1 text-xs font-bold uppercase bg-black text-white rounded hover:bg-ztmy-green hover:text-black transition-colors"
-                  >
-                    <PlusIcon className="size-3" />
-                    保存當前為模板
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+                    <FileCode className="size-4 opacity-50" />
+                    <span className="truncate">{template.name}</span>
+                  </DropdownMenuItem>
+                ))
+              )}
+              <DropdownMenuSeparator className="bg-black/20" />
+              <DropdownMenuItem
+                onClick={() => setShowTemplateManager(true)}
+                className="flex items-center gap-2 cursor-pointer bg-black text-white focus:bg-ztmy-green focus:text-black font-bold"
+              >
+                <PlusIcon className="size-4" />
+                保存當前為模板
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-          {/* 模板處理按鈕 */}
+          {/* 填充按鈕 */}
           <button
             onClick={() => setShowTemplateProcessor(true)}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-bold uppercase rounded transition-colors bg-purple-100 text-purple-700 hover:bg-purple-200"
+            className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold uppercase border-2 border-black rounded shadow-neo-sm bg-white text-black hover:bg-purple-300 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-neo transition-all"
             title="使用模板填充數據"
           >
-            <Wand2 className="size-3" />
+            <Wand2 className="size-4" />
             填充
           </button>
 
           {/* 分屏切換按鈕 */}
           <button
             onClick={toggleSplitMode}
-            className={`flex items-center gap-1 px-2 py-1 text-xs font-bold uppercase rounded transition-colors ${
+            className={`flex items-center gap-1 px-3 py-1.5 text-xs font-bold uppercase border-2 border-black rounded shadow-neo-sm transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-neo ${
               isSplitMode 
-                ? 'bg-black text-white' 
-                : 'bg-black/10 text-black/70 hover:bg-black/20'
+                ? 'bg-black text-white hover:bg-gray-800' 
+                : 'bg-white text-black hover:bg-gray-100'
             }`}
             title={isSplitMode ? '切換到單欄編輯' : '切換到雙欄預覽'}
           >
-            <Code className="size-3" />
+            <Code className="size-4" />
             {isSplitMode ? '單欄' : '分屏'}
           </button>
         </div>
       </div>
-      
-      {/* 點擊外部關閉模板菜單 */}
-      {showTemplates && (
-        <div 
-          className="fixed inset-0 z-40" 
-          onClick={() => setShowTemplates(false)}
-        />
-      )}
 
       {/* 模板管理彈窗 */}
       <Dialog open={showTemplateManager} onOpenChange={setShowTemplateManager}>
@@ -435,6 +433,29 @@ function RichTextEditor({ value, onChange }: RichTextEditorProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 模板刪除確認 AlertDialog */}
+      <AlertDialog open={deleteTemplateId !== null} onOpenChange={(open) => !open && setDeleteTemplateId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl font-black uppercase flex items-center gap-2 text-red-500">
+              <AlertTriangle className="size-6" /> 刪除模板
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-foreground font-bold opacity-80">
+              確定要刪除此模板嗎？此操作不可撤銷。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteTemplateId(null)}>取消</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteTemplate}
+              className="bg-red-500 text-white hover:bg-red-600"
+            >
+              確定刪除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* 模板處理器彈窗 */}
       <Dialog open={showTemplateProcessor} onOpenChange={setShowTemplateProcessor}>
@@ -649,9 +670,13 @@ export function AdminPage({ mvData, onRefresh }: AdminPageProps) {
   const [data, setData] = useState<MVItem[]>([]);
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const [isSaving, setIsSaving] = useState(false);
-  const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [showOnlyIncomplete, setShowOnlyIncomplete] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  
+  // 刪除確認 Drawer 狀態
+  const [deleteDrawerOpen, setDeleteDrawerOpen] = useState(false);
+  const [pendingDeleteMV, setPendingDeleteMV] = useState<MVItem | null>(null);
+  const [pendingDeleteImageIdx, setPendingDeleteImageIdx] = useState<number | null>(null);
 
   // 圖片列表分批加載狀態
   const [imageDisplayLimit, setImageDisplayLimit] = useState(12);
@@ -705,13 +730,6 @@ export function AdminPage({ mvData, onRefresh }: AdminPageProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-    // 自動關閉提示
-  useEffect(() => {
-    if (notification) {
-      const timer = setTimeout(() => setNotification(null), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [notification]);
 const currentMV = data[activeIndex];
 
   // 當切換影片時重置圖片顯示數量
@@ -908,10 +926,10 @@ const currentMV = data[activeIndex];
     setBatchStatus(prev => prev ? { ...prev, failedIndices: failed } : null);
     
     if (failed.length === 0) {
-      showNotify('success', '所有圖片尺寸獲取完成');
+      toast.success('所有圖片尺寸獲取完成');
       setTimeout(() => setBatchStatus(null), 3000);
     } else {
-      showNotify('error', `任務結束，其中 ${failed.length} 張圖片獲取失敗`);
+      toast.error(`任務結束，其中 ${failed.length} 張圖片獲取失敗`);
     }
   };
 
@@ -934,9 +952,9 @@ const currentMV = data[activeIndex];
         return { ...mv, images: newImages };
       }));
 
-      showNotify('success', '尺寸偵測完成');
+      toast.success('尺寸偵測完成');
     } catch (err: any) {
-      showNotify('error', '尺寸獲取失敗: ' + err.message);
+      toast.error('尺寸獲取失敗: ' + err.message);
     }
   };
 
@@ -948,13 +966,53 @@ const currentMV = data[activeIndex];
   };
 
   const removeImage = (imgIdx: number) => {
+    // 打開刪除確認 Drawer
+    setPendingDeleteImageIdx(imgIdx);
+    setPendingDeleteMV(null);
+    setDeleteDrawerOpen(true);
+  };
+
+  // 確認刪除圖片
+  const confirmDeleteImage = () => {
+    if (pendingDeleteImageIdx === null) return;
     const targetId = currentMV.id;
-    const images = currentMV.images?.filter((_, i) => i !== imgIdx);
+    const images = currentMV.images?.filter((_, i) => i !== pendingDeleteImageIdx);
     // 標記整個 images 數組變動
     markFieldChanged(targetId, 'images');
     setData(prevData => prevData.map(mv => 
       mv.id === targetId ? { ...mv, images } : mv
     ));
+    setDeleteDrawerOpen(false);
+    setPendingDeleteImageIdx(null);
+  };
+
+  // 開啟刪除 MV Drawer
+  const openDeleteMVDrawer = (mv: MVItem) => {
+    setPendingDeleteMV(mv);
+    setPendingDeleteImageIdx(null);
+    setDeleteDrawerOpen(true);
+  };
+
+  // 確認刪除 MV
+  const confirmDeleteMV = () => {
+    if (!pendingDeleteMV) return;
+    const mv = pendingDeleteMV;
+    const isNewItem = !originalDataRef.current.find(item => item.id === mv.id);
+    if (isNewItem) {
+      // 如果是新項目，直接從變動追蹤中移除
+      setChangedFields(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(mv.id);
+        return newMap;
+      });
+    } else {
+      // 如果是現有項目，標記為刪除
+      setDeletedIds(prev => new Set(prev).add(mv.id));
+    }
+    setData(data.filter(item => item.id !== mv.id));
+    setActiveIndex(0);
+    setDeleteDrawerOpen(false);
+    setPendingDeleteMV(null);
   };
 
   const addNewMV = () => {
@@ -982,17 +1040,27 @@ const currentMV = data[activeIndex];
     
     setData([newItem, ...data]);
     setActiveIndex(0);
-  };
-
-  const showNotify = (type: 'success' | 'error', message: string) => {
-    setNotification({ type, message });
+    toast('已新增條目，可開始編輯', {
+      description: `ID: ${newId}`,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          setData(data);
+          setChangedFields(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(newId);
+            return newMap;
+          });
+        },
+      },
+    });
   };
 
   // 同步新欄位到所有數據
   const handleSyncNewField = () => {
     const field = newFieldName.trim();
     if (!field) {
-      showNotify('error', '請輸入有效的欄位名稱');
+      toast.error('請輸入有效的欄位名稱');
       return;
     }
 
@@ -1001,7 +1069,7 @@ const currentMV = data[activeIndex];
       [field]: (item as any)[field] !== undefined ? (item as any)[field] : newFieldDefaultValue
     })));
 
-    showNotify('success', `已為所有項目同步欄位: [${field}]`);
+    toast.success(`已為所有項目同步欄位: [${field}]`);
     setNewFieldName('');
     setNewFieldDefaultValue('');
   };
@@ -1010,68 +1078,61 @@ const currentMV = data[activeIndex];
     if (isSaving) return;
     setIsConfirmOpen(false); // 關閉確認視窗
     
-    try {
-      setIsSaving(true);
-      
-      // 只獲取變動的字段數據
-      const changedData = getChangedData();
-      const hasChanges = changedData.length > 0 || (changedData._deleted && changedData._deleted.length > 0);
-      
-      // 如果沒有實質變動，直接提示成功
-      if (!hasChanges) {
-        showNotify('success', '沒有檢測到變動，無需保存');
-        setIsSaving(false);
-        return;
-      }
-      
-      const apiUrl = (import.meta.env.VITE_API_URL || '/api/mvs').replace(/(\/mvs)?$/, '/mvs/update');
-      const response = await fetch(apiUrl, {
+    // 只獲取變動的字段數據
+    const changedData = getChangedData();
+    const hasChanges = changedData.length > 0 || (changedData._deleted && changedData._deleted.length > 0);
+    
+    // 如果沒有實質變動，直接提示成功
+    if (!hasChanges) {
+      toast.success('沒有檢測到變動，無需保存');
+      return;
+    }
+    
+    const apiUrl = (import.meta.env.VITE_API_URL || '/api/mvs').replace(/(\/mvs)?$/, '/mvs/update');
+    
+    // 使用 Promise toast 處理非同步狀態
+    toast.promise(
+      fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           data: changedData,
           partial: true // 標記為部分更新
         }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: '未知錯誤' }));
-        throw new Error(errorData.error || `儲存失敗 (${response.status})`);
-      }
-      
-      const result = await response.json();
-      
-      // 更新成功後，重置變動追蹤並同步原始數據
-      originalDataRef.current = JSON.parse(JSON.stringify(data));
-      setChangedFields(new Map());
-      setDeletedIds(new Set());
-      
-      // 根據後端返回的詳細信息生成提示
-      const { details } = result;
-      if (details) {
-        const parts: string[] = [];
-        if (details.totalUpdated > 0) {
-          const updateDetails = details.updated.map((u: any) => {
-            const imgInfo = u.images?.length > 0 ? ` (圖片索引: ${u.images.join(', ')})` : '';
-            return `${u.id}: ${u.fields.join(', ')}${imgInfo}`;
-          });
-          parts.push(`已更新 ${details.totalUpdated} 條: ${updateDetails.join('; ')}`);
+      }).then(async response => {
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: '未知錯誤' }));
+          throw new Error(errorData.error || `儲存失敗 (${response.status})`);
         }
-        if (details.totalDeleted > 0) {
-          parts.push(`已刪除 ${details.totalDeleted} 條: ${details.deleted.join(', ')}`);
-        }
-        showNotify('success', parts.join(' | '));
-      } else {
-        showNotify('success', '數據回寫成功');
+        return response.json();
+      }),
+      {
+        loading: '正在同步數據到服務器...',
+        success: (result) => {
+          // 更新成功後，重置變動追蹤並同步原始數據
+          originalDataRef.current = JSON.parse(JSON.stringify(data));
+          setChangedFields(new Map());
+          setDeletedIds(new Set());
+          
+          // 根據後端返回的詳細信息生成提示
+          const { details } = result;
+          if (details) {
+            const parts: string[] = [];
+            if (details.totalUpdated > 0) {
+              parts.push(`已更新 ${details.totalUpdated} 條`);
+            }
+            if (details.totalDeleted > 0) {
+              parts.push(`已刪除 ${details.totalDeleted} 條`);
+            }
+            return parts.join(' | ') || '數據回寫成功';
+          }
+          return '數據回寫成功';
+        },
+        error: (err) => {
+          return `儲存失敗: ${err.message}`;
+        },
       }
-      
-      // 註解掉引發刷新頁面的回調，以保留左側列表焦點
-      // if (onRefresh) onRefresh();
-    } catch (err: any) {
-      showNotify('error', '儲存失敗: ' + err.message);
-    } finally {
-      setIsSaving(false);
-    }
+    );
   };
 
   if (!currentMV) return null;
@@ -1085,7 +1146,7 @@ const currentMV = data[activeIndex];
             <ArrowLeft className="size-4" /> 返回
           </Button>
           <h1 className="font-black uppercase tracking-tighter text-xl border-l-4 border-black pl-4">
-            Console_Maintenance_v3
+            數據管理後台 V{VERSION_CONFIG.app}
           </h1>
         </div>
         <div className="flex gap-4">
@@ -1115,16 +1176,6 @@ const currentMV = data[activeIndex];
         </div>
       </div>
 
-      {/* 自定義 Alert 組件 (Toast) */}
-      {notification && (
-        <div className={`fixed top-24 right-8 z-[100] flex items-center gap-3 px-6 py-4 border-4 border-black shadow-neo animate-in fade-in slide-in-from-top-4 ${
-          notification.type === 'success' ? 'bg-ztmy-green text-black' : 'bg-red-500 text-white'
-        }`}>
-          {notification.type === 'success' ? <CheckCircle2 className="size-5" /> : <AlertCircle className="size-5" />}
-          <span className="font-bold uppercase tracking-tight text-sm">{notification.message}</span>
-        </div>
-      )}
-
       <div className="flex flex-1 overflow-hidden">
         {/* 左側列表 */}
         <div className="w-80 border-r-4 border-black bg-card h-full flex flex-col">
@@ -1150,22 +1201,7 @@ const currentMV = data[activeIndex];
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (window.confirm('確定刪除？')) {
-                    const isNewItem = !originalDataRef.current.find(item => item.id === mv.id);
-                    if (isNewItem) {
-                      // 如果是新項目，直接從變動追蹤中移除
-                      setChangedFields(prev => {
-                        const newMap = new Map(prev);
-                        newMap.delete(mv.id);
-                        return newMap;
-                      });
-                    } else {
-                      // 如果是現有項目，標記為刪除
-                      setDeletedIds(prev => new Set(prev).add(mv.id));
-                    }
-                    setData(data.filter(item => item.id !== mv.id));
-                    setActiveIndex(0);
-                  }
+                  openDeleteMVDrawer(mv);
                 }}
                 className="opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity"
               >
@@ -1334,12 +1370,10 @@ const currentMV = data[activeIndex];
                       </div>
                     )}
                   </div>
-                  <div className="h-4 w-full bg-black/10 border-2 border-black overflow-hidden">
-                    <div 
-                      className="h-full bg-main transition-all duration-300" 
-                      style={{ width: `${(batchStatus.current / batchStatus.total) * 100}%` }}
-                    />
-                  </div>
+                  <Progress 
+                    value={(batchStatus.current / batchStatus.total) * 100} 
+                    className="h-4 border-2 border-black"
+                  />
                 </div>
               )}
 
@@ -1454,27 +1488,49 @@ const currentMV = data[activeIndex];
         </div>
       </div>
 
-      {/* 保存確認彈窗 */}
-      <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-        <DialogContent className="max-w-md border-4 border-black shadow-neo p-0 overflow-hidden bg-white text-black">
-          <DialogHeader className="p-6 bg-ztmy-green border-b-4 border-black">
-            <DialogTitle className="text-2xl font-black uppercase flex items-center gap-2">
-              <HelpCircle className="size-6" /> Confirm_Action
-            </DialogTitle>
-            <DialogDescription className="text-black font-bold opacity-80">
-              即將把當前所有變更回寫至服務器數據庫 (data.js)，此操作不可撤銷。
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="p-4 bg-secondary-background flex gap-3">
-            <Button variant="neutral" onClick={() => setIsConfirmOpen(false)} className="flex-1">
-              [ESC] 取消
-            </Button>
-            <Button variant="default" onClick={handleSave} className="flex-1 bg-black text-white hover:bg-ztmy-green hover:text-black">
-              [ENTER] 確定執行
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* 保存確認 AlertDialog */}
+      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl font-black uppercase flex items-center gap-2">
+              <HelpCircle className="size-6" /> 確認儲存變更
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-foreground font-bold opacity-80">
+              即將把當前所有變更回寫至服務器數據庫 (data.js)，請確認操作！
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsConfirmOpen(false)}>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSave} className="bg-black text-white hover:bg-ztmy-green hover:text-black">確定</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 刪除確認 AlertDialog */}
+      <AlertDialog open={deleteDrawerOpen} onOpenChange={setDeleteDrawerOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl font-black uppercase flex items-center gap-2 text-red-500">
+              <AlertTriangle className="size-6" /> {pendingDeleteMV ? '刪除 MV 條目' : '刪除圖片'}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-foreground font-bold opacity-80">
+              {pendingDeleteMV 
+                ? `即將刪除「${pendingDeleteMV.title}」，${!originalDataRef.current.find(item => item.id === pendingDeleteMV.id) ? '此為新條目，將直接移除。' : '請確認操作！'}`
+                : `即將刪除圖片 ${(pendingDeleteImageIdx ?? 0) + 1}，請確認操作！`
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteDrawerOpen(false)}>取消</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={pendingDeleteMV ? confirmDeleteMV : confirmDeleteImage}
+              className="bg-red-500 text-white hover:bg-red-600"
+            >
+              確定刪除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
     
     
