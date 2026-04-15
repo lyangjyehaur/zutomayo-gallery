@@ -116,21 +116,33 @@
     animation: marquee-title 8s linear infinite;
     will-change: transform;
   }
+
+  @keyframes card-title-marquee {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(calc(var(--marquee-distance, 0px) * -1), 0, 0);
+    }
+  }
+  .animate-card-title-marquee {
+    animation: card-title-marquee var(--marquee-duration, 8s) linear infinite;
+  }
   
   /* 滾動標題容器遮罩（可選） */
   .card-title-mask {
     mask-image: linear-gradient(
       to right,
       transparent 0%,
-      black 1rem,
-      black calc(100% - 1rem),
+      black 0.75rem,
+      black calc(100% - 0.75rem),
       transparent 100%
     );
     -webkit-mask-image: linear-gradient(
       to right,
       transparent 0%,
-      black 1rem,
-      black calc(100% - 1rem),
+      black 0.75rem,
+      black calc(100% - 0.75rem),
       transparent 100%
     );
   }

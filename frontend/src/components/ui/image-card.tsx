@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, ReactNode } from "react"
+import React, { useEffect, useRef, useState, ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
 type Props = {
@@ -8,28 +8,116 @@ type Props = {
   children?: ReactNode
 }
 
+const MARQUEE_GAP = 24
+const MARQUEE_SPEED = 48
+const MIN_MARQUEE_DURATION = 8
+
+function usePrefersReducedMotion() {
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return
+    }
+
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
+    const updatePreference = () => setPrefersReducedMotion(mediaQuery.matches)
+
+    updatePreference()
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", updatePreference)
+      return () => mediaQuery.removeEventListener("change", updatePreference)
+    }
+
+    mediaQuery.addListener(updatePreference)
+    return () => mediaQuery.removeListener(updatePreference)
+  }, [])
+
+  return prefersReducedMotion
+}
+
 export default function ImageCard({ imageUrl, caption, className, children }: Props) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [isOverflow, setIsOverflow] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+  const [marqueeDistance, setMarqueeDistance] = useState(0)
+  const [animationDuration, setAnimationDuration] = useState(MIN_MARQUEE_DURATION)
+  const prefersReducedMotion = usePrefersReducedMotion()
   const outerRef = useRef<HTMLDivElement>(null)
-  const innerRef = useRef<HTMLSpanElement>(null)
+  const measureRef = useRef<HTMLSpanElement>(null)
 
   // 檢測標題是否溢出
   useEffect(() => {
     const outer = outerRef.current
-    const inner = innerRef.current
-    if (!outer || !inner) return
+    const measure = measureRef.current
+    if (!outer || !measure) return
 
     const check = () => {
-      setIsOverflow(inner.scrollWidth > outer.clientWidth)
+      const textWidth = Math.ceil(measure.scrollWidth)
+      const containerWidth = Math.ceil(outer.clientWidth)
+      const overflow = textWidth > containerWidth
+
+      setIsOverflow(overflow)
+
+      if (!overflow) {
+        setMarqueeDistance(0)
+        setAnimationDuration(MIN_MARQUEE_DURATION)
+        return
+      }
+
+      const nextDistance = textWidth + MARQUEE_GAP
+      setMarqueeDistance(nextDistance)
+      setAnimationDuration(Math.max(nextDistance / MARQUEE_SPEED, MIN_MARQUEE_DURATION))
     }
 
-    check()
-    const observer = new ResizeObserver(check)
-    observer.observe(outer)
-    return () => observer.disconnect()
+    const scheduleCheck = () => {
+      window.cancelAnimationFrame(frameId)
+      frameId = window.requestAnimationFrame(check)
+    }
+
+    let frameId = window.requestAnimationFrame(check)
+    const fonts = "fonts" in document ? document.fonts : null
+
+    if (fonts?.ready) {
+      fonts.ready.then(scheduleCheck).catch(() => {})
+    }
+
+    if (typeof ResizeObserver !== "undefined") {
+      const observer = new ResizeObserver(scheduleCheck)
+
+      observer.observe(outer)
+      observer.observe(measure)
+
+      return () => {
+        window.cancelAnimationFrame(frameId)
+        observer.disconnect()
+      }
+    }
+
+    const handleResize = () => {
+      scheduleCheck()
+    }
+
+    window.addEventListener("resize", handleResize)
+
+    return () => {
+      window.cancelAnimationFrame(frameId)
+      window.removeEventListener("resize", handleResize)
+    }
   }, [caption])
+
+  const shouldWrapText = prefersReducedMotion && isOverflow
+
+  const marqueeStyle = isOverflow && !shouldWrapText
+    ? ({
+        "--marquee-distance": `${marqueeDistance}px`,
+        "--marquee-duration": `${animationDuration}s`,
+        animation: `image-card-title-marquee ${animationDuration}s linear infinite`,
+        animationPlayState: isHovered ? "paused" : "running",
+        willChange: "transform",
+      } as React.CSSProperties)
+    : undefined
 
   return (
     <figure
@@ -37,7 +125,19 @@ export default function ImageCard({ imageUrl, caption, className, children }: Pr
         "overflow-hidden rounded-base border-2 border-border bg-main font-base shadow-shadow",
         className,
       )}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
+      <style>{`
+        @keyframes image-card-title-marquee {
+          from {
+            transform: translate3d(0, 0, 0);
+          }
+          to {
+            transform: translate3d(calc(var(--marquee-distance, 0px) * -1), 0, 0);
+          }
+        }
+      `}</style>
       <div className="relative aspect-16/9 bg-secondary-background overflow-hidden">
         {!isLoaded && (
           <div className="absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2">
@@ -56,36 +156,63 @@ export default function ImageCard({ imageUrl, caption, className, children }: Pr
         />
       </div>
       
-      <figcaption className="border-t-2 text-main-foreground border-border p-4">
+      <figcaption className="border-t-2 text-main-foreground border-border bg-secondary-background">
         {/* 滾動標題區域 */}
         <div 
           ref={outerRef}
-          className="overflow-hidden relative text-center"
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
+          className="relative overflow-hidden border-b-2 border-border bg-main px-0 py-3 text-main-foreground"
+          title={caption}
+          data-testid="image-card-caption-container"
         >
           <span
-            ref={innerRef}
-            className={cn(
-              "inline-block whitespace-nowrap font-base",
-              isOverflow ? "animate-marquee-title" : "truncate"
-            )}
-            style={isOverflow ? {
-              animationPlayState: isHovered ? "paused" : "running"
-            } : undefined}
+            ref={measureRef}
+            aria-hidden="true"
+            data-testid="image-card-caption-measure"
+            className="pointer-events-none absolute invisible inline-block whitespace-nowrap px-3 font-heading uppercase tracking-wide"
           >
             {caption}
-            {isOverflow && (
-              <>
-                <span className="inline-block w-4">&nbsp;</span>
-                {caption}
-              </>
-            )}
           </span>
+
+          {shouldWrapText ? (
+            <span
+              data-testid="image-card-caption-wrap"
+              className="block whitespace-normal break-words px-3 text-center font-heading leading-snug"
+            >
+              {caption}
+            </span>
+          ) : isOverflow ? (
+            <div className="overflow-hidden">
+              <div
+                data-testid="image-card-caption-track"
+                className="flex w-max whitespace-nowrap font-heading uppercase tracking-wide"
+                style={{
+                  ...marqueeStyle,
+                  gap: `${MARQUEE_GAP}px`,
+                }}
+              >
+                <span className="shrink-0 px-3">
+                  {caption}
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="shrink-0 px-3"
+                >
+                  {caption}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <span
+              data-testid="image-card-caption-static"
+              className="block truncate px-3 text-center font-heading uppercase tracking-wide"
+            >
+              {caption}
+            </span>
+          )}
         </div>
         
         {/* 額外的子內容 */}
-        {children}
+        {children && <div className="px-4 pb-4 bg-main">{children}</div>}
       </figcaption>
     </figure>
   )
