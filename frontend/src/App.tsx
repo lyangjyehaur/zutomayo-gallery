@@ -11,6 +11,7 @@ import { Toaster } from '@/components/ui/sonner';
 import DebugLightGallery from '@/debug/DebugLightGallery';
 import { STORAGE_KEYS, storage } from '@/config/storage';
 import { VERSION_CONFIG } from '@/config/version';
+import ThemeToggle from '@/components/ui/ThemeToggle';
 
 import {
   Select,
@@ -54,7 +55,7 @@ function App({ mvData, isLoading, error }: { mvData: MVItem[], isLoading: boolea
   useEffect(() => {
     utils.initAnalytics();
     utils.printEgg();
-    document.documentElement.classList.add('dark');
+    // 初始化主題（ThemeToggle組件會處理）
   }, [utils]);
 
   // 動態獲取唯一的年份、專輯與藝術家清單
@@ -160,10 +161,16 @@ function App({ mvData, isLoading, error }: { mvData: MVItem[], isLoading: boolea
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-base font-normal selection:bg-main selection:text-main-foreground dark">
+    <div className="min-h-screen bg-background text-foreground font-base font-normal selection:bg-main selection:text-main-foreground">
       {/* 頁首 */}
       <header className="py-12 text-center border-b-4 border-border bg-card shadow-shadow mb-8 relative overflow-hidden">
         <div className="absolute inset-0 opacity-5 pointer-events-none crt-lines"></div>
+        
+        {/* 主題切換按鈕 - 右上角 */}
+        <div className="absolute top-4 right-4 z-10">
+          <ThemeToggle />
+        </div>
+        
         <h1 className="text-5xl font-black flex items-center justify-center gap-4 tracking-tighter">
           ZUTOMAYO MV Gallery
           <span className="text-xs bg-main/20 text-main border-3 border-main px-2 py-1 animate-pulse">V{VERSION_CONFIG.app}</span>

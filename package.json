@@ -1,4 +1,21 @@
 {
+  "name": "zutomayo-gallery",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "start:frontend": "cd frontend && npm run dev",
+    "start:backend": "cd backend && npm run dev",
+    "dev": "concurrently -n \"frontend,backend\" -c \"green,blue\" \"npm run start:frontend\" \"npm run start:backend\"",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "build": "npm run build:frontend && npm run build:backend",
+    "preview": "cd frontend && npm run preview",
+    "test": "cd frontend && npm run test"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
     "react-quill": "^2.0.0",

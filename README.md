@@ -94,6 +94,21 @@ zutomayo-gallery/
 
 ## 快速開始
 
+### 🚀 一键启动（最简单的方式）
+
+**Windows 用户**：
+- 双击 `start.bat` 文件（最简单）
+- 或双击 `launch.bat` 文件（有更多检查）
+
+**Linux/Mac 用户**：
+- 在终端运行 `./start.sh`
+- 或运行 `npm run dev`
+
+**命令行用户**：
+- 运行 `npm run dev` 启动前后端
+- 运行 `npm run start:frontend` 只启动前端
+- 运行 `npm run start:backend` 只启动后端
+
 ### 前置需求
 
 - Node.js >= 18
@@ -102,6 +117,10 @@ zutomayo-gallery/
 ### 安裝
 
 ```bash
+# 方法一：一鍵安裝所有依賴（推薦）
+npm run install:all
+
+# 方法二：分別安裝
 # 安裝根依賴
 npm install
 
@@ -115,11 +134,16 @@ cd ../backend && npm install
 ### 開發模式
 
 ```bash
-# 啟動前端 (根目錄)
-npm run dev:frontend
+# 方法一：一鍵啟動（推薦）
+npm run dev
+# 這個命令會同時啟動前端（localhost:5173）和後端（localhost:5000）
 
-# 啟動後端 (backend 目錄)
-cd backend && npm run dev
+# 方法二：分別啟動
+# 啟動前端
+npm run start:frontend
+
+# 啟動後端
+npm run start:backend
 ```
 
 ### 生產構建
