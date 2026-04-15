@@ -10,7 +10,10 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.19.2",
-    "probe-image-size": "^7.2.3"
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
+    "probe-image-size": "^7.2.3",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

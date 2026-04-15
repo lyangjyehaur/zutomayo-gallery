@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import LightGallery from 'lightgallery/react';
 import type { LightGallery as LightGalleryType } from 'lightgallery/lightgallery';
 
-
 // 導入 lightGallery 核心與插件樣式
 import 'lightgallery/css/lightgallery.css';
 import 'lightgallery/css/lg-zoom.css';
@@ -33,8 +32,12 @@ interface LightGalleryViewerProps {
   headerTitle?: string;
   /** 自定義副標題 */
   headerSubtitle?: string;
-  /** 響應式斷點配置 - 默認使用 GALLERY_BREAKPOINTS */
-  breakpointColumns?: typeof GALLERY_BREAKPOINTS;
+  /** 響應式斷點配置 */
+  breakpointColumns?: {
+    default: number;
+    768?: number;
+    1024?: number;
+  };
   /** 容器樣式類名 */
   className?: string;
   /** 是否啟用分頁 */
@@ -45,85 +48,99 @@ interface LightGalleryViewerProps {
   onLightboxClose?: () => void;
 }
 
-// 統一斷點配置
-// 規則：
-// - < 500px: 2列（手機豎屏）
-// - 500px - 767px: 3列（手機橫屏/小平板）
-// - >= 768px: 4列（平板/桌面）
-export const GALLERY_BREAKPOINTS = {
+// 默認響應式斷點配置
+const defaultBreakpointColumns = {
   default: 2,
-  500: 3,
-  768: 4,
+  768: 3,
   1024: 4
-} as const;
+};
 
-// 兼容舊代碼的默認導出
-const defaultBreakpointColumns = GALLERY_BREAKPOINTS;
+// 基於容器寬度的響應式 Hook
+function useContainerColumns(
+  containerRef: React.RefObject<HTMLDivElement | null>,
+  breakpointColumns: { default: number; 768?: number; 1024?: number }
+) {
+  const [columnCount, setColumnCount] = useState(breakpointColumns.default);
 
-// 自定義 Masonry 組件 - 強制根據視窗寬度判斷，而非容器寬度
-interface ResponsiveMasonryProps {
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const calculateColumns = () => {
+      const containerWidth = container.clientWidth;
+      const viewportWidth = window.innerWidth;
+
+      // 特殊處理：視窗寬度 >= 1024 時強制使用 4 列（Modal 左右布局情況）
+      if (viewportWidth >= 1024 && breakpointColumns[1024]) {
+        return breakpointColumns[1024];
+      }
+      // 容器寬度 >= 768 時使用 3 列
+      if (containerWidth >= 768) {
+        return breakpointColumns[768] ?? breakpointColumns.default;
+      }
+      // 默認 2 列
+      return breakpointColumns.default;
+    };
+
+    // 初始計算
+    setColumnCount(calculateColumns());
+
+    // 使用 ResizeObserver 監聽容器尺寸變化
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target === container) {
+          setColumnCount(calculateColumns());
+        }
+      }
+    });
+
+    resizeObserver.observe(container);
+
+    // 監聽窗口 resize（處理 Modal 等場景）
+    const handleWindowResize = () => {
+      setColumnCount(calculateColumns());
+    };
+    window.addEventListener('resize', handleWindowResize);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', handleWindowResize);
+    };
+  }, [containerRef, breakpointColumns]);
+
+  return columnCount;
+}
+
+// 基於容器寬度的瀑布流組件
+interface ContainerMasonryProps {
   children: React.ReactNode;
-  breakpointColumns?: typeof GALLERY_BREAKPOINTS;
+  columnCount: number;
   className?: string;
   columnClassName?: string;
 }
 
-// 根據視窗寬度計算列數
-const getColumnCount = (breakpointColumns: typeof GALLERY_BREAKPOINTS) => {
-  const viewportWidth = window.innerWidth;
-  if (viewportWidth >= 1024 && breakpointColumns[1024]) {
-    return breakpointColumns[1024];
-  } else if (viewportWidth >= 768 && breakpointColumns[768]) {
-    return breakpointColumns[768];
-  } else if (viewportWidth >= 500 && breakpointColumns[500]) {
-    return breakpointColumns[500];
-  }
-  return breakpointColumns.default ?? 2;
-};
-
-function ResponsiveMasonry({ 
-  children, 
-  breakpointColumns = GALLERY_BREAKPOINTS, 
-  className = '', 
-  columnClassName = '' 
-}: ResponsiveMasonryProps) {
-  // 初始化時直接計算正確的列數，避免閃爍
-  const [columnCount, setColumnCount] = useState(() => getColumnCount(breakpointColumns));
-
-  useEffect(() => {
-    const updateColumns = () => {
-      setColumnCount(getColumnCount(breakpointColumns));
-    };
-
-    updateColumns();
-    window.addEventListener('resize', updateColumns);
-    return () => window.removeEventListener('resize', updateColumns);
-  }, [breakpointColumns]);
-
-  // 將子元素按列分配，保持 DOM 順序與數據順序一致
+function ContainerMasonry({ children, columnCount, className = '', columnClassName = '' }: ContainerMasonryProps) {
+  // 將子元素分配到各列
   const distributeChildren = () => {
-    const safeColumnCount = columnCount || 2;
-    const columns: React.ReactNode[][] = Array.from({ length: safeColumnCount }, () => []);
-    
-    React.Children.forEach(children, (child, index) => {
-      if (!child) return;
-      const columnIndex = index % safeColumnCount;
-      columns[columnIndex].push(
-        <div key={index} className={`mb-4 ${columnClassName}`}>
-          {child}
-        </div>
-      );
+    const columns: React.ReactNode[][] = Array.from({ length: columnCount }, () => []);
+    let currentColumn = 0;
+
+    React.Children.forEach(children, (child) => {
+      if (child) {
+        columns[currentColumn].push(child);
+        currentColumn = (currentColumn + 1) % columnCount;
+      }
     });
-    
+
     return columns;
   };
 
   const columns = distributeChildren();
 
   return (
-    <div className={`flex gap-4 ${className}`}>
+    <div key={columnCount} className={`flex ${className}`}>
       {columns.map((columnChildren, index) => (
-        <div key={index} className="flex-1 min-w-0">
+        <div key={index} className={`flex-1 min-w-0 ${columnClassName}`}>
           {columnChildren}
         </div>
       ))}
@@ -153,7 +170,7 @@ const SkeletonItem = ({ width, height }: SkeletonItemProps) => {
   const aspectRatio = width && height ? `${width} / ${height}` : '16 / 9';
 
   return (
-    <div className="mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="mb-4">
       <div className="border-3 border-black bg-card shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
         <div
           className="relative bg-secondary-background overflow-hidden"
@@ -180,66 +197,38 @@ const SkeletonHeader = () => (
 // 圖片項目組件
 interface PhotoItemProps {
   photo: PhotoData;
-  index: number;
-  onPhotoClick?: (index: number) => void;
   key?: string | number;
 }
 
-const PhotoItem = ({ photo, index, onPhotoClick }: PhotoItemProps) => {
+const PhotoItem = ({ photo }: PhotoItemProps) => {
   const [isLoaded, setIsLoaded] = useState(false);
-  const [actualDimensions, setActualDimensions] = useState<{width: number, height: number} | null>(
-    photo.width && photo.height ? { width: photo.width, height: photo.height } : null
-  );
-  const containerRef = useRef<HTMLDivElement>(null);
 
-  // 預加載圖片獲取真實尺寸
-  useEffect(() => {
-    if (actualDimensions) return; // 已有尺寸數據，無需預加載
-    
-    const img = new Image();
-    img.onload = () => {
-      setActualDimensions({
-        width: img.naturalWidth,
-        height: img.naturalHeight
-      });
-    };
-    img.src = photo.src;
-  }, [photo.src, actualDimensions]);
-
-  // 計算圖片寬高比（優先使用後端數據，其次使用預加載獲取的尺寸）
-  const aspectRatio = actualDimensions 
-    ? `${actualDimensions.width} / ${actualDimensions.height}` 
-    : null;
-
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    onPhotoClick?.(index);
-  };
+  // 計算圖片寬高比，用於骨架屏
+  const aspectRatio = photo.width && photo.height
+    ? `${photo.width} / ${photo.height}`
+    : '16 / 9';
 
   return (
-    <div ref={containerRef} className="mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div
-        className="gallery-item block cursor-pointer"
-        onClick={handleClick}
+    <div className="mb-4">
+      <a
+        className="gallery-item lg-item block cursor-pointer"
+        data-src={photo.full}
+        data-sub-html={`.caption`}
+        data-download-url={photo.raw}
+        data-lg-size={photo.width && photo.height ? `${photo.width}-${photo.height}` : undefined}
       >
         <div className="border-3 border-black bg-card shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all">
-          {/* 圖片容器 - 使用預加載獲取的尺寸，避免高度跳動 */}
+          {/* 骨架屏占位 - 根據圖片實際寬高比 */}
           <div
             className="relative bg-secondary-background overflow-hidden"
-            style={{
-              aspectRatio: aspectRatio || '16 / 9',
-            }}
+            style={{ aspectRatio }}
           >
-            {/* 骨架屏 - 帶淡入動畫 */}
-            <div 
-              className={`absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2 transition-opacity duration-500 ${
-                isLoaded ? 'opacity-0 pointer-events-none' : 'opacity-100'
-              }`}
-            >
-              <div className="size-5 border-2 border-black/10 border-t-black animate-spin rounded-full" />
-              <span className="text-[8px] font-black opacity-20 uppercase tracking-tighter">Syncing_Visual...</span>
-            </div>
-            
+            {!isLoaded && (
+              <div className="absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2">
+                <div className="size-5 border-2 border-black/10 border-t-black animate-spin rounded-full" />
+                <span className="text-[8px] font-black opacity-20 uppercase tracking-tighter">Syncing_Visual...</span>
+              </div>
+            )}
             <img
               alt={photo.caption}
               src={photo.src}
@@ -247,19 +236,23 @@ const PhotoItem = ({ photo, index, onPhotoClick }: PhotoItemProps) => {
                 isLoaded ? 'opacity-100 scale-100 blur-0' : 'opacity-0 scale-110 blur-xl'
               }`}
               loading="lazy"
-              decoding="async"
-              onLoad={() => {
-                setIsLoaded(true);
-              }}
-              onError={(e) => {
-                // 加載失敗時顯示占位圖
-                (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"%3E%3C/svg%3E';
-                setIsLoaded(true);
-              }}
+              onLoad={() => setIsLoaded(true)}
             />
           </div>
+          {/* 隱藏的標題內容 */}
+          <div className={`caption hidden`}>
+            <div className="lg-neo-caption text-left p-4 bg-white border-l-8 border-black text-black">
+              <h4 className="font-black uppercase italic text-lg border-b-2 border-black pb-1 mb-2">
+                {photo.caption}
+              </h4>
+              <div 
+                className="text-xs font-bold leading-relaxed opacity-80" 
+                dangerouslySetInnerHTML={{ __html: photo.richText || 'NO_METADATA_FOUND' }} 
+              />
+            </div>
+          </div>
         </div>
-      </div>
+      </a>
     </div>
   );
 };
@@ -301,54 +294,24 @@ export default function LightGalleryViewer({
   const lightGalleryRef = useRef<LightGalleryType | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // 預加載圖片獲取真實尺寸
-  const preloadImageDimensions = useCallback((url: string): Promise<{width: number, height: number} | null> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        resolve({ width: img.naturalWidth, height: img.naturalHeight });
-      };
-      img.onerror = () => resolve(null);
-      img.src = url;
-    });
-  }, []);
+  // 基於容器寬度計算列數
+  const columnCount = useContainerColumns(
+    containerRef,
+    breakpointColumns
+  );
 
-  // 轉換圖片數據（過濾掉無效 URL，並預加載獲取尺寸）
-  const getPhotosFromRange = useCallback(async (startIndex: number, count: number): Promise<PhotoData[]> => {
-    const filteredImages = images
-      .slice(startIndex, startIndex + count)
-      .filter(img => img.url && img.url.trim() !== '');
-    
-    // 並行預加載所有圖片獲取尺寸
-    const photosWithDimensions = await Promise.all(
-      filteredImages.map(async (img, index) => {
-        const thumbUrl = getProxyImgUrl(img.url, 'thumb');
-        
-        // 如果後端沒有提供尺寸，預加載獲取
-        let width = img.width;
-        let height = img.height;
-        if (!width || !height) {
-          const dimensions = await preloadImageDimensions(thumbUrl);
-          if (dimensions) {
-            width = dimensions.width;
-            height = dimensions.height;
-          }
-        }
-        
-        return {
-          src: thumbUrl,
-          full: getProxyImgUrl(img.url, 'full'),
-          raw: getProxyImgUrl(img.url, 'raw', `${mvTitle}_${img.caption || index}`),
-          caption: img.caption || `${mvTitle}_${index}`,
-          richText: img.richText || '',
-          width,
-          height
-        };
-      })
-    );
-    
-    return photosWithDimensions;
-  }, [images, mvTitle, preloadImageDimensions]);
+  // 轉換圖片數據
+  const getPhotosFromRange = useCallback((startIndex: number, count: number): PhotoData[] => {
+    return images.slice(startIndex, startIndex + count).map((img, index) => ({
+      src: getProxyImgUrl(img.url, 'thumb'),
+      full: getProxyImgUrl(img.url, 'full'),
+      raw: getProxyImgUrl(img.url, 'raw', `${mvTitle}_${img.caption || index}`),
+      caption: img.caption || `${mvTitle}_${index}`,
+      richText: img.richText || '',
+      width: img.width,
+      height: img.height
+    }));
+  }, [images, mvTitle]);
 
   // 初始加載
   useEffect(() => {
@@ -359,12 +322,11 @@ export default function LightGalleryViewer({
     }
 
     setLoading(true);
-    getPhotosFromRange(0, itemsPerPage).then(firstPagePhotos => {
-      setDisplayedPhotos(firstPagePhotos);
-      setCurrentPage(1);
-      setHasMore(firstPagePhotos.length < images.length);
-      setLoading(false);
-    });
+    const firstPagePhotos = getPhotosFromRange(0, itemsPerPage);
+    setDisplayedPhotos(firstPagePhotos);
+    setCurrentPage(1);
+    setHasMore(firstPagePhotos.length < images.length);
+    setLoading(false);
   }, [images, itemsPerPage, getPhotosFromRange]);
 
   // 加載更多
@@ -373,8 +335,10 @@ export default function LightGalleryViewer({
     
     setLoadingMore(true);
     
-    const startIndex = currentPage * itemsPerPage;
-    getPhotosFromRange(startIndex, itemsPerPage).then(newPhotos => {
+    setTimeout(() => {
+      const startIndex = currentPage * itemsPerPage;
+      const newPhotos = getPhotosFromRange(startIndex, itemsPerPage);
+      
       if (newPhotos.length > 0) {
         setDisplayedPhotos(prev => [...prev, ...newPhotos]);
         setCurrentPage(prev => prev + 1);
@@ -382,7 +346,7 @@ export default function LightGalleryViewer({
       
       setHasMore(startIndex + newPhotos.length < images.length);
       setLoadingMore(false);
-    });
+    }, 300);
   }, [currentPage, images.length, loadingMore, hasMore, itemsPerPage, getPhotosFromRange]);
 
   // lightGallery 初始化回調
@@ -407,13 +371,6 @@ export default function LightGalleryViewer({
     onLightboxClose?.();
   }, [onLightboxClose]);
 
-  // 處理圖片點擊 - 使用 dynamic 模式打開指定索引的圖片
-  const handlePhotoClick = useCallback((index: number) => {
-    if (lightGalleryRef.current) {
-      lightGalleryRef.current.openGallery(index);
-    }
-  }, []);
-
   // 動態刷新 lightGallery 當圖片變化時
   useEffect(() => {
     if (lightGalleryRef.current && displayedPhotos.length > 0) {
@@ -429,15 +386,15 @@ export default function LightGalleryViewer({
     return (
       <div ref={containerRef} className={`p-4 sm:p-6 lg:p-10 min-h-screen font-mono ${className}`}>
         {showHeader && <SkeletonHeader />}
-        <ResponsiveMasonry
-          breakpointColumns={breakpointColumns}
-          className=""
-          columnClassName=""
+        <ContainerMasonry
+          columnCount={columnCount}
+          className="-mx-2"
+          columnClassName="px-2"
         >
           {Array.from({ length: Math.min(itemsPerPage, images.length || 4) }).map((_, i) => (
             <SkeletonItem key={i} />
           ))}
-        </ResponsiveMasonry>
+        </ContainerMasonry>
       </div>
     );
   }
@@ -477,7 +434,15 @@ export default function LightGalleryViewer({
           min-height: 100px !important;
         }
         
-
+        /* Masonry 佈局 */
+        .masonry-gallery-grid {
+          display: block !important;
+          width: 100% !important;
+        }
+        
+        .masonry-gallery-grid .flex {
+          display: flex !important;
+        }
         
         /* Gallery 包裝器 */
         .gallery-wrapper {
@@ -504,102 +469,6 @@ export default function LightGalleryViewer({
           display: block;
           width: 100%;
         }
-        
-        /* 燈箱內部標題樣式 */
-        .lg-sub-html {
-          margin: 0 auto;
-          max-width: 500px;
-          width: 90%;
-          background: rgba(0, 0, 0, 0.75);
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
-          border-radius: 8px 8px 0 0;
-          padding: 16px 20px;
-        }
-
-        /* 標題樣式 */
-        .lg-sub-html .lg-neo-caption h4 {
-          color: #fff;
-          font-size: 16px;
-          font-weight: 700;
-          margin: 0 0 12px 0;
-          padding-bottom: 8px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-          letter-spacing: 0.02em;
-        }
-
-        /* 富文本容器 - 雙欄布局 */
-        .lg-sub-html .lg-neo-caption .rich-text {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 8px;
-          color: rgba(255, 255, 255, 0.9);
-          font-size: 13px;
-          line-height: 1.7;
-        }
-
-        /* 作者 */
-        .lg-sub-html .lg-neo-caption .rich-text .author {
-          grid-column: 1;
-          grid-row: 1;
-          font-weight: 600;
-          font-size: 12px;
-          margin-bottom: 6px;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-        }
-
-        /* 原文 */
-        .lg-sub-html .lg-neo-caption .rich-text .post {
-          grid-column: 1;
-          grid-row: 2;
-          color: rgba(255, 255, 255, 0.9);
-          margin: 0;
-          line-height: 1.6;
-          white-space: pre-wrap;
-        }
-
-        /* 翻譯 */
-        .lg-sub-html .lg-neo-caption .rich-text .translation {
-          grid-column: 2;
-          grid-row: 1 / span 2;
-          color: rgba(255, 255, 255, 0.7);
-          border-left: 2px solid rgba(255, 255, 255, 0.2);
-          padding-left: 16px;
-          line-height: 1.6;
-          white-space: pre-wrap;
-        }
-
-        /* 無翻譯時：原文獨佔一行 */
-        .lg-sub-html .lg-neo-caption .rich-text:has(.translation:empty),
-        .lg-sub-html .lg-neo-caption .rich-text:not(:has(.translation)) {
-          grid-template-columns: 1fr;
-        }
-
-        .lg-sub-html .lg-neo-caption .rich-text:has(.translation:empty) .author,
-        .lg-sub-html .lg-neo-caption .rich-text:not(:has(.translation)) .author {
-          grid-column: 1;
-        }
-
-        .lg-sub-html .lg-neo-caption .rich-text:has(.translation:empty) .post,
-        .lg-sub-html .lg-neo-caption .rich-text:not(:has(.translation)) .post {
-          grid-column: 1;
-          grid-row: 2;
-        }
-
-        .lg-sub-html .lg-neo-caption .rich-text:has(.translation:empty) .translation,
-        .lg-sub-html .lg-neo-caption .rich-text:not(:has(.translation)) .translation {
-          display: none;
-        }
-
-        /* 空內容提示 */
-        .lg-sub-html .lg-neo-caption .rich-text:empty::before {
-          content: '暫無詳細信息';
-          color: rgba(255, 255, 255, 0.4);
-          font-style: italic;
-          grid-column: 1 / -1;
-        }
-
       `}</style>
       
       {showHeader && (
@@ -616,15 +485,10 @@ export default function LightGalleryViewer({
       <div className="gallery-wrapper">
         <LightGallery
           elementClassNames="masonry-gallery-grid"
-          dynamic={true}
-          dynamicEl={displayedPhotos.map(photo => ({
-            src: photo.full,
-            thumb: photo.src,
-            subHtml: `<div class="lg-neo-caption"><h4>${photo.caption}</h4><div class="rich-text">${photo.richText || 'NO_METADATA_FOUND'}</div></div>`,
-            downloadUrl: photo.raw,
-          }))}
-          appendSubHtmlTo=".lg-item"
+          selector=".gallery-item"
           numberOfSlideItemsInDom={5}
+          subHtmlSelectorRelative={true}
+          hideBarsDelay={3000}
           plugins={[lgZoom, lgThumbnail, lgFullscreen]}
           licenseKey="GPLv3"
           onInit={onInit}
@@ -640,21 +504,20 @@ export default function LightGalleryViewer({
           swipeThreshold={50}
           enableSwipe={true}
           enableDrag={true}
-          toggleThumb={true}
         >
-          <ResponsiveMasonry
-            breakpointColumns={breakpointColumns}
-            className=""
-            columnClassName=""
+          <ContainerMasonry
+            columnCount={columnCount}
+            className="-mx-2"
+            columnClassName="px-2"
           >
             {displayedPhotos.map((photo, index) => (
-              <PhotoItem key={`${photo.src}-${index}`} photo={photo} index={index} onPhotoClick={handlePhotoClick} />
+              <PhotoItem key={`${photo.src}-${index}`} photo={photo} />
             ))}
 
             {loadingMore && Array.from({ length: 4 }).map((_, i) => (
               <SkeletonItem key={`loading-${i}`} />
             ))}
-          </ResponsiveMasonry>
+          </ContainerMasonry>
         </LightGallery>
       </div>
 
@@ -678,7 +541,3 @@ export default function LightGalleryViewer({
     </div>
   );
 }
-
-
-
-

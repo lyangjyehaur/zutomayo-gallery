@@ -4,34 +4,41 @@ export const MV_DATA = [
         "title": "ultra魂",
         "year": "2026",
         "date": "2026/04/01",
-        "album": [
-            "形藻土"
-        ],
-        "artist": "G子",
+        "description": "90年代の名作 TVアニメ「ZUTOMAYO CARD -THE BATTLE BEGINS-」一期\nOPテーマ「ultra魂」クレジット有り映像です\n\n辛いラーメンが大好き、おっちょこちょいで勝気な主人公・昼にら。成績優秀で内気なクールヒロイン・夜にら。性格は正反対、だけどふたりは幼い頃からの大親友！\n\nところがある日、クラスメイトのグレイくんが、世界の時計を止めようと暗躍する謎の組織「暗黒魂（あんこくたましい）」の一員だと知ってしまう。\nしかしそれが、すべてのはじまりだった・・・！\n昼にらと夜にらは“美少女カード戦士”として、世界の平和を守る戦いへと巻き込まれていく！\n\n世界の運命を握る「クロノス」とは何なのか。\n「暗黒魂」を陰で操る裏組織「灰版電機工業(株)」の真の目的とは――。\n\n言い切った正義に、答えなんてない。\nだからこそ、自分の目で真実を見つけるしかない。\n持ち前のウルトラたましいで秒針を先へと進めるんだ！\n\n皆んなも一緒に〜〜\n森羅万象(しんらばんしょう)！\n\n※TVアニメの予定はありません。エイプリルフールです。むしろ常時募集しています。\n\n※ズトマヨカードというカードゲームは本当にあります。\nZUTOMAYO CARD \nhttps://zutomayocard.net\n\n＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝\n監督 - G子\n\nLyrics & Music & Vocal - ACAね\nArrangement - 100回嘔吐, ZTMY\nRecorded by Tomoya Nakamura\nMixing Engineer: Tomoya Nakamura\nMastering Engineer: Takeo Kira\nSound Editor: Kohei Matsumoto\n\n\n\n90 年代名作 TV 動畫《ZUTOMAYO CARD -THE BATTLE BEGINS-》第一期\nOP 主題曲「ultra 魂」附字幕版影像\n\n最喜歡辛辣拉麵、冒冒失失卻不服輸的主角・昼にら（晝 Nira ）。成績優異且內向文靜的高冷女主角・夜にら（夜 Nira ）。兩人的性格截然不同，卻是從小到大最好的朋友！\n\n然而就在某一天，她們發現同學 Gray 君竟然是企圖停止世界時鐘的謎之組織「暗黑魂」的一員。\n而這，正是一切的開端⋯⋯！\n小晝與小夜化身為「美少女卡牌戰士」，就此被捲入守護世界和平的戰鬥之中！\n\n掌握世界命運的「柯羅諾斯（Chronos）」究竟是什麼？\n在背後操縱「暗黑魂」的幕後組織「灰版電機工業(株)」真正的目的又是——。\n\n那些口口聲聲說出的正義，從來就沒有標準答案。\n正因如此，只能用自己的雙眼去尋找真相。\n用那與生俱來的 Ultra 靈魂，讓秒針繼續前進吧！\n\n大家也一起來～～\n森羅萬象（Shinrabansho）！\n\n[!NOTE]\n※ 目前沒有預定製作 TV 動畫。這是愚人節企劃。不如說我們隨時都在招募（合作機會）。\n\n※ 「ZUTOMAYO CARD」這款卡片遊戲是真的存在的。\nZUTOMAYO CARD： https://zutomayocard.net\n\n製作團隊（Credits）\n監督 - G子\n\n作詞 & 作曲 & 演唱 - ACAね\n\n編曲 - 100回嘔吐, ZTMY\n\n錄音 - Tomoya Nakamura\n\n混音工程師 - Tomoya Nakamura\n\n母帶後期處理工程師 - Takeo Kira\n\n音效編輯 - Kohei Matsumoto",
         "youtube": "lpg5nhWapjU",
         "bilibili": "BV1yq9LBDENq",
-        "description": "90年代の名作 TVアニメ「ZUTOMAYO CARD -THE BATTLE BEGINS-」一期\nOPテーマ「ultra魂」クレジット有り映像です\n\n辛いラーメンが大好き、おっちょこちょいで勝気な主人公・昼にら。成績優秀で内気なクールヒロイン・夜にら。性格は正反対、だけどふたりは幼い頃からの大親友！\n\nところがある日、クラスメイトのグレイくんが、世界の時計を止めようと暗躍する謎の組織「暗黒魂（あんこくたましい）」の一員だと知ってしまう。\nしかしそれが、すべてのはじまりだった・・・！\n昼にらと夜にらは“美少女カード戦士”として、世界の平和を守る戦いへと巻き込まれていく！\n\n世界の運命を握る「クロノス」とは何なのか。\n「暗黒魂」を陰で操る裏組織「灰版電機工業(株)」の真の目的とは――。\n\n言い切った正義に、答えなんてない。\nだからこそ、自分の目で真実を見つけるしかない。\n持ち前のウルトラたましいで秒針を先へと進めるんだ！\n\n皆んなも一緒に〜〜\n森羅万象(しんらばんしょう)！\n\n※TVアニメの予定はありません。エイプリルフールです。むしろ常時募集しています。\n\n※ズトマヨカードというカードゲームは本当にあります。\nZUTOMAYO CARD \nhttps://zutomayocard.net\n\n＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝\n監督 - G子\n\nLyrics & Music & Vocal - ACAね\nArrangement - 100回嘔吐, ZTMY\nRecorded by Tomoya Nakamura\nMixing Engineer: Tomoya Nakamura\nMastering Engineer: Takeo Kira\nSound Editor: Kohei Matsumoto\n\n\n\n90 年代名作 TV 動畫《ZUTOMAYO CARD -THE BATTLE BEGINS-》第一期\nOP 主題曲「ultra 魂」附字幕版影像\n\n最喜歡辛辣拉麵、冒冒失失卻不服輸的主角・昼にら（晝 Nira ）。成績優異且內向文靜的高冷女主角・夜にら（夜 Nira ）。兩人的性格截然不同，卻是從小到大最好的朋友！\n\n然而就在某一天，她們發現同學 Gray 君竟然是企圖停止世界時鐘的謎之組織「暗黑魂」的一員。\n而這，正是一切的開端⋯⋯！\n小晝與小夜化身為「美少女卡牌戰士」，就此被捲入守護世界和平的戰鬥之中！\n\n掌握世界命運的「柯羅諾斯（Chronos）」究竟是什麼？\n在背後操縱「暗黑魂」的幕後組織「灰版電機工業(株)」真正的目的又是——。\n\n那些口口聲聲說出的正義，從來就沒有標準答案。\n正因如此，只能用自己的雙眼去尋找真相。\n用那與生俱來的 Ultra 靈魂，讓秒針繼續前進吧！\n\n大家也一起來～～\n森羅萬象（Shinrabansho）！\n\n[!NOTE]\n※ 目前沒有預定製作 TV 動畫。這是愚人節企劃。不如說我們隨時都在招募（合作機會）。\n\n※ 「ZUTOMAYO CARD」這款卡片遊戲是真的存在的。\nZUTOMAYO CARD： https://zutomayocard.net\n\n製作團隊（Credits）\n監督 - G子\n\n作詞 & 作曲 & 演唱 - ACAね\n\n編曲 - 100回嘔吐, ZTMY\n\n錄音 - Tomoya Nakamura\n\n混音工程師 - Tomoya Nakamura\n\n母帶後期處理工程師 - Takeo Kira\n\n音效編輯 - Kohei Matsumoto",
+        "keywords": [
+            "ultra soul",
+            "ultra tamashii",
+            "urutora tamashii",
+            "ultra灵魂",
+            "ultra靈魂",
+            "奧特魂",
+            "超魂",
+            "ultra혼",
+            "우루토라 타마시이"
+        ],
         "images": [
             {
                 "url": "https://pbs.twimg.com/media/HEy5zIiagAA7Iqi?format=jpg&name=large",
-                "caption": "設定圖1",
-                "richText": "<p lang=\"ja\"><span class=\"fw-bold\">ACAね</span> <span class=\"text-white-50 small\">@zutomayo</span> <a data-umami-event=\"twitter-link\" data-umami-event-type=\"link\" href=\"https://x.com/zutomayo/status/2039209027230695869\" target=\"_blank\">原推文</a></p>\n<p lang=\"ja\" style=\"white-space: pre-wrap;\">ultra魂 キャラデザ可愛いです\nベルトにカセット\n昼にら・夜にら・グレイくん</p>\n<p class=\"border border-success-subtle small p-3\" style=\"background-color: rgb(105 105 105 / 60%);border-radius:10px;white-space: pre-wrap;width: fit-content;\">ultra魂的角色設計很可愛\n腰帶上還有磁帶\n晝Nira・夜Nira・Gray君</p>",
-                "alt": "設定圖1",
+                "caption": "設定圖 晝Nira & 夜Nira",
+                "richText": "<p lang=\"ja\" class=\"author\">\n  <span>ACAね</span> \n  <span>@zutomayo</span> \n  <a href=\"https://x.com/zutomayo/status/2039209027230695869\" target=\"_blank\">原推文</a>\n</p>\n<p lang=\"ja\" class=\"post\">ultra魂 キャラデザ可愛いです\n  ベルトにカセット\n  昼にら・夜にら・グレイくん</p>\n<p class=\"translation\">\n  ultra魂的角色設計很可愛\n  腰帶上還有磁帶\n  晝Nira・夜Nira・Gray君</p>",
+                "alt": "nira",
                 "width": 2048,
                 "height": 1335
             },
             {
                 "url": "https://pbs.twimg.com/media/HEy5zIdb0AACPvc?format=jpg&name=large",
-                "caption": "設定圖2",
-                "richText": "<p lang=\"ja\"><span class=\"fw-bold\">ACAね</span> <span class=\"text-white-50 small\">@zutomayo</span> <a data-umami-event=\"twitter-link\" data-umami-event-type=\"link\" href=\"https://x.com/zutomayo/status/2039209027230695869\" target=\"_blank\">原推文</a></p>\n<p lang=\"ja\" style=\"white-space: pre-wrap;\">ultra魂 キャラデザ可愛いです\nベルトにカセット\n昼にら・夜にら・グレイくん</p>\n<p class=\"border border-success-subtle small p-3\" style=\"background-color: rgb(105 105 105 / 60%);border-radius:10px;white-space: pre-wrap;width: fit-content;\">ultra魂的角色設計很可愛\n腰帶上還有磁帶\n晝Nira・夜Nira・Gray君</p>",
-                "alt": "設定圖2",
+                "caption": "設定圖 Gray君",
+                "richText": "<p lang=\"ja\" class=\"author\">\n  <span>ACAね</span> \n  <span>@zutomayo</span> \n  <a href=\"https://x.com/zutomayo/status/2039209027230695869\" target=\"_blank\">原推文</a>\n</p>\n<p lang=\"ja\" class=\"post\">ultra魂 キャラデザ可愛いです\n  ベルトにカセット\n  昼にら・夜にら・グレイくん</p>\n<p class=\"translation\">\n  ultra魂的角色設計很可愛\n  腰帶上還有磁帶\n  晝Nira・夜Nira・Gray君</p>",
+                "alt": "gray",
                 "width": 2048,
                 "height": 1482
             },
             {
                 "url": "https://pbs.twimg.com/media/HEz4z83bsAAm_Hy?format=jpg&name=large",
                 "caption": "賀圖1",
-                "richText": "<p lang=\"ja\"><span class=\"fw-bold\">G子</span> <span class=\"text-white-50 small\">@G2_1112</span> <a data-umami-event=\"twitter-link\" data-umami-event-type=\"link\" href=\"https://x.com/G2_1112/status/2039278309939503426\" target=\"_blank\">原推文</a></p>\n<p lang=\"ja\" style=\"white-space: pre-wrap;\">📼ずっと真夜中でいいのに。『ultra魂』\n\n監督/演出/撮影/原画ちょっと/うにぐりハーモニー化/クレジットデザイン　等々\n担当しました！！\n\n参加してくださった方々、楽しんでくださってる方々、ずとまよ様、皆様ありがとうございます！！！　森羅万象✨\n#ずとまよファンアート</p>\n<p class=\"border border-success-subtle small p-3\" style=\"background-color: rgb(105 105 105 / 60%);border-radius:10px;white-space: pre-wrap;width: fit-content;\">📼 永遠是深夜有多好。  『Ultra魂』\n\n本人擔任了\n導演 / 演出 / 攝影 / 部分原畫 / 海膽栗子一致化 / 字幕設計 等等工作！！\n\n非常感謝所有參與的人員、喜愛這部作品的大家、以及 ZUTOMAYO 各位成員，感謝大家！！！ 森羅萬象✨\n#ZTMY Fan Art</p>",
+                "richText": "<p lang=\"ja\" class=\"author\">\n  <span>G子</span> \n  <span>@G2_1112</span> \n  <a href=\"https://x.com/G2_1112/status/2039278309939503426\" target=\"_blank\">原推文</a>\n</p>\n<p lang=\"ja\" class=\"post\">📼ずっと真夜中でいいのに。『ultra魂』\n\n監督/演出/撮影/原画ちょっと/うにぐりハーモニー化/クレジットデザイン　等々\n担当しました！！\n\n参加してくださった方々、楽しんでくださってる方々、ずとまよ様、皆様ありがとうございます！！！　森羅万象✨\n#ずとまよファンアート</p>\n<p class=\"translation\">📼 永遠是深夜有多好。  『Ultra魂』\n\n本人擔任了\n導演 / 演出 / 攝影 / 部分原畫 / 海膽栗子一致化 / 字幕設計 等等工作！！\n\n非常感謝所有參與的人員、喜愛這部作品的大家、以及 ZUTOMAYO 各位成員，感謝大家！！！ 森羅萬象✨\n#ZTMY Fan Art</p>",
                 "alt": "賀圖1",
                 "width": 1614,
                 "height": 1594
@@ -39,7 +46,7 @@ export const MV_DATA = [
             {
                 "url": "https://pbs.twimg.com/media/HEzgxNPaUAAqHHB?format=jpg&name=large",
                 "caption": "賀圖2",
-                "richText": "<p lang=\"ja\"><span class=\"fw-bold\">絹谷ゆたか</span> <span class=\"text-white-50 small\">@kinutani_yutaka</span> <a data-umami-event=\"twitter-link\" data-umami-event-type=\"link\" href=\"https://x.com/kinutani_yutaka/status/2039252343527711030\" target=\"_blank\">原推文</a></p>\n<p lang=\"ja\" style=\"white-space: pre-wrap;\">改めまして\nずっと真夜中でいいのに。『ultra魂』\n\nキャラクターデザイン / 作画監督 /原画　\nとして参加させていただきました！\n何卒よろしくおねがいいたします！\n※非公式ファンアートです</p>\n<p class=\"border border-success-subtle small p-3\" style=\"background-color: rgb(105 105 105 / 60%);border-radius:10px;white-space: pre-wrap;width: fit-content;\">再次介紹\n永遠是深夜有多好。  『Ultra魂』\n\n本人以 角色設計 / 作畫監督 / 原畫 的身份參與了製作！\n還請大家多多指教！\n※此為非官方Fan Art</p>",
+                "richText": "<p lang=\"ja\" class=\"author\"><span>絹谷ゆたか</span> <span>@kinutani_yutaka</span> <a href=\"https://x.com/kinutani_yutaka/status/2039252343527711030\" target=\"_blank\">原推文</a></p>\n<p lang=\"ja\" class=\"post\">改めまして\nずっと真夜中でいいのに。『ultra魂』\n\nキャラクターデザイン / 作画監督 /原画　\nとして参加させていただきました！\n何卒よろしくおねがいいたします！\n※非公式ファンアートです</p>\n<p class=\"translation\">再次介紹\n永遠是深夜有多好。  『Ultra魂』\n\n本人以 角色設計 / 作畫監督 / 原畫 的身份參與了製作！\n還請大家多多指教！\n※此為非官方Fan Art</p>",
                 "alt": "賀圖2",
                 "width": 1500,
                 "height": 1476
@@ -51,21 +58,14 @@ export const MV_DATA = [
             "https://i.ytimg.com/vi/lpg5nhWapjU/maxres2.jpg",
             "https://i.ytimg.com/vi/lpg5nhWapjU/maxres3.jpg"
         ],
-        "keywords": [
-            "ultra soul",
-            "ultra tamashii",
-            "urutora tamashii",
-            "ultra灵魂",
-            "ultra靈魂",
-            "奧特魂",
-            "超魂",
-            "ultra혼",
-            "우루토라 타마시이"
-        ]
+        "album": [
+            "形藻土"
+        ],
+        "artist": "G子"
     },
     {
         "id": "yomosugara",
-        "title": "よもすがら12",
+        "title": "よもすがら",
         "year": "2026",
         "date": "2026/03/05",
         "album": [
@@ -1196,19 +1196,25 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/GaaPthSaIAEFjK3?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1044
             },
             {
                 "url": "https://pbs.twimg.com/media/Gaj_oO0bYAAwrFc?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1044
             },
             {
                 "url": "https://pbs.twimg.com/media/Gaj_oO0bAAANfZC?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1044
             }
         ],
         "coverImages": [
@@ -1244,25 +1250,33 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/GWEGOfnWYAAsN0S?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1593,
+                "height": 1126
             },
             {
                 "url": "https://pbs.twimg.com/media/GWEGOe_boAAUEsR?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1593,
+                "height": 1126
             },
             {
                 "url": "https://pbs.twimg.com/media/GWPNrVPWgAE6tCm?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1593,
+                "height": 1126
             },
             {
                 "url": "https://pbs.twimg.com/media/GWEGOfCbkAE6lNi?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1593,
+                "height": 1126
             }
         ],
         "coverImages": [
@@ -1297,31 +1311,41 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/GPT94EzbAAAb9n4?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1520
             },
             {
                 "url": "https://pbs.twimg.com/media/GPYbwqxasAAeat-?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1522
             },
             {
                 "url": "https://pbs.twimg.com/media/GPdp27Da4AAHGVi?format=jpg&name=large",
                 "caption": "背景",
                 "richText": "https://x.com/goru_777/status/1799022974290522537",
-                "alt": "背景"
+                "alt": "背景",
+                "width": 1545,
+                "height": 2048
             },
             {
                 "url": "https://pbs.twimg.com/media/GbYlu8LbIAAb8Ag?format=jpg&name=large",
                 "caption": "隨筆",
                 "richText": "https://x.com/goru_777/status/1852709792646857001",
-                "alt": "隨筆"
+                "alt": "隨筆",
+                "width": 1528,
+                "height": 2048
             },
             {
                 "url": "https://pbs.twimg.com/media/HBXHRNWb0AAsFI8?format=jpg&name=large",
                 "caption": "卡牌",
                 "richText": "https://x.com/goru_777/status/2023742713544536527",
-                "alt": "卡牌"
+                "alt": "卡牌",
+                "width": 1191,
+                "height": 1684
             }
         ],
         "coverImages": [
@@ -1357,37 +1381,49 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/GOLrhxBaEAA1nOy?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1536
             },
             {
                 "url": "https://pbs.twimg.com/media/GOP-1wAaYAArfPY?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1536
             },
             {
                 "url": "https://pbs.twimg.com/media/GOUDBggbAAAz1Qq?format=jpg&name=4096x4096",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1536
             },
             {
                 "url": "https://pbs.twimg.com/media/GOUDBgbasAAMs0-?format=jpg&name=4096x4096",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1536
             },
             {
                 "url": "https://pbs.twimg.com/media/GOUDBgiboAAN1Hw?format=jpg&name=4096x4096",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1536
             },
             {
                 "url": "https://pbs.twimg.com/media/GOUDBggaAAA71f6?format=jpg&name=4096x4096",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1536
             }
         ],
         "coverImages": [
@@ -1456,31 +1492,41 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/FyBHQ9ragAEyQdn?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1375,
+                "height": 1193
             },
             {
                 "url": "https://pbs.twimg.com/media/Fyd8TvwaAAEgV1p?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1220,
+                "height": 1342
             },
             {
                 "url": "https://pbs.twimg.com/media/Fyd8TvqakAIgVqK?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1014,
+                "height": 1354
             },
             {
                 "url": "https://pbs.twimg.com/media/Gsmxst7aAAAMgth?format=jpg&name=large",
                 "caption": "2周年",
                 "richText": "https://x.com/aozukikawasemi/status/1930269302550344160",
-                "alt": "2周年"
+                "alt": "2周年",
+                "width": 1047,
+                "height": 1549
             },
             {
                 "url": "https://pbs.twimg.com/media/HD7e9WCbwAAI19W?format=jpg&name=large",
                 "caption": "圖",
                 "richText": "https://x.com/aozukikawasemi/status/2035309235622609147",
-                "alt": "圖"
+                "alt": "圖",
+                "width": 1458,
+                "height": 2048
             }
         ],
         "coverImages": [
@@ -1513,37 +1559,49 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/FwGJOICaQAYnvNg?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1204
             },
             {
                 "url": "https://pbs.twimg.com/media/FwJEmiIacAAIY4I?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1204
             },
             {
                 "url": "https://pbs.twimg.com/media/GLM8fLQbgAApTxn?format=jpg&name=large",
                 "caption": "JK Nira",
                 "richText": "https://x.com/goru_777/status/1779832787924828537",
-                "alt": "JK Nira"
+                "alt": "JK Nira",
+                "width": 1043,
+                "height": 1391
             },
             {
                 "url": "https://pbs.twimg.com/media/Fx24pQCagAA9Epz?format=jpg&name=large",
                 "caption": "5周年",
                 "richText": "https://x.com/goru_777/status/1665690460432498691",
-                "alt": "5周年"
+                "alt": "5周年",
+                "width": 1264,
+                "height": 2048
             },
             {
                 "url": "https://pbs.twimg.com/media/GPIqbAXagAIFZgg?format=jpg&name=large",
                 "caption": "Nira初設",
                 "richText": "https://x.com/goru_777/status/1797545848957816962",
-                "alt": "Nira初設"
+                "alt": "Nira初設",
+                "width": 1462,
+                "height": 2048
             },
             {
                 "url": "https://pbs.twimg.com/media/Gq8BzimaAAIafqK?format=jpg&name=large",
                 "caption": "2周年",
                 "richText": "https://x.com/goru_777/status/1922757556323172427",
-                "alt": "2周年"
+                "alt": "2周年",
+                "width": 1071,
+                "height": 1349
             }
         ],
         "coverImages": [
@@ -1646,7 +1704,9 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/FflMKHXVsAAlaJa?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1523,
+                "height": 1077
             }
         ],
         "coverImages": [
@@ -1685,19 +1745,25 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/Fcs57quaEAELSo9?format=jpg&name=medium",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1200,
+                "height": 674
             },
             {
                 "url": "https://pbs.twimg.com/media/Fcs57qeaAAImkyF?format=jpg&name=medium",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1200,
+                "height": 674
             },
             {
                 "url": "https://pbs.twimg.com/media/Fcs57qZaAAEB9C9?format=jpg&name=medium",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1200,
+                "height": 674
             }
         ],
         "coverImages": [
@@ -1766,19 +1832,25 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/FPk_YxrVQAQl8j-?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1448
             },
             {
                 "url": "https://pbs.twimg.com/media/FPp7YEnVcAQ7JCw?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1448
             },
             {
                 "url": "https://pbs.twimg.com/media/FPtfU3NVcAQelb7?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1448
             }
         ],
         "coverImages": [
@@ -1814,25 +1886,33 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/FLeuoklVcAI22SP?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1064
             },
             {
                 "url": "https://pbs.twimg.com/media/FLt0WFFaAAQYQP1?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1064
             },
             {
                 "url": "https://pbs.twimg.com/media/FLt0WFFaAAExc6h?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1064
             },
             {
                 "url": "https://pbs.twimg.com/media/FLt0WHTakAUFP65?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1064
             }
         ],
         "coverImages": [
@@ -1871,31 +1951,41 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/Fi9vQmjaMAAWoBU?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1450
             },
             {
                 "url": "https://pbs.twimg.com/media/Fi9vQmiaMAAadFr?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1450
             },
             {
                 "url": "https://pbs.twimg.com/media/Fi9vQmhaEAA1I9A?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1266
             },
             {
                 "url": "https://pbs.twimg.com/media/FMM7s3uaMAMsAXj?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1252
             },
             {
                 "url": "https://pbs.twimg.com/media/Fx24mLQaAAIV-py?format=jpg&name=large",
                 "caption": "5周年",
                 "richText": "https://x.com/goru_777/status/1665690407328686081",
-                "alt": "5周年"
+                "alt": "5周年",
+                "width": 1264,
+                "height": 2048
             }
         ],
         "coverImages": [
@@ -1931,13 +2021,17 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/E5C9CsqVUAc8WSQ?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1448
             },
             {
                 "url": "https://pbs.twimg.com/media/E5aywrQVoAYVu7j?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1448
             }
         ],
         "coverImages": [
@@ -1974,13 +2068,17 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/E31vLBCVIAMtr2M?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1884,
+                "height": 870
             },
             {
                 "url": "https://pbs.twimg.com/media/E31vLBEVgAAPLt2?format=jpg&name=medium",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1163,
+                "height": 1172
             }
         ],
         "coverImages": [
@@ -2019,13 +2117,17 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/Exi9VQUUUAEM1bt?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1920,
+                "height": 1080
             },
             {
                 "url": "https://pbs.twimg.com/media/Exog827U4AIv_cP?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1920,
+                "height": 1080
             }
         ],
         "coverImages": [
@@ -2060,7 +2162,9 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/EtyM7SFVcAACkA9?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1448
             }
         ],
         "coverImages": [
@@ -2098,49 +2202,65 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/ErxLPsxU0AEacIV?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1448
             },
             {
                 "url": "https://pbs.twimg.com/media/EsOKYVaVgAECNWY?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1448
             },
             {
                 "url": "https://pbs.twimg.com/media/EsOKYXOU0AA3BDE?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1448
             },
             {
                 "url": "https://pbs.twimg.com/media/EsOKYafVEAEFV48?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1448
             },
             {
                 "url": "https://pbs.twimg.com/media/EsQNKsrUwAI0UDo?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1448
             },
             {
                 "url": "https://pbs.twimg.com/media/EsQNKstVgAAYtBT?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1448
             },
             {
                 "url": "https://pbs.twimg.com/media/EsQNKutUwAExK9w?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1448
             },
             {
                 "url": "https://pbs.twimg.com/media/EsQNKvAVcAEo7d_?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 2048,
+                "height": 1448
             }
         ],
         "coverImages": [
@@ -2178,19 +2298,25 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/EpQP3FbVgAcp95B?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1408,
+                "height": 792
             },
             {
                 "url": "https://pbs.twimg.com/media/EpQP3FZU0AEmZjf?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1408,
+                "height": 792
             },
             {
                 "url": "https://pbs.twimg.com/media/EpQP3FdVoAAPoI0?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1408,
+                "height": 792
             }
         ],
         "coverImages": [
@@ -2274,55 +2400,73 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/EfG0SqfU0AEQ0HW?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1920,
+                "height": 1080
             },
             {
                 "url": "https://pbs.twimg.com/media/EkDgGlGVoAc_U5q?format=jpg&name=large",
                 "caption": "100萬",
                 "richText": "https://x.com/goru_777/status/1315297500257894401",
-                "alt": "100萬"
+                "alt": "100萬",
+                "width": 1300,
+                "height": 830
             },
             {
                 "url": "https://pbs.twimg.com/media/E345QoOVkAA9ZAg?format=jpg&name=large",
                 "caption": "500萬",
                 "richText": "https://x.com/goru_777/status/1404623096196190208",
-                "alt": "500萬"
+                "alt": "500萬",
+                "width": 1775,
+                "height": 1131
             },
             {
                 "url": "https://pbs.twimg.com/media/FT6aYnbUUAAjZrQ?format=jpg&name=large",
                 "caption": "圖",
                 "richText": "https://x.com/goru_777/status/1530830676789825539",
-                "alt": "圖"
+                "alt": "圖",
+                "width": 1560,
+                "height": 2047
             },
             {
                 "url": "https://pbs.twimg.com/media/FdQ301UUYAAzxH7?format=jpg&name=medium",
                 "caption": "卡牌",
                 "richText": "https://x.com/goru_777/status/1572943569014300672",
-                "alt": "卡牌"
+                "alt": "卡牌",
+                "width": 816,
+                "height": 1175
             },
             {
                 "url": "https://pbs.twimg.com/media/FdQ301VVUAAD1Y7?format=jpg&name=medium",
                 "caption": "卡牌",
                 "richText": "https://x.com/goru_777/status/1572943569014300672",
-                "alt": "卡牌"
+                "alt": "卡牌",
+                "width": 825,
+                "height": 1173
             },
             {
                 "url": "https://pbs.twimg.com/media/Fx24izJacAAkqGQ?format=jpg&name=large",
                 "caption": "5周年",
                 "richText": "https://x.com/goru_777/status/1665690348813729794",
-                "alt": "5周年"
+                "alt": "5周年",
+                "width": 1264,
+                "height": 2048
             },
             {
                 "url": "https://pbs.twimg.com/media/F3PkHW4bUAAE-aD?format=jpg&name=large",
                 "caption": "3周年",
                 "richText": "https://x.com/goru_777/status/1689945104822472704",
-                "alt": "3周年"
+                "alt": "3周年",
+                "width": 1461,
+                "height": 1923
             },
             {
                 "url": "https://pbs.twimg.com/media/GyEfT0GbQAAx1JA?format=jpg&name=large",
                 "caption": "5周年",
                 "richText": "https://x.com/goru_777/status/1954878144839827776",
-                "alt": "5周年"
+                "alt": "5周年",
+                "width": 1500,
+                "height": 1920
             }
         ],
         "coverImages": [
@@ -2354,7 +2498,9 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/GwhiDTqasAA0wXH?format=jpg&name=large",
                 "caption": "5周年",
                 "richText": "https://x.com/aozukikawasemi/status/1947914672247869615",
-                "alt": "5周年"
+                "alt": "5周年",
+                "width": 1268,
+                "height": 1808
             }
         ],
         "coverImages": [
@@ -2391,13 +2537,17 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/Ecj0hvWU8A8VZ1J?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1280,
+                "height": 1280
             },
             {
                 "url": "https://pbs.twimg.com/media/Ecj0hvmUwAU7fOq?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1920,
+                "height": 1920
             }
         ],
         "coverImages": [
@@ -2431,13 +2581,17 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/EXKzv4fVcAEIth3?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1526,
+                "height": 1074
             },
             {
                 "url": "https://pbs.twimg.com/media/EXurwcgVAAA66TE?format=jpg&name=large",
                 "caption": "",
                 "richText": "",
-                "alt": ""
+                "alt": "",
+                "width": 1526,
+                "height": 1075
             }
         ],
         "coverImages": [
@@ -2583,7 +2737,9 @@ export const MV_DATA = [
                 "url": "https://pbs.twimg.com/media/GqbMatMWwAAdVGM?format=jpg&name=large",
                 "caption": "6周年",
                 "richText": "https://x.com/aozukikawasemi/status/1920447059670286546",
-                "alt": "6周年"
+                "alt": "6周年",
+                "width": 892,
+                "height": 1264
             }
         ],
         "coverImages": [

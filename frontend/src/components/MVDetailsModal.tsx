@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { MVItem } from '@/lib/types';
 import { getProxyImgUrl } from '@/lib/image';
-import LightGalleryViewer from '@/components/LightGalleryViewer';
+import LightGalleryViewer, { GALLERY_BREAKPOINTS } from '@/components/LightGalleryViewer';
 import { WalineComments } from '@/components/WalineComments';
 import './MVDetailsModal.css';
 
@@ -214,7 +214,7 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                       itemsPerPage={12}
                       showHeader={false}
                       enablePagination={true}
-                      breakpointColumns={{ default: 2, 768: 3, 1024: 4 }}
+                      breakpointColumns={GALLERY_BREAKPOINTS}
                       className="!p-0 !min-h-0"
                       onLightboxOpen={() => { isLightboxOpenRef.current = true; }}
                       onLightboxClose={() => { isLightboxOpenRef.current = false; }}
@@ -247,7 +247,7 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                   itemsPerPage={12}
                   showHeader={false}
                   enablePagination={true}
-                  breakpointColumns={{ default: 2, 768: 3, 1024: 4 }}
+                  breakpointColumns={GALLERY_BREAKPOINTS}
                   className="!p-0 !min-h-0"
                   onLightboxOpen={() => { isLightboxOpenRef.current = true; }}
                   onLightboxClose={() => { isLightboxOpenRef.current = false; }}

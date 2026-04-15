@@ -6,10 +6,9 @@ import { MVCard } from '@/components/MVCard';
 import { MVDetailsModal } from '@/components/MVDetailsModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { AdminPage } from '@/pages/AdminPage'; // 引入管理頁
-// import DebugGallery from '@/pages/DebugGallery';
-import Hello from '@/debug/index';
+import { AdminPage } from '@/pages/AdminPage';
 import DebugLightGallery from '@/debug/DebugLightGallery';
+import { STORAGE_KEYS, storage } from '@/config/storage';
 
 import {
   Select,
@@ -41,8 +40,7 @@ function App({ mvData, isLoading, error }: { mvData: MVItem[], isLoading: boolea
   const [albumFilter, setAlbumFilter] = useState<string>("all");
   const [artistFilter, setArtistFilter] = useState<string>("all");
   const [favorites, setFavorites] = useState<string[]>(() => {
-    const saved = localStorage.getItem('ztmy_favs_v2');
-    return saved ? JSON.parse(saved) : [];
+    return storage.get<string[]>(STORAGE_KEYS.FAVORITES, []) || [];
   });
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
@@ -110,8 +108,27 @@ function App({ mvData, isLoading, error }: { mvData: MVItem[], isLoading: boolea
       ? favorites.filter(favId => favId !== id)
       : [...favorites, id];
     setFavorites(newFavs);
-    localStorage.setItem('ztmy_favs_v2', JSON.stringify(newFavs));
+    storage.set(STORAGE_KEYS.FAVORITES, newFavs);
+    
+    // 同步到其他標籤頁
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      const channel = new BroadcastChannel('favorites_sync');
+      channel.postMessage(newFavs);
+      channel.close();
+    }
   }, [favorites]);
+  
+  // 監聽其他標籤頁的收藏變化
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
+    
+    const channel = new BroadcastChannel('favorites_sync');
+    channel.onmessage = (e) => {
+      setFavorites(e.data);
+    };
+    
+    return () => channel.close();
+  }, []);
 
   // 獲取當前選中的 MV 對象
   const selectedMv = useMemo(() => 
@@ -332,8 +349,9 @@ export default function RootApp() {
         const response = await fetch(apiUrl, { signal: controller.signal });
 
         if (!response.ok) throw new Error('API 伺服器無回應 (404/500)');
-        const data = await response.json();
-        setMvData(data);
+        const result = await response.json();
+        // 適配新的 API 響應格式 {success, data, count}
+        setMvData(result.data || result);
       } catch (err: any) {
         if (err.name === 'AbortError') return;
         console.error("API Fetch Error:", err.message);

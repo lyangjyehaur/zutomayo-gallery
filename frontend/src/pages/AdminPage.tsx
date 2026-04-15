@@ -5,7 +5,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useNavigate } from 'react-router-dom';
 import { MVItem } from '@/lib/types';
 import { getProxyImgUrl } from '@/lib/image';
-import { Plus, Trash2, Save, ArrowLeft, Image as ImageIcon, Hash, Disc, Youtube, Tv, Ruler, CheckCircle2, AlertCircle, RefreshCw, Play, AlertTriangle, Filter, HelpCircle } from 'lucide-react';
+import { Plus, Trash2, Save, ArrowLeft, Image as ImageIcon, Hash, Disc, Youtube, Tv, Ruler, CheckCircle2, AlertCircle, RefreshCw, Play, AlertTriangle, Filter, HelpCircle, Code, LayoutTemplate, FileCode, Star, X, Plus as PlusIcon, Wand2 } from 'lucide-react';
+import Editor from '@monaco-editor/react';
 import {
   Dialog,
   DialogContent,
@@ -14,6 +15,630 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+
+// 模板類型
+interface Template {
+  id: string;
+  name: string;
+  content: string;
+}
+
+const STORAGE_KEY = 'ztmy_richtext_templates';
+
+// 從 localStorage 讀取模板
+const loadTemplates = (): Template[] => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch {
+    // 解析失敗時返回默認模板
+  }
+  return [
+    { id: 'default-1', name: '空白模板', content: '' }
+  ];
+};
+
+// 保存模板到 localStorage
+const saveTemplates = (templates: Template[]) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
+  } catch {
+    // 存儲失敗時忽略
+  }
+};
+
+// 佔位符數據類型
+interface TemplateData {
+  'display-name': string;
+  'username': string;
+  'original-link': string;
+  'post': string;
+  'translation': string;
+  [key: string]: string; // 允許自定義佔位符
+}
+
+// 模板處理函數：替換 {{placeholder}} 佔位符
+const processTemplate = (template: string, data: Partial<TemplateData>): string => {
+  let result = template;
+  
+  // 遍歷數據對象，替換所有佔位符
+  Object.entries(data).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      // 創建全局正則表達式，匹配 {{key}}
+      const placeholder = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+      result = result.replace(placeholder, String(value));
+    }
+  });
+  
+  return result;
+};
+
+// 從模板中提取所有佔位符
+const extractPlaceholders = (template: string): string[] => {
+  const matches = template.match(/\{\{([^}]+)\}\}/g);
+  if (!matches) return [];
+  
+  // 去重並移除 {{ 和 }}
+  const placeholders = matches.map(match => match.slice(2, -2));
+  return [...new Set(placeholders)];
+};
+
+// 富文本編輯器組件（雙欄實時預覽模式 + 自定義模板功能）
+interface RichTextEditorProps {
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function RichTextEditor({ value, onChange }: RichTextEditorProps) {
+  const [isSplitMode, setIsSplitMode] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [showTemplateManager, setShowTemplateManager] = useState(false);
+  const [showTemplateProcessor, setShowTemplateProcessor] = useState(false);
+  const [templates, setTemplates] = useState<Template[]>(loadTemplates);
+  const [localValue, setLocalValue] = useState(value);
+  
+  // 模板管理狀態
+  const [newTemplateName, setNewTemplateName] = useState('');
+  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
+  
+  // 模板處理器狀態
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [templateData, setTemplateData] = useState<Partial<TemplateData>>({
+    'display-name': '',
+    'username': '',
+    'original-link': '',
+    'post': '',
+    'translation': ''
+  });
+  const [processedResult, setProcessedResult] = useState('');
+
+  // 同步外部值變化
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  // 保存模板變更
+  useEffect(() => {
+    saveTemplates(templates);
+  }, [templates]);
+
+  // 處理編輯器變更
+  const handleEditorChange = (newValue: string | undefined) => {
+    if (newValue !== undefined) {
+      setLocalValue(newValue);
+      onChange(newValue);
+    }
+  };
+
+  // 切換分屏模式
+  const toggleSplitMode = () => {
+    setIsSplitMode(!isSplitMode);
+  };
+
+  // 應用模板
+  const applyTemplate = (template: Template) => {
+    const newValue = localValue ? localValue + '\n\n' + template.content : template.content;
+    setLocalValue(newValue);
+    onChange(newValue);
+    setShowTemplates(false);
+  };
+
+  // 保存當前內容為新模板
+  const handleSaveAsTemplate = () => {
+    if (!newTemplateName.trim() || !localValue.trim()) return;
+    
+    const newTemplate: Template = {
+      id: Date.now().toString(),
+      name: newTemplateName.trim(),
+      content: localValue
+    };
+    
+    setTemplates(prev => [...prev, newTemplate]);
+    setNewTemplateName('');
+  };
+
+  // 刪除模板
+  const handleDeleteTemplate = (id: string) => {
+    setTemplates(prev => prev.filter(t => t.id !== id));
+  };
+
+  // 更新模板
+  const handleUpdateTemplate = () => {
+    if (!editingTemplate || !editingTemplate.name.trim()) return;
+    
+    setTemplates(prev => prev.map(t => 
+      t.id === editingTemplate.id ? editingTemplate : t
+    ));
+    setEditingTemplate(null);
+  };
+
+  // 處理模板（替換佔位符）
+  const handleProcessTemplate = () => {
+    if (!selectedTemplate) return;
+    
+    const result = processTemplate(selectedTemplate.content, templateData);
+    setProcessedResult(result);
+  };
+
+  // 應用處理結果到編輯器
+  const applyProcessedResult = () => {
+    if (!processedResult) return;
+    
+    const newValue = localValue ? localValue + '\n\n' + processedResult : processedResult;
+    setLocalValue(newValue);
+    onChange(newValue);
+    setShowTemplateProcessor(false);
+    setProcessedResult('');
+    setSelectedTemplate(null);
+  };
+
+  // 獲取選中模板的所有佔位符
+  const currentPlaceholders = selectedTemplate ? extractPlaceholders(selectedTemplate.content) : [];
+
+  // 字體配置 - 使用更適合代碼的等寬字體
+  const editorFontFamily = "'Fira Code', 'JetBrains Mono', 'Cascadia Code', 'Source Code Pro', 'Consolas', 'Monaco', monospace";
+
+  const editorOptions = {
+    minimap: { enabled: false },
+    lineNumbers: 'on',
+    fontSize: 13,
+    fontFamily: editorFontFamily,
+    fontLigatures: true,
+    padding: { top: 12, bottom: 12 },
+    automaticLayout: true,
+    formatOnPaste: true,
+    formatOnType: true,
+    wordWrap: 'on',
+    tabSize: 2,
+    insertSpaces: true,
+    roundedSelection: false,
+    scrollBeyondLastLine: false,
+    lineHeight: 1.6,
+    letterSpacing: 0.5,
+  };
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-bold opacity-50 uppercase">富文本內容 (RichText)</label>
+        <div className="flex items-center gap-2">
+          {/* 模板按鈕 */}
+          <div className="relative">
+            <button
+              onClick={() => setShowTemplates(!showTemplates)}
+              className={`flex items-center gap-1 px-2 py-1 text-xs font-bold uppercase rounded transition-colors ${
+                showTemplates 
+                  ? 'bg-ztmy-green text-black' 
+                  : 'bg-black/10 text-black/70 hover:bg-black/20'
+              }`}
+              title="插入模板"
+            >
+              <LayoutTemplate className="size-3" />
+              模板
+            </button>
+            
+            {/* 模板下拉菜單 */}
+            {showTemplates && (
+              <div className="absolute right-0 top-full mt-1 z-50 w-[180px] bg-white border-2 border-black shadow-neo rounded overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-1 border-b border-black/10 bg-gray-50">
+                  <span className="text-[10px] font-bold uppercase opacity-50">選擇模板</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowTemplates(false);
+                      setShowTemplateManager(true);
+                    }}
+                    className="text-[10px] text-blue-600 hover:underline"
+                  >
+                    管理
+                  </button>
+                </div>
+                <div className="max-h-[200px] overflow-y-auto">
+                  {templates.length === 0 ? (
+                    <div className="px-3 py-2 text-xs text-gray-400 italic">暫無模板</div>
+                  ) : (
+                    templates.map((template) => (
+                      <button
+                        key={template.id}
+                        onClick={() => applyTemplate(template)}
+                        className="w-full text-left px-3 py-2 text-xs hover:bg-ztmy-green/20 transition-colors border-b border-black/5 last:border-0"
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <FileCode className="size-3 opacity-50 shrink-0" />
+                          <span className="truncate">{template.name}</span>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+                <div className="border-t border-black/10 p-2 bg-gray-50">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowTemplates(false);
+                      setShowTemplateManager(true);
+                    }}
+                    className="w-full flex items-center justify-center gap-1 px-2 py-1 text-xs font-bold uppercase bg-black text-white rounded hover:bg-ztmy-green hover:text-black transition-colors"
+                  >
+                    <PlusIcon className="size-3" />
+                    保存當前為模板
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 模板處理按鈕 */}
+          <button
+            onClick={() => setShowTemplateProcessor(true)}
+            className="flex items-center gap-1 px-2 py-1 text-xs font-bold uppercase rounded transition-colors bg-purple-100 text-purple-700 hover:bg-purple-200"
+            title="使用模板填充數據"
+          >
+            <Wand2 className="size-3" />
+            填充
+          </button>
+
+          {/* 分屏切換按鈕 */}
+          <button
+            onClick={toggleSplitMode}
+            className={`flex items-center gap-1 px-2 py-1 text-xs font-bold uppercase rounded transition-colors ${
+              isSplitMode 
+                ? 'bg-black text-white' 
+                : 'bg-black/10 text-black/70 hover:bg-black/20'
+            }`}
+            title={isSplitMode ? '切換到單欄編輯' : '切換到雙欄預覽'}
+          >
+            <Code className="size-3" />
+            {isSplitMode ? '單欄' : '分屏'}
+          </button>
+        </div>
+      </div>
+      
+      {/* 點擊外部關閉模板菜單 */}
+      {showTemplates && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setShowTemplates(false)}
+        />
+      )}
+
+      {/* 模板管理彈窗 */}
+      <Dialog open={showTemplateManager} onOpenChange={setShowTemplateManager}>
+        <DialogContent className="max-w-lg border-4 border-black shadow-neo p-0 overflow-hidden bg-white text-black">
+          <DialogHeader className="p-4 bg-ztmy-green border-b-4 border-black">
+            <DialogTitle className="text-xl font-black uppercase flex items-center gap-2">
+              <LayoutTemplate className="size-5" /> 模板管理
+            </DialogTitle>
+            <DialogDescription className="text-black font-bold opacity-80 text-xs">
+              保存、編輯或刪除您的自定義 HTML 模板
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="p-4 space-y-4 max-h-[400px] overflow-y-auto">
+            {/* 保存當前為模板 */}
+            <div className="p-3 border-2 border-dashed border-black/20 bg-gray-50 rounded space-y-2">
+              <label className="text-[10px] font-bold uppercase opacity-60">保存當前內容為新模板</label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="模板名稱"
+                  value={newTemplateName}
+                  onChange={(e) => setNewTemplateName(e.target.value)}
+                  className="flex-1 h-8 text-sm"
+                />
+                <Button 
+                  onClick={handleSaveAsTemplate}
+                  disabled={!newTemplateName.trim() || !localValue.trim()}
+                  size="sm"
+                  className="bg-black text-white"
+                >
+                  <PlusIcon className="size-3" />
+                  保存
+                </Button>
+              </div>
+            </div>
+
+            {/* 模板列表 */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase opacity-60">已保存的模板 ({templates.length})</label>
+              {templates.length === 0 ? (
+                <div className="text-center py-8 text-xs text-gray-400 border-2 border-dashed border-black/10">
+                  暫無保存的模板
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {templates.map((template) => (
+                    <div key={template.id} className="flex items-center gap-2 p-2 border-2 border-black/10 rounded bg-white group">
+                      {editingTemplate?.id === template.id ? (
+                        // 編輯模式
+                        <>
+                          <Input
+                            value={editingTemplate.name}
+                            onChange={(e) => setEditingTemplate({...editingTemplate, name: e.target.value})}
+                            className="flex-1 h-7 text-sm"
+                            autoFocus
+                          />
+                          <Button 
+                            onClick={handleUpdateTemplate}
+                            size="sm"
+                            className="h-7 px-2 bg-ztmy-green text-black"
+                          >
+                            保存
+                          </Button>
+                          <Button 
+                            onClick={() => setEditingTemplate(null)}
+                            variant="neutral"
+                            size="sm"
+                            className="h-7 px-2"
+                          >
+                            取消
+                          </Button>
+                        </>
+                      ) : (
+                        // 顯示模式
+                        <>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-bold text-sm truncate">{template.name}</div>
+                            <div className="text-[10px] text-gray-400 truncate">
+                              {template.content.slice(0, 50) || '(空白)'}
+                              {template.content.length > 50 ? '...' : ''}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setEditingTemplate(template)}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-black/10 rounded transition-all"
+                            title="重命名"
+                          >
+                            <FileCode className="size-3" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTemplate(template.id)}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 text-red-500 rounded transition-all"
+                            title="刪除"
+                          >
+                            <Trash2 className="size-3" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <DialogFooter className="p-4 bg-secondary-background border-t-2 border-black">
+            <Button variant="neutral" onClick={() => setShowTemplateManager(false)} className="w-full">
+              關閉
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 模板處理器彈窗 */}
+      <Dialog open={showTemplateProcessor} onOpenChange={setShowTemplateProcessor}>
+        <DialogContent className="max-w-2xl border-4 border-black shadow-neo p-0 overflow-hidden bg-white text-black">
+          <DialogHeader className="p-4 bg-purple-500 border-b-4 border-black">
+            <DialogTitle className="text-xl font-black uppercase flex items-center gap-2 text-white">
+              <Wand2 className="size-5" /> 模板填充器
+            </DialogTitle>
+            <DialogDescription className="text-white font-bold opacity-90 text-xs">
+              選擇模板並填入數據，自動替換佔位符
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto">
+            {/* 模板選擇 */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase opacity-60">選擇模板</label>
+              <select
+                value={selectedTemplate?.id || ''}
+                onChange={(e) => {
+                  const template = templates.find(t => t.id === e.target.value);
+                  setSelectedTemplate(template || null);
+                  setProcessedResult('');
+                }}
+                className="w-full h-9 px-3 border-2 border-black/20 rounded text-sm bg-white"
+              >
+                <option value="">-- 請選擇模板 --</option>
+                {templates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {selectedTemplate && (
+              <>
+                {/* 模板預覽 */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase opacity-60">模板內容預覽</label>
+                  <div className="p-3 bg-gray-100 border-2 border-black/10 rounded text-xs font-mono max-h-[100px] overflow-auto whitespace-pre-wrap">
+                    {selectedTemplate.content}
+                  </div>
+                  {currentPlaceholders.length > 0 && (
+                    <div className="text-[10px] text-purple-600">
+                      檢測到佔位符: {currentPlaceholders.map(p => `{{${p}}}`).join(', ')}
+                    </div>
+                  )}
+                </div>
+
+                {/* 數據輸入 */}
+                <div className="space-y-3 border-2 border-dashed border-black/20 p-4 rounded">
+                  <label className="text-[10px] font-bold uppercase opacity-60 block">填入數據</label>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase opacity-40">display-name</label>
+                      <Input
+                        value={templateData['display-name']}
+                        onChange={(e) => setTemplateData(prev => ({ ...prev, 'display-name': e.target.value }))}
+                        placeholder="顯示名稱"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase opacity-40">username</label>
+                      <Input
+                        value={templateData['username']}
+                        onChange={(e) => setTemplateData(prev => ({ ...prev, 'username': e.target.value }))}
+                        placeholder="用戶名（不含@）"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase opacity-40">original-link</label>
+                    <Input
+                      value={templateData['original-link']}
+                      onChange={(e) => setTemplateData(prev => ({ ...prev, 'original-link': e.target.value }))}
+                      placeholder="原文鏈接 URL"
+                      className="h-8 text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase opacity-40">post</label>
+                    <Textarea
+                      value={templateData['post']}
+                      onChange={(e) => setTemplateData(prev => ({ ...prev, 'post': e.target.value }))}
+                      placeholder="原文內容"
+                      className="min-h-[80px] text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase opacity-40">translation</label>
+                    <Textarea
+                      value={templateData['translation']}
+                      onChange={(e) => setTemplateData(prev => ({ ...prev, 'translation': e.target.value }))}
+                      placeholder="翻譯內容（可選）"
+                      className="min-h-[80px] text-sm"
+                    />
+                  </div>
+
+                  {/* 自定義佔位符輸入 */}
+                  {currentPlaceholders.filter(p => !['display-name', 'username', 'original-link', 'post', 'translation'].includes(p)).map(placeholder => (
+                    <div key={placeholder} className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase opacity-40">{placeholder}</label>
+                      <Input
+                        value={templateData[placeholder] || ''}
+                        onChange={(e) => setTemplateData(prev => ({ ...prev, [placeholder]: e.target.value }))}
+                        placeholder={`輸入 ${placeholder}`}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* 處理按鈕 */}
+                <Button 
+                  onClick={handleProcessTemplate}
+                  className="w-full bg-purple-500 text-white hover:bg-purple-600"
+                >
+                  <Wand2 className="size-4 mr-2" />
+                  生成結果
+                </Button>
+
+                {/* 處理結果 */}
+                {processedResult && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase opacity-60">處理結果預覽</label>
+                    <div className="p-3 bg-green-50 border-2 border-green-200 rounded text-xs font-mono max-h-[150px] overflow-auto whitespace-pre-wrap">
+                      {processedResult}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          
+          <DialogFooter className="p-4 bg-secondary-background border-t-2 border-black flex gap-2">
+            <Button 
+              variant="neutral" 
+              onClick={() => {
+                setShowTemplateProcessor(false);
+                setSelectedTemplate(null);
+                setProcessedResult('');
+              }} 
+              className="flex-1"
+            >
+              取消
+            </Button>
+            <Button 
+              onClick={applyProcessedResult}
+              disabled={!processedResult}
+              className="flex-1 bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50"
+            >
+              應用到編輯器
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {isSplitMode ? (
+        // 雙欄模式：左編輯右預覽
+        <div className="grid grid-cols-2 gap-0 border-2 border-black/20 rounded overflow-hidden">
+          {/* 左側：Monaco 編輯器 */}
+          <div className="border-r border-black/20">
+            <Editor
+              height="320px"
+              language="html"
+              value={localValue}
+              onChange={handleEditorChange}
+              options={editorOptions}
+            />
+          </div>
+          {/* 右側：實時預覽 */}
+          <div className="bg-white">
+            <div className="text-[10px] font-bold uppercase opacity-40 px-3 py-1 border-b border-black/10 bg-gray-50">
+              實時預覽
+            </div>
+            <div 
+              className="p-4 prose prose-sm max-w-none overflow-auto font-sans"
+              style={{ height: '290px' }}
+              dangerouslySetInnerHTML={{ __html: localValue }}
+            />
+          </div>
+        </div>
+      ) : (
+        // 單欄模式：僅 Monaco 編輯器
+        <div className="border-2 border-black/20 rounded overflow-hidden">
+          <Editor
+            height="280px"
+            language="html"
+            value={localValue}
+            onChange={handleEditorChange}
+            options={editorOptions}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface AdminPageProps {
   mvData: MVItem[];
@@ -43,6 +668,13 @@ export function AdminPage({ mvData, onRefresh }: AdminPageProps) {
   const [newFieldName, setNewFieldName] = useState('');
   const [newFieldDefaultValue, setNewFieldDefaultValue] = useState('');
 
+  // 追蹤變動的字段: Map<mvId, Set<fieldPath>>
+  const [changedFields, setChangedFields] = useState<Map<string, Set<string>>>(new Map());
+  // 追蹤刪除的 MV ID
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  // 保存原始數據用於比較
+  const originalDataRef = useRef<MVItem[]>([]);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -53,7 +685,10 @@ export function AdminPage({ mvData, onRefresh }: AdminPageProps) {
         const dateB = `${b.year}-${b.date || ''}`;
         return dateB.localeCompare(dateA);
       });
-      setData(JSON.parse(JSON.stringify(sortedData))); 
+      setData(JSON.parse(JSON.stringify(sortedData)));
+      originalDataRef.current = JSON.parse(JSON.stringify(sortedData));
+      // 重置變動追蹤
+      setChangedFields(new Map());
     }
   }, [mvData]);
 
@@ -132,9 +767,52 @@ const currentMV = data[activeIndex];
 
   const getErrorClass = (val: any) => isFieldIncomplete(val) ? 'border-red-500/50 bg-red-500/5' : '';
 
+  // 標記字段為已變動
+  const markFieldChanged = (mvId: string, fieldPath: string) => {
+    setChangedFields(prev => {
+      const newMap = new Map(prev);
+      const fields = newMap.get(mvId) || new Set();
+      fields.add(fieldPath);
+      newMap.set(mvId, fields);
+      return newMap;
+    });
+  };
+
+  // 獲取需要保存的完整 MV 數據（用於部分更新）
+  // 直接打包整個 MV 對象，避免嵌套字段的部分更新問題
+  const getChangedData = (): MVItem[] & { _deleted?: string[] } => {
+    const result: MVItem[] & { _deleted?: string[] } = [];
+    
+    data.forEach((mv) => {
+      const changed = changedFields.get(mv.id);
+      
+      // 如果沒有任何變動，或這是未修改的新項目，跳過
+      if (!changed || changed.size === 0) {
+        return;
+      }
+      
+      // 直接複製整個 MV 對象（包含所有字段和圖片）
+      result.push({ ...mv });
+    });
+    
+    // 添加刪除標記
+    if (deletedIds.size > 0) {
+      result._deleted = Array.from(deletedIds);
+    }
+    
+    return result;
+  };
+
   // 更新單個欄位
   const updateField = (field: keyof MVItem, value: any) => {
     const targetId = currentMV.id;
+    const originalMv = originalDataRef.current.find(mv => mv.id === targetId);
+    
+    // 檢查值是否真的變動
+    if (originalMv && JSON.stringify(originalMv[field]) !== JSON.stringify(value)) {
+      markFieldChanged(targetId, field as string);
+    }
+    
     setData(prevData => prevData.map(mv => 
       mv.id === targetId ? { ...mv, [field]: value } : mv
     ));
@@ -143,6 +821,14 @@ const currentMV = data[activeIndex];
   // 更新圖片陣列
   const updateImage = (imgIdx: number, field: string, value: any) => {
     const targetId = currentMV.id;
+    const originalMv = originalDataRef.current.find(mv => mv.id === targetId);
+    const originalImage = originalMv?.images?.[imgIdx];
+    
+    // 檢查值是否真的變動
+    if (!originalImage || JSON.stringify(originalImage[field as keyof typeof originalImage]) !== JSON.stringify(value)) {
+      markFieldChanged(targetId, `images.${imgIdx}.${field}`);
+    }
+    
     setData(prevData => prevData.map(mv => {
       if (mv.id !== targetId) return mv;
       const newImages = [...(mv.images || [])];
@@ -192,12 +878,18 @@ const currentMV = data[activeIndex];
       await Promise.all(chunk.map(async (imgIdx) => {
         try {
           const result = await probeImageSize(images[imgIdx].url);
+          const width = result.data?.width || result.width;
+          const height = result.data?.height || result.height;
+          
+          // 標記寬高字段變動
+          markFieldChanged(targetId, `images.${imgIdx}.width`);
+          markFieldChanged(targetId, `images.${imgIdx}.height`);
           
           // 使用函數式更新確保狀態正確
           setData(prevData => prevData.map(mv => {
             if (mv.id !== targetId) return mv;
             const newImages = [...(mv.images || [])];
-            newImages[imgIdx] = { ...newImages[imgIdx], width: result.width, height: result.height };
+            newImages[imgIdx] = { ...newImages[imgIdx], width, height };
             return { ...mv, images: newImages };
           }));
         } catch (err) {
@@ -230,11 +922,15 @@ const currentMV = data[activeIndex];
     try {
       const result = await probeImageSize(url);
       
+      // 標記寬高字段變動
+      markFieldChanged(targetId, `images.${imgIdx}.width`);
+      markFieldChanged(targetId, `images.${imgIdx}.height`);
+      
       // 合併更新寬高，避免兩次調用 updateImage 導致的異步覆蓋問題
       setData(prevData => prevData.map(mv => {
         if (mv.id !== targetId) return mv;
         const newImages = [...(mv.images || [])];
-        newImages[imgIdx] = { ...newImages[imgIdx], width: result.width, height: result.height };
+        newImages[imgIdx] = { ...newImages[imgIdx], width: result.data?.width || result.width, height: result.data?.height || result.height };
         return { ...mv, images: newImages };
       }));
 
@@ -252,13 +948,19 @@ const currentMV = data[activeIndex];
   };
 
   const removeImage = (imgIdx: number) => {
+    const targetId = currentMV.id;
     const images = currentMV.images?.filter((_, i) => i !== imgIdx);
-    updateField('images', images);
+    // 標記整個 images 數組變動
+    markFieldChanged(targetId, 'images');
+    setData(prevData => prevData.map(mv => 
+      mv.id === targetId ? { ...mv, images } : mv
+    ));
   };
 
   const addNewMV = () => {
+    const newId = `new-mv-${Date.now()}`;
     const newItem: MVItem = {
-      id: `new-mv-${Date.now()}`,
+      id: newId,
       title: "新影片標題",
       year: new Date().getFullYear().toString(),
       date: "",
@@ -270,6 +972,14 @@ const currentMV = data[activeIndex];
       coverImages: [],
       keywords: []
     };
+    // 標記所有字段為變動（新項目需要全部保存）
+    const allFields = Object.keys(newItem) as (keyof MVItem)[];
+    setChangedFields(prev => {
+      const newMap = new Map(prev);
+      newMap.set(newId, new Set(allFields as string[]));
+      return newMap;
+    });
+    
     setData([newItem, ...data]);
     setActiveIndex(0);
   };
@@ -303,15 +1013,57 @@ const currentMV = data[activeIndex];
     try {
       setIsSaving(true);
       
+      // 只獲取變動的字段數據
+      const changedData = getChangedData();
+      const hasChanges = changedData.length > 0 || (changedData._deleted && changedData._deleted.length > 0);
+      
+      // 如果沒有實質變動，直接提示成功
+      if (!hasChanges) {
+        showNotify('success', '沒有檢測到變動，無需保存');
+        setIsSaving(false);
+        return;
+      }
+      
       const apiUrl = (import.meta.env.VITE_API_URL || '/api/mvs').replace(/(\/mvs)?$/, '/mvs/update');
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          data: changedData,
+          partial: true // 標記為部分更新
+        }),
       });
 
-      if (!response.ok) throw new Error('儲存失敗');
-      showNotify('success', '數據回寫成功，當前狀態已保存');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: '未知錯誤' }));
+        throw new Error(errorData.error || `儲存失敗 (${response.status})`);
+      }
+      
+      const result = await response.json();
+      
+      // 更新成功後，重置變動追蹤並同步原始數據
+      originalDataRef.current = JSON.parse(JSON.stringify(data));
+      setChangedFields(new Map());
+      setDeletedIds(new Set());
+      
+      // 根據後端返回的詳細信息生成提示
+      const { details } = result;
+      if (details) {
+        const parts: string[] = [];
+        if (details.totalUpdated > 0) {
+          const updateDetails = details.updated.map((u: any) => {
+            const imgInfo = u.images?.length > 0 ? ` (圖片索引: ${u.images.join(', ')})` : '';
+            return `${u.id}: ${u.fields.join(', ')}${imgInfo}`;
+          });
+          parts.push(`已更新 ${details.totalUpdated} 條: ${updateDetails.join('; ')}`);
+        }
+        if (details.totalDeleted > 0) {
+          parts.push(`已刪除 ${details.totalDeleted} 條: ${details.deleted.join(', ')}`);
+        }
+        showNotify('success', parts.join(' | '));
+      } else {
+        showNotify('success', '數據回寫成功');
+      }
       
       // 註解掉引發刷新頁面的回調，以保留左側列表焦點
       // if (onRefresh) onRefresh();
@@ -399,6 +1151,18 @@ const currentMV = data[activeIndex];
                 onClick={(e) => {
                   e.stopPropagation();
                   if (window.confirm('確定刪除？')) {
+                    const isNewItem = !originalDataRef.current.find(item => item.id === mv.id);
+                    if (isNewItem) {
+                      // 如果是新項目，直接從變動追蹤中移除
+                      setChangedFields(prev => {
+                        const newMap = new Map(prev);
+                        newMap.delete(mv.id);
+                        return newMap;
+                      });
+                    } else {
+                      // 如果是現有項目，標記為刪除
+                      setDeletedIds(prev => new Set(prev).add(mv.id));
+                    }
                     setData(data.filter(item => item.id !== mv.id));
                     setActiveIndex(0);
                   }
@@ -622,11 +1386,9 @@ const currentMV = data[activeIndex];
                         </div>
                         <Input placeholder="說明文字 (Caption)" value={img.caption || ''} onChange={(e) => updateImage(imgIdx, 'caption', e.target.value)} />
                         <Input placeholder="替代文字 (Alt)" value={img.alt || ''} onChange={(e) => updateImage(imgIdx, 'alt', e.target.value)} />
-                        <Textarea 
-                          placeholder="富文本 / 來源連結 (RichText)" 
-                          value={img.richText || ''} 
-                          onChange={(e) => updateImage(imgIdx, 'richText', e.target.value)} 
-                          className="min-h-[200px] font-sans text-sm"
+                        <RichTextEditor
+                          value={img.richText || ''}
+                          onChange={(value) => updateImage(imgIdx, 'richText', value)}
                         />
                       </div>
                       <div className="bg-black/5 border-2 border-dashed border-black/10 flex items-center justify-center overflow-hidden">

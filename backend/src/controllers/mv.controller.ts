@@ -1,8 +1,45 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import probe from 'probe-image-size';
 import { MVService } from '../services/mv.service.js';
+import { MVItem } from '../../../frontend/src/lib/types.js';
+import { 
+  validateQuery, 
+  validateId, 
+  validateProbe, 
+  validateMVs 
+} from '../validators/mv.validator.js';
+import { ZodError } from 'zod';
 
 const mvService = new MVService();
+
+// 統一錯誤處理輔助函數
+const handleError = (res: Response, error: unknown, context: string) => {
+  console.error(`[${context}]:`, error);
+  
+  if (error instanceof ZodError) {
+    return res.status(400).json({
+      success: false,
+      error: '輸入驗證失敗',
+      details: error.errors.map(e => ({
+        field: e.path.join('.'),
+        message: e.message,
+      })),
+    });
+  }
+  
+  if (error instanceof Error) {
+    return res.status(500).json({
+      success: false,
+      error: '服務器內部錯誤',
+      message: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+  
+  return res.status(500).json({
+    success: false,
+    error: '未知錯誤',
+  });
+};
 
 /**
  * 獲取所有 MV 數據
@@ -10,16 +47,25 @@ const mvService = new MVService();
  */
 export const getMVs = async (req: Request, res: Response) => {
     try {
+        // 驗證輸入參數
+        const validatedQuery = validateQuery(req.query);
+        
         // 將 query 參數傳遞給 Service 處理過濾與排序
         const data = await mvService.getAllMVs({
-            search: req.query.search as string,
-            year: req.query.year as string,
-            sort: req.query.sort as 'asc' | 'desc'
+            search: validatedQuery.search,
+            year: validatedQuery.year,
+            album: validatedQuery.album,
+            artist: validatedQuery.artist,
+            sort: validatedQuery.sort
         });
-        res.json(data);
+        
+        res.json({
+          success: true,
+          data,
+          count: data.length,
+        });
     } catch (error) {
-        console.error('[Controller Error - getMVs]:', error);
-        res.status(500).json({ error: '無法讀取數據庫文件' });
+        handleError(res, error, 'Controller Error - getMVs');
     }
 };
 
@@ -29,33 +75,58 @@ export const getMVs = async (req: Request, res: Response) => {
  */
 export const getMVById = async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
+        // 驗證 ID
+        const id = validateId(req.params.id);
         const mv = await mvService.getMVById(id);
 
         if (!mv) {
             return res.status(404).json({ 
+                success: false,
                 error: `找不到 ID 為 ${id} 的 MV 數據` 
             });
         }
 
-        res.json(mv);
+        res.json({
+          success: true,
+          data: mv,
+        });
     } catch (error) {
-        console.error(`[Controller Error - getMVById]: ID ${req.params.id}`, error);
-        res.status(500).json({ error: '獲取 MV 詳情時發生伺服器錯誤' });
+        handleError(res, error, 'Controller Error - getMVById');
     }
 };
 
 /**
  * 批量更新或新增 MV 數據 (對應路由中的 /update)
+ * 支持部分更新：只更新變動的字段
  */
 export const updateMVs = async (req: Request, res: Response) => {
   try {
-    const newData = req.body;
-    await mvService.updateAllMVs(newData);
-    res.json({ message: 'Database_Updated_Successfully' });
+    const { data: updateData, partial } = req.body;
+    
+    if (!Array.isArray(updateData)) {
+      return res.status(400).json({
+        success: false,
+        error: '請求格式錯誤，data 必須是數組'
+      });
+    }
+    
+    // 提取刪除標記
+    const deletedIds = (updateData as any)._deleted || [];
+    const actualData = updateData.filter(item => !deletedIds.includes(item.id));
+    
+    // 驗證輸入數據
+    const validatedData = validateMVs(actualData) as MVItem[];
+    
+    // 執行更新（支持部分更新邏輯）
+    const updateResult = await mvService.updateAllMVs(validatedData, partial === true, deletedIds);
+    
+    res.json({ 
+      success: true,
+      message: partial ? 'Database_Partial_Updated_Successfully' : 'Database_Updated_Successfully',
+      details: updateResult,
+    });
   } catch (error) {
-    console.error('[Controller Error - updateMVs]:', error);
-    res.status(500).json({ message: 'Update Failed', error });
+    handleError(res, error, 'Controller Error - updateMVs');
   }
 };
 
@@ -64,16 +135,25 @@ export const updateMVs = async (req: Request, res: Response) => {
  */
 export const probeImage = async (req: Request, res: Response) => {
   try {
-    const { url } = req.body;
+    // 驗證輸入
+    const { url } = validateProbe(req.body);
     
-    if (!url) {
-      return res.status(400).json({ error: 'Missing image URL in request body' });
-    }
-
-    const result = await probe(url, { timeout: 5000 });
-    res.json({ width: result.width, height: result.height });
+    // 添加超時和大小限制
+    const result = await probe(url, { 
+      timeout: 10000,
+      retries: 2,
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        width: result.width, 
+        height: result.height,
+        type: result.type,
+        url: result.url,
+      },
+    });
   } catch (error) {
-    console.error('[Controller Error - probeImage]:', error);
-    res.status(500).json({ message: 'Probe failed', error: (error as Error).message });
+    handleError(res, error, 'Controller Error - probeImage');
   }
 };
