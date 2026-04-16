@@ -22,7 +22,7 @@ export const MV_DATA = [
             {
                 "url": "https://pbs.twimg.com/media/HEy5zIiagAA7Iqi?format=jpg&name=large",
                 "caption": "設定圖 晝Nira & 夜Nira",
-                "richText": "<p lang=\"ja\" class=\"author\">\n  <span>ACAね</span> \n  <span>@zutomayo</span> \n  <a href=\"https://x.com/zutomayo/status/2039209027230695869\" target=\"_blank\">原推文</a>\n</p>\n<p lang=\"ja\" class=\"post\">ultra魂 キャラデザ可愛いです\n  ベルトにカセット\n  昼にら・夜にら・グレイくん</p>\n<p class=\"translation\">\n  ultra魂的角色設計很可愛\n  腰帶上還有磁帶\n  晝Nira・夜Nira・Gray君</p>",
+                "richText": "<p lang=\"ja\" class=\"author\">\n  <span>ACAね</span> \n  <span>@zutomayo</span> \n  <a href=\"https://x.com/zutomayo/status/2039209027230695869\" target=\"_blank\">原推文</a>\n</p>\n<p lang=\"ja\" class=\"post\">ultra魂 キャラデザ可愛いです\nベルトにカセット\n昼にら・夜にら・グレイくん</p>\n<p class=\"translation\">ultra魂的角色設計很可愛\n腰帶上還有磁帶\n晝Nira・夜Nira・Gray君</p>",
                 "alt": "nira",
                 "width": 2048,
                 "height": 1335
@@ -30,7 +30,7 @@ export const MV_DATA = [
             {
                 "url": "https://pbs.twimg.com/media/HEy5zIdb0AACPvc?format=jpg&name=large",
                 "caption": "設定圖 Gray君",
-                "richText": "<p lang=\"ja\" class=\"author\">\n  <span>ACAね</span> \n  <span>@zutomayo</span> \n  <a href=\"https://x.com/zutomayo/status/2039209027230695869\" target=\"_blank\">原推文</a>\n</p>\n<p lang=\"ja\" class=\"post\">ultra魂 キャラデザ可愛いです\n  ベルトにカセット\n  昼にら・夜にら・グレイくん</p>\n<p class=\"translation\">\n  ultra魂的角色設計很可愛\n  腰帶上還有磁帶\n  晝Nira・夜Nira・Gray君</p>",
+                "richText": "<p lang=\"ja\" class=\"author\">\n  <span>ACAね</span> \n  <span>@zutomayo</span> \n  <a href=\"https://x.com/zutomayo/status/2039209027230695869\" target=\"_blank\">原推文</a>\n</p>\n<p lang=\"ja\" class=\"post\">ultra魂 キャラデザ可愛いです\nベルトにカセット\n昼にら・夜にら・グレイくん</p>\n<p class=\"translation\">ultra魂的角色設計很可愛\n腰帶上還有磁帶\n晝Nira・夜Nira・Gray君</p>",
                 "alt": "gray",
                 "width": 2048,
                 "height": 1482

@@ -21,7 +21,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:5000', // 你的後端實際運行位址
+        target: 'http://localhost:5010', // 你的後端實際運行位址
         changeOrigin: true,
         // 如果後端 API 本身就有 /api 前綴，則不需要 rewrite
         // 如果後端是 http://localhost:5000/mvs，則需要：

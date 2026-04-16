@@ -17,6 +17,9 @@ import lgFullscreen from 'lightgallery/plugins/fullscreen';
 
 import { MVImage } from '@/lib/types';
 import { getProxyImgUrl } from '@/lib/image';
+import { GALLERY_BREAKPOINTS } from '@/components/galleryBreakpoints';
+
+export { GALLERY_BREAKPOINTS } from '@/components/galleryBreakpoints';
 
 interface LightGalleryViewerProps {
   /** 圖片數據數組 */
@@ -44,18 +47,6 @@ interface LightGalleryViewerProps {
   /** 燈箱關閉回調 */
   onLightboxClose?: () => void;
 }
-
-// 統一斷點配置
-// 規則：
-// - < 500px: 2列（手機豎屏）
-// - 500px - 767px: 3列（手機橫屏/小平板）
-// - >= 768px: 4列（平板/桌面）
-export const GALLERY_BREAKPOINTS = {
-  default: 2,
-  500: 3,
-  768: 4,
-  1024: 4
-} as const;
 
 // 兼容舊代碼的默認導出
 const defaultBreakpointColumns = GALLERY_BREAKPOINTS;
@@ -397,6 +388,7 @@ export default function LightGalleryViewer({
     // 觸發自定義事件
     const event = new CustomEvent('lgBeforeOpen');
     document.dispatchEvent(event);
+    document.dispatchEvent(new CustomEvent('lightboxBeforeOpen', { detail: { provider: 'lg' } }));
     onLightboxOpen?.();
   }, [onLightboxOpen]);
 
@@ -404,6 +396,7 @@ export default function LightGalleryViewer({
   const handleAfterClose = useCallback(() => {
     const event = new CustomEvent('lgAfterClose');
     document.dispatchEvent(event);
+    document.dispatchEvent(new CustomEvent('lightboxAfterClose', { detail: { provider: 'lg' } }));
     onLightboxClose?.();
   }, [onLightboxClose]);
 
@@ -677,7 +670,5 @@ export default function LightGalleryViewer({
     </div>
   );
 }
-
-
 
 

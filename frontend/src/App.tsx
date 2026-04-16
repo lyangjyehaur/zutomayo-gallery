@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input';
 import { AdminPage } from '@/pages/AdminPage';
 import { Toaster } from '@/components/ui/sonner';
 import DebugLightGallery from '@/debug/DebugLightGallery';
+import DebugFancyboxMasonry from '@/debug/DebugFancyboxMasonry';
+import DebugMVModalLightbox from '@/debug/DebugMVModalLightbox';
 import { STORAGE_KEYS, storage } from '@/config/storage';
 import { VERSION_CONFIG } from '@/config/version';
 import ThemeToggle from '@/components/ui/ThemeToggle';
@@ -386,6 +388,8 @@ export default function RootApp() {
       <Route path="/mv/:id" element={<App {...commonProps} />} />
       <Route path="/admin" element={<AdminPage mvData={mvData} onRefresh={() => window.location.href = window.location.href} />} />
       <Route path="/debug/lg/:mvid?" element={<DebugLightGallery />} />
+      <Route path="/debug/fb/:mvid?" element={<DebugFancyboxMasonry />} />
+      <Route path="/debug/modal" element={<DebugMVModalLightbox />} />
       {/* <Route path="/debug/:mvid?" element={<DebugFancyBox mvData={mvData} />} /> */}
       {/* <Route path="/debug" element={<Hello {...commonProps} />} /> */}
     </Routes>

@@ -6,7 +6,7 @@ import mvRoutes from './routes/mv.routes.js';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5010;
 
 // CORS 配置 - 僅允許特定來源
 const allowedOrigins = [

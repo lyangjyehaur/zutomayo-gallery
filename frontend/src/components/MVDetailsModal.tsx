@@ -12,8 +12,10 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { MVItem } from '@/lib/types';
 import { getProxyImgUrl } from '@/lib/image';
 import LightGalleryViewer, { GALLERY_BREAKPOINTS } from '@/components/LightGalleryViewer';
+import FancyboxViewer from '@/components/FancyboxViewer';
 import { WalineComments } from '@/components/WalineComments';
 import { VERSION_CONFIG } from '@/config/version';
+import { getLightboxProvider } from '@/config';
 import './MVDetailsModal.css';
 
 
@@ -78,21 +80,30 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
     else if (mv?.youtube) setVideoPlatform('youtube');
   }, [mv?.id]);
 
+  const lightboxProvider = getLightboxProvider();
+
+  const lgDismissableSelectors =
+    '.lg-backdrop, .lg-outer, .lg-components, .lg-container, .lg-toolbar, .lg-actions, .lg-thumb-outer, .lg-sub-html';
+  const fbDismissableSelectors =
+    '.fancybox__container, .fancybox__backdrop, .fancybox__carousel, .fancybox__toolbar, .fancybox__nav, .f-thumbs, .f-caption';
+  const dismissableSelectors = lightboxProvider === 'fb' ? fbDismissableSelectors : lgDismissableSelectors;
+
   // 處理 Dialog 外部點擊
   const handlePointerDownOutside = (e: React.PointerEvent) => {
     // 檢查點擊目標是否在燈箱元素內
     const target = e.target as HTMLElement;
-    if (target.closest('.lg-backdrop, .lg-outer, .lg-components, .lg-container, .lg-toolbar, .lg-actions, .lg-thumb-outer')) {
+    if (target.closest(dismissableSelectors)) {
       e.preventDefault();
     }
   };
 
   const handleInteractOutside = (e: React.FocusEvent | React.MouseEvent | React.TouchEvent | React.PointerEvent) => {
     const target = (e as unknown as React.PointerEvent).target as HTMLElement;
-    if (target?.closest('.lg-backdrop, .lg-outer, .lg-components, .lg-container, .lg-toolbar, .lg-actions, .lg-thumb-outer')) {
+    if (target?.closest(dismissableSelectors)) {
       e.preventDefault();
     }
   };
+  const GalleryViewer = (lightboxProvider === 'fb' ? FancyboxViewer : LightGalleryViewer) as React.ComponentType<any>;
 
   return (
     <Dialog open={!!mv} onOpenChange={(open) => !open && !isLightboxOpenRef.current && onClose()}>
@@ -248,7 +259,7 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                 </h4>
                 <div className="lg:hidden">
                   {mv?.images && mv.images.length > 0 ? (
-                    <LightGalleryViewer
+                    <GalleryViewer
                       images={mv.images}
                       mvTitle={mv.title}
                       mvId={mv.id}
@@ -281,7 +292,7 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                 <PixelGallery className="size-5 text-ztmy-green" /> 設定資料圖
               </h4>
               {mv?.images && mv.images.length > 0 ? (
-                <LightGalleryViewer
+                <GalleryViewer
                   images={mv.images}
                   mvTitle={mv.title}
                   mvId={mv.id}
@@ -321,36 +332,73 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
       
       {/* 全局樣式：確保燈箱層級和交互正確 */}
       <style>{`
-        /* LightGallery 燈箱層級 - 必須高於 Radix Dialog */
-        .lg-backdrop {
-          z-index: 99999 !important;
-        }
-        .lg-outer {
-          z-index: 100000 !important;
-        }
-        .lg-components {
-          z-index: 100001 !important;
-        }
+        ${lightboxProvider === 'fb' ? `
+          .fancybox__container {
+            z-index: 100000 !important;
+          }
 
-        /* 確保燈箱元素可以接收所有事件 */
-        .lg-backdrop,
-        .lg-outer,
-        .lg-components,
-        .lg-toolbar,
-        .lg-actions,
-        .lg-sub-html,
-        .lg-thumb-outer,
-        .lg-img-wrap,
-        .lg-item {
-          pointer-events: auto !important;
-        }
+          .fancybox__backdrop {
+            z-index: 0 !important;
+          }
 
-        /* 修復 Dialog 的 dismissableLayer 問題 */
+          .fancybox__carousel {
+            position: relative !important;
+            z-index: 2 !important;
+          }
+
+          .f-thumbs {
+            position: relative !important;
+            z-index: 1 !important;
+          }
+
+          .f-caption {
+            position: relative !important;
+            z-index: 3 !important;
+          }
+
+          .fancybox__toolbar,
+          .fancybox__nav {
+            position: relative !important;
+            z-index: 4 !important;
+          }
+
+          .fancybox__container,
+          .fancybox__backdrop,
+          .fancybox__carousel,
+          .fancybox__toolbar,
+          .fancybox__nav,
+          .f-caption,
+          .f-thumbs {
+            pointer-events: auto !important;
+          }
+        ` : `
+          .lg-backdrop {
+            z-index: 99999 !important;
+          }
+          .lg-outer {
+            z-index: 100000 !important;
+          }
+          .lg-components {
+            z-index: 100001 !important;
+          }
+
+          .lg-backdrop,
+          .lg-outer,
+          .lg-components,
+          .lg-toolbar,
+          .lg-actions,
+          .lg-sub-html,
+          .lg-thumb-outer,
+          .lg-img-wrap,
+          .lg-item {
+            pointer-events: auto !important;
+          }
+        `}
+
         [data-radix-focus-guard] {
           display: none !important;
         }
 
-        /* Waline 樣式覆寫 */
         .waline-wrapper {
           --waline-theme-color: #00ff9d !important;
           --waline-active-color: #00cc7d !important;
