@@ -298,13 +298,21 @@ const PhotoItem = ({ photo, index, onPhotoClick, delayMs }: PhotoItemProps) => {
     if (actualDimensions) return;
 
     const img = new Image();
-    img.onload = () => {
-      setActualDimensions({
-        width: img.naturalWidth,
-        height: img.naturalHeight,
-      });
+    const handleLoad = () => {
+      if (img.naturalWidth && img.naturalHeight) {
+        setActualDimensions({
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+        });
+      }
     };
+    img.onload = handleLoad;
     img.src = photo.src;
+    
+    // Check if the image is already cached/loaded
+    if (img.complete && img.naturalWidth) {
+      handleLoad();
+    }
   }, [photo.src, actualDimensions]);
 
   const aspectRatio = actualDimensions ? `${actualDimensions.width} / ${actualDimensions.height}` : null;
@@ -317,17 +325,17 @@ const PhotoItem = ({ photo, index, onPhotoClick, delayMs }: PhotoItemProps) => {
   return (
     <div
       ref={containerRef}
-      className="mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500 motion-reduce:animate-none"
+      className="mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500 motion-reduce:animate-none min-h-0 min-w-0 w-full"
       style={delayMs !== undefined ? { animationDelay: `${delayMs}ms`, animationFillMode: 'both' } : undefined}
     >
       <div 
-        className="gallery-item block cursor-pointer" 
+        className="gallery-item block cursor-pointer min-h-0 min-w-0 w-full" 
         data-index={index} 
         data-filename={photo.rawFilename || photo.caption}
         onClick={handleClick}
       >
-        <div className="border-3 border-black bg-card shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all">
-          <div className="relative bg-secondary-background overflow-hidden" style={{ aspectRatio: aspectRatio || '16 / 9' }}>
+        <div className="border-3 border-black bg-card shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all w-full">
+          <div className="relative bg-secondary-background overflow-hidden w-full" style={{ aspectRatio: aspectRatio || '16 / 9' }}>
             <div
               className={`absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2 transition-opacity duration-500 pointer-events-none ${
                 isLoaded ? 'opacity-0' : 'opacity-100'
@@ -343,13 +351,17 @@ const PhotoItem = ({ photo, index, onPhotoClick, delayMs }: PhotoItemProps) => {
             <img
               alt={photo.caption}
               src={photo.src}
-              className={`w-full h-full object-cover transition-all duration-700 ${
+              className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ${
                 isLoaded ? 'opacity-100 scale-100 blur-0' : 'opacity-0 scale-110 blur-xl'
               }`}
               loading="lazy"
               decoding="async"
-              onLoad={() => {
+              onLoad={(e) => {
                 setIsLoaded(true);
+                const target = e.target as HTMLImageElement;
+                if (!actualDimensions && target.naturalWidth) {
+                  setActualDimensions({ width: target.naturalWidth, height: target.naturalHeight });
+                }
               }}
               onError={(e) => {
                 (e.target as HTMLImageElement).src =
@@ -688,6 +700,11 @@ export default function FancyboxViewer({
           min-height: 200px;
         }
 
+        /* Fix iOS Safari flexbox bug: force masonry columns and their parents to allow shrinking */
+        .gallery-wrapper div {
+          min-width: 0;
+        }
+
         .gallery-item {
           display: block;
           text-decoration: none;
@@ -719,6 +736,13 @@ export default function FancyboxViewer({
           padding-bottom: 0 !important;
           margin-top: 0 !important;
           overflow: hidden !important;
+        }
+
+        /* Force hide native captions if they still appear */
+        .fancybox__caption,
+        .f-caption,
+        .fancybox__caption-wrap {
+          display: none !important;
         }
 
         /* Responsive overrides for Fancybox neo caption */
