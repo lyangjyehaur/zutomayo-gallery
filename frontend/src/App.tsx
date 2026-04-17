@@ -1383,7 +1383,7 @@ const fetcher = (url: string) =>
 
 // 為了支援 useParams，我們需要導出一個包裹了路由環境的組件
 export default function RootApp() {
-  const apiUrl = import.meta.env.VITE_API_URL || "/api/mvs";
+  const apiUrl = import.meta.env.VITE_API_URL || "https://api.ztmr.club/api/mvs";
   const defaultMetadata = {
     albumMeta: {},
     artistMeta: {},
