@@ -16,6 +16,20 @@ NC='\033[0m' # No Color
 CONFIG_FILE="deploy.conf"
 
 # ==========================================
+# 工具檢查
+# ==========================================
+if command -v pnpm &> /dev/null; then
+    PKG_MANAGER="pnpm"
+    PKG_INSTALL="pnpm install"
+    PKG_BUILD="pnpm run build"
+    echo -e "${GREEN}偵測到 pnpm，將使用 pnpm 進行套件管理。${NC}"
+else
+    PKG_MANAGER="npm"
+    PKG_INSTALL="npm install"
+    PKG_BUILD="npm run build"
+    echo -e "${YELLOW}未偵測到 pnpm，降級使用 npm 進行套件管理。${NC}"
+fi
+# ==========================================
 # 1. 檢查並載入部署設定檔
 # ==========================================
 if [ ! -f "$CONFIG_FILE" ]; then
@@ -77,9 +91,9 @@ deploy_frontend() {
     echo -e "\n${YELLOW}[Frontend] 開始處理前端...${NC}"
     cd frontend
     echo "安裝前端依賴..."
-    npm install
+    $PKG_INSTALL
     echo "編譯前端靜態檔案..."
-    npm run build
+    $PKG_BUILD
     cd ..
 
     echo -e "\n${YELLOW}[Frontend] 準備備份與發佈前端檔案...${NC}"
@@ -115,9 +129,13 @@ deploy_backend() {
     echo -e "\n${YELLOW}[Backend] 開始處理後端...${NC}"
     cd backend
     echo "安裝後端依賴..."
-    npm install --production=false # 必須安裝 devDependencies 才能編譯 TypeScript
+    if [ "$PKG_MANAGER" = "pnpm" ]; then
+        pnpm install --prod=false # 必須安裝 devDependencies 才能編譯 TypeScript
+    else
+        npm install --production=false
+    fi
     echo "編譯後端程式碼..."
-    npm run build
+    $PKG_BUILD
     
     echo -e "\n${YELLOW}[Backend] 準備備份後端資料...${NC}"
     TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
@@ -145,7 +163,11 @@ deploy_backend() {
         pm2 restart ztmy-gallery-api
     else
         echo "建立新的 PM2 服務..."
-        pm2 start npm --name "ztmy-gallery-api" -- start
+        if [ "$PKG_MANAGER" = "pnpm" ]; then
+            pm2 start pnpm --name "ztmy-gallery-api" -- start
+        else
+            pm2 start npm --name "ztmy-gallery-api" -- start
+        fi
         echo "儲存 PM2 設定..."
         pm2 save
     fi
