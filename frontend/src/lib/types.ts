@@ -5,6 +5,13 @@ export interface MVImage {
   alt?: string;
   width?: number;
   height?: number;
+  [key: string]: any;
+}
+
+export interface MVKeyword {
+  text: string;
+  lang?: string;
+  [key: string]: any;
 }
 
 export interface MVItem {
@@ -13,11 +20,12 @@ export interface MVItem {
   year: string;
   date: string;
   album: string[];
-  artist: string;
+  artist: string[]; // 支援多畫師
   youtube: string;
   bilibili: string;
   description: string;
   images: MVImage[];
   coverImages: string[];
-  keywords: string[];
+  keywords: MVKeyword[];
+  [key: string]: any;
 }

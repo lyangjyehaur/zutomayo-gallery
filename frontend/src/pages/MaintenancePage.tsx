@@ -1,0 +1,117 @@
+import React, { useState, useEffect } from "react";
+import { Helmet } from "react-helmet-async";
+import { VERSION_CONFIG } from "@/config/version";
+
+interface MaintenancePageProps {
+  eta?: string | null;
+}
+
+export function MaintenancePage({ eta }: MaintenancePageProps) {
+  const [timeLeft, setTimeLeft] = useState<string>('');
+
+  useEffect(() => {
+    if (!eta) {
+      setTimeLeft('未知');
+      return;
+    }
+
+    const targetDate = new Date(eta).getTime();
+    if (isNaN(targetDate)) {
+      setTimeLeft('未知');
+      return;
+    }
+
+    const updateCountdown = () => {
+      const now = new Date().getTime();
+      const distance = targetDate - now;
+
+      if (distance < 0) {
+        setTimeLeft('即將完成');
+        return;
+      }
+
+      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+      const parts = [];
+      if (days > 0) parts.push(`${days}天`);
+      parts.push(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+      
+      setTimeLeft(parts.join(' '));
+    };
+
+    updateCountdown();
+    const intervalId = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [eta]);
+
+  return (
+    <div className="dark min-h-screen bg-background text-foreground font-base flex flex-col items-center justify-center p-6 selection:bg-main selection:text-black crt relative overflow-hidden">
+      <Helmet>
+        <title>系統維護中 - ZUTOMAYO MV Gallery</title>
+      </Helmet>
+      
+      {/* 背景格線與掃描線 */}
+      <div className="absolute inset-0 pointer-events-none opacity-20 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+      <div className="absolute inset-0 opacity-10 pointer-events-none crt-lines"></div>
+
+      <div className="w-full max-w-md bg-card border-4 border-black shadow-neo flex flex-col relative z-10">
+        <div className="flex items-center justify-between px-4 py-2 border-b-4 border-black bg-black/5">
+          <div className="flex items-center gap-3">
+            <div className="w-2.5 h-2.5 bg-yellow-500 animate-pulse shadow-[2px_2px_0_0_rgba(234,179,8,0.4)]"></div>
+            <span className="text-[10px] font-black uppercase tracking-widest flex flex-col leading-tight">
+              <span className="tracking-normal flex items-baseline gap-1.5 opacity-60">
+                系統狀態 <span className="text-[8px] font-mono normal-case">System_Status</span>
+              </span>
+              <span className="tracking-normal text-yellow-500 flex items-baseline gap-1.5">
+                維護中 <span className="text-[8px] font-mono normal-case">Maintenance</span>
+              </span>
+            </span>
+          </div>
+        </div>
+
+        <div className="p-8 flex flex-col items-center text-center gap-6">
+          <div className="w-24 h-24 border-4 border-black bg-yellow-500/20 flex items-center justify-center shadow-neo-sm relative">
+            <i className="hn hn-cog text-5xl text-yellow-500 animate-spin"></i>
+          </div>
+          
+          <div className="flex flex-col items-center gap-2">
+            <h1 className="text-3xl font-black uppercase tracking-widest animate-glitch text-yellow-500 mb-1">
+              系統維護中
+            </h1>
+            <p className="text-xs font-mono opacity-60 tracking-widest uppercase">
+              SYSTEM_UNDER_MAINTENANCE
+            </p>
+          </div>
+          
+          <div className="w-full h-1 bg-border/30 my-2"></div>
+          
+          <p className="text-sm font-bold opacity-80 leading-relaxed max-w-xs">
+            站長目前正在進行資料庫升級或系統維護，請稍後再回來。
+          </p>
+
+          <div className="mt-4 px-8 py-3 border-2 border-black bg-black text-main uppercase flex flex-col items-center gap-3 shadow-[4px_4px_0_0_rgba(0,0,0,0.3)]">
+            <span className="flex flex-col items-center leading-tight opacity-80">
+              <span className="tracking-normal font-bold text-xs">預估恢復時間</span>
+              <span className="text-[8px] font-mono opacity-60 normal-case mt-0.5">ESTIMATED_TIME_TO_RECOVERY</span>
+            </span>
+            <span className="flex flex-col items-center leading-tight text-white glitch-text">
+              <span className="tracking-normal font-black text-sm">{timeLeft}</span>
+              <span className="text-[8px] font-mono opacity-60 normal-case mt-0.5 text-main">{!eta ? 'UNKNOWN' : 'COUNTDOWN'}</span>
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      <div className="mt-12 text-[10px] uppercase tracking-[0.2em] opacity-30 text-center flex flex-col items-center gap-1">
+        <span>© {new Date().getFullYear()} ZTMY MV 資料庫 V{VERSION_CONFIG.app}</span>
+        <span className="opacity-60 normal-case text-[8px]">
+          ZUTOMATO_MV_GALLERY
+        </span>
+      </div>
+    </div>
+  );
+}

@@ -70,7 +70,7 @@ export const globalErrorHandler = (
   res.status(statusCode).json({
     success: false,
     error: message,
-    ...(details && { details }),
+    ...(details ? { details } : {}),
     ...(isDev && { 
       stack: err.stack,
       originalError: err.message,

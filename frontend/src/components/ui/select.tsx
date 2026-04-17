@@ -1,5 +1,4 @@
 import * as SelectPrimitive from "@radix-ui/react-select"
-import { Check, ChevronDown, ChevronUp } from "lucide-react"
 
 import * as React from "react"
 
@@ -37,8 +36,10 @@ function SelectTrigger({
       )}
       {...props}
     >
-      {children}
-      <SelectPrimitive.Icon render={<ChevronDown className="size-4" />}></SelectPrimitive.Icon>
+      <div className="flex-1 min-w-0 overflow-hidden text-left truncate [&>span]:truncate">
+        {children}
+      </div>
+      <SelectPrimitive.Icon render={<i className="hn hn-chevron-down text-base shrink-0" />}></SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   )
 }
@@ -49,14 +50,14 @@ function SelectScrollUpButton({
 }: React.ComponentProps<typeof SelectPrimitive.ScrollUpButton>) {
   return (
     <SelectPrimitive.ScrollUpButton
-      data-slot="select-scroll-up"
+      data-slot="select-scroll-up-button"
       className={cn(
-        "flex cursor-default text-main-foreground font-base items-center justify-center py-1",
+        "flex cursor-default items-center justify-center py-1",
         className,
       )}
       {...props}
     >
-      <ChevronUp className="size-4" />
+      <i className="hn hn-chevron-up text-base" />
     </SelectPrimitive.ScrollUpButton>
   )
 }
@@ -67,14 +68,14 @@ function SelectScrollDownButton({
 }: React.ComponentProps<typeof SelectPrimitive.ScrollDownButton>) {
   return (
     <SelectPrimitive.ScrollDownButton
-      data-slot="select-scroll-down"
+      data-slot="select-scroll-down-button"
       className={cn(
-        "flex cursor-default text-main-foreground font-base items-center justify-center py-1",
+        "flex cursor-default items-center justify-center py-1",
         className,
       )}
       {...props}
     >
-      <ChevronDown className="size-4" />
+      <i className="hn hn-chevron-down text-base" />
     </SelectPrimitive.ScrollDownButton>
   )
 }
@@ -133,8 +134,9 @@ function SelectLabel({
 function SelectItem({
   className,
   children,
+  description,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Item>) {
+}: React.ComponentProps<typeof SelectPrimitive.Item> & { description?: string }) {
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
@@ -144,12 +146,19 @@ function SelectItem({
       )}
       {...props}
     >
-      <span className="absolute right-2 flex size-3.5 items-center justify-center">
+      <span className="absolute right-2 flex size-3.5 items-center justify-center shrink-0">
         <SelectPrimitive.ItemIndicator>
-          <Check className="size-4" />
+          <i className="hn hn-check text-base" />
         </SelectPrimitive.ItemIndicator>
       </span>
-      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+      <div className="flex-1 min-w-0 overflow-hidden">
+        <SelectPrimitive.ItemText>
+          <span className="block truncate text-left w-full">{children}</span>
+        </SelectPrimitive.ItemText>
+      </div>
+      {description && description !== "-" && description !== "—" && description !== "__HIDE__" && (
+        <span className="text-[10px] font-mono opacity-50 shrink-0 tracking-widest">{description}</span>
+      )}
     </SelectPrimitive.Item>
   )
 }

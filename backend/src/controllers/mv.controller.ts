@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import probe from 'probe-image-size';
 import { MVService } from '../services/mv.service.js';
-import { MVItem } from '../../../frontend/src/lib/types.js';
+import { MVItem } from '../types.js';
 import { 
   validateQuery, 
   validateId, 
@@ -9,6 +9,7 @@ import {
   validateMVs 
 } from '../validators/mv.validator.js';
 import { ZodError } from 'zod';
+import { getMetadata as getMeta, updateMetadata as updateMeta } from '../services/metadata.service.js';
 
 const mvService = new MVService();
 
@@ -141,7 +142,6 @@ export const probeImage = async (req: Request, res: Response) => {
     // 添加超時和大小限制
     const result = await probe(url, { 
       timeout: 10000,
-      retries: 2,
     });
     
     res.json({
@@ -155,5 +155,23 @@ export const probeImage = async (req: Request, res: Response) => {
     });
   } catch (error) {
     handleError(res, error, 'Controller Error - probeImage');
+  }
+};
+
+export const getMetadata = async (req: Request, res: Response) => {
+  try {
+    const metadata = await getMeta();
+    res.json(metadata);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || '無法獲取 Metadata' });
+  }
+};
+
+export const updateMetadata = async (req: Request, res: Response) => {
+  try {
+    const newMeta = await updateMeta(req.body);
+    res.json({ success: true, metadata: newMeta });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || '無法更新 Metadata' });
   }
 };

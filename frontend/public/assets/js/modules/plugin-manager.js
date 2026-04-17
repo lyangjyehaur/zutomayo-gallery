@@ -93,14 +93,14 @@ export class PluginManager {
                 order: 8,
                 tagName: 'div',
                 className: 'pswp__download-wrapper',
-                html: `<a type="button" class="pswp__button pswp__button--download-custom" title="下載原圖" data-umami-event="download-original" data-umami-event-type="interaction" rel="noopener">
+                html: `<a type="button" class="pswp__button pswp__button--download-custom" title="下載原圖" data-umami-event="Z_download-original" data-umami-event-type="interaction" rel="noopener">
                     <svg width="32" height="32" viewBox="0 0 32 32" class="pswp__icn">
                     <use class="pswp__icn-shadow" xlink:href="#pswp__icn-download"></use>
                     <path d="M20.5 14.3 17.1 18V10h-2.2v7.9l-3.4-3.6L10 16l6 6.1 6-6.1ZM23 23H9v2h14Z" id="pswp__icn-download"/></svg></a>
                                         <div class="pswp__download-popover alert alert-info p-2 shadow">
                 <div class="d-flex align-items-center">
                     <span class="me-2" style="white-space: wrap;width:110px;font-size:0.675em;">網頁預覽存在畫質壓縮 如所需可點此下載原圖</span>
-                    <button type="button" class="btn-close btn-close-white" style="font-size: 0.5rem; " data-umami-event="download-popover-close" data-umami-event-type="interaction"></button>
+                    <button type="button" class="btn-close btn-close-white" style="font-size: 0.5rem; " data-umami-event="Z_download-popover-close" data-umami-event-type="interaction"></button>
                 </div>
                 <div class="popover-arrow"></div>
             </div>`,

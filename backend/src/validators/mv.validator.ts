@@ -49,7 +49,15 @@ export const mvItemSchema = z.object({
   description: z.string().max(5000).optional().or(z.literal('')),
   youtube: z.string().optional().or(z.literal('')),
   bilibili: z.string().optional().or(z.literal('')),
-  keywords: z.array(z.string()).optional(),
+  keywords: z.array(
+    z.union([
+      z.string(),
+      z.object({
+        text: z.string(),
+        lang: z.string().optional().or(z.literal(''))
+      }).passthrough()
+    ])
+  ).optional().transform(arr => arr?.map(k => typeof k === 'string' ? { text: k } : k) || []),
   images: z.array(
     z.union([
       z.null(),
@@ -63,13 +71,13 @@ export const mvItemSchema = z.object({
         alt: z.string().optional().or(z.literal('')),
         width: z.number().optional().or(z.literal(0)).or(z.literal(null)),
         height: z.number().optional().or(z.literal(0)).or(z.literal(null)),
-      })
+      }).passthrough() // 允許圖片物件內有未定義的新欄位
     ])
   ).optional().transform(arr => arr?.filter(item => item !== null) || []),
   coverImages: z.array(z.string()).optional(),
   album: z.array(z.string()).optional(),
-  artist: z.string().optional().or(z.literal('')),
-});
+  artist: z.array(z.string()).optional(),
+}).passthrough(); // 允許 MV 物件內有未定義的新欄位
 
 export const mvArraySchema = z.array(mvItemSchema);
 

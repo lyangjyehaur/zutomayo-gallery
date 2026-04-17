@@ -1,0 +1,109 @@
+
+      {/* 右下角懸浮控制面板 (Control Hub) */}
+      <div className="fixed bottom-6 right-6 flex flex-col -space-y-[2px]">
+        {/* 返回頂部按鈕 - 僅在向下滾動後顯示 */}
+        <div
+          className={`transition-all duration-300 overflow-hidden ${scrolled ? "h-12 opacity-100 mb-[2px]" : "h-0 opacity-0 mb-0"}`}
+        >
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                variant="neutral"
+                size="icon"
+                className="z-[50] w-12 h-12 rounded-none transition-colors hover:bg-main hover:text-black bg-card text-foreground"
+              >
+                <i className="hn hn-arrow-up text-2xl"></i>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left" align="center" sideOffset={10}>
+              <div className="flex flex-col gap-0.5">
+                <p className="text-xs font-black tracking-widest">返回頂部</p>
+                <p className="text-[10px] font-mono opacity-60 normal-case">
+                  TOP
+                </p>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              onClick={() =>
+                setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))
+              }
+              variant="neutral"
+              size="icon"
+              data-active={sortOrder === "asc"}
+              className={`z-10 w-12 h-12 rounded-none transition-colors ${sortOrder === "asc" ? "bg-main text-black hover:bg-main/80" : "hover:bg-main hover:text-black"}`}
+            >
+              <i className={`hn hn-sort text-2xl`}></i>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left" align="center" sideOffset={10}>
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs font-black tracking-widest">排序</p>
+              <p className="text-[10px] font-mono opacity-60 normal-case">
+                SORT
+              </p>
+              <p className="text-xs font-bold">
+                {sortOrder === "desc" ? "最新 → 最舊" : "最舊 → 最新"}
+              </p>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              onClick={() => navigate(showFavOnly ? "/" : "/favorites")}
+              variant="neutral"
+              size="icon"
+              data-active={showFavOnly}
+              className={`z-20 w-12 h-12 rounded-none transition-colors ${showFavOnly ? "bg-main text-black hover:bg-main/80" : "hover:bg-main hover:text-black"}`}
+            >
+              <i
+                className={`hn hn-star-solid text-2xl leading-none ${showFavOnly ? "animate-pulse" : ""}`}
+              ></i>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left" align="center" sideOffset={10}>
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs font-black tracking-widest">收藏</p>
+              <p className="text-[10px] font-mono opacity-60 normal-case">
+                FAVORITES
+              </p>
+              <p className="text-xs font-bold">
+                {showFavOnly ? "返回所有作品" : "只看收藏"}
+              </p>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              onClick={() => setIsFeedbackOpen(!isFeedbackOpen)}
+              variant="neutral"
+              size="icon"
+              data-active={isFeedbackOpen}
+              className={`z-30 w-12 h-12 rounded-none transition-colors ${isFeedbackOpen ? "bg-main text-black hover:bg-main/80" : "hover:bg-main hover:text-black"}`}
+            >
+              <i className="hn hn-message text-2xl"></i>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left" align="center" sideOffset={10}>
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs font-black tracking-widest">意見回饋</p>
+              <p className="text-[10px] font-mono opacity-60 normal-case">
+                FEEDBACK
+              </p>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+
+        <div className="z-40 relative">
+          <ThemeToggle isIconOnly={true} />
+        </div>
+      </div>

@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>系統升級中 - ZUTOMAYO MV Gallery</title>
+    <meta name="description" content="ZUTOMAYO (ずっと真夜中でいいのに。) 粉絲自建 MV 設定圖資料庫。目前正在進行主視覺全新升級。">
+    <meta name="theme-color" content="#0a0a0b">
+
+    <!-- 引入 Umami 統計 -->
+    <script defer src="https://u.danndann.cn/script.js" data-website-id="405e07a8-7aae-41a6-bdb9-6851e898ab0c"></script>
+
+    <style>
+        /* 基礎樣式重置與像素字體模擬 */
+        @import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap');
+        
+        :root {
+            --background: #1e1b4b; /* hsl(244, 47%, 20%) 紫色 */
+            --foreground: #fafafa; /* hsl(0, 0%, 98%) */
+            --card: #1e1b4b; /* hsl(244, 47%, 20%) */
+            --border: #312e81; /* hsl(244, 47%, 34%) */
+            --main: #dcfb27;
+            --yellow-500: #eab308;
+            --black: #000000;
+            --white: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'DotGothic16', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+            background-color: var(--background);
+            color: var(--foreground);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            padding: 1.5rem;
+            line-height: 1.5;
+        }
+
+        /* 背景格線 */
+        .bg-grid {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.2;
+            background-image: 
+                linear-gradient(to right, rgba(128,128,128,0.1) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(128,128,128,0.1) 1px, transparent 1px);
+            background-size: 24px 24px;
+            z-index: 0;
+        }
+
+        /* 掃描線效果 */
+        .crt-lines {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.1;
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0,0,0,0.2) 50%,
+                rgba(0,0,0,0.2)
+            );
+            background-size: 100% 4px;
+            z-index: 1;
+        }
+
+        /* 內容容器 */
+        .card-container {
+            width: 100%;
+            max-width: 28rem; /* max-w-md */
+            background-color: var(--card);
+            border: 4px solid var(--black);
+            box-shadow: 8px 8px 0px 0px rgba(0,0,0,1); /* neo shadow */
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Header */
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 1rem;
+            border-bottom: 4px solid var(--black);
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .status-dot {
+            width: 0.625rem;
+            height: 0.625rem;
+            background-color: var(--yellow-500);
+            box-shadow: 2px 2px 0px 0px rgba(234,179,8,0.4);
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        .header-text {
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+
+        .header-text-row {
+            display: flex;
+            align-items: baseline;
+            gap: 0.375rem;
+            letter-spacing: normal;
+        }
+
+        .header-text-row.dim { opacity: 0.6; }
+        .header-text-row.yellow { color: var(--yellow-500); }
+        
+        .header-subtext {
+            font-size: 8px;
+            font-family: monospace;
+            text-transform: none;
+        }
+
+        /* Body Content */
+        .card-body {
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 1.5rem;
+        }
+
+        /* Icon Box */
+        .icon-box {
+            width: 6rem;
+            height: 6rem;
+            border: 4px solid var(--black);
+            background-color: rgba(234,179,8,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 4px 4px 0px 0px rgba(0,0,0,1); /* neo-sm */
+            position: relative;
+        }
+
+        .icon-box i {
+            display: inline-block;
+            width: 3rem;
+            height: 3rem;
+            color: var(--yellow-500);
+            animation: spin 3s linear infinite;
+        }
+        
+        /* 齒輪 SVG 樣式 */
+        .icon-box svg {
+            width: 100%;
+            height: 100%;
+            fill: currentColor;
+        }
+
+        /* Title Area */
+        .title-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .main-title {
+            font-size: 1.875rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--yellow-500);
+            margin-bottom: 0.25rem;
+        }
+
+        .sub-title {
+            font-size: 0.75rem;
+            font-family: monospace;
+            opacity: 0.6;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        /* Divider */
+        .divider {
+            width: 100%;
+            height: 4px;
+            background-color: rgba(255, 255, 255, 0.1);
+            margin: 0.5rem 0;
+        }
+
+        /* Description */
+        .description {
+            font-size: 0.875rem;
+            font-weight: 700;
+            opacity: 0.8;
+            line-height: 1.6;
+            max-width: 20rem;
+        }
+
+        /* Countdown Box */
+        .countdown-box {
+            margin-top: 1rem;
+            padding: 0.75rem 2rem;
+            border: 2px solid var(--black);
+            background-color: var(--black);
+            color: var(--main);
+            text-transform: uppercase;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: 4px 4px 0px 0px rgba(0,0,0,0.3);
+        }
+
+        .countdown-row {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1.2;
+        }
+
+        .countdown-row.dim { opacity: 0.8; }
+        .countdown-row.white { color: var(--white); }
+
+        .countdown-title {
+            letter-spacing: normal;
+            font-weight: 700;
+            font-size: 0.75rem;
+        }
+
+        .countdown-value {
+            letter-spacing: normal;
+            font-weight: 900;
+            font-size: 0.875rem;
+        }
+
+        .countdown-subtext {
+            font-size: 8px;
+            font-family: monospace;
+            opacity: 0.6;
+            text-transform: none;
+            margin-top: 0.125rem;
+        }
+        
+        .countdown-subtext.main-color { color: var(--main); }
+
+        /* Footer */
+        .footer {
+            margin-top: 3rem;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            opacity: 0.3;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+            z-index: 10;
+        }
+
+        .footer-subtext {
+            opacity: 0.6;
+            text-transform: none;
+            font-size: 8px;
+        }
+
+        /* Animations */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 錨點標記 -->
+    <div id="maintenance"></div>
+        
+    <!-- 背景格線與掃描線 -->
+    <div class="bg-grid"></div>
+    <div class="crt-lines"></div>
+
+    <div class="card-container">
+        <!-- Header -->
+        <div class="card-header">
+            <div class="header-content">
+                <div class="status-dot"></div>
+                <div class="header-text">
+                    <span class="header-text-row dim">
+                        系統狀態 <span class="header-subtext">System_Status</span>
+                    </span>
+                    <span class="header-text-row yellow">
+                        升級中 <span class="header-subtext">Upgrading</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="card-body">
+            <!-- Icon -->
+            <div class="icon-box">
+                <i>
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="m21,10v-1h-1v-2h1v-2h-1v-1h-1v-1h-2v1h-2v-1h-1V1h-4v2h-1v1h-2v-1h-2v1h-1v1h-1v2h1v2h-1v1H1v4h2v1h1v2h-1v2h1v1h1v1h2v-1h2v1h1v2h4v-2h1v-1h2v1h2v-1h1v-1h1v-2h-1v-2h1v-1h2v-4h-2Zm0,3h-1v1h-1v1h-1v2h1v2h-2v-1h-2v1h-1v1h-1v1h-2v-1h-1v-1h-1v-1h-2v1h-2v-2h1v-2h-1v-1h-1v-1h-1v-2h1v-1h1v-1h1v-2h-1v-2h2v1h2v-1h1v-1h1v-1h2v1h1v1h1v1h2v-1h2v2h-1v2h1v1h1v1h1v2Z"/>
+                        <path d="m16,10v-1h-1v-1h-1v-1h-4v1h-1v1h-1v1h-1v4h1v1h1v1h1v1h4v-1h1v-1h1v-1h1v-4h-1Zm-1,4h-1v1h-4v-1h-1v-4h1v-1h4v1h1v4Z"/>
+                    </svg>
+                </i>
+            </div>
+            
+            <!-- Title -->
+            <div class="title-area">
+                <h1 class="main-title">
+                    系統升級中
+                </h1>
+                <p class="sub-title">
+                    SYSTEM_UPGRADE_IN_PROGRESS
+                </p>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <!-- Description -->
+            <p class="description">
+                資料庫主視覺與 UI 介面正在進行全新升級，將為您帶來更沉浸的賽博龐克體驗，敬請期待。
+            </p>
+
+            <!-- Countdown Timer -->
+            <div class="countdown-box">
+                <span class="countdown-row dim">
+                    <span class="countdown-title">預估恢復時間</span>
+                    <span class="countdown-subtext">ESTIMATED_TIME_TO_RECOVERY</span>
+                </span>
+                <span class="countdown-row white" id="countdown-container" data-text="未知">
+                    <span class="countdown-value" id="countdown-text">未知</span>
+                    <span class="countdown-subtext main-color" id="countdown-label">UNKNOWN</span>
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <div class="footer">
+        <span id="footer-year">© 2024 ZTMY MV 資料庫</span>
+        <span class="footer-subtext">
+            ZUTOMATO_MV_GALLERY
+        </span>
+    </div>
+
+    <script>
+        // ==========================================
+        // 配置區：請在這裡修改您的預估完成時間
+        // 格式：'YYYY-MM-DDTHH:mm:ss' (ISO 8601)
+        // 
+        // 【時區說明】
+        // 如果沒有加上時區標記（例如 '2024-12-31T23:59:59'），瀏覽器會把它當作「訪客當地的時區」。
+        // 若要指定「絕對時間（如台灣時間 UTC+8）」，請在結尾加上 '+08:00'。
+        //
+        // 範例：
+        // 台灣時間 2024年12月31日 晚上11點59分： '2024-12-31T23:59:59+08:00'
+        // 日本時間 2024年12月31日 晚上11點59分： '2024-12-31T23:59:59+09:00'
+        // UTC 零時區 (格林威治標準時間)： '2024-12-31T23:59:59Z'
+        //
+        // 若留空或設為 null，則顯示「未知」
+        // ==========================================
+        const MAINTENANCE_ETA = null; // '<-- 修改這裡'
+
+        // 初始化 Footer 年份
+        document.getElementById('footer-year').textContent = `© ${new Date().getFullYear()} ZTMY MV 資料庫`;
+
+        // 倒數計時邏輯
+        function updateCountdown() {
+            const textEl = document.getElementById('countdown-text');
+            const labelEl = document.getElementById('countdown-label');
+            const containerEl = document.getElementById('countdown-container');
+
+            if (!MAINTENANCE_ETA) {
+                textEl.textContent = '未知';
+                labelEl.textContent = 'UNKNOWN';
+                containerEl.setAttribute('data-text', '未知');
+                return;
+            }
+
+            const targetDate = new Date(MAINTENANCE_ETA).getTime();
+            if (isNaN(targetDate)) {
+                textEl.textContent = '未知';
+                labelEl.textContent = 'UNKNOWN';
+                containerEl.setAttribute('data-text', '未知');
+                return;
+            }
+
+            const now = new Date().getTime();
+            const distance = targetDate - now;
+
+            if (distance < 0) {
+                textEl.textContent = '即將完成';
+                labelEl.textContent = 'FINISHING_UP';
+                containerEl.setAttribute('data-text', '即將完成');
+                return;
+            }
+
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            const parts = [];
+            if (days > 0) parts.push(`${days}天`);
+            parts.push(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+            
+            const timeString = parts.join(' ');
+            textEl.textContent = timeString;
+            labelEl.textContent = 'COUNTDOWN';
+            containerEl.setAttribute('data-text', timeString);
+        }
+
+        // 立即執行一次，然後每秒更新
+        updateCountdown();
+        if (MAINTENANCE_ETA) {
+            setInterval(updateCountdown, 1000);
+        }
+
+        // Umami 自訂事件追蹤 (如果需要)
+        window.addEventListener('load', () => {
+            if (window.umami) {
+                umami.track('Maintenance_Page_Viewed');
+            }
+        });
+    </script>
+</body>
+
+</html>

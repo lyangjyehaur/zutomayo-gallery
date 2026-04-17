@@ -29,7 +29,7 @@
     src: url("../fonts/fusion-pixel-8px-monospaced-zh_hans.otf.woff2");
 }
 
-.font-8px-monospaced:lang(zh-hans) {
+.font-8px-monospaced:lang(zh-Hans) {
     font-family: fusion-pixel-8px-monospaced-zh_hans, sans-serif;
 }
 
@@ -38,7 +38,7 @@
     src: url("../fonts/fusion-pixel-8px-monospaced-zh_hant.otf.woff2");
 }
 
-.font-8px-monospaced:lang(zh-hant) {
+.font-8px-monospaced:lang(zh-Hant) {
     font-family: fusion-pixel-8px-monospaced-zh_hant, sans-serif;
 }
 
@@ -78,7 +78,7 @@
     src: url("../fonts/fusion-pixel-8px-proportional-zh_hans.otf.woff2");
 }
 
-.font-8px-proportional:lang(zh-hans) {
+.font-8px-proportional:lang(zh-Hans) {
     font-family: fusion-pixel-8px-proportional-zh_hans, sans-serif;
 }
 
@@ -87,7 +87,7 @@
     src: url("../fonts/fusion-pixel-8px-proportional-zh_hant.otf.woff2");
 }
 
-.font-8px-proportional:lang(zh-hant) {
+.font-8px-proportional:lang(zh-Hant) {
     font-family: fusion-pixel-8px-proportional-zh_hant, sans-serif;
 }
 
@@ -127,7 +127,7 @@
     src: url("../fonts/fusion-pixel-10px-monospaced-zh_hans.otf.woff2");
 }
 
-.font-10px-monospaced:lang(zh-hans) {
+.font-10px-monospaced:lang(zh-Hans) {
     font-family: fusion-pixel-10px-monospaced-zh_hans, sans-serif;
 }
 
@@ -136,7 +136,7 @@
     src: url("../fonts/fusion-pixel-10px-monospaced-zh_hant.otf.woff2");
 }
 
-.font-10px-monospaced:lang(zh-hant) {
+.font-10px-monospaced:lang(zh-Hant) {
     font-family: fusion-pixel-10px-monospaced-zh_hant, sans-serif;
 }
 
@@ -176,7 +176,7 @@
     src: url("../fonts/fusion-pixel-10px-proportional-zh_hans.otf.woff2");
 }
 
-.font-10px-proportional:lang(zh-hans) {
+.font-10px-proportional:lang(zh-Hans) {
     font-family: fusion-pixel-10px-proportional-zh_hans, sans-serif;
 }
 
@@ -185,7 +185,7 @@
     src: url("../fonts/fusion-pixel-10px-proportional-zh_hant.otf.woff2");
 }
 
-.font-10px-proportional:lang(zh-hant) {
+.font-10px-proportional:lang(zh-Hant) {
     font-family: fusion-pixel-10px-proportional-zh_hant, sans-serif;
 }
 
@@ -225,7 +225,7 @@
     src: url("../fonts/fusion-pixel-12px-monospaced-zh_hans.otf.woff2");
 }
 
-.font-12px-monospaced:lang(zh-hans) {
+.font-12px-monospaced:lang(zh-Hans) {
     font-family: fusion-pixel-12px-monospaced-zh_hans, sans-serif;
 }
 
@@ -234,7 +234,7 @@
     src: url("../fonts/fusion-pixel-12px-monospaced-zh_hant.otf.woff2");
 }
 
-.font-12px-monospaced:lang(zh-hant) {
+.font-12px-monospaced:lang(zh-Hant) {
     font-family: fusion-pixel-12px-monospaced-zh_hant, sans-serif;
 }
 
@@ -274,7 +274,7 @@
     src: url("../fonts/fusion-pixel-12px-proportional-zh_hans.otf.woff2");
 }
 
-.font-12px-proportional:lang(zh-hans) {
+.font-12px-proportional:lang(zh-Hans) {
     font-family: fusion-pixel-12px-proportional-zh_hans, sans-serif;
 }
 
@@ -283,7 +283,7 @@
     src: url("../fonts/fusion-pixel-12px-proportional-zh_hant.otf.woff2");
 }
 
-.font-12px-proportional:lang(zh-hant) {
+.font-12px-proportional:lang(zh-Hant) {
     font-family: fusion-pixel-12px-proportional-zh_hant, sans-serif;
 }
 

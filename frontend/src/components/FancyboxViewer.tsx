@@ -4,6 +4,11 @@ import { createRoot, type Root } from 'react-dom/client';
 import { Fancybox as NativeFancybox } from '@fancyapps/ui';
 import '@fancyapps/ui/dist/fancybox/fancybox.css';
 
+// 將 NativeFancybox 暴露給全域，讓 analytics.ts 可以存取 API 以獲取下載檔名
+if (typeof window !== 'undefined') {
+  (window as any).Fancybox = NativeFancybox;
+}
+
 import { MVImage } from '@/lib/types';
 import { getProxyImgUrl } from '@/lib/image';
 import { GALLERY_BREAKPOINTS } from '@/components/galleryBreakpoints';
@@ -106,7 +111,30 @@ interface PhotoData {
   richText: string;
   width?: number;
   height?: number;
+  rawFilename?: string;
 }
+
+// 輔助函數：從 URL 提取副檔名
+const getExtensionFromUrl = (urlStr: string): string => {
+  if (!urlStr) return 'jpg';
+  try {
+    const urlObj = new URL(urlStr);
+    
+    // 處理 Twitter 圖片
+    if (urlObj.hostname === 'pbs.twimg.com') {
+      const format = urlObj.searchParams.get('format');
+      if (format) return format;
+    }
+    
+    // 處理一般圖片網址
+    const match = urlObj.pathname.match(/\.([a-zA-Z0-9]+)$/);
+    if (match) return match[1].toLowerCase();
+    
+    return 'jpg';
+  } catch {
+    return 'jpg';
+  }
+};
 
 const FancyboxCaptionOverlay = ({ api, photos }: { api: any; photos: PhotoData[] }) => {
   const [activeIndex, setActiveIndex] = useState(api?.getCarousel?.()?.getPage()?.index || 0);
@@ -210,7 +238,7 @@ const FancyboxCaptionOverlay = ({ api, photos }: { api: any; photos: PhotoData[]
             <h4>{title}</h4>
           </div>
           <div className="ztmy-fb-caption-rich">
-            <div className="rich-text" dangerouslySetInnerHTML={{ __html: richText || 'NO_METADATA_FOUND' }} />
+            <div className="rich-text" dangerouslySetInnerHTML={{ __html: richText || '暫無描述 (NO_METADATA_FOUND)' }} />
           </div>
         </div>
       </div>
@@ -233,7 +261,10 @@ const SkeletonItem = ({ width, height }: SkeletonItemProps) => {
         <div className="relative bg-secondary-background overflow-hidden" style={{ aspectRatio }}>
           <div className="absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2">
             <div className="size-5 border-2 border-black/10 border-t-black animate-spin rounded-full" />
-            <span className="text-[8px] font-black opacity-20 uppercase tracking-tighter">Syncing_Visual...</span>
+            <span className="text-[8px] font-black uppercase tracking-tighter flex flex-col items-center leading-tight">
+              <span className="opacity-40 tracking-normal">同步視覺中...</span>
+              <span className="font-mono opacity-20 normal-case">Syncing_Visual...</span>
+            </span>
           </div>
         </div>
       </div>
@@ -252,10 +283,11 @@ interface PhotoItemProps {
   photo: PhotoData;
   index: number;
   onPhotoClick?: (index: number) => void;
+  delayMs?: number;
   key?: string | number;
 }
 
-const PhotoItem = ({ photo, index, onPhotoClick }: PhotoItemProps) => {
+const PhotoItem = ({ photo, index, onPhotoClick, delayMs }: PhotoItemProps) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [actualDimensions, setActualDimensions] = useState<{ width: number; height: number } | null>(
     photo.width && photo.height ? { width: photo.width, height: photo.height } : null,
@@ -283,17 +315,29 @@ const PhotoItem = ({ photo, index, onPhotoClick }: PhotoItemProps) => {
   };
 
   return (
-    <div ref={containerRef} className="mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="gallery-item block cursor-pointer" data-index={index} onClick={handleClick}>
+    <div
+      ref={containerRef}
+      className="mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500 motion-reduce:animate-none"
+      style={delayMs !== undefined ? { animationDelay: `${delayMs}ms`, animationFillMode: 'both' } : undefined}
+    >
+      <div 
+        className="gallery-item block cursor-pointer" 
+        data-index={index} 
+        data-filename={photo.rawFilename || photo.caption}
+        onClick={handleClick}
+      >
         <div className="border-3 border-black bg-card shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all">
           <div className="relative bg-secondary-background overflow-hidden" style={{ aspectRatio: aspectRatio || '16 / 9' }}>
             <div
-              className={`absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2 transition-opacity duration-500 ${
-                isLoaded ? 'opacity-0 pointer-events-none' : 'opacity-100'
+              className={`absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2 transition-opacity duration-500 pointer-events-none ${
+                isLoaded ? 'opacity-0' : 'opacity-100'
               }`}
             >
               <div className="size-5 border-2 border-black/10 border-t-black animate-spin rounded-full" />
-              <span className="text-[8px] font-black opacity-20 uppercase tracking-tighter">Syncing_Visual...</span>
+              <span className="text-[8px] font-black uppercase tracking-tighter flex flex-col items-center leading-tight">
+                <span className="opacity-40 tracking-normal">同步視覺中...</span>
+                <span className="font-mono opacity-20 normal-case">Syncing_Visual...</span>
+              </span>
             </div>
 
             <img
@@ -339,9 +383,15 @@ export default function FancyboxViewer({
   const [loadingMore, setLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const lastBatchStartRef = useRef(0);
+  const displayedCountRef = useRef(0);
 
   const fancyboxRef = useRef<ReturnType<typeof NativeFancybox.show> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    displayedCountRef.current = displayedPhotos.length;
+  }, [displayedPhotos.length]);
 
   const preloadImageDimensions = useCallback((url: string): Promise<{ width: number; height: number } | null> => {
     return new Promise((resolve) => {
@@ -374,14 +424,19 @@ export default function FancyboxViewer({
 
           const caption = img.caption || `${mvTitle}_${index}`;
 
+          // 擷取原始副檔名，並組合出包含副檔名的完整下載檔名
+          const ext = getExtensionFromUrl(img.url);
+          const fullFilename = `${mvTitle}_${caption.replace(/[^a-zA-Z0-9_\-\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff]/g, '_')}.${ext}`;
+
           return {
             src: thumbUrl,
             full: getProxyImgUrl(img.url, 'full'),
-            raw: getProxyImgUrl(img.url, 'raw', `${mvTitle}_${caption}`),
+            raw: getProxyImgUrl(img.url, 'raw', fullFilename),
             caption,
             richText: img.richText || '',
             width,
             height,
+            rawFilename: fullFilename,
           };
         }),
       );
@@ -400,6 +455,7 @@ export default function FancyboxViewer({
 
     setLoading(true);
     getPhotosFromRange(0, itemsPerPage).then((firstPagePhotos) => {
+      lastBatchStartRef.current = 0;
       setDisplayedPhotos(firstPagePhotos);
       setCurrentPage(1);
       setHasMore(firstPagePhotos.length < images.length);
@@ -415,6 +471,7 @@ export default function FancyboxViewer({
     const startIndex = currentPage * itemsPerPage;
     getPhotosFromRange(startIndex, itemsPerPage).then((newPhotos) => {
       if (newPhotos.length > 0) {
+        lastBatchStartRef.current = displayedCountRef.current;
         setDisplayedPhotos((prev) => [...prev, ...newPhotos]);
         setCurrentPage((prev) => prev + 1);
       }
@@ -458,7 +515,9 @@ export default function FancyboxViewer({
           thumbEl: thumbEl,
           $thumb: thumbEl,
           downloadSrc: photo.raw,
-          downloadFilename: photo.caption,
+          downloadFilename: photo.rawFilename || photo.caption, // <-- 改用帶有副檔名的檔名
+          // Do not pass caption to Fancybox API to completely prevent native caption rendering
+          alt: photo.caption,     // 讓 img 標籤加上 alt 屬性，修復 DOM 備用方案
         };
       });
 
@@ -468,6 +527,12 @@ export default function FancyboxViewer({
         dragToClose: true,
         placeFocusBack: false,
         mainClass: 'fancybox-neo-container',
+        // Disable native caption by unbinding the default plugin/template entirely
+        Caption: false,
+        template: {
+          // Remove caption element from the main template
+          main: '<div class="fancybox__container" role="dialog" aria-modal="true" aria-label="{{MODAL}}" tabindex="-1">\n      <div class="fancybox__backdrop"></div>\n      <div class="fancybox__carousel"></div>\n      <div class="fancybox__footer"></div>\n    </div>',
+        },
         on: {
           ready: (api) => {
             handleAfterOpen();
@@ -481,6 +546,21 @@ export default function FancyboxViewer({
             (api as any).__ztmyOverlay = { root, host };
           },
           destroy: (api) => {
+            // 觸發關閉事件追蹤 (包含點擊 X 按鈕、滑動關閉、按 ESC 鍵等所有關閉方式)
+            if (typeof window !== 'undefined' && (window as any).umami && typeof (window as any).umami.track === 'function') {
+              let targetImageInfo = 'unknown';
+              const slide = api.getSlide();
+              if (slide) {
+                targetImageInfo = slide.downloadFilename || slide.caption || slide.alt || (typeof slide.src === 'string' ? slide.src.split('/').pop() : 'unknown');
+              }
+              
+              (window as any).umami.track('Z_Lightbox_Close', {
+                type: 'Fancybox_Lifecycle',
+                label: `Close (${String(targetImageInfo).substring(0, 30)})`,
+                current_url: window.location.pathname + window.location.search
+              });
+            }
+
             const overlay = (api as any)?.__ztmyOverlay as { root?: Root; host?: HTMLElement } | undefined;
             overlay?.root?.unmount?.();
             overlay?.host?.remove?.();
@@ -745,10 +825,24 @@ export default function FancyboxViewer({
       {showHeader && (
         <header className="mb-8 lg:mb-12 border-b-8 border-border bg-card p-4 sm:p-6 shadow-neo-sm">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black uppercase italic tracking-tighter text-foreground">
-            {headerTitle || 'Fancybox_Debug_Terminal'}
+            {headerTitle || (
+              <span className="flex flex-col leading-tight">
+                <span className="tracking-normal">Fancybox 除錯終端</span>
+                <span className="text-[10px] font-mono opacity-50 normal-case">Fancybox_Debug_Terminal</span>
+              </span>
+            )}
           </h1>
           <p className="font-bold opacity-50 uppercase mt-2 text-foreground text-sm sm:text-base">
-            {headerSubtitle || `Source: ${mvId ? `Target_MV: ${mvId}` : 'Full_Archive'} | Assets_Count: ${displayedPhotos.length}`}
+            {headerSubtitle || (
+              <span className="flex flex-col leading-tight">
+                <span className="tracking-normal">
+                  來源：{mvId ? `指定 MV：${mvId}` : '全站資料'} ｜ 素材數：{displayedPhotos.length}
+                </span>
+                <span className="text-[10px] font-mono opacity-50 normal-case">
+                  Source: {mvId ? `Target_MV: ${mvId}` : 'Full_Archive'} | Assets_Count: {displayedPhotos.length}
+                </span>
+              </span>
+            )}
           </p>
         </header>
       )}
@@ -756,7 +850,13 @@ export default function FancyboxViewer({
       <div className="gallery-wrapper">
         <ResponsiveMasonry breakpointColumns={breakpointColumns} className="" columnClassName="">
           {displayedPhotos.map((photo, index) => (
-            <PhotoItem key={`${photo.src}-${index}`} photo={photo} index={index} onPhotoClick={handlePhotoClick} />
+            <PhotoItem
+              key={`${photo.src}-${index}`}
+              photo={photo}
+              index={index}
+              onPhotoClick={handlePhotoClick}
+              delayMs={index >= lastBatchStartRef.current ? Math.min(index - lastBatchStartRef.current, 48) * 25 : undefined}
+            />
           ))}
 
           {loadingMore && Array.from({ length: 4 }).map((_, i) => <SkeletonItem key={`loading-${i}`} />)}
@@ -769,16 +869,27 @@ export default function FancyboxViewer({
             onClick={loadMore}
             disabled={loadingMore}
             className="group px-6 sm:px-8 py-3 sm:py-4 bg-card border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none active:translate-x-2 active:translate-y-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-black uppercase tracking-tighter text-sm sm:text-lg flex flex-col items-center gap-1 min-w-[200px]"
+            data-umami-event="Z_Load_More_Images"
+            data-umami-event-mv={mvTitle}
+            data-umami-event-count={displayedPhotos.length}
           >
-            <span>
-              {loadingMore ? 'Loading...' : 'Load_More_Assets'} ({displayedPhotos.length} / {images.length})
+            <span className="flex flex-col items-center leading-tight">
+              <span className="tracking-normal">
+                {loadingMore ? '載入中...' : '載入更多'} ({displayedPhotos.length} / {images.length})
+              </span>
+              <span className="text-[10px] font-mono opacity-60 normal-case">
+                {loadingMore ? 'Loading...' : 'Load_More_Assets'}
+              </span>
             </span>
           </button>
         </div>
       )}
 
       {enablePagination && !hasMore && displayedPhotos.length > 0 && (
-        <div className="mt-8 lg:mt-12 text-center font-bold opacity-50 uppercase text-sm sm:text-base">End of Archive</div>
+        <div className="mt-8 lg:mt-12 text-center font-bold opacity-50 uppercase text-sm sm:text-base flex flex-col items-center leading-tight">
+          <span className="tracking-normal">已到最底</span>
+          <span className="text-[10px] font-mono opacity-60 normal-case">End of Archive</span>
+        </div>
       )}
     </div>
   );

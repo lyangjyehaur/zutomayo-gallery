@@ -58,7 +58,8 @@ export default function DebugFancyBox({ mvid: propMvid }: DebugFancyBoxProps) {
         src: getProxyImgUrl(img.url, 'thumb'),
         full: getProxyImgUrl(img.url, 'full'),
         raw: getProxyImgUrl(img.url, 'raw'),
-        caption: img.caption || mv.title,
+        key: img.url,
+        caption: img.caption || `<span lang="ja">${mv.title}</span>`,
         alt: img.alt || mv.title,
         richText: img.richText || '',
         originalUrl: img.url
@@ -70,22 +71,50 @@ export default function DebugFancyBox({ mvid: propMvid }: DebugFancyBoxProps) {
     <div className="p-10 bg-background min-h-screen">
       <header className="mb-12 border-b-8 border-border pb-4">
         <h1 className="text-4xl font-black uppercase italic tracking-tighter">
-          {loading ? 'Fetching_Data...' : (mvid && !Array.isArray(fetchedData) ? `Debug: ${fetchedData?.title}` : 'Fancybox_API_Terminal')}
+          {loading ? (
+            <span className="flex flex-col leading-tight">
+              <span className="tracking-normal">讀取資料中...</span>
+              <span className="text-[10px] font-mono opacity-60 normal-case">Fetching_Data...</span>
+            </span>
+          ) : (mvid && !Array.isArray(fetchedData) ? (
+            <span className="flex flex-col leading-tight">
+              <span className="tracking-normal">除錯：<span lang="ja">{fetchedData?.title}</span></span>
+              <span className="text-[10px] font-mono opacity-60 normal-case">Debug</span>
+            </span>
+          ) : (
+            <span className="flex flex-col leading-tight">
+              <span className="tracking-normal">Fancybox API 終端</span>
+              <span className="text-[10px] font-mono opacity-60 normal-case">Fancybox_API_Terminal</span>
+            </span>
+          ))}
         </h1>
         <p className="font-bold opacity-50 uppercase mt-2">
-          Status: {loading ? 'SYNCING' : (error ? `ERROR: ${error}` : `ONLINE (${photos.length} Assets)`)}
+          <span className="flex flex-col leading-tight">
+            <span className="tracking-normal">
+              狀態：{loading ? '同步中' : (error ? `錯誤：${error}` : `線上（${photos.length} 筆素材）`)}
+            </span>
+            <span className="text-[10px] font-mono opacity-60 normal-case">
+              Status: {loading ? 'SYNCING' : (error ? `ERROR: ${error}` : `ONLINE (${photos.length} Assets)`)}
+            </span>
+          </span>
         </p>
       </header>
 
       {loading && (
         <div className="py-20 text-center animate-pulse font-black text-main uppercase text-xl">
-          Accessing_Database_Cluster...
+          <div className="flex flex-col items-center leading-tight">
+            <span className="tracking-normal">連線資料庫中...</span>
+            <span className="text-[10px] font-mono opacity-60 normal-case">Accessing_Database_Cluster...</span>
+          </div>
         </div>
       )}
 
       {error && (
         <div className="p-6 border-4 border-red-500 bg-red-500/10 text-red-500 font-bold mb-8">
-          [DATABASE_ERROR]: {error}
+          <span className="flex flex-col leading-tight">
+            <span className="tracking-normal">[資料庫錯誤]：{error}</span>
+            <span className="text-[10px] font-mono opacity-60 normal-case">[DATABASE_ERROR]</span>
+          </span>
         </div>
       )}
 
@@ -118,10 +147,15 @@ export default function DebugFancyBox({ mvid: propMvid }: DebugFancyBoxProps) {
             // 構造側邊欄 HTML 內容，保持 Neo-brutalism 風格
             const captionHtml = `
               <div class="fancy-sidebar-content">
-                <div class="text-[10px] font-black uppercase bg-black text-[#bcff00] px-2 py-0.5 inline-block mb-4 border border-[#bcff00]">Asset_Metadata_Node</div>
+                <div class="text-[10px] font-black uppercase bg-black text-[#bcff00] px-2 py-0.5 inline-block mb-4 border border-[#bcff00]">
+                  <div style="display:flex;flex-direction:column;line-height:1.1;">
+                    <span style="opacity:0.9;">素材資訊</span>
+                    <span style="font-family:monospace;opacity:0.6;">Asset_Metadata_Node</span>
+                  </div>
+                </div>
                 <h2 class="text-xl font-black italic uppercase tracking-tighter mb-4 leading-none">${photo.caption}</h2>
                 <div class="rich-text-content space-y-4 text-sm leading-relaxed border-t-2 border-black pt-4">
-                  ${photo.richText || '<span class="opacity-30 italic">No additional telemetry data found for this asset.</span>'}
+                  ${photo.richText || '<span class="opacity-30 italic">暫無更多資訊 (No additional telemetry data found for this asset.)</span>'}
                 </div>
               </div>
             `;

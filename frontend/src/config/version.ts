@@ -2,8 +2,8 @@
  * 全局版本号配置
  * 用于统一管理和引用应用版本信息
  */
-export const APP_VERSION = '3.0' as const;
-export const BUILD_DATE = '2026-04-15' as const;
+export const APP_VERSION = import.meta.env.VITE_APP_VERSION || '2.7.0';
+export const BUILD_DATE = import.meta.env.VITE_BUILD_DATE || '2026-04-15';
 
 // 导出为对象方便扩展
 export const VERSION_CONFIG = {

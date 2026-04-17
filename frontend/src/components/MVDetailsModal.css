@@ -191,3 +191,88 @@
     border-top: 8px solid #000000 !important;
   }
 }
+
+/* MVDetailsModal Global Styles */
+.fancybox__container {
+  z-index: 100000 !important;
+}
+
+.fancybox__backdrop {
+  z-index: 0 !important;
+}
+
+.fancybox__carousel {
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+.f-thumbs {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+.f-caption {
+  position: relative !important;
+  z-index: 3 !important;
+}
+
+.fancybox__toolbar,
+.fancybox__nav {
+  position: relative !important;
+  z-index: 4 !important;
+}
+
+.fancybox__container,
+.fancybox__backdrop,
+.fancybox__carousel,
+.fancybox__toolbar,
+.fancybox__nav,
+.f-caption,
+.f-thumbs {
+  pointer-events: auto !important;
+}
+
+.lg-backdrop {
+  z-index: 99999 !important;
+}
+.lg-outer {
+  z-index: 100000 !important;
+}
+.lg-components {
+  z-index: 100001 !important;
+}
+
+.lg-backdrop,
+.lg-outer,
+.lg-components,
+.lg-toolbar,
+.lg-actions,
+.lg-sub-html,
+.lg-thumb-outer,
+.lg-img-wrap,
+.lg-item {
+  pointer-events: auto !important;
+}
+
+[data-radix-focus-guard] {
+  display: none !important;
+}
+
+.waline-wrapper {
+  --waline-theme-color: #00ff9d !important;
+  --waline-active-color: #00cc7d !important;
+}
+.waline-wrapper .wl-panel {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border: 2px solid #333 !important;
+}
+.waline-wrapper .wl-input,
+.waline-wrapper .wl-editor {
+  background: rgba(0, 0, 0, 0.5) !important;
+  color: #fff !important;
+}
+.waline-wrapper .wl-btn.primary {
+  background: var(--waline-theme-color) !important;
+  color: #000 !important;
+  border: 2px solid #000 !important;
+}

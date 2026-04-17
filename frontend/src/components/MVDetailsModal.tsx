@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -7,7 +7,6 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { MVItem } from '@/lib/types';
 import { getProxyImgUrl } from '@/lib/image';
@@ -16,39 +15,12 @@ import FancyboxViewer from '@/components/FancyboxViewer';
 import { WalineComments } from '@/components/WalineComments';
 import { VERSION_CONFIG } from '@/config/version';
 import { getLightboxProvider } from '@/config';
+import { Helmet } from 'react-helmet-async';
+import { CoverCarousel } from './MVCard';
 import './MVDetailsModal.css';
 
 
-// 像素風圖標組件庫
-const PixelPlay = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" className={className} fill="currentColor">
-    <path d="M6 4h2v2H6V4zm2 2h2v2H8V6zm2 2h2v2h-2V8zm2 2h2v2h-2v-2zm-2 2h2v2h-2v-2zm-2 2h2v2H8v-2zm-2 2h2v2H6v-2z" />
-  </svg>
-);
-
-const PixelX = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" className={className} fill="currentColor">
-    <path d="M4 4h2v2H4V4zm2 2h2v2H6V6zm2 2h2v2H8V8zm2 2h4v2h-4v-2zm4-2h2v2h-2V8zm2-2h2v2h-2V6zm2-2h2v2h-2V4zM4 20h2v-2H4v2zm2-2h2v-2H6v2zm2-2h2v-2H8v2zm8 0h2v-2h-2v2zm2 2h2v-2h-2v2zm2 2h2v-2h-2v2z" />
-  </svg>
-);
-
-const PixelYoutube = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" className={className} fill="currentColor">
-    <path d="M2 5h20v14H2V5zm2 2v10h16V7H4zm6 2l6 3-6 3V9z" />
-  </svg>
-);
-
-const PixelTV = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" className={className} fill="currentColor">
-    <path d="M3 5h18v12H3V5zm2 2v8h14V7H5zM8 2l2 2h4l2-2h2v2h-2l-2 2H10L8 4H6V2h2z" />
-  </svg>
-);
-
-const PixelGallery = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" className={className} fill="currentColor">
-    <path d="M2 4h20v16H2V4zm2 2v12h16V6H4zm2 2h4v4H6V8zm6 4h6v2h-6v-2zm0-4h6v2h-6V8z" />
-  </svg>
-);
+// 圖標組件改為 pixelarticons 類名使用
 
 interface MVDetailsModalProps {
   mv: MVItem | null;
@@ -80,6 +52,20 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
     else if (mv?.youtube) setVideoPlatform('youtube');
   }, [mv?.id]);
 
+  // 網頁標題管理
+  useEffect(() => {
+    if (mv) {
+      document.title = `${mv.title} - ZUTOMAYO MV Gallery`;
+    } else {
+      document.title = 'ZUTOMAYO MV Gallery';
+    }
+    
+    // 清理函數：當元件卸載時恢復預設標題
+    return () => {
+      document.title = 'ZUTOMAYO MV Gallery';
+    };
+  }, [mv]);
+
   const lightboxProvider = getLightboxProvider();
 
   const lgDismissableSelectors =
@@ -105,218 +91,283 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
   };
   const GalleryViewer = (lightboxProvider === 'fb' ? FancyboxViewer : LightGalleryViewer) as React.ComponentType<any>;
 
+  const leftColumnRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<HTMLDivElement>(null);
+  const [descHeight, setDescHeight] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const updateHeight = () => {
+      // 只有在 lg (1024px) 以上才需要精確計算高度，手機端維持 max-h-[50vh]
+      if (window.innerWidth < 1024) {
+        setDescHeight(undefined);
+        return;
+      }
+
+      if (leftColumnRef.current && playerRef.current) {
+        // 使用 window.innerHeight 減去所有已知的固定空間來精確計算
+        // Modal 的結構是: 100vh，包含 header、py-8 的 padding 等
+        
+        // 抓取彈窗可滾動區域容器 (有 px-8 py-8 的那個)
+        const scrollContainer = leftColumnRef.current.closest('.custom-scrollbar');
+        if (!scrollContainer) return;
+        
+        // 可用總高度 = 容器實際高度 - 內部上下 padding (2rem = 32px * 2 = 64px)
+        const availableHeight = scrollContainer.clientHeight - 64; 
+        
+        const playerHeight = playerRef.current.offsetHeight;
+        const gap = 16; // space-y-4
+        
+        const calculated = availableHeight - playerHeight - gap;
+        setDescHeight(Math.max(150, calculated));
+      }
+    };
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateHeight();
+    });
+
+    if (leftColumnRef.current?.parentElement) {
+      resizeObserver.observe(leftColumnRef.current.parentElement);
+    }
+    if (playerRef.current) {
+      resizeObserver.observe(playerRef.current);
+    }
+    
+    window.addEventListener('resize', updateHeight);
+    // 延遲一下確保 DOM 渲染完成
+    setTimeout(updateHeight, 0);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateHeight);
+    };
+  }, [mv?.id, isVideoActivated, videoPlatform]);
+
+  useEffect(() => {
+    // 建立提取參數的工具函式
+    const getUtmSource = () => {
+      try {
+        return new URLSearchParams(window.location.search).get('utm_source') || 'direct';
+      } catch {
+        return 'direct';
+      }
+    };
+
+    if (isVideoActivated && window.umami && typeof window.umami.track === 'function') {
+      window.umami.track('Z_Play_Video', {
+        platform: videoPlatform,
+        title: mv?.title,
+        utm_source: getUtmSource()
+      });
+    }
+  }, [isVideoActivated, videoPlatform, mv?.title]);
+
   return (
+    <>
+      <Helmet>
+        <title>{mv ? `${mv.title} - ZUTOMAYO MV Gallery` : 'ZUTOMAYO MV Gallery'}</title>
+        {mv && (
+          <>
+            <meta property="og:title" content={`${mv.title} - ZUTOMAYO MV Gallery`} />
+            <meta property="og:description" content={mv.description?.substring(0, 100) || ''} />
+            {mv.coverImages?.[0] && <meta property="og:image" content={getProxyImgUrl(mv.coverImages[0], 'small')} />}
+          </>
+        )}
+      </Helmet>
     <Dialog open={!!mv} onOpenChange={(open) => !open && !isLightboxOpenRef.current && onClose()}>
       <DialogContent
-        className="max-w-none crt-lines crt-scanline border-none"
+        className="max-w-none border-none [&>button]:hidden"
         onPointerDownOutside={handlePointerDownOutside}
         onInteractOutside={handleInteractOutside}
       >
-        <DialogHeader className="relative z-30 pt-10 px-8 pb-6 border-b-4 border-border">
+        <DialogHeader className="relative z-30 pt-10 py-6 border-b-4 border-border">
           <DialogClose 
-            className="absolute top-6 right-8 z-50 bg-white text-black border-3 border-black p-2 shadow-neo-sm hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all"
-            onClick={onClose}
-          >
-            <PixelX className="size-6" />
-          </DialogClose>
+              className="absolute top-4 right-4 md:top-6 md:right-8 z-50 bg-background text-foreground border-3 border-foreground shadow-neo-sm hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all w-10 h-10 flex items-center justify-center rounded-none"
+              onClick={onClose}
+              data-umami-event="Z_Close_MV_Modal"
+              data-umami-event-title={mv?.title}
+            >
+              <i className="hn hn-times text-2xl"></i>
+            </DialogClose>
           
-          <DialogTitle className="text-2xl pr-16 hover:animate-glitch cursor-default transition-colors hover:text-main uppercase tracking-tighter font-black">
-            {mv?.title}
+          <DialogTitle className="text-2xl pr-16 cursor-default transition-colors uppercase tracking-tighter font-black flex flex-col md:flex-row md:items-center gap-x-4 gap-y-2" lang="ja">
+            <span className="ztmy-cyber-title shrink-0 w-fit" data-text={mv?.title}>
+              <span className="ztmy-cyber-text" data-text={mv?.title}>
+                {mv?.title}
+              </span>
+            </span>
+            {mv?.keywords && mv.keywords.length > 0 && (
+              <div className="flex-1 flex flex-wrap items-center gap-2 opacity-80 italic text-sm font-bold tracking-normal normal-case md:pt-1.5">
+                {mv.keywords.map((k, i) => (
+                  <span key={i} lang={k.lang || undefined}>#{k.text}</span>
+                ))}
+              </div>
+            )}
           </DialogTitle>
-          <DialogDescription asChild className="mt-2">
-            <div className="flex flex-wrap gap-3 opacity-80 italic text-sm font-bold">
-              {mv?.keywords?.map(k => <span key={k}>#{k}</span>)}
-            </div>
+          <DialogDescription className="sr-only">
+            {mv?.title} 詳細資訊
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex-1 overflow-y-auto px-8 py-12 custom-scrollbar relative z-20">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-screen-2xl mx-auto">
+        <div className="flex-1 overflow-y-auto lg:overflow-hidden px-8 py-8 custom-scrollbar relative z-20">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-screen-2xl mx-auto lg:h-full">
             {/* 左側/上方區域：影片 + 描述 + 畫廊 */}
-            <div className="space-y-4 lg:sticky lg:top-0 lg:h-[calc(100vh-240px)] flex flex-col">
-              {/* 影片播放區 */}
-              <Tabs value={videoPlatform} onValueChange={(v) => { setVideoPlatform(v as 'youtube' | 'bilibili'); setIsVideoActivated(false); }} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 border-4 border-black shadow-neo-sm bg-black/20">
-                  {mv?.bilibili && (
-                    <TabsTrigger 
-                      value="bilibili" 
-                      className="gap-2 font-black text-xs data-[state=active]:bg-[#00aeec] data-[state=active]:text-white data-[state=active]:border-b-4 data-[state=active]:border-black"
-                    >
-                      <PixelTV className="size-5" /> BILIBILI
-                    </TabsTrigger>
-                  )}
-                  {mv?.youtube && (
-                    <TabsTrigger 
-                      value="youtube" 
-                      className="gap-2 font-black text-xs data-[state=active]:bg-main data-[state=active]:text-black data-[state=active]:border-b-4 data-[state=active]:border-black"
-                    >
-                      <PixelYoutube className="size-5" /> YOUTUBE
-                    </TabsTrigger>
-                  )}
-                </TabsList>
-
-                <TabsContent value="bilibili" className="mt-2">
-                  <div className="aspect-video border-4 border-black shadow-shadow bg-black overflow-hidden relative group isolate">
-                    {!isVideoActivated ? (
-                      /* 播放遮罩 */
-                      <div 
-                        className="absolute inset-0 z-20 cursor-pointer flex items-center justify-center overflow-hidden"
-                        onClick={() => setIsVideoActivated(true)}
-                      >
-                        {/* 封面背景圖 */}
-                        <div 
-                          className="glitch-base absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
-                          style={{ backgroundImage: `url(${getProxyImgUrl(mv?.coverImages?.[0] || '', 'small')})` }}
-                        />
-                        {/* Glitch 疊加層 */}
-                        <div 
-                          className="glitch-layer glitch-red absolute inset-0 bg-cover bg-center"
-                          style={{ backgroundImage: `url(${getProxyImgUrl(mv?.coverImages?.[0] || '', 'small')})` }}
-                        />
-                        <div 
-                          className="glitch-layer glitch-blue absolute inset-0 bg-cover bg-center"
-                          style={{ backgroundImage: `url(${getProxyImgUrl(mv?.coverImages?.[0] || '', 'small')})` }}
-                        />
-                        {/* 黑色疊加層 */}
-                        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors z-10" />
-                        <div className="absolute inset-0 opacity-20 pointer-events-none crt-lines z-15"></div>
-                        
-                        {/* 播放按 */}
-                        <div className="relative z-40 flex flex-col items-center gap-4">
-                          <div className="bg-main p-6 rounded-full shadow-neo transform transition-transform group-hover:scale-110 active:scale-95 border-4 border-black">
-                            <PixelPlay className="size-12 text-black" />
-                          </div>
-                          <span className="glitch-text text-white font-black tracking-widest text-[10px] bg-black px-4 py-1 border-2 border-main uppercase">
-                            Initialize_Signal_Stream
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      /* Bilibili iframe */
-                      <iframe 
-                        src={`//player.bilibili.com/player.html?bvid=${mv?.bilibili}&page=1&high_quality=1&autoplay=1`}
-                        className="w-full h-full"
-                        scrolling="no" frameBorder="0" allowFullScreen
-                      />
-                    )}
+            <div className="space-y-4 lg:sticky lg:top-0 flex flex-col min-h-0 lg:h-full" ref={leftColumnRef}>
+              {/* 影片播放區 (Monitor) */}
+              <div className="w-full flex flex-col border-4 border-black shadow-shadow bg-card" ref={playerRef}>
+                {/* Monitor Header / Signal Switcher */}
+                <div className="flex items-center justify-between px-4 py-2 border-b-4 border-black bg-black/5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2.5 h-2.5 bg-green-500 animate-pulse shadow-[2px_2px_0_0_rgba(34,197,94,0.4)]"></div>
+                    <span className="text-[10px] font-black uppercase tracking-widest flex flex-col leading-tight">
+                      <span className="tracking-normal flex items-baseline gap-1.5 opacity-60">
+                        訊號源 <span className="text-[8px] font-mono normal-case">Signal_Source</span>
+                      </span>
+                      <span className="tracking-normal text-green-500 flex items-baseline gap-1.5">
+                        已連線 <span className="text-[8px] font-mono normal-case">Connected</span>
+                      </span>
+                    </span>
                   </div>
-                </TabsContent>
-
-                <TabsContent value="youtube" className="mt-2">
-                  <div className="aspect-video border-4 border-black shadow-shadow bg-black overflow-hidden relative group isolate">
-                    {!isVideoActivated ? (
-                      /* 播放遮罩 */
-                      <div 
-                        className="absolute inset-0 z-20 cursor-pointer flex items-center justify-center overflow-hidden"
-                        onClick={() => setIsVideoActivated(true)}
+                  
+                  {mv?.bilibili && mv?.youtube && (
+                    <div className="flex gap-3">
+                      <button 
+                        onClick={() => { setVideoPlatform('youtube'); setIsVideoActivated(false); }}
+                        className={`px-3 py-1.5 text-[10px] font-black uppercase transition-all border-2 border-black flex items-center gap-1.5 ${videoPlatform === 'youtube' ? 'bg-main text-black translate-y-[2px] translate-x-[2px] shadow-none' : 'bg-card text-foreground shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:bg-main/20 hover:-translate-y-[1px] hover:-translate-x-[1px] hover:shadow-[3px_3px_0_0_rgba(0,0,0,1)]'}`}
+                        data-umami-event="Z_Switch_Video_Platform"
+                        data-umami-event-platform="youtube"
+                        data-umami-event-title={mv?.title}
                       >
-                        {/* 封面背景圖 */}
-                        <div 
-                          className="glitch-base absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
-                          style={{ backgroundImage: `url(${getProxyImgUrl(mv?.coverImages?.[0] || '', 'small')})` }}
-                        />
-                        {/* Glitch 疊加層 */}
-                        <div 
-                          className="glitch-layer glitch-red absolute inset-0 bg-cover bg-center"
-                          style={{ backgroundImage: `url(${getProxyImgUrl(mv?.coverImages?.[0] || '', 'small')})` }}
-                        />
-                        <div 
-                          className="glitch-layer glitch-blue absolute inset-0 bg-cover bg-center"
-                          style={{ backgroundImage: `url(${getProxyImgUrl(mv?.coverImages?.[0] || '', 'small')})` }}
-                        />
-                        {/* 黑色疊加層 */}
-                        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors z-10" />
-                        <div className="absolute inset-0 opacity-20 pointer-events-none crt-lines z-15"></div>
-                        
-                        {/* 播放按 */}
-                        <div className="relative z-40 flex flex-col items-center gap-4">
-                          <div className="bg-main p-6 rounded-full shadow-neo transform transition-transform group-hover:scale-110 active:scale-95 border-4 border-black">
-                            <PixelPlay className="size-12 text-black" />
+                        <i className="hn hn-video-camera text-sm"></i> YouTube
+                      </button>
+                      <button 
+                        onClick={() => { setVideoPlatform('bilibili'); setIsVideoActivated(false); }}
+                        className={`px-3 py-1.5 text-[10px] font-black uppercase transition-all border-2 border-black flex items-center gap-1.5 ${videoPlatform === 'bilibili' ? 'bg-[#00aeec] text-white translate-y-[2px] translate-x-[2px] shadow-none' : 'bg-card text-foreground shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:bg-[#00aeec]/20 hover:-translate-y-[1px] hover:-translate-x-[1px] hover:shadow-[3px_3px_0_0_rgba(0,0,0,1)]'}`}
+                        data-umami-event="Z_Switch_Video_Platform"
+                        data-umami-event-platform="bilibili"
+                        data-umami-event-title={mv?.title}
+                      >
+                        <i className="hn hn-pc text-sm"></i> Bilibili
+                      </button>
+                    </div>
+                  )}
+                  {(!mv?.bilibili || !mv?.youtube) && (
+                    <div className="px-3 py-1.5 text-[10px] font-black uppercase border-2 border-black flex items-center gap-1.5 bg-card shadow-[2px_2px_0_0_rgba(0,0,0,1)] opacity-70">
+                      {mv?.youtube ? <><i className="hn hn-video-camera text-sm"></i> YouTube</> : <><i className="hn hn-pc text-sm"></i> Bilibili</>}
+                    </div>
+                  )}
+                </div>
+
+                {/* Monitor Screen */}
+                <div className="aspect-video bg-black overflow-hidden relative group isolate">
+                  {!isVideoActivated ? (
+                    <div 
+                      className="absolute inset-0 z-20 cursor-pointer flex items-center justify-center overflow-hidden"
+                      onClick={() => setIsVideoActivated(true)}
+                      data-umami-event="Z_Play_Video"
+                      data-umami-event-platform={videoPlatform}
+                      data-umami-event-title={mv?.title}
+                    >
+                      <div className="absolute inset-0 z-0">
+                        <CoverCarousel coverImages={mv?.coverImages ?? []} title={mv?.title || ''} isPaused={false} forceLoad={true} hideCrt={true} />
+                      </div>
+                      <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors z-10" />
+                      <div className="absolute inset-0 opacity-20 pointer-events-none crt-lines z-15"></div>
+                      
+                      <div className="relative z-40 flex flex-col items-center gap-6">
+                        {/* 播放按鈕 - 背景模糊、無陰影、無懸浮位移 */}
+                        <div className="bg-main/50 backdrop-blur px-10 py-5 border-4 border-black flex flex-col items-center gap-3">
+                          <div className="flex items-center gap-3 mb-1">
+                            <i className="hn hn-play text-3xl text-black"></i>
+                            <span className="font-black tracking-widest text-black text-2xl">PLAY</span>
                           </div>
-                          <span className="glitch-text text-white font-black tracking-widest text-[10px] bg-black px-4 py-1 border-2 border-main uppercase">
-                            Initialize_Signal_Stream
+                          <span className="glitch-text text-black font-black tracking-widest text-[10px] uppercase flex flex-col items-center leading-tight opacity-70">
+                            <span className="tracking-normal">初始化訊號串流</span>
+                            <span className="text-[8px] font-mono opacity-80 normal-case mt-0.5">Initialize_Signal_Stream</span>
                           </span>
                         </div>
                       </div>
-                    ) : (
-                      /* YouTube iframe */
+                    </div>
+                  ) : (
+                    videoPlatform === 'youtube' && mv?.youtube ? (
                       <iframe 
-                        src={`https://www.youtube.com/embed/${mv?.youtube}?autoplay=1&rel=0`}
+                        src={`https://www.youtube.com/embed/${mv.youtube}?autoplay=1&rel=0`}
                         className="w-full h-full"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
                         title={mv.title}
+                        lang="ja"
                       />
-                    )}
-                  </div>
-                </TabsContent>
-              </Tabs>
-
-              {/* 設定圖畫廊區 - 使用 order 調整布局順序 */}
-              <div className="space-y-4 order-2 lg:order-none">
-                <h4 className="font-bold border-b-3 border-black pb-2 flex items-center gap-2 uppercase tracking-widest lg:hidden">
-                  <PixelGallery className="size-5 text-ztmy-green" /> 設定資料圖
-                </h4>
-                <div className="lg:hidden">
-                  {mv?.images && mv.images.length > 0 ? (
-                    <GalleryViewer
-                      images={mv.images}
-                      mvTitle={mv.title}
-                      mvId={mv.id}
-                      itemsPerPage={12}
-                      showHeader={false}
-                      enablePagination={true}
-                      breakpointColumns={GALLERY_BREAKPOINTS}
-                      className="!p-0 !min-h-0"
-                      onLightboxOpen={() => { isLightboxOpenRef.current = true; }}
-                      onLightboxClose={() => { isLightboxOpenRef.current = false; }}
-                    />
-                  ) : (
-                    <p className="text-sm opacity-50 italic text-center py-10 border-2 border-dashed border-white/5">
-                      暫無設定圖資料
-                    </p>
+                    ) : mv?.bilibili ? (
+                      <iframe 
+                        src={`//player.bilibili.com/player.html?bvid=${mv.bilibili}&page=1&high_quality=1&autoplay=1`}
+                        className="w-full h-full"
+                        scrolling="no" frameBorder="0" allowFullScreen
+                        title={mv.title}
+                        lang="ja"
+                      />
+                    ) : null
                   )}
                 </div>
               </div>
 
-              {/* 描述區域 - 使用 order 調整為最後（上下布局時） */}
-              <ScrollArea className="p-8 bg-card border-4 border-border shadow-shadow flex-1 overflow-y-auto custom-scrollbar lg:flex-1 order-3 lg:order-none">
-                <h4 className="text-xs font-black uppercase tracking-widest text-main mb-6 opacity-50 border-b-2 border-border pb-2 inline-block">File_Description_v{VERSION_CONFIG.app}</h4>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap opacity-90 font-base">{mv?.description}</p>
-              </ScrollArea>
+              {/* 描述區域 */}
+              <div 
+                className="flex flex-col bg-card border-4 border-border shadow-shadow relative overflow-hidden max-h-[50vh] lg:max-h-none min-h-0 transition-none"
+                style={{ height: descHeight ? `${descHeight}px` : 'auto' }}
+              >
+                <div className="flex items-center justify-between px-4 py-4 border-b-4 border-black bg-black/5 shrink-0 z-10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2.5 h-2.5 bg-blue-500 animate-pulse shadow-[2px_2px_0_0_rgba(59,130,246,0.4)]"></div>
+                    <span className="text-[10px] font-black uppercase tracking-widest flex flex-col leading-tight">
+                      <span className="tracking-normal flex items-baseline gap-1.5 opacity-60">
+                        影像資訊 <span className="text-[8px] font-mono normal-case">Video_Description_v{VERSION_CONFIG.app}</span>
+                      </span>
+                    </span>
+                  </div>
+                </div>
+                <ScrollArea className="flex-1 min-h-0 custom-scrollbar w-full">
+                  <div className="p-8 pt-6">
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap opacity-90 font-base" lang="ja">{mv?.description}</p>
+                  </div>
+                </ScrollArea>
+              </div>
             </div>
 
-            {/* 設定圖畫廊區 - 在左右布局時顯示在右側 */}
-            <div className="space-y-4 hidden lg:block">
-              <h4 className="font-bold border-b-3 border-black pb-2 flex items-center gap-2 uppercase tracking-widest">
-                <PixelGallery className="size-5 text-ztmy-green" /> 設定資料圖
-              </h4>
-              {mv?.images && mv.images.length > 0 ? (
-                <GalleryViewer
-                  images={mv.images}
-                  mvTitle={mv.title}
-                  mvId={mv.id}
-                  itemsPerPage={12}
-                  showHeader={false}
-                  enablePagination={true}
-                  breakpointColumns={GALLERY_BREAKPOINTS}
-                  className="!p-0 !min-h-0"
-                  onLightboxOpen={() => { isLightboxOpenRef.current = true; }}
-                  onLightboxClose={() => { isLightboxOpenRef.current = false; }}
-                />
-              ) : (
-                <p className="text-sm opacity-50 italic text-center py-10 border-2 border-dashed border-white/5">
-                  暫無設定圖資料
-                </p>
-              )}
+            {/* 設定圖畫廊區與評論區 - 在左右布局時顯示在右側，在單欄時接在描述下方 */}
+            <ScrollArea className="lg:h-full custom-scrollbar w-full">
+              <div className="space-y-8 lg:space-y-4 lg:pr-4 lg:pb-8">
+                <div className="space-y-4">
+                <h4 className="font-bold border-b-3 border-black pb-2 flex items-center gap-2 uppercase tracking-widest">
+                  <i className="hn hn-image text-xl text-ztmy-green"></i> 設定資料圖
+                </h4>
+                {mv?.images && mv.images.length > 0 ? (
+                  <GalleryViewer
+                    images={mv.images}
+                    mvTitle={mv.title}
+                    mvId={mv.id}
+                    itemsPerPage={12}
+                    showHeader={false}
+                    enablePagination={true}
+                    breakpointColumns={GALLERY_BREAKPOINTS}
+                    className="!p-0 !min-h-0"
+                    onLightboxOpen={() => { isLightboxOpenRef.current = true; }}
+                    onLightboxClose={() => { isLightboxOpenRef.current = false; }}
+                  />
+                ) : (
+                  <p className="text-sm opacity-50 italic text-center py-10 border-2 border-dashed border-white/5">
+                    暫無設定圖資料
+                  </p>
+                )}
+              </div>
 
               {/* Waline 評論區 */}
               {mv && (
-                <div className="mt-8 pt-8 border-t-4 border-border">
+                <div className="mt-8 pt-8">
                   <h4 className="font-bold border-b-3 border-black pb-2 flex items-center gap-2 uppercase tracking-widest mb-4">
-                    <svg viewBox="0 0 24 24" className="size-5 text-ztmy-blue" fill="currentColor">
-                      <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
-                    </svg>
+                    <i className="hn hn-message text-xl text-ztmy-blue"></i>
                     評論
                   </h4>
                   <WalineComments
@@ -325,99 +376,12 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                   />
                 </div>
               )}
-            </div>
+              </div>
+            </ScrollArea>
           </div>
         </div>
       </DialogContent>
-      
-      {/* 全局樣式：確保燈箱層級和交互正確 */}
-      <style>{`
-        ${lightboxProvider === 'fb' ? `
-          .fancybox__container {
-            z-index: 100000 !important;
-          }
-
-          .fancybox__backdrop {
-            z-index: 0 !important;
-          }
-
-          .fancybox__carousel {
-            position: relative !important;
-            z-index: 2 !important;
-          }
-
-          .f-thumbs {
-            position: relative !important;
-            z-index: 1 !important;
-          }
-
-          .f-caption {
-            position: relative !important;
-            z-index: 3 !important;
-          }
-
-          .fancybox__toolbar,
-          .fancybox__nav {
-            position: relative !important;
-            z-index: 4 !important;
-          }
-
-          .fancybox__container,
-          .fancybox__backdrop,
-          .fancybox__carousel,
-          .fancybox__toolbar,
-          .fancybox__nav,
-          .f-caption,
-          .f-thumbs {
-            pointer-events: auto !important;
-          }
-        ` : `
-          .lg-backdrop {
-            z-index: 99999 !important;
-          }
-          .lg-outer {
-            z-index: 100000 !important;
-          }
-          .lg-components {
-            z-index: 100001 !important;
-          }
-
-          .lg-backdrop,
-          .lg-outer,
-          .lg-components,
-          .lg-toolbar,
-          .lg-actions,
-          .lg-sub-html,
-          .lg-thumb-outer,
-          .lg-img-wrap,
-          .lg-item {
-            pointer-events: auto !important;
-          }
-        `}
-
-        [data-radix-focus-guard] {
-          display: none !important;
-        }
-
-        .waline-wrapper {
-          --waline-theme-color: #00ff9d !important;
-          --waline-active-color: #00cc7d !important;
-        }
-        .waline-wrapper .wl-panel {
-          background: rgba(0, 0, 0, 0.3) !important;
-          border: 2px solid #333 !important;
-        }
-        .waline-wrapper .wl-input,
-        .waline-wrapper .wl-editor {
-          background: rgba(0, 0, 0, 0.5) !important;
-          color: #fff !important;
-        }
-        .waline-wrapper .wl-btn.primary {
-          background: var(--waline-theme-color) !important;
-          color: #000 !important;
-          border: 2px solid #000 !important;
-        }
-      `}</style>
     </Dialog>
+    </>
   );
 }

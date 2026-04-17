@@ -15,7 +15,10 @@ export class MVService {
       const k = filters.search.toLowerCase();
       data = data.filter(mv => 
         mv.title.toLowerCase().includes(k) || 
-        mv.keywords.some(key => key.toLowerCase().includes(k))
+        mv.keywords.some(key => {
+          const text = typeof key === 'string' ? key : key.text;
+          return text.toLowerCase().includes(k);
+        })
       );
     }
 

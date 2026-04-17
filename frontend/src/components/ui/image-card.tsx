@@ -6,6 +6,9 @@ type Props = {
   caption: string
   className?: string
   children?: ReactNode
+  media?: ReactNode
+  isPaused?: boolean
+  lang?: string
 }
 
 const MARQUEE_GAP = 24
@@ -37,7 +40,7 @@ function usePrefersReducedMotion() {
   return prefersReducedMotion
 }
 
-export default function ImageCard({ imageUrl, caption, className, children }: Props) {
+export default function ImageCard({ imageUrl, caption, className, children, media, isPaused, lang }: Props) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [isOverflow, setIsOverflow] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
@@ -113,8 +116,11 @@ export default function ImageCard({ imageUrl, caption, className, children }: Pr
     ? ({
         "--marquee-distance": `${marqueeDistance}px`,
         "--marquee-duration": `${animationDuration}s`,
-        animation: `image-card-title-marquee ${animationDuration}s linear infinite`,
-        animationPlayState: isHovered ? "paused" : "running",
+        animationName: "image-card-title-marquee",
+        animationDuration: `${animationDuration}s`,
+        animationTimingFunction: "linear",
+        animationIterationCount: "infinite",
+        animationPlayState: isPaused || isHovered ? "paused" : "running",
         willChange: "transform",
       } as React.CSSProperties)
     : undefined
@@ -139,21 +145,30 @@ export default function ImageCard({ imageUrl, caption, className, children }: Pr
         }
       `}</style>
       <div className="relative aspect-16/9 bg-secondary-background overflow-hidden">
-        {!isLoaded && (
-          <div className="absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2">
-            <div className="size-5 border-2 border-black/10 border-t-black animate-spin rounded-full" />
-            <span className="text-[8px] font-black opacity-20 uppercase tracking-tighter">Syncing_Visual...</span>
-          </div>
+        {media ? (
+          media
+        ) : (
+          <>
+            {!isLoaded && (
+              <div className="absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2">
+                <div className="size-5 border-2 border-black/10 border-t-black animate-spin rounded-full" />
+                <span className="text-[8px] font-black uppercase tracking-tighter flex flex-col items-center leading-tight">
+                  <span className="opacity-40 tracking-normal">同步視覺中...</span>
+                  <span className="font-mono opacity-20 normal-case">Syncing_Visual...</span>
+                </span>
+              </div>
+            )}
+            <img 
+              className={cn(
+                "w-full h-full object-cover transition-all duration-700",
+                isLoaded ? "opacity-100 scale-100 blur-0" : "opacity-0 scale-110 blur-xl"
+              )} 
+              src={imageUrl} 
+              alt="圖片 (image)" 
+              onLoad={() => setIsLoaded(true)}
+            />
+          </>
         )}
-        <img 
-          className={cn(
-            "w-full h-full object-cover transition-all duration-700",
-            isLoaded ? "opacity-100 scale-100 blur-0" : "opacity-0 scale-110 blur-xl"
-          )} 
-          src={imageUrl} 
-          alt="image" 
-          onLoad={() => setIsLoaded(true)}
-        />
       </div>
       
       <figcaption className="border-t-2 text-main-foreground border-border bg-secondary-background">
@@ -163,6 +178,7 @@ export default function ImageCard({ imageUrl, caption, className, children }: Pr
           className="relative overflow-hidden border-b-2 border-border bg-main px-0 py-3 text-main-foreground"
           title={caption}
           data-testid="image-card-caption-container"
+          lang={lang}
         >
           <span
             ref={measureRef}
@@ -212,7 +228,7 @@ export default function ImageCard({ imageUrl, caption, className, children }: Pr
         </div>
         
         {/* 額外的子內容 */}
-        {children && <div className="px-4 pb-4 bg-main">{children}</div>}
+        {children && <div className="px-0 pb-0 bg-main">{children}</div>}
       </figcaption>
     </figure>
   )

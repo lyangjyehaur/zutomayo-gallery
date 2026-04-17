@@ -1,5 +1,4 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog"
-import { X } from "lucide-react"
 
 import * as React from "react"
 
@@ -20,7 +19,7 @@ const DialogOverlay = React.forwardRef<
       ref={ref}
 
       className={cn(
-"fixed inset-0 z-50 bg-black/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",        className,
+"fixed inset-0 z-50 bg-background/90 backdrop-blur-md crt-lines data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",        className,
       )}
       {...props}
     />
@@ -38,11 +37,15 @@ const DialogContent = React.forwardRef<
         ref={ref}
         
         className={cn(
-"bg-card text-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed inset-0 z-50 flex flex-col w-full h-full gap-0 shadow-none duration-200 outline-none",          className,
+"text-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed inset-0 z-50 flex flex-col w-full h-full gap-0 shadow-none duration-200 outline-none",          className,
         )}
         {...props}
       >
-        <div className="relative flex flex-col w-full h-full z-10">{children}</div>
+        {children}
+        <DialogPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:pointer-events-none">
+          <i className="hn hn-times text-base" />
+          <span className="sr-only">Close</span>
+        </DialogPrimitive.Close>
       </DialogPrimitive.Content>
     </DialogPortal>
   )
@@ -51,7 +54,7 @@ const DialogContent = React.forwardRef<
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
     return (
     <div
-className={cn("flex flex-col gap-2 p-6 border-b-4 border-border bg-card", className)}
+className={cn("flex flex-col gap-2 p-6 border-b-4 border-border", className)}
       {...props}
     />
   )

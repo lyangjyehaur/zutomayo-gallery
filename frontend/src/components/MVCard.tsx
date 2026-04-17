@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, memo } from 'react';
 import ImageCard from '@/components/ui/image-card';
 import { MVItem } from '@/lib/types';
 import { getProxyImgUrl } from '@/lib/image';
+import { useLazyImage } from '@/hooks/useLazyImage';
+
+import { Switch } from '@/components/ui/switch';
 
 interface MVCardProps {
   mv: MVItem;
@@ -10,44 +13,361 @@ interface MVCardProps {
   onClick: () => void;
 }
 
-export function MVCard({ mv, isFav, onToggleFav, onClick }: MVCardProps) {
-  const thumbUrl = getProxyImgUrl(mv.coverImages?.[0] || 'default.jpg', 'thumb');
-  const artistName = mv.artist?.trim() || "Unknown";
+const getRandomInt = (min: number, max: number) => {
+  const a = Math.ceil(min);
+  const b = Math.floor(max);
+  return Math.floor(Math.random() * (b - a + 1)) + a;
+};
+
+const sample = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+
+export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, isPaused, forceLoad = false, hideCrt = false, initialDelay }: { coverImages: string[]; title: string; isPaused?: boolean; forceLoad?: boolean; hideCrt?: boolean; initialDelay?: number }) {
+  const urls = useMemo(() => {
+    const normalized = (coverImages || []).map((u) => u?.trim()).filter(Boolean) as string[];
+    if (normalized.length === 0) return ['default.jpg'];
+    return normalized;
+  }, [coverImages]);
+
+  const proxied = useMemo(() => urls.map((u) => getProxyImgUrl(u, 'small')), [urls]);
+  const prefersReducedMotion = useMemo(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }, []);
+
+  const { elementRef, shouldLoad: lazyShouldLoad } = useLazyImage({ rootMargin: '600px', threshold: 0.01, triggerOnce: false });
+  const shouldLoad = forceLoad || lazyShouldLoad;
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const currentIndexRef = useRef(0);
+  const isFirstRun = useRef(true);
+  const [nextIndex, setNextIndex] = useState<number | null>(null);
+  const [fadeState, setFadeState] = useState<'idle' | 'pre' | 'active'>('idle');
+  const [transitionMode, setTransitionMode] = useState<'fade' | 'scan-wipe' | 'block-glitch' | 'vhs-ff' | 'pixelate' | null>(null);
+  const [fadeMs, setFadeMs] = useState(420);
+  const [glitch, setGlitch] = useState<{ active: boolean; mode: 'rgb' | 'noise' | 'scan' | 'jitter' | 'invert'; drop: boolean }>({
+    active: false,
+    mode: 'rgb',
+    drop: false,
+  });
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const phaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const glitchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const aliveRef = useRef(true);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  const clearTimers = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (phaseTimerRef.current) clearTimeout(phaseTimerRef.current);
+    if (glitchTimerRef.current) clearTimeout(glitchTimerRef.current);
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    timerRef.current = null;
+    phaseTimerRef.current = null;
+    glitchTimerRef.current = null;
+    rafRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => {
+      aliveRef.current = false;
+      clearTimers();
+    };
+  }, [clearTimers]);
+
+  useEffect(() => {
+    currentIndexRef.current = currentIndex;
+  }, [currentIndex]);
+
+  useEffect(() => {
+    if (!shouldLoad) {
+      clearTimers();
+      setNextIndex(null);
+      setFadeState('idle');
+      setGlitch((g) => (g.active ? { ...g, active: false } : g));
+      return;
+    }
+  }, [shouldLoad, clearTimers]);
+
+  const scheduleNext = useCallback(() => {
+    if (!aliveRef.current) return;
+    if (!shouldLoad) return;
+    if (prefersReducedMotion) return;
+    if (isPaused) return;
+
+    clearTimers();
+    // 1. 決定下一次切換的時間間隔
+    const delay = (isFirstRun.current && initialDelay !== undefined)
+      ? initialDelay
+      : getRandomInt(5000, 10000);
+      
+    isFirstRun.current = false;
+
+    timerRef.current = setTimeout(() => {
+      if (!aliveRef.current || !shouldLoad) return;
+
+      const current = currentIndexRef.current;
+      const available = proxied.map((_, i) => i).filter((i) => i !== current);
+      const next = available.length > 0 ? sample(available) : current;
+
+      // 2. 隨機決定圖片過場方式與故障類型
+      const transition = available.length > 0 
+        ? sample(['cut', 'fade', 'scan-wipe', 'block-glitch', 'vhs-ff', 'pixelate'] as const)
+        : 'cut';
+      const mode = sample(['rgb', 'noise', 'scan', 'jitter', 'invert'] as const);
+      // 故障特效持續時間 (300ms 到 800ms)
+      const glitchMs = getRandomInt(300, 800);
+
+      // 3. 隨機決定是否觸發「訊號中斷」 (40% 機率)
+      const doDrop = Math.random() > 0.6;
+
+      // 開啟特效狀態，這會讓 JSX 中的 class 生效
+      setGlitch({ active: true, mode, drop: doDrop });
+      glitchTimerRef.current = setTimeout(() => {
+        if (!aliveRef.current) return;
+        // 時間到後關閉特效
+        setGlitch((g) => ({ ...g, active: false, drop: false }));
+      }, Math.max(glitchMs, 500));
+
+      if (transition !== 'cut') {
+        // 動畫時間長短設定
+        let ms = 500;
+        if (transition === 'scan-wipe') ms = getRandomInt(800, 1200);
+        else if (transition === 'fade') ms = getRandomInt(240, 760);
+        else if (transition === 'block-glitch') ms = getRandomInt(600, 900);
+        else if (transition === 'vhs-ff') ms = getRandomInt(400, 700);
+        else if (transition === 'pixelate') ms = getRandomInt(500, 800);
+
+        setFadeMs(ms);
+        setNextIndex(next);
+        setTransitionMode(transition);
+        setFadeState('pre');
+        rafRef.current = requestAnimationFrame(() => {
+          if (!aliveRef.current) return;
+          setFadeState('active');
+        });
+        phaseTimerRef.current = setTimeout(() => {
+          if (!aliveRef.current) return;
+          setCurrentIndex(next);
+          setNextIndex(null);
+          setFadeState('idle');
+          setTransitionMode(null);
+          scheduleNext();
+        }, ms);
+      } else {
+        phaseTimerRef.current = setTimeout(() => {
+          if (!aliveRef.current) return;
+          setCurrentIndex(next);
+          scheduleNext();
+        }, Math.max(80, Math.floor(glitchMs * 0.55)));
+      }
+    }, delay);
+  }, [clearTimers, prefersReducedMotion, proxied, shouldLoad, isPaused, initialDelay]);
+
+  useEffect(() => {
+    if (!shouldLoad) return;
+    if (isPaused) {
+      clearTimers();
+      return;
+    }
+    scheduleNext();
+    return () => {
+      clearTimers();
+    };
+  }, [shouldLoad, scheduleNext, clearTimers, isPaused]);
+
+  const currentSrc = proxied[currentIndex] || proxied[0];
+  const nextSrc = nextIndex !== null ? proxied[nextIndex] : null;
+
+  const isFading = fadeState !== 'idle' && nextSrc;
+  const isScanWipe = transitionMode === 'scan-wipe';
+  // 4. 隨機化 Rolling Slice 的啟動延遲時間，避免所有卡片同時出現橫線錯位 (-0 到 -6秒)
+  const sliceDelay = useMemo(() => `${(Math.random() * -6).toFixed(2)}s`, []);
+
+  return (
+    // `.crt-lines` 套用常駐掃描線與暗角 (如果有 hideCrt 則不套用)
+    <div ref={elementRef} className={`absolute inset-0 w-full h-full bg-black ${!hideCrt ? 'crt-lines' : ''}`}>
+      {!isLoaded && (
+        <div className="absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2 z-20">
+          <div className="size-5 border-2 border-black/10 border-t-black animate-spin rounded-full" />
+          <span className="text-[8px] font-black uppercase tracking-tighter flex flex-col items-center leading-tight">
+            <span className="opacity-40 tracking-normal">同步視覺中...</span>
+            <span className="font-mono opacity-20 normal-case">Syncing_Visual...</span>
+          </span>
+        </div>
+      )}
+
+      {/* 動態追加 glitch 與 signal-drop 類別 */}
+      <div className={`absolute inset-0 ${glitch.active && glitch.mode === 'jitter' ? 'ztmy-glitch-jitter' : ''} ${glitch.active && glitch.mode === 'invert' ? 'ztmy-invert-flash' : ''} ${glitch.active && glitch.drop ? 'ztmy-signal-drop' : ''}`}>
+        {/* 底層目前圖片 */}
+        <img
+          src={currentSrc}
+          alt={title}
+          className={`absolute inset-0 w-full h-full object-cover z-10 ${
+            transitionMode === 'block-glitch' && fadeState !== 'idle' ? 'ztmy-block-glitch-out' : ''
+          } ${
+            transitionMode === 'vhs-ff' && fadeState !== 'idle' ? 'ztmy-vhs-ff-out' : ''
+          } ${
+            transitionMode === 'pixelate' && fadeState !== 'idle' ? 'ztmy-pixelate-out' : ''
+          }`}
+          style={
+            transitionMode === 'fade'
+              ? { opacity: fadeState === 'active' ? 0 : 1, transition: `opacity ${fadeMs}ms linear` }
+              : transitionMode === 'scan-wipe'
+              ? { opacity: 1 }
+              : {
+                  animationDuration: `${fadeMs}ms`,
+                }
+          }
+          onLoad={() => setIsLoaded(true)}
+          loading={forceLoad ? "eager" : "lazy"}
+          decoding="async"
+        />
+
+        {/* 頂層下一張圖片 */}
+        {nextSrc && (
+          <img
+            src={nextSrc}
+            alt={title}
+            className={`absolute inset-0 w-full h-full object-cover z-20 ${
+              transitionMode === 'block-glitch' && fadeState !== 'idle' ? 'ztmy-block-glitch-in' : ''
+            } ${
+              transitionMode === 'vhs-ff' && fadeState !== 'idle' ? 'ztmy-vhs-ff-in' : ''
+            } ${
+              transitionMode === 'pixelate' && fadeState !== 'idle' ? 'ztmy-pixelate-in' : ''
+            }`}
+            style={
+              transitionMode === 'scan-wipe'
+                ? {
+                    clipPath: fadeState === 'active' ? 'inset(0 0 0 0)' : 'inset(0 0 100% 0)',
+                    transition: `clip-path ${fadeMs}ms linear`,
+                    filter: fadeState === 'active' ? 'brightness(1)' : 'brightness(1.5) contrast(1.2)',
+                  }
+                : transitionMode === 'fade'
+                ? {
+                    opacity: fadeState === 'active' ? 1 : 0,
+                    transition: `opacity ${fadeMs}ms linear`,
+                  }
+                : {
+                    // 對於透過 class 控制的動畫，確保它可見並把 duration 傳入
+                    opacity: fadeState === 'active' ? 1 : 0,
+                    animationDuration: `${fadeMs}ms`,
+                  }
+            }
+            loading={forceLoad ? "eager" : "lazy"}
+            decoding="async"
+          />
+        )}
+
+        {/* 掃描擦除專用：新舊圖交界處的高亮綠色掃描帶 */}
+        {fadeState !== 'idle' && isScanWipe && (
+          <div
+            className="absolute left-0 right-0 h-2 bg-green-400/80 mix-blend-screen shadow-[0_0_15px_5px_rgba(74,222,128,0.6)] z-30"
+            style={{
+              top: fadeState === 'active' ? '100%' : '0%',
+              transition: `top ${fadeMs}ms linear`,
+              transform: 'translateY(-50%)'
+            }}
+          />
+        )}
+
+        {/* RGB 色彩分離故障 (重疊兩張偏移的圖片) */}
+        {glitch.active && glitch.mode === 'rgb' && (
+          <>
+            <div
+              className="glitch-layer glitch-red absolute inset-0 bg-cover bg-center opacity-60"
+              style={{ backgroundImage: `url(${currentSrc})`, display: 'block' }}
+            />
+            <div
+              className="glitch-layer glitch-blue absolute inset-0 bg-cover bg-center opacity-60"
+              style={{ backgroundImage: `url(${currentSrc})`, display: 'block' }}
+            />
+          </>
+        )}
+
+        {/* 閃爍噪點與掃描帶 */}
+        {glitch.active && glitch.mode === 'noise' && <div className="absolute inset-0 z-30 ztmy-noise-pop" />}
+        {glitch.active && glitch.mode === 'scan' && <div className="absolute inset-0 z-30 ztmy-scanline-pop" />}
+
+        {/* 5. 常駐偶發效果：水平錯位橫紋 (Rolling Slice) - 只有在視野內才渲染以節省效能 */}
+        {shouldLoad && (
+          <img
+            src={currentSrc}
+            alt="切片效果 (slice)"
+            className="absolute inset-0 w-full h-full object-cover z-20 ztmy-rolling-slice"
+            style={{ animationDelay: sliceDelay }}
+            loading="lazy"
+            decoding="async"
+          />
+        )}
+      </div>
+    </div>
+  );
+});
+
+export const MVCard = memo(function MVCard({ mv, isFav, onToggleFav, onClick, isPaused }: MVCardProps & { isPaused?: boolean }) {
+  const artistName = (mv.artist || []).map(a => a.trim()).filter(Boolean).join(', ') || "未知 (Unknown)";
+  const fallbackThumbUrl = getProxyImgUrl(mv.coverImages?.[0] || 'default.jpg', 'thumb');
 
   return (
     <div
-      className="relative group isolate cursor-pointer transition-all hover:translate-x-1 hover:translate-y-1"
+      className="relative group isolate cursor-pointer transition-all hover:translate-x-1 hover:translate-y-1 mv-card"
+      data-umami-event="Z_MV_Card_Click"
+      data-umami-event-title={mv.title}
+      data-umami-event-id={mv.id}
       onClick={onClick}
     >
-      <button 
-        onClick={(e) => { e.stopPropagation(); onToggleFav(); }}
-        aria-label={isFav ? 'Remove favorite' : 'Add favorite'}
-        className={`absolute top-3 right-3 z-20 flex h-9 min-w-[58px] items-center justify-center gap-1 border-2 border-border px-2 font-black uppercase tracking-widest shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-all hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-[1px] active:translate-y-[1px] active:shadow-none ${isFav ? 'bg-main text-main-foreground' : 'bg-secondary-background text-foreground'}`}
-      >
-        <i className={`fa-solid fa-star text-[11px] ${isFav ? 'animate-beat' : 'opacity-50'}`}></i>
-        <span className="text-[9px] leading-none">{isFav ? 'On' : 'Fav'}</span>
-      </button>
-      
       <ImageCard
-        imageUrl={thumbUrl}
+        imageUrl={fallbackThumbUrl}
         caption={mv.title}
-        className="border-3 bg-card text-foreground transition-all group-hover:shadow-none"
+        isPaused={isPaused}
+        lang="ja"
+        className="border-2 bg-card text-foreground transition-all group-hover:shadow-none"
+        media={<CoverCarousel coverImages={mv.coverImages ?? []} title={mv.title} isPaused={isPaused} />}
       >
-        <div className="flex items-end justify-between gap-3 bg-main px-4 py-3 text-[10px] text-main-foreground uppercase md:text-xs">
-          <div className="min-w-0">
-            <p className="mb-1 font-black tracking-[0.2em] opacity-70">Release</p>
-            <p className="truncate border-2 border-border bg-main px-2 py-1 text-main-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-              {mv.date}
-            </p>
+        <div className="flex flex-col gap-3 bg-main px-4 py-3 text-[10px] text-main-foreground uppercase md:text-xs">
+          <div className="flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <div className="mb-1 font-black tracking-[0.2em] opacity-70 flex items-baseline gap-1.5">
+                <span className="tracking-normal">發行</span>
+                <span className="text-[8px] font-mono opacity-60 normal-case tracking-normal">Release</span>
+              </div>
+              <p className="truncate border-2 border-border bg-main px-2 py-1 text-main-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                {mv.date}
+              </p>
+            </div>
+            <div className="min-w-0 text-right">
+              <div className="mb-1 font-black tracking-[0.2em] opacity-70 flex items-baseline justify-end gap-1.5">
+                <span className="text-[8px] font-mono opacity-60 normal-case tracking-normal">Artist</span>
+                <span className="tracking-normal">製作</span>
+              </div>
+              <p className="truncate border-2 border-border bg-main px-2 py-1 text-main-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]" lang="ja">
+                {artistName}
+              </p>
+            </div>
           </div>
-          <div className="min-w-0 text-right">
-            <p className="mb-1 font-black tracking-[0.2em] opacity-70">Artist</p>
-            <p className="truncate border-2 border-border bg-main px-2 py-1 text-main-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-              {artistName}
-            </p>
+          
+          <div className="flex items-center justify-between border-t-2 border-border/20 pt-3">
+            <div className="font-black tracking-[0.2em] opacity-70 flex items-baseline gap-1.5">
+              <span className="tracking-normal">收藏</span>
+              <span className="text-[8px] font-mono opacity-60 normal-case tracking-normal">Favorite</span>
+            </div>
+            <div 
+              onClick={(e) => e.stopPropagation()} 
+              className="flex items-center"
+              data-umami-event="Z_Toggle_Favorite"
+              data-umami-event-title={mv.title}
+              data-umami-event-id={mv.id}
+              data-umami-event-action={isFav ? 'remove' : 'add'}
+            >
+              <Switch 
+                checked={isFav}
+                onCheckedChange={onToggleFav}
+                className="scale-90"
+              />
+            </div>
           </div>
         </div>
       </ImageCard>
     </div>
   );
-}
+});

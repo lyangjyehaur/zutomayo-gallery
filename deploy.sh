@@ -1,0 +1,177 @@
+#!/bin/bash
+
+# ==========================================
+# ZUTOMAYO MV Gallery - 伺服器部署與啟動腳本
+# ==========================================
+
+# 確保腳本在錯誤時停止執行
+set -e
+
+# 顏色定義
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+CONFIG_FILE="deploy.conf"
+
+# ==========================================
+# 1. 檢查並載入部署設定檔
+# ==========================================
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo -e "${YELLOW}找不到設定檔 $CONFIG_FILE，正在為您建立預設設定檔...${NC}"
+    cat <<EOF > "$CONFIG_FILE"
+# ==========================================
+# 部署設定檔 (deploy.conf)
+# ==========================================
+
+# 前端部署目標路徑 (例如: Nginx 的站點目錄)
+FRONTEND_DEPLOY_PATH="/www/wwwroot/mv.ztmr.club"
+
+# 前端備份目錄 (每次更新前會將舊檔案備份到這裡)
+FRONTEND_BACKUP_PATH="/www/wwwroot/mv_backup"
+
+EOF
+    echo -e "${RED}已建立預設 $CONFIG_FILE！${NC}"
+    echo -e "${RED}請先編輯 $CONFIG_FILE 確認路徑是否正確，然後再次執行此腳本。${NC}"
+    exit 1
+fi
+
+# 讀取設定檔變數
+source "$CONFIG_FILE"
+
+# ==========================================
+# 2. 互動式選單
+# ==========================================
+echo -e "${GREEN}歡迎使用 ZUTOMAYO MV Gallery 部署工具${NC}"
+echo "請選擇要執行的操作："
+echo "1) 部署全部 (前端 + 後端)"
+echo "2) 僅部署前端 (Frontend)"
+echo "3) 僅部署後端 (Backend)"
+echo "0) 退出"
+read -p "請輸入選項 [1/2/3/0]: " choice
+
+if [ "$choice" == "0" ]; then
+    echo "已退出部署。"
+    exit 0
+fi
+
+if [[ "$choice" != "1" && "$choice" != "2" && "$choice" != "3" ]]; then
+    echo -e "${RED}無效的選項！請重新執行腳本。${NC}"
+    exit 1
+fi
+
+# ==========================================
+# 3. 獲取最新程式碼
+# ==========================================
+echo -e "\n${YELLOW}[Git] 正在拉取最新程式碼...${NC}"
+git pull origin main || {
+    echo -e "${RED}拉取程式碼失敗，請確認 Git 狀態或是否有衝突！${NC}"
+    exit 1
+}
+
+# ==========================================
+# 部署前端函式
+# ==========================================
+deploy_frontend() {
+    echo -e "\n${YELLOW}[Frontend] 開始處理前端...${NC}"
+    cd frontend
+    echo "安裝前端依賴..."
+    npm install
+    echo "編譯前端靜態檔案..."
+    npm run build
+    cd ..
+
+    echo -e "\n${YELLOW}[Frontend] 準備備份與發佈前端檔案...${NC}"
+    TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+    BACKUP_DIR="${FRONTEND_BACKUP_PATH}/${TIMESTAMP}"
+
+    # 確保目標與備份目錄存在
+    mkdir -p "$FRONTEND_DEPLOY_PATH"
+    mkdir -p "$BACKUP_DIR"
+
+    # 檢查部署目錄是否為空，如果不為空就執行備份
+    if [ "$(ls -A $FRONTEND_DEPLOY_PATH)" ]; then
+        echo "正在備份當前線上檔案至 $BACKUP_DIR ..."
+        cp -a "$FRONTEND_DEPLOY_PATH/." "$BACKUP_DIR/"
+        
+        echo "清理舊版線上檔案..."
+        # 避免誤刪根目錄，使用 :? 確保變數不為空
+        rm -rf "${FRONTEND_DEPLOY_PATH:?}/"*
+    else
+        echo "部署目錄為空，跳過備份步驟。"
+    fi
+
+    echo "正在將新編譯的檔案複製到部署目錄 $FRONTEND_DEPLOY_PATH ..."
+    cp -a frontend/dist/. "$FRONTEND_DEPLOY_PATH/"
+    
+    echo -e "${GREEN}[Frontend] 前端部署與備份完成！${NC}"
+}
+
+# ==========================================
+# 部署後端函式
+# ==========================================
+deploy_backend() {
+    echo -e "\n${YELLOW}[Backend] 開始處理後端...${NC}"
+    cd backend
+    echo "安裝後端依賴..."
+    npm install --production=false # 必須安裝 devDependencies 才能編譯 TypeScript
+    echo "編譯後端程式碼..."
+    npm run build
+    
+    echo -e "\n${YELLOW}[Backend] 準備備份後端資料...${NC}"
+    TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+    BACKUP_DIR="${FRONTEND_BACKUP_PATH}/backend_data_${TIMESTAMP}"
+    
+    if [ -d "data" ]; then
+        echo "正在備份後端資料 (SQLite & JSON) 至 $BACKUP_DIR ..."
+        mkdir -p "$BACKUP_DIR"
+        cp -a data/. "$BACKUP_DIR/"
+        echo "後端資料備份完成。"
+    else
+        echo "未偵測到 data 資料夾，跳過備份。"
+    fi
+
+    echo -e "\n${YELLOW}[Backend] 準備啟動後端服務...${NC}"
+    # 檢查是否已安裝 PM2
+    if ! command -v pm2 &> /dev/null; then
+        echo -e "${YELLOW}未偵測到 PM2，正在全域安裝 PM2...${NC}"
+        npm install -g pm2
+    fi
+
+    # 檢查是否已經有同名的 PM2 服務在運行
+    if pm2 status | grep -q "ztmy-gallery-api"; then
+        echo "重啟現有的 PM2 服務..."
+        pm2 restart ztmy-gallery-api
+    else
+        echo "建立新的 PM2 服務..."
+        pm2 start npm --name "ztmy-gallery-api" -- start
+        echo "儲存 PM2 設定..."
+        pm2 save
+    fi
+    cd ..
+    echo -e "${GREEN}[Backend] 後端部署完成！${NC}"
+}
+
+# ==========================================
+# 執行選擇的任務
+# ==========================================
+case $choice in
+    1)
+        deploy_frontend
+        deploy_backend
+        ;;
+    2)
+        deploy_frontend
+        ;;
+    3)
+        deploy_backend
+        ;;
+esac
+
+# ==========================================
+# 結束提示
+# ==========================================
+echo -e "\n${GREEN}==========================================${NC}"
+echo -e "${GREEN}所有選定的部署任務已順利完成！🎉${NC}"
+echo -e "${GREEN}==========================================${NC}"

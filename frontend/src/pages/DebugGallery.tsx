@@ -20,7 +20,7 @@ export default function DebugGallery({ mvData = [] }: DebugGalleryProps) {
                 full: getProxyImgUrl(img.url, 'full'),
                 width: img.width || 1200,
                 height: img.height || 800,
-                caption: img.caption || mv.title,
+                caption: img.caption || `<span lang="ja">${mv.title}</span>`,
                 richText: img.richText || '',
                 key: img.url
             }))
@@ -59,8 +59,16 @@ export default function DebugGallery({ mvData = [] }: DebugGalleryProps) {
         <div className="min-h-screen p-10 bg-white font-mono">
             <div className="max-w-6xl mx-auto">
                 <header className="mb-12 border-b-8 border-black pb-4">
-                    <h1 className="text-4xl font-black uppercase italic tracking-tighter">Fancybox_Debug_Terminal</h1>
-                    <p className="font-bold opacity-50 uppercase mt-2">Source_Mode: {mvData.length > 0 ? 'REAL_DATABASE' : 'FALLBACK_MOCK'}</p>
+                    <h1 className="text-4xl font-black uppercase italic tracking-tighter flex flex-col leading-tight">
+                      <span className="tracking-normal">Fancybox 除錯終端</span>
+                      <span className="text-[10px] font-mono opacity-50 normal-case">Fancybox_Debug_Terminal</span>
+                    </h1>
+                    <p className="font-bold opacity-50 uppercase mt-2 flex flex-col leading-tight">
+                      <span className="tracking-normal">來源模式：{mvData.length > 0 ? '真實資料庫' : '備用假資料'}</span>
+                      <span className="text-[10px] font-mono opacity-60 normal-case">
+                        Source_Mode: {mvData.length > 0 ? 'REAL_DATABASE' : 'FALLBACK_MOCK'}
+                      </span>
+                    </p>
                 </header>
 
                 {/* 測試階段：使用簡單的 CSS Grid 代替 PhotoAlbum */}
@@ -69,10 +77,15 @@ export default function DebugGallery({ mvData = [] }: DebugGalleryProps) {
                         // 構造側邊欄 HTML 內容
                         const captionHtml = `
               <div class="fancy-sidebar-content">
-                <div class="text-[10px] font-black uppercase bg-black text-ztmy-green px-2 py-0.5 inline-block mb-4 border border-ztmy-green">Asset_Metadata_Node</div>
+                <div class="text-[10px] font-black uppercase bg-black text-ztmy-green px-2 py-0.5 inline-block mb-4 border border-ztmy-green">
+                  <div style="display:flex;flex-direction:column;line-height:1.1;">
+                    <span style="opacity:0.9;">素材資訊</span>
+                    <span style="font-family:monospace;opacity:0.6;">Asset_Metadata_Node</span>
+                  </div>
+                </div>
                 <h2 class="text-2xl font-black italic uppercase tracking-tighter mb-4 leading-none">${photo.caption}</h2>
                 <div class="rich-text-content space-y-4 text-sm leading-relaxed border-t-2 border-black pt-4">
-                  ${photo.richText || '<span class="opacity-30 italic">No additional telemetry data found for this asset.</span>'}
+                  ${photo.richText || '<span class="opacity-30 italic">暫無更多資訊 (No additional telemetry data found for this asset.)</span>'}
                 </div>
                 <div class="mt-8 pt-4 border-t border-black/10 text-[8px] font-black opacity-20 uppercase tracking-[0.3em]">
                   System_Archive_v3 // Access_Stable

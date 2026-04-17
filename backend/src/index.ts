@@ -3,10 +3,16 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import mvRoutes from './routes/mv.routes.js';
+import authRoutes from './routes/auth.routes.js';
+import systemRoutes from './routes/system.routes.js';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import { initDB } from './services/db.service.js';
 
 const app = express();
 const PORT = process.env.PORT || 5010;
+
+// 初始化資料庫
+await initDB();
 
 // CORS 配置 - 僅允許特定來源
 const allowedOrigins = [
@@ -32,7 +38,7 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-admin-password'],
   maxAge: 86400, // 24小時
 };
 
@@ -68,7 +74,7 @@ const apiLimiter = rateLimit({
     res.status(429).json({
       success: false,
       error: '請求過於頻繁，請稍後再試',
-      retryAfter: Math.ceil(req.rateLimit.resetTime.getTime() / 1000),
+      retryAfter: Math.ceil((req as any).rateLimit.resetTime.getTime() / 1000),
     });
   },
 });
@@ -87,7 +93,9 @@ const writeLimiter = rateLimit({
 app.use('/api/', apiLimiter);
 
 // API 路由註冊
+app.use('/api/auth', authRoutes);
 app.use('/api/mvs', mvRoutes);
+app.use('/api/system', systemRoutes);
 
 // 健康檢查
 app.get('/health', (req, res) => res.json({

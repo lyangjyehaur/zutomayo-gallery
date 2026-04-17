@@ -152,7 +152,10 @@ const SkeletonItem = ({ width, height }: SkeletonItemProps) => {
         >
           <div className="absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2">
             <div className="size-5 border-2 border-black/10 border-t-black animate-spin rounded-full" />
-            <span className="text-[8px] font-black opacity-20 uppercase tracking-tighter">Syncing_Visual...</span>
+            <span className="text-[8px] font-black uppercase tracking-tighter flex flex-col items-center leading-tight">
+              <span className="opacity-40 tracking-normal">同步視覺中...</span>
+              <span className="font-mono opacity-20 normal-case">Syncing_Visual...</span>
+            </span>
           </div>
         </div>
       </div>
@@ -173,10 +176,11 @@ interface PhotoItemProps {
   photo: PhotoData;
   index: number;
   onPhotoClick?: (index: number) => void;
+  delayMs?: number;
   key?: string | number;
 }
 
-const PhotoItem = ({ photo, index, onPhotoClick }: PhotoItemProps) => {
+const PhotoItem = ({ photo, index, onPhotoClick, delayMs }: PhotoItemProps) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [actualDimensions, setActualDimensions] = useState<{width: number, height: number} | null>(
     photo.width && photo.height ? { width: photo.width, height: photo.height } : null
@@ -208,7 +212,11 @@ const PhotoItem = ({ photo, index, onPhotoClick }: PhotoItemProps) => {
   };
 
   return (
-    <div ref={containerRef} className="mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div
+      ref={containerRef}
+      className="mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500 motion-reduce:animate-none"
+      style={delayMs !== undefined ? { animationDelay: `${delayMs}ms`, animationFillMode: 'both' } : undefined}
+    >
       <div
         className="gallery-item block cursor-pointer"
         onClick={handleClick}
@@ -228,7 +236,10 @@ const PhotoItem = ({ photo, index, onPhotoClick }: PhotoItemProps) => {
               }`}
             >
               <div className="size-5 border-2 border-black/10 border-t-black animate-spin rounded-full" />
-              <span className="text-[8px] font-black opacity-20 uppercase tracking-tighter">Syncing_Visual...</span>
+              <span className="text-[8px] font-black uppercase tracking-tighter flex flex-col items-center leading-tight">
+                <span className="opacity-40 tracking-normal">同步視覺中...</span>
+                <span className="font-mono opacity-20 normal-case">Syncing_Visual...</span>
+              </span>
             </div>
             
             <img
@@ -287,10 +298,16 @@ export default function LightGalleryViewer({
   const [loadingMore, setLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const lastBatchStartRef = useRef(0);
+  const displayedCountRef = useRef(0);
   
   // lightGallery 實例引用
   const lightGalleryRef = useRef<LightGalleryType | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    displayedCountRef.current = displayedPhotos.length;
+  }, [displayedPhotos.length]);
 
   // 預加載圖片獲取真實尺寸
   const preloadImageDimensions = useCallback((url: string): Promise<{width: number, height: number} | null> => {
@@ -351,6 +368,7 @@ export default function LightGalleryViewer({
 
     setLoading(true);
     getPhotosFromRange(0, itemsPerPage).then(firstPagePhotos => {
+      lastBatchStartRef.current = 0;
       setDisplayedPhotos(firstPagePhotos);
       setCurrentPage(1);
       setHasMore(firstPagePhotos.length < images.length);
@@ -367,6 +385,7 @@ export default function LightGalleryViewer({
     const startIndex = currentPage * itemsPerPage;
     getPhotosFromRange(startIndex, itemsPerPage).then(newPhotos => {
       if (newPhotos.length > 0) {
+        lastBatchStartRef.current = displayedCountRef.current;
         setDisplayedPhotos(prev => [...prev, ...newPhotos]);
         setCurrentPage(prev => prev + 1);
       }
@@ -598,10 +617,24 @@ export default function LightGalleryViewer({
       {showHeader && (
         <header className="mb-8 lg:mb-12 border-b-8 border-border bg-card p-4 sm:p-6 shadow-neo-sm">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black uppercase italic tracking-tighter text-foreground">
-            {headerTitle || 'LightGallery_Debug_Terminal'}
+            {headerTitle || (
+              <span className="flex flex-col leading-tight">
+                <span className="tracking-normal">LightGallery 除錯終端</span>
+                <span className="text-[10px] font-mono opacity-50 normal-case">LightGallery_Debug_Terminal</span>
+              </span>
+            )}
           </h1>
           <p className="font-bold opacity-50 uppercase mt-2 text-foreground text-sm sm:text-base">
-            {headerSubtitle || `Source: ${mvId ? `Target_MV: ${mvId}` : 'Full_Archive'} | Assets_Count: ${displayedPhotos.length}`}
+            {headerSubtitle || (
+              <span className="flex flex-col leading-tight">
+                <span className="tracking-normal">
+                  來源：{mvId ? `指定 MV：${mvId}` : '全站資料'} ｜ 素材數：{displayedPhotos.length}
+                </span>
+                <span className="text-[10px] font-mono opacity-50 normal-case">
+                  Source: {mvId ? `Target_MV: ${mvId}` : 'Full_Archive'} | Assets_Count: {displayedPhotos.length}
+                </span>
+              </span>
+            )}
           </p>
         </header>
       )}
@@ -613,7 +646,7 @@ export default function LightGalleryViewer({
           dynamicEl={displayedPhotos.map(photo => ({
             src: photo.full,
             thumb: photo.src,
-            subHtml: `<div class="lg-neo-caption"><h4>${photo.caption}</h4><div class="rich-text">${photo.richText || 'NO_METADATA_FOUND'}</div></div>`,
+            subHtml: `<div class="lg-neo-caption"><h4>${photo.caption}</h4><div class="rich-text">${photo.richText || '暫無描述 (NO_METADATA_FOUND)'}</div></div>`,
             downloadUrl: photo.raw,
           }))}
           appendSubHtmlTo=".lg-item"
@@ -640,7 +673,13 @@ export default function LightGalleryViewer({
             columnClassName=""
           >
             {displayedPhotos.map((photo, index) => (
-              <PhotoItem key={`${photo.src}-${index}`} photo={photo} index={index} onPhotoClick={handlePhotoClick} />
+              <PhotoItem
+                key={`${photo.src}-${index}`}
+                photo={photo}
+                index={index}
+                onPhotoClick={handlePhotoClick}
+                delayMs={index >= lastBatchStartRef.current ? Math.min(index - lastBatchStartRef.current, 48) * 25 : undefined}
+              />
             ))}
 
             {loadingMore && Array.from({ length: 4 }).map((_, i) => (
@@ -657,18 +696,24 @@ export default function LightGalleryViewer({
             disabled={loadingMore}
             className="group px-6 sm:px-8 py-3 sm:py-4 bg-card border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none active:translate-x-2 active:translate-y-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-black uppercase tracking-tighter text-sm sm:text-lg flex flex-col items-center gap-1 min-w-[200px]"
           >
-            <span>{loadingMore ? 'Loading...' : 'Load_More_Assets'} ({displayedPhotos.length} / {images.length})</span>
+            <span className="flex flex-col items-center leading-tight">
+              <span className="tracking-normal">
+                {loadingMore ? '載入中...' : '載入更多'} ({displayedPhotos.length} / {images.length})
+              </span>
+              <span className="text-[10px] font-mono opacity-60 normal-case">
+                {loadingMore ? 'Loading...' : 'Load_More_Assets'}
+              </span>
+            </span>
           </button>
         </div>
       )}
 
       {enablePagination && !hasMore && displayedPhotos.length > 0 && (
-        <div className="mt-8 lg:mt-12 text-center font-bold opacity-50 uppercase text-sm sm:text-base">
-          End of Archive
+        <div className="mt-8 lg:mt-12 text-center font-bold opacity-50 uppercase text-sm sm:text-base flex flex-col items-center leading-tight">
+          <span className="tracking-normal">已到最底</span>
+          <span className="text-[10px] font-mono opacity-60 normal-case">End of Archive</span>
         </div>
       )}
     </div>
   );
 }
-
-

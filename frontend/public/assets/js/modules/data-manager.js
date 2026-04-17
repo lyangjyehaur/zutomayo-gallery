@@ -18,7 +18,7 @@ export class FilterManager {
             const matchFav = !this.app.state.showFavOnly || this.app.state.favorites.includes(mv.id);
             const matchKeyword = !keyword ||
                 mv.title.toLowerCase().includes(keyword) ||
-                (mv.keywords && mv.keywords.some(k => k.toLowerCase().includes(keyword)));
+                (mv.keywords && mv.keywords.some(k => (k.text || k).toLowerCase().includes(keyword)));
             const matchYear = !activeYear || mv.year === activeYear || (mv.date && mv.date.startsWith(activeYear));
             const matchAlbum = !activeAlbum || (mv.album && mv.album.includes(activeAlbum));
             const matchArtist = !activeArtist || mv.artist === activeArtist;

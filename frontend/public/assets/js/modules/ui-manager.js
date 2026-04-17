@@ -77,7 +77,8 @@ export class UIManager {
         this.app.utils.updateUrlHash(id);
         this.app.favoritesManager.setupModalBtn(id);
         this.app.dom.modalTitle.textContent = mv.title;
-        this.app.dom.modalSubtitle.innerHTML = (mv.keywords || []).map(k => `<span class="text-light">${k}</span>`).join('<span class="text-white-50"> / </span>');
+        this.app.dom.modalTitle.setAttribute("lang", "ja");
+        this.app.dom.modalSubtitle.innerHTML = (mv.keywords || []).map(k => `<span class="text-light">${k.text || k}</span>`).join('<span class="text-white-50"> / </span>');
 
         this.renderModalDescription(mv.description);
         this.renderModalVideo(mv);

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-Hant" class="dark">
 
 <head>
     <meta charset="UTF-8">
@@ -22,8 +22,22 @@
     <link rel="stylesheet" href="https://unpkg.com/@waline/client@v3/dist/waline.css" />
     <link rel="stylesheet" href="https://unpkg.com/@waline/client@v3/dist/waline-meta.css" />-->
     <link rel="stylesheet" href="./assets/css/fonts.css">
-    <link rel="stylesheet" href="./assets/css/vendor/fontawesome-free-7.2.0.all.min.css"> 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="./src/tailwind.css">
+    <script>
+        (function() {
+            try {
+                var savedTheme = localStorage.getItem("theme");
+                if (savedTheme === "light" || savedTheme === "dark") {
+                    document.documentElement.classList.add(savedTheme);
+                } else {
+                    document.documentElement.classList.add("dark");
+                }
+            } catch (e) {
+                document.documentElement.classList.add("dark");
+            }
+        })();
+    </script>
 </head>
 
 <body>

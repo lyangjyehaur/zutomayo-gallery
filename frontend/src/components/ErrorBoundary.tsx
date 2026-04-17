@@ -62,32 +62,35 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="max-w-2xl w-full border-4 border-red-500 bg-card p-8 shadow-[8px_8px_0px_0px_rgba(239,68,68,1)]">
             {/* 錯誤圖標 */}
             <div className="flex justify-center mb-6">
-              <svg 
-                viewBox="0 0 24 24" 
-                className="w-20 h-20 text-red-500 animate-pulse" 
-                fill="currentColor"
-              >
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-              </svg>
+              <i className="hn hn-exclamation-triangle text-7xl text-red-500 animate-pulse"></i>
             </div>
 
             {/* 標題 */}
-            <h1 className="text-3xl font-black text-center mb-4 uppercase tracking-tighter text-red-500">
-              System_Critical_Error
-            </h1>
+            <div className="flex flex-col items-center leading-tight mb-4">
+              <h1 className="text-3xl font-black text-center uppercase tracking-tighter text-red-500">
+                系統發生嚴重錯誤
+              </h1>
+              <span className="text-[10px] font-mono opacity-50 normal-case text-red-400">System_Critical_Error</span>
+            </div>
 
             {/* 錯誤信息 */}
             <div className="bg-black/30 border-2 border-red-500/30 p-4 mb-6 font-mono text-sm">
-              <p className="text-red-400 mb-2">Error_Details:</p>
+              <div className="text-red-400 mb-2 flex flex-col leading-tight">
+                <span>錯誤資訊</span>
+                <span className="text-[10px] font-mono opacity-60 normal-case">Error_Details:</span>
+              </div>
               <p className="text-red-300/80 break-all">
-                {this.state.error?.message || 'Unknown error occurred'}
+                {this.state.error?.message || '未知錯誤 (Unknown error occurred)'}
               </p>
               
               {/* 開發環境顯示堆棧 */}
               {import.meta.env.DEV && this.state.errorInfo && (
                 <details className="mt-4">
                   <summary className="cursor-pointer text-red-400 hover:text-red-300">
-                    Stack_Trace (Dev_Mode)
+                    <span className="flex flex-col leading-tight">
+                      <span>堆疊追蹤（開發模式）</span>
+                      <span className="text-[10px] font-mono opacity-60 normal-case">Stack_Trace (Dev_Mode)</span>
+                    </span>
                   </summary>
                   <pre className="mt-2 text-xs text-red-300/60 overflow-auto max-h-40 whitespace-pre-wrap">
                     {this.state.errorInfo.componentStack}
@@ -102,6 +105,8 @@ export class ErrorBoundary extends Component<Props, State> {
                 onClick={this.handleReset}
                 variant="default"
                 className="border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                data-umami-event="Z_Error_Recovery"
+                data-umami-event-action="retry"
               >
                 重試
               </Button>
@@ -109,6 +114,8 @@ export class ErrorBoundary extends Component<Props, State> {
                 onClick={this.handleReload}
                 variant="neutral"
                 className="border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                data-umami-event="Z_Error_Recovery"
+                data-umami-event-action="reload"
               >
                 重新加載頁面
               </Button>
@@ -116,6 +123,8 @@ export class ErrorBoundary extends Component<Props, State> {
                 onClick={() => window.location.href = '/'}
                 variant="reverse"
                 className="border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                data-umami-event="Z_Error_Recovery"
+                data-umami-event-action="home"
               >
                 返回首頁
               </Button>
@@ -124,14 +133,18 @@ export class ErrorBoundary extends Component<Props, State> {
             {/* 狀態碼 */}
             <div className="mt-6 text-center">
               <span className="inline-block bg-red-500/20 text-red-400 px-3 py-1 text-xs font-mono border border-red-500/30">
-                STATUS_CODE: 500_INTERNAL_ERROR
+                <span className="flex flex-col items-center leading-tight">
+                  <span className="tracking-normal">狀態碼：500（內部錯誤）</span>
+                  <span className="text-[10px] font-mono opacity-60 normal-case">STATUS_CODE: 500_INTERNAL_ERROR</span>
+                </span>
               </span>
             </div>
           </div>
 
           {/* 底部信息 */}
-          <p className="mt-8 text-xs opacity-50 font-mono">
-            If this error persists, please contact support.
+          <p className="mt-8 text-xs opacity-50 font-mono flex flex-col items-center leading-tight">
+            <span className="tracking-normal">若此錯誤持續發生，請聯絡管理者</span>
+            <span className="text-[10px] font-mono opacity-60 normal-case">If this error persists, please contact support.</span>
           </p>
         </div>
       );

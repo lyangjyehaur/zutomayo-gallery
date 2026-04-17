@@ -117,7 +117,7 @@ const PhotoItem = ({ photo }: PhotoItemProps) => {
               </h4>
               <div 
                 className="text-xs font-bold leading-relaxed opacity-80" 
-                dangerouslySetInnerHTML={{ __html: photo.richText || 'NO_METADATA_FOUND' }} 
+                dangerouslySetInnerHTML={{ __html: photo.richText || '暫無描述 (NO_METADATA_FOUND)' }} 
               />
             </div>
           </div>
@@ -150,7 +150,7 @@ export default function DebugLightGallery({ mvid: propMvid }: DebugLightGalleryP
         originalUrl: getProxyImgUrl(img.url, 'full'),
         alt: img.alt || mv.title,
         key: `${mv.id}-${index}`,
-        caption: img.caption || mv.title,
+        caption: img.caption || `<span lang="ja">${mv.title}</span>`,
         richText: img.richText || '',
         // width: img.width,
         // height: img.height
@@ -236,16 +236,27 @@ export default function DebugLightGallery({ mvid: propMvid }: DebugLightGalleryP
     <div className="p-4 sm:p-6 lg:p-10 bg-background min-h-screen font-mono">
       <header className="mb-8 lg:mb-12 border-b-8 border-border bg-card p-4 sm:p-6 shadow-neo-sm">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black uppercase italic tracking-tighter text-foreground">
-          LightGallery_Debug_Terminal
+          <span className="flex flex-col leading-tight">
+            <span className="tracking-normal">LightGallery 除錯終端</span>
+            <span className="text-[10px] font-mono opacity-50 normal-case">LightGallery_Debug_Terminal</span>
+          </span>
         </h1>
         <p className="font-bold opacity-50 uppercase mt-2 text-foreground text-sm sm:text-base">
-          Source: {mvid ? `Target_MV: ${mvid}` : 'Full_Archive'} | Assets_Count: {displayedPhotos.length}
+          <span className="flex flex-col leading-tight">
+            <span className="tracking-normal">來源：{mvid ? `指定 MV：${mvid}` : '全站資料'} ｜ 素材數：{displayedPhotos.length}</span>
+            <span className="text-[10px] font-mono opacity-50 normal-case">
+              Source: {mvid ? `Target_MV: ${mvid}` : 'Full_Archive'} | Assets_Count: {displayedPhotos.length}
+            </span>
+          </span>
         </p>
       </header>
 
       {error && (
         <div className="p-4 sm:p-6 border-4 border-red-500 bg-red-500/10 text-red-500 font-bold mb-6 lg:mb-8 uppercase tracking-tight text-sm sm:text-base">
-          [LG_ERROR_SIGNAL]: {error}
+          <span className="flex flex-col leading-tight">
+            <span className="tracking-normal">[錯誤訊號]：{error}</span>
+            <span className="text-[10px] font-mono opacity-60 normal-case">[LG_ERROR_SIGNAL]</span>
+          </span>
         </div>
       )}
 
@@ -280,15 +291,22 @@ export default function DebugLightGallery({ mvid: propMvid }: DebugLightGalleryP
             disabled={loadingMore}
             className="group px-6 sm:px-8 py-3 sm:py-4 bg-card border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none active:translate-x-2 active:translate-y-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-black uppercase tracking-tighter text-sm sm:text-lg flex flex-col items-center gap-1 min-w-[200px]"
           >
-            <span>{loadingMore ? 'Loading...' : 'Load_More_Assets'} ({displayedPhotos.length} / {totalPhotoCount})
+            <span className="flex flex-col items-center leading-tight">
+              <span className="tracking-normal">
+                {loadingMore ? '載入中...' : '載入更多'} ({displayedPhotos.length} / {totalPhotoCount})
+              </span>
+              <span className="text-[10px] font-mono opacity-60 normal-case">
+                {loadingMore ? 'Loading...' : 'Load_More_Assets'}
+              </span>
             </span>
           </button>
         </div>
       )}
 
       {!hasMore && displayedPhotos.length > 0 && (
-        <div className="mt-8 lg:mt-12 text-center font-bold opacity-50 uppercase text-sm sm:text-base">
-          End of Archive
+        <div className="mt-8 lg:mt-12 text-center font-bold opacity-50 uppercase text-sm sm:text-base flex flex-col items-center leading-tight">
+          <span className="tracking-normal">已到最底</span>
+          <span className="text-[10px] font-mono opacity-60 normal-case">End of Archive</span>
         </div>
       )}
     </div>

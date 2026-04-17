@@ -1,10 +1,20 @@
 import path from "path"
 import { fileURLToPath } from 'url'
+import { readFileSync, writeFileSync, existsSync, cpSync } from 'fs'
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+const pkg = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8'))
+
+// 注入版本號到環境變數，可以在程式碼中透過 import.meta.env.VITE_APP_VERSION 取得
+process.env.VITE_APP_VERSION = pkg.version
+
+// 注入建置日期
+const now = new Date()
+process.env.VITE_BUILD_DATE = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -17,6 +27,20 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: "./src/test/setup.ts",
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-ui': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-popover', '@radix-ui/react-scroll-area', '@radix-ui/react-select', '@radix-ui/react-tabs', '@radix-ui/react-tooltip'],
+          'vendor-gallery': ['@fancyapps/ui', 'lightgallery', 'react-masonry-css', 'masonry-layout'],
+          'vendor-editor': ['@monaco-editor/react'],
+          'vendor-utils': ['swr', 'sonner', 'clsx', 'tailwind-merge', 'zod']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000,
   },
   server: {
     proxy: {

@@ -4,11 +4,19 @@ import { toast } from "sonner"
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
 import { MVItem } from '@/lib/types';
 import { getProxyImgUrl } from '@/lib/image';
-import { Plus, Trash2, Save, ArrowLeft, Image as ImageIcon, Hash, Disc, Youtube, Tv, Ruler, RefreshCw, Play, AlertTriangle, Filter, HelpCircle, Code, LayoutTemplate, FileCode, Plus as PlusIcon, Wand2 } from 'lucide-react';
 import Editor from '@monaco-editor/react';
+import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
 import {
   Dialog,
   DialogContent,
@@ -264,7 +272,7 @@ function RichTextEditor({ value, onChange }: RichTextEditorProps) {
                 }`}
                 title="插入模板"
               >
-                <LayoutTemplate className="size-4" />
+                <i className="hn hn-grid text-base" />
                 模板
               </button>
             </DropdownMenuTrigger>
@@ -280,7 +288,7 @@ function RichTextEditor({ value, onChange }: RichTextEditorProps) {
                     onClick={() => applyTemplate(template)}
                     className="flex items-center gap-2 cursor-pointer focus:bg-ztmy-green/20"
                   >
-                    <FileCode className="size-4 opacity-50" />
+                    <i className="hn hn-notebook text-base opacity-50" />
                     <span className="truncate">{template.name}</span>
                   </DropdownMenuItem>
                 ))
@@ -290,7 +298,7 @@ function RichTextEditor({ value, onChange }: RichTextEditorProps) {
                 onClick={() => setShowTemplateManager(true)}
                 className="flex items-center gap-2 cursor-pointer bg-black text-white focus:bg-ztmy-green focus:text-black font-bold"
               >
-                <PlusIcon className="size-4" />
+                <i className="hn hn-plus text-base" />
                 保存當前為模板
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -302,7 +310,7 @@ function RichTextEditor({ value, onChange }: RichTextEditorProps) {
             className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold uppercase border-2 border-black rounded shadow-neo-sm bg-white text-black hover:bg-purple-300 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-neo transition-all"
             title="使用模板填充數據"
           >
-            <Wand2 className="size-4" />
+            <i className="hn hn-edit text-base mr-1" />
             填充
           </button>
 
@@ -316,7 +324,7 @@ function RichTextEditor({ value, onChange }: RichTextEditorProps) {
             }`}
             title={isSplitMode ? '切換到單欄編輯' : '切換到雙欄預覽'}
           >
-            <Code className="size-4" />
+            <i className="hn hn-code text-base" />
             {isSplitMode ? '單欄' : '分屏'}
           </button>
         </div>
@@ -327,7 +335,7 @@ function RichTextEditor({ value, onChange }: RichTextEditorProps) {
         <DialogContent className="max-w-lg border-4 border-black shadow-neo p-0 overflow-hidden bg-white text-black">
           <DialogHeader className="p-4 bg-ztmy-green border-b-4 border-black">
             <DialogTitle className="text-xl font-black uppercase flex items-center gap-2">
-              <LayoutTemplate className="size-5" /> 模板管理
+              <i className="hn hn-grid text-xl" /> 模板管理
             </DialogTitle>
             <DialogDescription className="text-black font-bold opacity-80 text-xs">
               保存、編輯或刪除您的自定義 HTML 模板
@@ -351,7 +359,7 @@ function RichTextEditor({ value, onChange }: RichTextEditorProps) {
                   size="sm"
                   className="bg-black text-white"
                 >
-                  <PlusIcon className="size-3" />
+                  <i className="hn hn-plus text-sm" />
                   保存
                 </Button>
               </div>
@@ -408,14 +416,14 @@ function RichTextEditor({ value, onChange }: RichTextEditorProps) {
                             className="opacity-0 group-hover:opacity-100 p-1 hover:bg-black/10 rounded transition-all"
                             title="重命名"
                           >
-                            <FileCode className="size-3" />
+                            <i className="hn hn-notebook text-sm" />
                           </button>
                           <button
                             onClick={() => handleDeleteTemplate(template.id)}
                             className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 text-red-500 rounded transition-all"
                             title="刪除"
                           >
-                            <Trash2 className="size-3" />
+                            <i className="hn hn-trash text-base" />
                           </button>
                         </>
                       )}
@@ -439,7 +447,7 @@ function RichTextEditor({ value, onChange }: RichTextEditorProps) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="text-2xl font-black uppercase flex items-center gap-2 text-red-500">
-              <AlertTriangle className="size-6" /> 刪除模板
+              <i className="hn hn-exclamation-triangle text-2xl" /> 刪除模板
             </AlertDialogTitle>
             <AlertDialogDescription className="text-foreground font-bold opacity-80">
               確定要刪除此模板嗎？此操作不可撤銷。
@@ -462,7 +470,7 @@ function RichTextEditor({ value, onChange }: RichTextEditorProps) {
         <DialogContent className="max-w-2xl border-4 border-black shadow-neo p-0 overflow-hidden bg-white text-black">
           <DialogHeader className="p-4 bg-purple-500 border-b-4 border-black">
             <DialogTitle className="text-xl font-black uppercase flex items-center gap-2 text-white">
-              <Wand2 className="size-5" /> 模板填充器
+              <i className="hn hn-edit text-xl mr-2" /> 模板填充器
             </DialogTitle>
             <DialogDescription className="text-white font-bold opacity-90 text-xs">
               選擇模板並填入數據，自動替換佔位符
@@ -580,7 +588,7 @@ function RichTextEditor({ value, onChange }: RichTextEditorProps) {
                   onClick={handleProcessTemplate}
                   className="w-full bg-purple-500 text-white hover:bg-purple-600"
                 >
-                  <Wand2 className="size-4 mr-2" />
+                  <i className="hn hn-edit text-base mr-2" />
                   生成結果
                 </Button>
 
@@ -663,10 +671,219 @@ function RichTextEditor({ value, onChange }: RichTextEditorProps) {
 
 interface AdminPageProps {
   mvData: MVItem[];
+  metadata: {
+    albumMeta: Record<string, { date?: string; hideDate?: boolean }>;
+    artistMeta: Record<string, { id?: string; hideId?: boolean }>;
+    settings: { showAutoAlbumDate: boolean };
+  };
+  systemStatus?: { maintenance: boolean; eta?: string | null };
   onRefresh?: () => void;
 }
 
-export function AdminPage({ mvData, onRefresh }: AdminPageProps) {
+export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPageProps) {
+  // 認證狀態
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isDefaultPassword, setIsDefaultPassword] = useState(false);
+  
+  // 登入追蹤狀態
+  const [loginAttempts, setLoginAttempts] = useState(0);
+  const [loginFailures, setLoginFailures] = useState(0);
+
+  // 密碼修改狀態
+  const [isChangePwdOpen, setIsChangePwdOpen] = useState(false);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [oldPwd, setOldPwd] = useState('');
+  const [newPwd, setNewPwd] = useState('');
+  const [confirmPwd, setConfirmPwd] = useState('');
+  const [isSavingPwd, setIsSavingPwd] = useState(false);
+
+  const verifyPassword = async (pwd: string, silent = false) => {
+    // 若已登入，阻擋追蹤與後續邏輯
+    if (isAuthenticated) return;
+    
+    setIsVerifying(true);
+
+    // 追蹤：有人嘗試登入
+    if (!silent && (window as any).umami && typeof (window as any).umami.track === 'function') {
+      (window as any).umami.track('Z_Admin_Login_Attempt', { 
+        method: 'password', 
+        attemptCount: loginAttempts + 1 
+      });
+      setLoginAttempts(prev => prev + 1);
+    }
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
+      const res = await fetch(`${apiUrl}/verify-admin`, {
+        method: 'POST',
+        headers: { 'x-admin-password': pwd }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setIsAuthenticated(true);
+        localStorage.setItem('ztmy_admin_pwd', pwd);
+        setIsDefaultPassword(data.isDefaultPassword);
+        if (!silent) toast.success('登入成功');
+      } else {
+        if (!silent) {
+          toast.error('密碼錯誤或驗證失敗');
+          
+          // 追蹤：登入失敗
+          if ((window as any).umami && typeof (window as any).umami.track === 'function') {
+            (window as any).umami.track('Z_Admin_Login_Failed', { 
+              method: 'password',
+              reason: 'invalid_password',
+              failureCount: loginFailures + 1 
+            });
+            setLoginFailures(prev => prev + 1);
+          }
+        }
+        localStorage.removeItem('ztmy_admin_pwd');
+        setIsAuthenticated(false);
+      }
+    } catch (e) {
+      if (!silent) {
+        toast.error('伺服器連線失敗');
+        
+        // 追蹤：登入失敗 (連線問題)
+        if ((window as any).umami && typeof (window as any).umami.track === 'function') {
+          (window as any).umami.track('Z_Admin_Login_Failed', { 
+            method: 'password',
+            reason: 'network_error',
+            failureCount: loginFailures + 1 
+          });
+          setLoginFailures(prev => prev + 1);
+        }
+      }
+      setIsAuthenticated(false);
+    } finally {
+      setIsVerifying(false);
+      setIsInitializing(false);
+    }
+  };
+
+  const handlePasskeyLogin = async () => {
+    if (isAuthenticated) return;
+    
+    setIsVerifying(true);
+
+    // 追蹤：嘗試使用 Passkey 登入
+    if ((window as any).umami && typeof (window as any).umami.track === 'function') {
+      (window as any).umami.track('Z_Admin_Login_Attempt', { 
+        method: 'passkey', 
+        attemptCount: loginAttempts + 1 
+      });
+      setLoginAttempts(prev => prev + 1);
+    }
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
+      const authApiUrl = apiUrl.replace(/\/mvs$/, '/auth');
+      
+      const resp = await fetch(`${authApiUrl}/generate-auth-options`);
+      const options = await resp.json();
+      if (options.error) throw new Error(options.error);
+
+      const asseResp = await startAuthentication({ optionsJSON: options });
+      const verifyResp = await fetch(`${authApiUrl}/verify-auth`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(asseResp)
+      });
+      const verifyResult = await verifyResp.json();
+      if (verifyResult.success) {
+        setIsAuthenticated(true);
+        localStorage.setItem('ztmy_admin_pwd', verifyResult.token);
+        setIsDefaultPassword(verifyResult.isDefaultPassword);
+        toast.success('Passkey 登入成功');
+      } else {
+        toast.error('Passkey 驗證失敗');
+        
+        // 追蹤：Passkey 登入失敗
+        if ((window as any).umami && typeof (window as any).umami.track === 'function') {
+          (window as any).umami.track('Z_Admin_Login_Failed', { 
+            method: 'passkey',
+            reason: 'verification_failed',
+            failureCount: loginFailures + 1 
+          });
+          setLoginFailures(prev => prev + 1);
+        }
+      }
+    } catch (e: any) {
+      toast.error('Passkey 登入失敗: ' + e.message);
+      
+      // 追蹤：Passkey 登入錯誤
+      if ((window as any).umami && typeof (window as any).umami.track === 'function') {
+        (window as any).umami.track('Z_Admin_Login_Failed', { 
+          method: 'passkey',
+          reason: 'error_or_cancelled',
+          failureCount: loginFailures + 1 
+        });
+        setLoginFailures(prev => prev + 1);
+      }
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleLogout = () => {
+    setIsLogoutConfirmOpen(false);
+    localStorage.removeItem('ztmy_admin_pwd');
+    setIsAuthenticated(false);
+    toast.success('已安全登出');
+  };
+
+  const handleChangePassword = async () => {
+    if (!isDefaultPassword && !oldPwd) return toast.error('請輸入舊密碼');
+    if (newPwd.length < 4) return toast.error('密碼至少需要4個字元');
+    if (newPwd === 'zutomayo') return toast.error('不能修改回初始密碼');
+    if (newPwd !== confirmPwd) return toast.error('兩次密碼輸入不一致');
+    
+    setIsSavingPwd(true);
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
+      const authApiUrl = apiUrl.replace(/\/mvs$/, '/auth');
+      
+      const res = await fetch(`${authApiUrl}/change-password`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
+        },
+        body: JSON.stringify({ oldPassword: oldPwd, newPassword: newPwd })
+      });
+      
+      if (res.ok) {
+        toast.success('密碼修改成功！');
+        localStorage.setItem('ztmy_admin_pwd', newPwd);
+        setIsDefaultPassword(false);
+        setIsChangePwdOpen(false);
+        setOldPwd('');
+        setNewPwd('');
+        setConfirmPwd('');
+      } else {
+        const data = await res.json();
+        toast.error(data.error || '修改失敗');
+      }
+    } catch (e) {
+      toast.error('伺服器連線失敗');
+    } finally {
+      setIsSavingPwd(false);
+    }
+  };
+
+  useEffect(() => {
+    const saved = localStorage.getItem('ztmy_admin_pwd');
+    if (saved) {
+      verifyPassword(saved, true);
+    } else {
+      setIsInitializing(false);
+    }
+  }, []);
+
   const [data, setData] = useState<MVItem[]>([]);
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const [isSaving, setIsSaving] = useState(false);
@@ -700,6 +917,127 @@ export function AdminPage({ mvData, onRefresh }: AdminPageProps) {
   // 保存原始數據用於比較
   const originalDataRef = useRef<MVItem[]>([]);
 
+  // Metadata 狀態
+  const [localMetadata, setLocalMetadata] = useState<{
+    albumMeta: Record<string, { date?: string; hideDate?: boolean }>;
+    artistMeta: Record<string, { id?: string; hideId?: boolean }>;
+    settings: { showAutoAlbumDate: boolean; announcements?: string[] };
+  }>({ albumMeta: {}, artistMeta: {}, settings: { showAutoAlbumDate: false, announcements: [] } });
+  const [localMaintenance, setLocalMaintenance] = useState(false);
+  const [localMaintenanceEta, setLocalMaintenanceEta] = useState<string>('');
+  const [isMetadataDialogOpen, setIsMetadataDialogOpen] = useState(false);
+  const [isSavingMetadata, setIsSavingMetadata] = useState(false);
+
+  useEffect(() => {
+    setLocalMetadata(JSON.parse(JSON.stringify(metadata)));
+  }, [metadata]);
+
+  useEffect(() => {
+    setLocalMaintenance(systemStatus?.maintenance || false);
+    setLocalMaintenanceEta(systemStatus?.eta || '');
+  }, [systemStatus]);
+
+  const availableAlbums = useMemo(() => {
+    const set = new Set<string>();
+    mvData.forEach((mv) => {
+      if (Array.isArray(mv.album)) {
+        mv.album.forEach((a) => {
+          if (typeof a === 'string' && a.trim() !== '') set.add(a);
+        });
+      }
+    });
+    return Array.from(set).sort();
+  }, [mvData]);
+
+  const availableArtists = useMemo(() => {
+    const set = new Set<string>();
+    mvData.forEach((mv) => {
+      if (Array.isArray(mv.artist)) {
+        mv.artist.forEach((a) => {
+          if (typeof a === 'string' && a.trim() !== '') set.add(a);
+        });
+      } else if (typeof mv.artist === 'string' && (mv.artist as string).trim() !== '') {
+        set.add(mv.artist as string);
+      }
+    });
+    return Array.from(set).sort();
+  }, [mvData]);
+
+  const [passkeys, setPasskeys] = useState<{id: string, name?: string, createdAt: string}[]>([]);
+
+  useEffect(() => {
+    if (isMetadataDialogOpen) {
+      const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
+      const authApiUrl = apiUrl.replace(/\/mvs$/, '/auth');
+      fetch(`${authApiUrl}/passkeys`, {
+        headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
+      }).then(r => r.json()).then(data => {
+        if (Array.isArray(data)) setPasskeys(data);
+      });
+    }
+  }, [isMetadataDialogOpen]);
+
+  const handleRegisterPasskey = async () => {
+    try {
+      const name = window.prompt('請為此設備的 Passkey 命名 (例如: My MacBook):');
+      if (!name) return;
+
+      const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
+      const authApiUrl = apiUrl.replace(/\/mvs$/, '/auth');
+      const headers = { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '', 'Content-Type': 'application/json' };
+      
+      const resp = await fetch(`${authApiUrl}/generate-reg-options`, { headers });
+      const options = await resp.json();
+      if (options.error) throw new Error(options.error);
+
+      const attResp = await startRegistration({ optionsJSON: options });
+      
+      const verifyResp = await fetch(`${authApiUrl}/verify-reg`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ data: attResp, name })
+      });
+      const verifyResult = await verifyResp.json();
+      
+      if (verifyResult.success) {
+        toast.success('Passkey 註冊成功！');
+        const listResp = await fetch(`${authApiUrl}/passkeys`, { headers });
+        setPasskeys(await listResp.json());
+      } else {
+        toast.error('Passkey 註冊失敗');
+      }
+    } catch (e: any) {
+      toast.error('Passkey 註冊錯誤: ' + e.message);
+    }
+  };
+
+  const handleRemovePasskey = async (id: string) => {
+    if (!window.confirm('確定要刪除這個 Passkey 嗎？')) return;
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
+      const authApiUrl = apiUrl.replace(/\/mvs$/, '/auth');
+      await fetch(`${authApiUrl}/passkeys/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
+      });
+      setPasskeys(prev => prev.filter(p => p.id !== id));
+      toast.success('Passkey 已刪除');
+    } catch (e) {
+      toast.error('刪除失敗');
+    }
+  };
+
+  const albumDefaultDateMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    mvData.forEach((mv) => {
+      if (!mv.date) return;
+      mv.album?.forEach((a) => {
+        if (!map[a] || mv.date < map[a]) map[a] = mv.date.replace(/\//g, '/');
+      });
+    });
+    return map;
+  }, [mvData]);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -732,34 +1070,79 @@ export function AdminPage({ mvData, onRefresh }: AdminPageProps) {
 
 const currentMV = data[activeIndex];
 
-  // 當切換影片時重置圖片顯示數量
+  // 保存 Metadata
+  const handleSaveMetadata = async () => {
+    setIsSavingMetadata(true);
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
+      const response = await fetch(`${apiUrl}/metadata`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
+        },
+        body: JSON.stringify(localMetadata),
+      });
+      if (!response.ok) throw new Error('保存 Metadata 失敗');
+
+      if (localMaintenance !== systemStatus?.maintenance || localMaintenanceEta !== (systemStatus?.eta || '')) {
+        const sysResponse = await fetch(`${apiUrl.replace('/mvs', '/system')}/maintenance`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
+          },
+          body: JSON.stringify({ maintenance: localMaintenance, eta: localMaintenanceEta })
+        });
+        if (!sysResponse.ok) throw new Error('保存系統狀態失敗');
+      }
+      
+      toast.success('全局設定 (Metadata) 已保存！');
+      setIsMetadataDialogOpen(false);
+      onRefresh?.();
+    } catch (error) {
+      console.error(error);
+      toast.error('保存全局設定失敗！');
+    } finally {
+      setIsSavingMetadata(false);
+    }
+  };
   useEffect(() => {
     setImageDisplayLimit(12);
   }, [activeIndex]);
 
-  // 滾動自動加載圖片列表邏輯 (Admin 側)
-  useEffect(() => {
-    if (!currentMV?.images || imageDisplayLimit >= currentMV.images.length) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setImageDisplayLimit((prev) => prev + 12);
-        }
-      },
-      { rootMargin: '200px' } // 提前觸發以保持流暢
-    );
-
-    if (imageSentinelRef.current) {
-      observer.observe(imageSentinelRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, [currentMV?.images, imageDisplayLimit]);
-
   const visibleImages = useMemo(() => {
     return (currentMV?.images || []).slice(0, imageDisplayLimit);
   }, [currentMV?.images, imageDisplayLimit]);
+
+  // 滾動自動加載圖片列表邏輯 (Admin 側)
+  const handleImageObserver = useCallback((entries: IntersectionObserverEntry[]) => {
+    const [target] = entries;
+    if (target.isIntersecting && currentMV?.images && imageDisplayLimit < currentMV.images.length) {
+      setImageDisplayLimit(prev => prev + 12);
+    }
+  }, [currentMV?.images, imageDisplayLimit]);
+
+  useEffect(() => {
+    if (!currentMV?.images || imageDisplayLimit >= currentMV.images.length) return;
+
+    const observer = new IntersectionObserver(handleImageObserver, { 
+      root: null,
+      rootMargin: '200px',
+      threshold: 0.1
+    });
+
+    const currentTarget = imageSentinelRef.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
+    }
+
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
+    };
+  }, [handleImageObserver, currentMV?.images, imageDisplayLimit]);
 
   // 動態檢測欄位是否為空 (支持未來新增的欄位)
   const isFieldIncomplete = (val: any) => {
@@ -863,7 +1246,10 @@ const currentMV = data[activeIndex];
       const apiUrl = (import.meta.env.VITE_API_URL || '/api/mvs').replace(/\/mvs$/, '/mvs/probe');
       const response = await fetch(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
+        },
         body: JSON.stringify({ url: proxiedUrl }),
       });
       if (!response.ok) throw new Error('Network Error');
@@ -1023,8 +1409,9 @@ const currentMV = data[activeIndex];
       year: new Date().getFullYear().toString(),
       date: "",
       album: [],
-      artist: "Waboku",
+      artist: ["Waboku"], // 改為陣列
       youtube: "",
+      bilibili: "",
       description: "",
       images: [],
       coverImages: [],
@@ -1094,7 +1481,10 @@ const currentMV = data[activeIndex];
     toast.promise(
       fetch(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
+        },
         body: JSON.stringify({
           data: changedData,
           partial: true // 標記為部分更新
@@ -1113,6 +1503,8 @@ const currentMV = data[activeIndex];
           originalDataRef.current = JSON.parse(JSON.stringify(data));
           setChangedFields(new Map());
           setDeletedIds(new Set());
+          
+          if (onRefresh) onRefresh();
           
           // 根據後端返回的詳細信息生成提示
           const { details } = result;
@@ -1135,15 +1527,129 @@ const currentMV = data[activeIndex];
     );
   };
 
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center font-mono text-foreground crt-lines p-4 relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none opacity-5 crt-lines-global" />
+        <div className="text-xl font-black uppercase tracking-widest animate-pulse flex items-center gap-2">
+          <i className="hn hn-refresh text-xl animate-spin" />
+          <span className="flex flex-col leading-tight">
+            <span className="tracking-normal opacity-70">驗證中...</span>
+            <span className="text-[10px] font-mono opacity-40 normal-case">AUTHENTICATING...</span>
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center font-mono text-foreground crt-lines p-4 relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none opacity-5 crt-lines-global" />
+        <div className="w-full max-w-sm bg-card border-4 border-black shadow-neo flex flex-col z-10 relative">
+          <div className="h-10 bg-black text-white flex items-center justify-between px-4 border-b-4 border-black">
+            <span className="font-black uppercase tracking-widest text-xs flex items-center gap-2">
+              <i className="hn hn-exclamation-triangle text-base" />
+              <span className="flex flex-col leading-tight">
+                <span className="tracking-normal opacity-90">管理員驗證</span>
+                <span className="text-[10px] font-mono opacity-60 normal-case">ADMIN_AUTH</span>
+              </span>
+            </span>
+            <div className="flex gap-2">
+              <div className="size-3 rounded-full bg-main" />
+              <div className="size-3 rounded-full bg-ztmy-green" />
+              <div className="size-3 rounded-full bg-red-500" />
+            </div>
+          </div>
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault();
+              verifyPassword(passwordInput);
+            }} 
+            className="p-8 flex flex-col gap-6"
+          >
+            <div className="space-y-2">
+              <label className="text-xs font-black uppercase tracking-widest flex flex-col leading-tight">
+                <span className="tracking-normal opacity-70">存取碼</span>
+                <span className="text-[10px] font-mono opacity-40 normal-case">ACCESS_CODE</span>
+              </label>
+              <Input
+                type="password"
+                placeholder="請輸入密碼... (ENTER_PASSWORD...)"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                className="font-mono bg-black/5 border-2 border-black focus-visible:ring-black rounded-none h-12"
+                autoFocus
+              />
+            </div>
+            <Button 
+              type="submit" 
+              variant="default" 
+              className="w-full bg-black text-white hover:bg-main hover:text-black shadow-neo border-2 border-transparent transition-colors rounded-none h-12 font-black tracking-widest"
+              disabled={isVerifying || !passwordInput}
+            >
+              <span className="flex flex-col items-center leading-tight">
+                <span className="tracking-normal">{isVerifying ? '驗證中...' : '登入'}</span>
+                <span className="text-[10px] font-mono opacity-60 normal-case">{isVerifying ? 'VERIFYING...' : 'LOGIN_'}</span>
+              </span>
+            </Button>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-black/20"></span></div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-black/50 font-bold flex flex-col items-center leading-tight">
+                  <span className="tracking-normal">或</span>
+                  <span className="text-[10px] font-mono opacity-60 normal-case">OR</span>
+                </span>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="neutral"
+              className="w-full h-12 font-black tracking-widest flex items-center justify-center gap-2 border-2 border-black"
+              onClick={handlePasskeyLogin}
+              disabled={isVerifying}
+            >
+              <i className="hn hn-user text-xl" />
+              <span className="flex flex-col items-center leading-tight">
+                <span className="tracking-normal">使用 Passkey 登入</span>
+                <span className="text-[10px] font-mono opacity-60 normal-case">PASSKEY LOGIN</span>
+              </span>
+            </Button>
+          </form>
+          <div className="bg-secondary-background border-t-4 border-black p-3 flex justify-between items-center text-[10px] opacity-70">
+            <span>SYS.AUTH.v{VERSION_CONFIG.app}</span>
+            <button onClick={() => navigate('/')} className="hover:underline hover:text-main transition-colors uppercase">
+              <span className="flex flex-col items-end leading-tight">
+                <span className="tracking-normal">{'<'} 返回首頁</span>
+                <span className="text-[10px] font-mono opacity-60 normal-case">Return_Home</span>
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!currentMV) return null;
   return (
 
     <div className="h-screen bg-background text-foreground flex flex-col font-mono font-normal overflow-hidden">
+      {/* 密碼安全性警告 */}
+      {isDefaultPassword && (
+        <div className="bg-red-600 text-white p-2 text-center text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-4 z-50 relative shrink-0">
+          <i className="hn hn-exclamation-triangle text-base animate-pulse" />
+          系統目前使用初始密碼 (zutomayo)，存在安全風險！請立即修改密碼。
+          <Button size="sm" variant="neutral" className="h-6 text-[10px] bg-white text-red-600 hover:bg-gray-200 shadow-none border-transparent px-2" onClick={() => setIsChangePwdOpen(true)}>
+            立即修改
+          </Button>
+        </div>
+      )}
+
       {/* 頂部控制欄 */}
-      <div className="h-20 border-b-4 border-black bg-card flex items-center justify-between px-8 shadow-neo-sm z-50">
+      <div className="h-20 border-b-4 border-black bg-card flex items-center justify-between px-8 shadow-neo-sm z-40 shrink-0">
         <div className="flex items-center gap-4">
           <Button variant="neutral" size="sm" onClick={() => navigate('/')}>
-            <ArrowLeft className="size-4" /> 返回
+            <i className="hn hn-arrow-left text-base mr-2" /> 返回
           </Button>
           <h1 className="font-black uppercase tracking-tighter text-xl border-l-4 border-black pl-4">
             數據管理後台 V{VERSION_CONFIG.app}
@@ -1151,27 +1657,63 @@ const currentMV = data[activeIndex];
         </div>
         <div className="flex gap-4">
           <Button 
+            variant="neutral" 
+            size="sm" 
+            onClick={() => setIsMetadataDialogOpen(true)}
+            className="border-2 border-black font-bold bg-white"
+          >
+            全局設定 (Metadata)
+          </Button>
+          <Button 
             variant={showOnlyIncomplete ? "default" : "neutral"} 
             size="sm" 
             onClick={() => setShowOnlyIncomplete(!showOnlyIncomplete)}
             className={showOnlyIncomplete ? "bg-red-500 text-white shadow-neo" : ""}
           >
-            <Filter className="size-4" /> 
+            <i className="hn hn-filter text-base mr-2" /> 
             <span className="hidden md:inline">
               {showOnlyIncomplete ? '正在查看待完善' : '只看待完善'}
             </span>
           </Button>
-          <Button variant="default" size="sm" onClick={addNewMV} className="bg-main text-black">
-            <Plus className="size-4" /> 新增條目
+          <Button variant="default" size="sm" onClick={addNewMV} className="bg-main text-main-foreground shadow-neo hover:translate-x-0 hover:translate-y-0">
+            <i className="hn hn-plus text-base mr-2" /> 新增條目
           </Button>
           <Button 
             variant="default" 
             size="sm" 
             onClick={() => setIsConfirmOpen(true)} 
             disabled={isSaving}
-            className="bg-ztmy-green text-black shadow-neo"
+            className="bg-ztmy-green text-black shadow-neo hover:translate-x-0 hover:translate-y-0"
           >
-            <Save className="size-4" /> {isSaving ? '同步中...' : '儲存回寫 (COMMIT)'}
+            <i className="hn hn-save text-base mr-2" /> {isSaving ? '同步中...' : '儲存回寫 (COMMIT)'}
+          </Button>
+          <div className="w-px h-8 bg-black/20 mx-2"></div>
+          <Button 
+            variant="neutral" 
+            size="sm" 
+            onClick={() => navigate('/admin/db')}
+            className="border-2 border-transparent text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+            title="資料庫管理（SQL EXPLORER）"
+          >
+            <i className="hn hn-table text-base" />
+          </Button>
+          <Button 
+            variant="neutral" 
+            size="sm" 
+            onClick={() => setIsLogoutConfirmOpen(true)}
+            className="border-2 border-transparent text-red-500 hover:text-red-600 hover:bg-red-50"
+            title="登出管理員"
+          >
+            <i className="hn hn-logout text-base" />
+          </Button>
+          <Button 
+            variant="neutral" 
+            size="sm" 
+            onClick={() => setIsChangePwdOpen(true)}
+            className="border-2 border-transparent text-black hover:bg-black/5"
+            title="修改密碼"
+          >
+            <i className="hn hn-lock-open text-base" />
           </Button>
         </div>
       </div>
@@ -1194,9 +1736,9 @@ const currentMV = data[activeIndex];
             >
               <div className="truncate pr-2">
                 <div className="text-[10px] opacity-50 mb-1 flex items-center gap-1">
-                  #{mv.id} {isIncomplete && <AlertTriangle className="size-3 text-red-500" />}
+                  #{mv.id} {isIncomplete && <i className="hn hn-exclamation-triangle text-sm text-red-500" />}
                 </div>
-                <div className="font-bold text-sm truncate">{mv.title}</div>
+                <div className="font-bold text-sm truncate" lang="ja">{mv.title}</div>
               </div>
               <button 
                 onClick={(e) => {
@@ -1205,7 +1747,7 @@ const currentMV = data[activeIndex];
                 }}
                 className="opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity"
               >
-                <Trash2 className="size-4" />
+                <i className="hn hn-trash text-base" />
               </button>
             </div>
               );
@@ -1221,10 +1763,16 @@ const currentMV = data[activeIndex];
             
             {/* 基礎資訊區塊 */}
             <section className="space-y-6">
-              <h3 className="text-sm font-black uppercase text-main bg-main/10 inline-block px-2">01_Basic_Information</h3>
+              <div className="flex flex-col gap-1">
+                <h3 className="text-sm font-black uppercase text-main bg-main/10 inline-block px-2">01 基礎資訊</h3>
+                <span className="text-[10px] font-bold opacity-40 font-mono normal-case ml-2">01_Basic_Information</span>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2 col-span-1">
-                  <label className="text-xs font-bold opacity-50 uppercase">MV_Unique_ID</label>
+                  <label className="text-xs font-bold uppercase flex flex-col leading-tight">
+                    <span className="opacity-70">MV 唯一 ID</span>
+                    <span className="text-[10px] font-mono opacity-40 normal-case">MV_Unique_ID</span>
+                  </label>
                   <Input 
                     value={currentMV.id} 
                     onChange={(e) => updateField('id', e.target.value)} 
@@ -1232,15 +1780,22 @@ const currentMV = data[activeIndex];
                   />
                 </div>
                 <div className="space-y-2 col-span-1">
-                  <label className="text-xs font-bold opacity-50 uppercase">MV_Title</label>
+                  <label className="text-xs font-bold uppercase flex flex-col leading-tight">
+                    <span className="opacity-70">MV 標題</span>
+                    <span className="text-[10px] font-mono opacity-40 normal-case">MV_Title</span>
+                  </label>
                   <Input 
                     value={currentMV.title} 
                     onChange={(e) => updateField('title', e.target.value)} 
                     className={getErrorClass(currentMV.title)}
+                    lang="ja"
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-xs font-bold opacity-50 uppercase">Description</label>
+                  <label className="text-xs font-bold uppercase flex flex-col leading-tight">
+                    <span className="opacity-70">描述</span>
+                    <span className="text-[10px] font-mono opacity-40 normal-case">Description</span>
+                  </label>
                   <Textarea 
                     value={currentMV.description} 
                     onChange={(e) => updateField('description', e.target.value)}
@@ -1248,7 +1803,10 @@ const currentMV = data[activeIndex];
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold opacity-50 uppercase">Release_Year</label>
+                  <label className="text-xs font-bold uppercase flex flex-col leading-tight">
+                    <span className="opacity-70">發布年份</span>
+                    <span className="text-[10px] font-mono opacity-40 normal-case">Release_Year</span>
+                  </label>
                   <Input 
                     value={currentMV.year} 
                     onChange={(e) => updateField('year', e.target.value)} 
@@ -1256,7 +1814,10 @@ const currentMV = data[activeIndex];
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold opacity-50 uppercase">Full_Date</label>
+                  <label className="text-xs font-bold uppercase flex flex-col leading-tight">
+                    <span className="opacity-70">完整日期</span>
+                    <span className="text-[10px] font-mono opacity-40 normal-case">Full_Date</span>
+                  </label>
                   <Input 
                     value={currentMV.date} 
                     onChange={(e) => updateField('date', e.target.value)} 
@@ -1268,10 +1829,19 @@ const currentMV = data[activeIndex];
 
             {/* 媒體與關聯區塊 */}
             <section className="space-y-6">
-              <h3 className="text-sm font-black uppercase text-main bg-main/10 inline-block px-2">02_Media_Connections</h3>
+              <div className="flex flex-col gap-1">
+                <h3 className="text-sm font-black uppercase text-main bg-main/10 inline-block px-2">02 媒體與關聯</h3>
+                <span className="text-[10px] font-bold opacity-40 font-mono normal-case ml-2">02_Media_Connections</span>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold opacity-50 uppercase flex items-center gap-2"><Youtube className="size-3"/> Youtube_ID</label>
+                  <label className="text-xs font-bold uppercase flex items-start gap-2">
+                    <i className="hn hn-video-camera text-base mr-2" />
+                    <span className="flex flex-col leading-tight">
+                      <span className="opacity-70">YouTube 影片 ID</span>
+                      <span className="text-[10px] font-mono opacity-40 normal-case">Youtube_ID</span>
+                    </span>
+                  </label>
                   <Input 
                     value={currentMV.youtube} 
                     onChange={(e) => updateField('youtube', e.target.value)} 
@@ -1279,24 +1849,26 @@ const currentMV = data[activeIndex];
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold opacity-50 uppercase flex items-center gap-2"><Tv className="size-3"/> Bilibili_BV</label>
+                  <label className="text-xs font-bold uppercase flex items-start gap-2">
+                    <i className="hn hn-pc text-base mr-2" />
+                    <span className="flex flex-col leading-tight">
+                      <span className="opacity-70">Bilibili BV 號</span>
+                      <span className="text-[10px] font-mono opacity-40 normal-case">Bilibili_BV</span>
+                    </span>
+                  </label>
                   <Input 
                     value={currentMV.bilibili || ''} 
                     onChange={(e) => updateField('bilibili', e.target.value)} 
                     className={getErrorClass(currentMV.bilibili)}
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold opacity-50 uppercase">Artist / Animator</label>
-                  <Input 
-                    value={currentMV.artist} 
-                    onChange={(e) => updateField('artist', e.target.value)} 
-                    className={getErrorClass(currentMV.artist)}
-                  />
-                </div>
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-xs font-bold opacity-50 uppercase flex items-center gap-2">
-                    <Disc className="size-3" /> Albums (每行一個項目)
+                  <label className="text-xs font-bold uppercase flex items-start gap-2">
+                    <i className="hn hn-disc text-base mr-2" />
+                    <span className="flex flex-col leading-tight">
+                      <span className="opacity-70">專輯（每行一個項目）</span>
+                      <span className="text-[10px] font-mono opacity-40 normal-case">Albums</span>
+                    </span>
                   </label>
                   <Textarea 
                     value={currentMV.album?.join('\n')} 
@@ -1305,23 +1877,102 @@ const currentMV = data[activeIndex];
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-xs font-bold opacity-50 uppercase flex items-center gap-2">
-                    <Hash className="size-3" /> Keywords / Tags (每行一個項目)
+                  <label className="text-xs font-bold uppercase flex items-start gap-2">
+                    <i className="hn hn-hashtag text-base mr-2" />
+                    <span className="flex flex-col leading-tight">
+                      <span className="opacity-70">關鍵字 / 標籤</span>
+                      <span className="text-[10px] font-mono opacity-40 normal-case">Keywords / Tags</span>
+                    </span>
                   </label>
-                  <Textarea 
-                    value={currentMV.keywords?.join('\n')} 
-                    onChange={(e) => updateField('keywords', e.target.value.split('\n').map(s => s.trim()).filter(s => s !== ''))} 
-                    className={`min-h-[200px] font-sans text-sm ${getErrorClass(currentMV.keywords)}`}
-                  />
+                  <div className={`space-y-2 border-2 border-border bg-black/5 p-4 ${getErrorClass(currentMV.keywords)}`}>
+                    {(currentMV.keywords || []).map((kw, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <Input 
+                          placeholder="輸入關鍵字..."
+                          value={kw.text}
+                          onChange={(e) => {
+                            const newKeywords = [...(currentMV.keywords || [])];
+                            newKeywords[idx] = { ...kw, text: e.target.value };
+                            updateField('keywords', newKeywords);
+                          }}
+                          className="flex-1 bg-white font-sans text-sm h-10"
+                        />
+                        <div className="w-[180px] shrink-0">
+                          <Select
+                            value={kw.lang || "none"}
+                            onValueChange={(val) => {
+                              const newKeywords = [...(currentMV.keywords || [])];
+                              if (val === "none") {
+                                delete newKeywords[idx].lang;
+                              } else {
+                                newKeywords[idx] = { ...kw, lang: val };
+                              }
+                              updateField('keywords', newKeywords);
+                            }}
+                          >
+                            <SelectTrigger className="h-10 bg-white border-2 border-border shadow-none">
+                              <SelectValue placeholder="選擇語言" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">無 (預設)</SelectItem>
+                              <SelectItem value="zh-Hant">繁體中文 (zh-Hant)</SelectItem>
+                              <SelectItem value="zh-Hans">簡體中文 (zh-Hans)</SelectItem>
+                              <SelectItem value="ja">日文 (ja)</SelectItem>
+                              <SelectItem value="en">英文 (en)</SelectItem>
+                              <SelectItem value="ko">韓文 (ko)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button
+                          variant="neutral"
+                          size="icon"
+                          className="shrink-0 h-10 w-10 text-red-500 hover:bg-red-500 hover:text-white shadow-none"
+                          onClick={() => {
+                            const newKeywords = [...(currentMV.keywords || [])];
+                            newKeywords.splice(idx, 1);
+                            updateField('keywords', newKeywords);
+                          }}
+                        >
+                          <i className="hn hn-trash text-base" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      variant="neutral"
+                      size="sm"
+                      className="w-full mt-2 border-dashed border-2 bg-white shadow-none hover:bg-black/5"
+                      onClick={() => {
+                        const newKeywords = [...(currentMV.keywords || []), { text: '', lang: 'zh-Hant' }];
+                        updateField('keywords', newKeywords);
+                      }}
+                    >
+                      <i className="hn hn-plus mr-2" /> 新增關鍵字
+                    </Button>
+                  </div>
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-xs font-bold opacity-50 uppercase flex items-center gap-2">
-                    <ImageIcon className="size-3" /> Cover Images (封面輪播，每行一個網址)
+                  <label className="text-xs font-bold uppercase flex items-start gap-2">
+                    <i className="hn hn-image text-base mr-2" />
+                    <span className="flex flex-col leading-tight">
+                      <span className="opacity-70">封面圖片（輪播，每行一個網址）</span>
+                      <span className="text-[10px] font-mono opacity-40 normal-case">Cover Images</span>
+                    </span>
                   </label>
                   <Textarea 
                     value={currentMV.coverImages?.join('\n')} 
                     onChange={(e) => updateField('coverImages', e.target.value.split('\n').map(s => s.trim()).filter(s => s !== ''))} 
                     className={`min-h-[100px] font-sans text-sm ${getErrorClass(currentMV.coverImages)}`}
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-xs font-bold uppercase flex flex-col leading-tight">
+                    <span className="opacity-70">畫師 / 動畫師（每行一個項目）</span>
+                    <span className="text-[10px] font-mono opacity-40 normal-case">Artist / Animator</span>
+                  </label>
+                  <Textarea 
+                    value={currentMV.artist?.join('\n')} 
+                    onChange={(e) => updateField('artist', e.target.value.split('\n').map(s => s.trim()).filter(s => s !== ''))} 
+                    className={`min-h-[50px] font-sans text-sm ${getErrorClass(currentMV.artist)}`}
                   />
                 </div>
               </div>
@@ -1331,8 +1982,14 @@ const currentMV = data[activeIndex];
             <section className="space-y-6">
               <div className="flex justify-between items-center">
                 <div className="flex flex-col gap-1">
-                  <h3 className="text-sm font-black uppercase text-main bg-main/10 inline-block px-2">03_Setting_Images_Gallery</h3>
-                  <span className="text-[10px] opacity-40 font-bold ml-2">TOTAL_COUNT: {currentMV.images?.length || 0}</span>
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-sm font-black uppercase text-main bg-main/10 inline-block px-2">03 設定圖庫</h3>
+                    <span className="text-[10px] font-bold opacity-40 font-mono normal-case ml-2">03_Setting_Images_Gallery</span>
+                  </div>
+                  <span className="text-[10px] font-bold ml-2 flex flex-col leading-tight">
+                    <span className="opacity-60">總數：{currentMV.images?.length || 0}</span>
+                    <span className="font-mono opacity-30 normal-case">TOTAL_COUNT</span>
+                  </span>
                 </div>
                 <div className="flex gap-2">
                   <Button 
@@ -1342,10 +1999,10 @@ const currentMV = data[activeIndex];
                     disabled={!!batchStatus && batchStatus.current < batchStatus.total}
                     className="bg-ztmy-green/10"
                   >
-                    <Play className="size-3" /> 一鍵獲取尺寸
+                    <i className="hn hn-play text-base mr-2" /> 一鍵獲取尺寸
                   </Button>
                   <Button variant="neutral" size="sm" onClick={addImage}>
-                    <ImageIcon className="size-3" /> 增加圖片
+                    <i className="hn hn-image text-base mr-2" /> 增加圖片
                   </Button>
                 </div>
               </div>
@@ -1355,17 +2012,27 @@ const currentMV = data[activeIndex];
                 <div className="border-4 border-black p-4 bg-secondary-background shadow-neo-sm space-y-3">
                   <div className="flex justify-between items-center text-xs font-black uppercase">
                     <div className="flex items-center gap-2">
-                      <RefreshCw className={`size-3 ${batchStatus.current < batchStatus.total ? 'animate-spin' : ''}`} />
-                      PROBING_PROGRESS: {batchStatus.current} / {batchStatus.total}
+                      <i className={`hn hn-refresh text-base mr-2 ${batchStatus.current < batchStatus.total ? 'animate-spin' : ''}`} />
+                      <span className="flex flex-col leading-tight">
+                        <span className="opacity-70">偵測進度：{batchStatus.current} / {batchStatus.total}</span>
+                        <span className="text-[10px] font-mono opacity-40 normal-case">PROBING_PROGRESS</span>
+                      </span>
                     </div>
                     {batchStatus.failedIndices.length > 0 && (
                       <div className="text-red-500 flex items-center gap-2">
-                        <AlertTriangle className="size-3" /> FAILED: {batchStatus.failedIndices.length}
+                        <i className="hn hn-exclamation-triangle text-base mr-2" />
+                        <span className="flex flex-col leading-tight">
+                          <span className="opacity-90">失敗：{batchStatus.failedIndices.length}</span>
+                          <span className="text-[10px] font-mono opacity-60 normal-case">FAILED</span>
+                        </span>
                         <button 
                           onClick={() => handleBatchProbe(batchStatus.failedIndices)}
                           className="underline hover:text-black transition-colors ml-2"
                         >
-                          [RETRY_FAILED]
+                          <span className="flex flex-col leading-tight">
+                            <span>重試失敗項目</span>
+                            <span className="text-[10px] font-mono opacity-60 no-underline normal-case">[RETRY_FAILED]</span>
+                          </span>
                         </button>
                       </div>
                     )}
@@ -1384,7 +2051,7 @@ const currentMV = data[activeIndex];
                       onClick={() => removeImage(imgIdx)}
                       className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity border-2 border-black"
                     >
-                      <Trash2 className="size-3" />
+                      <i className="hn hn-trash text-base" />
                     </button>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="md:col-span-2 space-y-2">
@@ -1395,7 +2062,7 @@ const currentMV = data[activeIndex];
                             onChange={(e) => updateImage(imgIdx, 'url', e.target.value)} 
                             className={`flex-1 ${!img.url?.trim() ? 'border-red-500/50 bg-red-500/5' : ''}`} />
                           <Button variant="neutral" size="icon" onClick={() => handleProbe(imgIdx, img.url)} title="自動偵測尺寸">
-                            <Ruler className="size-4" />
+                            <i className="hn hn-expand text-base" />
                           </Button>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
@@ -1427,9 +2094,12 @@ const currentMV = data[activeIndex];
                       </div>
                       <div className="bg-black/5 border-2 border-dashed border-black/10 flex items-center justify-center overflow-hidden">
                         {img.url ? (
-                          <img src={getProxyImgUrl(img.url, 'thumb')} className="max-h-40 object-contain" alt="preview" />
+                          <img src={getProxyImgUrl(img.url, 'thumb')} className="max-h-40 object-contain" alt="預覽 (preview)" />
                         ) : (
-                          <span className="text-[10px] opacity-30">NO_PREVIEW</span>
+                          <span className="text-[10px] flex flex-col items-center leading-tight">
+                            <span className="opacity-50">無預覽</span>
+                            <span className="font-mono opacity-30 normal-case">NO_PREVIEW</span>
+                          </span>
                         )}
                       </div>
                     </div>
@@ -1439,29 +2109,45 @@ const currentMV = data[activeIndex];
                 {/* 圖片列表分段載入哨兵 */}
                 {imageDisplayLimit < (currentMV.images?.length || 0) && (
                   <div ref={imageSentinelRef} className="py-8 flex justify-center border-4 border-dashed border-black/10 bg-black/5">
-                    <div className="flex items-center gap-3 text-xs font-black uppercase opacity-40">
-                      <RefreshCw className="size-4 animate-spin" />
-                      Loading_More_Image_Editor_Fields...
+                    <div className="flex items-start gap-3 text-xs font-black uppercase">
+                      <i className="hn hn-refresh text-base animate-spin" />
+                      <span className="flex flex-col leading-tight">
+                        <span className="opacity-60">載入更多圖片編輯欄位...</span>
+                        <span className="text-[10px] font-mono opacity-40 normal-case">Loading_More_Image_Editor_Fields...</span>
+                      </span>
                     </div>
                   </div>
                 )}
 
                 {(!currentMV.images || currentMV.images.length === 0) && (
-                  <div className="text-center py-8 border-2 border-dashed border-black/10 opacity-30 text-xs italic uppercase">
-                    No_Gallery_Data_Found
+                  <div className="text-center py-8 border-2 border-dashed border-black/10 text-xs italic uppercase">
+                    <div className="flex flex-col items-center leading-tight">
+                      <div className="opacity-60">找不到圖庫資料</div>
+                      <div className="text-[10px] font-mono opacity-40 normal-case">No_Gallery_Data_Found</div>
+                    </div>
                   </div>
                 )}
               </div>
             </section>
                         {/* 數據架構維護工具 (Schema Maintenance) */}
             <section className="p-6 border-4 border-dashed border-black bg-main/5 space-y-4">
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-black uppercase text-white bg-black px-2">00_Schema_Maintenance</h3>
-                <span className="text-[10px] font-bold opacity-50 text-black">批量注入新屬性至所有數據條目</span>
+              <div className="flex items-start gap-2">
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-sm font-black uppercase text-white bg-black px-2">00 資料架構維護</h3>
+                  <span className="text-[10px] font-bold opacity-50 text-black font-mono normal-case ml-2">00_Schema_Maintenance</span>
+                </div>
+                <span className="text-[10px] font-bold opacity-50 text-black">自動為前端表單擴充新欄位</span>
               </div>
+              <p className="text-xs font-bold text-black/70 mb-2">
+                提示：後端資料庫已支援自動擴充，此處操作僅用於在前端編輯器中為所有 MV 條目預設一個空值，以方便你進行編輯。
+                如果需要新增資料庫實體欄位，請前往 <code>backend/src/services/db.service.ts</code> 的 <code>expectedColumns</code> 陣列中新增。
+              </p>
               <div className="flex flex-wrap md:flex-nowrap gap-4 items-end">
                 <div className="flex-1 space-y-2">
-                  <label className="text-[10px] font-black uppercase opacity-60">New_Field_Key (e.g. director)</label>
+                  <label className="text-[10px] font-black uppercase flex flex-col leading-tight">
+                    <span className="opacity-70">新欄位鍵名（例如：director）</span>
+                    <span className="font-mono opacity-50 normal-case">New_Field_Key</span>
+                  </label>
                   <Input 
                     value={newFieldName} 
                     onChange={(e) => setNewFieldName(e.target.value)} 
@@ -1470,7 +2156,10 @@ const currentMV = data[activeIndex];
                   />
                 </div>
                 <div className="flex-1 space-y-2">
-                  <label className="text-[10px] font-black uppercase opacity-60">Default_Value</label>
+                  <label className="text-[10px] font-black uppercase flex flex-col leading-tight">
+                    <span className="opacity-70">預設值</span>
+                    <span className="font-mono opacity-50 normal-case">Default_Value</span>
+                  </label>
                   <Input 
                     value={newFieldDefaultValue} 
                     onChange={(e) => setNewFieldDefaultValue(e.target.value)} 
@@ -1479,7 +2168,7 @@ const currentMV = data[activeIndex];
                   />
                 </div>
                 <Button variant="default" onClick={handleSyncNewField} className="bg-black text-white shrink-0">
-                  <RefreshCw className="size-4" /> 執行全局同步
+                  <i className="hn hn-refresh text-base" /> 執行全局同步
                 </Button>
               </div>
             </section>
@@ -1493,10 +2182,10 @@ const currentMV = data[activeIndex];
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="text-2xl font-black uppercase flex items-center gap-2">
-              <HelpCircle className="size-6" /> 確認儲存變更
+              <i className="hn hn-question-circle text-2xl" /> 確認儲存變更
             </AlertDialogTitle>
             <AlertDialogDescription className="text-foreground font-bold opacity-80">
-              即將把當前所有變更回寫至服務器數據庫 (data.js)，請確認操作！
+              即將把當前所有變更回寫至服務器資料庫 (SQLite)，請確認操作！
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1511,7 +2200,7 @@ const currentMV = data[activeIndex];
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="text-2xl font-black uppercase flex items-center gap-2 text-red-500">
-              <AlertTriangle className="size-6" /> {pendingDeleteMV ? '刪除 MV 條目' : '刪除圖片'}
+              <i className="hn hn-exclamation-triangle text-2xl" /> {pendingDeleteMV ? '刪除 MV 條目' : '刪除圖片'}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-foreground font-bold opacity-80">
               {pendingDeleteMV 
@@ -1531,6 +2220,479 @@ const currentMV = data[activeIndex];
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Metadata 全局設定 Dialog */}
+      <Dialog open={isMetadataDialogOpen} onOpenChange={setIsMetadataDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-0 border-4 border-black rounded-none shadow-neo overflow-hidden">
+          <DialogHeader className="p-6 bg-black text-white border-b-4 border-black">
+            <DialogTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-2">
+              <i className="hn hn-disc text-xl" /> 全局設定 (Metadata)
+            </DialogTitle>
+            <DialogDescription className="text-white/70 font-mono text-xs">
+              手動維護專輯的發布年份與畫師 ID 等全局變數。這會影響首頁篩選器的顯示。
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto p-6 bg-background space-y-8 font-mono">
+
+            <div className="flex flex-col gap-3 border-2 border-black p-3 bg-yellow-500/20">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  <div className="text-xs font-black tracking-widest text-yellow-600">系統維護模式</div>
+                  <div className="text-[10px] font-bold opacity-40 font-mono normal-case">Maintenance Mode</div>
+                  <div className="text-[10px] font-bold opacity-60">開啟後所有訪客將看到維護頁面</div>
+                </div>
+                <Switch
+                  checked={localMaintenance}
+                  onCheckedChange={(checked) => setLocalMaintenance(checked)}
+                />
+              </div>
+              
+              {localMaintenance && (
+                <div className="flex flex-col gap-2 pt-3 border-t-2 border-yellow-500/30">
+                  <div className="flex flex-col">
+                    <div className="text-xs font-black tracking-widest text-yellow-600">預估恢復時間 (選填)</div>
+                    <div className="text-[10px] font-bold opacity-40 font-mono normal-case">Estimated Time to Recovery</div>
+                  </div>
+                  <Input 
+                    type="datetime-local" 
+                    value={localMaintenanceEta} 
+                    onChange={(e) => setLocalMaintenanceEta(e.target.value)} 
+                    className="font-mono text-sm bg-background border-2 border-black focus-visible:ring-black h-8"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between border-2 border-black p-3 bg-card">
+              <div className="flex flex-col">
+                <div className="text-xs font-black tracking-widest">自動推算專輯日期</div>
+                <div className="text-[10px] font-bold opacity-40 font-mono normal-case">Auto Album Date</div>
+                <div className="text-[10px] font-bold opacity-60">未設定專輯發布日期時，是否顯示自動推算值</div>
+              </div>
+              <Switch
+                checked={!!localMetadata.settings?.showAutoAlbumDate}
+                onCheckedChange={(checked) => {
+                  setLocalMetadata((prev) => ({
+                    ...prev,
+                    settings: { ...(prev.settings || { showAutoAlbumDate: false }), showAutoAlbumDate: checked },
+                  }));
+                }}
+              />
+            </div>
+            
+            {/* 首頁跑馬燈公告 */}
+            <section className="space-y-4">
+              <div className="flex items-center justify-between border-b-2 border-black pb-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-sm font-black uppercase bg-main text-main-foreground px-2 py-1">00 公告</h3>
+                    <span className="text-[10px] font-bold opacity-50 font-mono normal-case ml-2">00_Announcements</span>
+                  </div>
+                  <span className="text-[10px] font-bold opacity-50">首頁跑馬燈公告維護</span>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 border-2 border-black p-4 bg-card">
+                <div className="text-xs font-bold opacity-60">
+                  請輸入跑馬燈公告內容，每行一則公告。若為空則不顯示跑馬燈。
+                </div>
+                <Textarea 
+                  value={(localMetadata.settings?.announcements || []).join('\n')}
+                  onChange={(e) => {
+                    const lines = e.target.value.split('\n');
+                    setLocalMetadata(prev => ({
+                      ...prev,
+                      settings: { 
+                        ...(prev.settings || { showAutoAlbumDate: false }), 
+                        announcements: lines 
+                      }
+                    }));
+                  }}
+                  placeholder="例如：
+【最新】ZUTOMAYO 新專輯發布！
+網站功能更新公告..."
+                  className="w-full min-h-[120px] text-sm font-bold border-2 border-black/20 bg-black/5"
+                />
+              </div>
+            </section>
+            
+            <section className="space-y-4">
+              <div className="flex items-start gap-2 border-b-2 border-black pb-2">
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-sm font-black uppercase bg-main text-main-foreground px-2 py-1">01 專輯日期</h3>
+                  <span className="text-[10px] font-bold opacity-50 font-mono normal-case ml-2">01_Album_Dates</span>
+                </div>
+                <span className="text-[10px] font-bold opacity-50">手動覆蓋專輯發布日期</span>
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-[10px] font-bold uppercase opacity-50">現有專輯</div>
+                <div className="max-h-40 overflow-y-auto border-2 border-black/10 bg-black/5 p-2">
+                  <div className="flex flex-wrap gap-2">
+                    {Array.from(new Set(availableAlbums)).filter(a => typeof a === 'string').sort((a, b) => a.localeCompare(b)).map((album) => (
+                      <Button
+                        key={album}
+                        variant="neutral"
+                        size="sm"
+                        className="h-7 px-2 text-[10px] font-bold bg-white"
+                        onClick={() => {
+                          setLocalMetadata((prev) => {
+                            if (Object.prototype.hasOwnProperty.call(prev.albumMeta || {}, album)) return prev;
+                            return {
+                              ...prev,
+                              albumMeta: {
+                                ...(prev.albumMeta || {}),
+                                [album]: { date: albumDefaultDateMap[album] || "", hideDate: false },
+                              },
+                            };
+                          });
+                        }}
+                      >
+                        <span className="truncate max-w-[180px]">{album}</span>
+                        <span className="ml-2 font-mono opacity-60 shrink-0">
+                          {albumDefaultDateMap[album] || "--"}
+                        </span>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.entries(localMetadata.albumMeta || {}).map(([album, meta], idx) => (
+                  <div key={idx} className="flex items-center gap-2 border-2 border-black p-2 bg-card">
+                    <Input 
+                      value={album} 
+                      onChange={(e) => {
+                        const newKey = e.target.value;
+                        setLocalMetadata(prev => {
+                          const newAlbumMeta = { ...prev.albumMeta };
+                          const oldVal = newAlbumMeta[album];
+                          delete newAlbumMeta[album];
+                          newAlbumMeta[newKey] = oldVal;
+                          return { ...prev, albumMeta: newAlbumMeta };
+                        });
+                      }} 
+                      placeholder="專輯名稱" 
+                      className="flex-1 h-8 text-xs font-bold border-none bg-black/5"
+                    />
+                    <Input 
+                      value={meta?.date || ""} 
+                      onChange={(e) => {
+                        const newVal = e.target.value;
+                        setLocalMetadata(prev => ({
+                          ...prev,
+                          albumMeta: { ...prev.albumMeta, [album]: { ...(prev.albumMeta?.[album] || {}), date: newVal } }
+                        }));
+                      }} 
+                      placeholder="日期 (可空)" 
+                      className="w-24 h-8 text-xs font-mono text-center"
+                    />
+                    <Switch
+                      checked={!!meta?.hideDate}
+                      onCheckedChange={(checked) => {
+                        setLocalMetadata((prev) => ({
+                          ...prev,
+                          albumMeta: { ...prev.albumMeta, [album]: { ...(prev.albumMeta?.[album] || {}), hideDate: checked } },
+                        }));
+                      }}
+                    />
+                    <Button 
+                      variant="neutral" 
+                      size="icon" 
+                      className="h-8 w-8 text-red-500 hover:bg-red-500 hover:text-white"
+                      onClick={() => {
+                        setLocalMetadata(prev => {
+                          const newAlbumMeta = { ...prev.albumMeta };
+                          delete newAlbumMeta[album];
+                          return { ...prev, albumMeta: newAlbumMeta };
+                        });
+                      }}
+                    >
+                      <i className="hn hn-trash text-base" />
+                    </Button>
+                  </div>
+                ))}
+                
+                <Button 
+                  variant="neutral" 
+                  className="h-full min-h-[52px] border-2 border-dashed border-black/30 opacity-50 hover:opacity-100 flex items-center justify-center gap-2"
+                  onClick={() => {
+                    const newKey = `新專輯_${Object.keys(localMetadata.albumMeta || {}).length + 1}`;
+                    setLocalMetadata(prev => ({
+                      ...prev,
+                      albumMeta: { ...prev.albumMeta, [newKey]: { date: new Date().getFullYear().toString(), hideDate: false } }
+                    }));
+                  }}
+                >
+                  <i className="hn hn-plus text-base mr-2" /> 新增專輯發布日期
+                </Button>
+              </div>
+            </section>
+
+            {/* 畫師 ID 設定 */}
+            <section className="space-y-4">
+              <div className="flex items-start gap-2 border-b-2 border-black pb-2">
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-sm font-black uppercase bg-main text-main-foreground px-2 py-1">02 畫師 ID</h3>
+                  <span className="text-[10px] font-bold opacity-50 font-mono normal-case ml-2">02_Artist_IDs</span>
+                </div>
+                <span className="text-[10px] font-bold opacity-50">管理畫師關聯帳號/ID</span>
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-[10px] font-bold uppercase opacity-50">現有畫師</div>
+                <div className="max-h-40 overflow-y-auto border-2 border-black/10 bg-black/5 p-2">
+                  <div className="flex flex-wrap gap-2">
+                    {Array.from(new Set(availableArtists)).filter(a => typeof a === 'string').sort((a, b) => a.localeCompare(b)).map((artist) => (
+                      <Button
+                        key={artist}
+                        variant="neutral"
+                        size="sm"
+                        className="h-7 px-2 text-[10px] font-bold bg-white"
+                        onClick={() => {
+                          setLocalMetadata((prev) => {
+                            if (Object.prototype.hasOwnProperty.call(prev.artistMeta || {}, artist)) return prev;
+                            return {
+                              ...prev,
+                              artistMeta: {
+                                ...(prev.artistMeta || {}),
+                                [artist]: { id: "", hideId: false },
+                              },
+                            };
+                          });
+                        }}
+                      >
+                        <span className="truncate max-w-[220px]">{artist}</span>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.entries(localMetadata.artistMeta || {}).map(([artist, meta], idx) => (
+                  <div key={idx} className="flex items-center gap-2 border-2 border-black p-2 bg-card">
+                    <Input 
+                      value={artist} 
+                      onChange={(e) => {
+                        const newKey = e.target.value;
+                        setLocalMetadata(prev => {
+                          const newArtistMeta = { ...prev.artistMeta };
+                          const oldVal = newArtistMeta[artist];
+                          delete newArtistMeta[artist];
+                          newArtistMeta[newKey] = oldVal;
+                          return { ...prev, artistMeta: newArtistMeta };
+                        });
+                      }} 
+                      placeholder="畫師名稱" 
+                      className="flex-1 h-8 text-xs font-bold border-none bg-black/5"
+                    />
+                    <Input 
+                      value={meta?.id || ""} 
+                      onChange={(e) => {
+                        const newVal = e.target.value;
+                        setLocalMetadata(prev => ({
+                          ...prev,
+                          artistMeta: { ...prev.artistMeta, [artist]: { ...(prev.artistMeta?.[artist] || {}), id: newVal } }
+                        }));
+                      }} 
+                      placeholder="社群 ID (Twitter/SNS ID)" 
+                      className="flex-1 h-8 text-xs font-mono"
+                    />
+                    <Switch
+                      checked={!!meta?.hideId}
+                      onCheckedChange={(checked) => {
+                        setLocalMetadata((prev) => ({
+                          ...prev,
+                          artistMeta: { ...prev.artistMeta, [artist]: { ...(prev.artistMeta?.[artist] || {}), hideId: checked } },
+                        }));
+                      }}
+                    />
+                    <Button 
+                      variant="neutral" 
+                      size="icon" 
+                      className="h-8 w-8 text-red-500 hover:bg-red-500 hover:text-white"
+                      onClick={() => {
+                        setLocalMetadata(prev => {
+                          const newArtistMeta = { ...prev.artistMeta };
+                          delete newArtistMeta[artist];
+                          return { ...prev, artistMeta: newArtistMeta };
+                        });
+                      }}
+                    >
+                      <i className="hn hn-trash text-base" />
+                    </Button>
+                  </div>
+                ))}
+                
+                <Button 
+                  variant="neutral" 
+                  className="h-full min-h-[52px] border-2 border-dashed border-black/30 opacity-50 hover:opacity-100 flex items-center justify-center gap-2"
+                  onClick={() => {
+                    const newKey = `新畫師_${Object.keys(localMetadata.artistMeta || {}).length + 1}`;
+                    setLocalMetadata(prev => ({
+                      ...prev,
+                      artistMeta: { ...prev.artistMeta, [newKey]: { id: "", hideId: false } }
+                    }));
+                  }}
+                >
+                  <i className="hn hn-plus text-base mr-2" /> 新增畫師 ID
+                </Button>
+              </div>
+            </section>
+
+            {/* Passkeys 設定 */}
+            <section className="space-y-4">
+              <div className="flex items-center justify-between border-b-2 border-black pb-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-sm font-black uppercase bg-main text-main-foreground px-2 py-1">03 登入裝置（Passkey）</h3>
+                    <span className="text-[10px] font-bold opacity-50 font-mono normal-case ml-2">03_Passkeys</span>
+                  </div>
+                  <span className="text-[10px] font-bold opacity-50">生物辨識 / 設備登入管理</span>
+                </div>
+                <Button variant="neutral" size="sm" className="h-7 px-2 text-[10px] font-bold bg-ztmy-green border-2 border-black text-black hover:bg-ztmy-green/80" onClick={handleRegisterPasskey}>
+                  <i className="hn hn-plus text-base mr-2" /> 註冊新設備 (Passkey)
+                </Button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {passkeys.length === 0 && (
+                  <div className="col-span-full p-4 border-2 border-dashed border-black/30 text-center opacity-50 text-xs">
+                    目前沒有註冊任何 Passkey，請點擊右上方按鈕新增。
+                  </div>
+                )}
+                {passkeys.map((pk) => (
+                  <div key={pk.id} className="flex flex-col gap-1 border-2 border-black p-3 bg-card relative">
+                    <div className="font-bold text-sm flex items-center gap-2">
+                      <i className="hn hn-user text-base mr-2" /> {pk.name || '未命名設備 (Unnamed Device)'}
+                    </div>
+                    <div className="text-[10px] opacity-60 font-mono">ID: {pk.id.slice(0, 16)}...</div>
+                    <div className="text-[10px] opacity-60 font-mono">建立於: {new Date(pk.createdAt).toLocaleString()}</div>
+                    <Button 
+                      variant="neutral" 
+                      size="icon" 
+                      className="absolute top-2 right-2 h-6 w-6 text-red-500 hover:bg-red-500 hover:text-white"
+                      onClick={() => handleRemovePasskey(pk.id)}
+                    >
+                      <i className="hn hn-trash text-base" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+          </div>
+
+          <DialogFooter className="p-4 bg-secondary-background border-t-4 border-black flex gap-4 sm:justify-end">
+            <Button 
+              variant="neutral" 
+              onClick={() => setIsMetadataDialogOpen(false)} 
+              className="flex-1 sm:flex-none"
+            >
+              取消
+            </Button>
+            <Button 
+              onClick={handleSaveMetadata}
+              disabled={isSavingMetadata}
+              className="flex-1 sm:flex-none bg-black text-white hover:bg-ztmy-green hover:text-black font-bold border-2 border-transparent shadow-neo"
+            >
+              {isSavingMetadata ? <i className="hn hn-refresh text-base animate-spin mr-2" /> : <i className="hn hn-save text-base mr-2" />}
+              保存全局設定
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* 修改密碼 Dialog */}
+      <Dialog open={isChangePwdOpen} onOpenChange={setIsChangePwdOpen}>
+        <DialogContent className="max-w-sm flex flex-col p-0 border-4 border-black rounded-none shadow-neo overflow-hidden z-[100]">
+          <DialogHeader className="p-6 bg-black text-white border-b-4 border-black">
+            <DialogTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-2">
+              <i className="hn hn-lock-open text-xl" /> 修改管理密碼
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="p-6 bg-background space-y-4 font-mono">
+            {!isDefaultPassword && (
+              <div className="space-y-2">
+                <label className="text-xs font-black uppercase tracking-widest text-red-500">舊密碼 (Current Password)</label>
+                <Input
+                  type="password"
+                  placeholder="請輸入目前的密碼..."
+                  value={oldPwd}
+                  onChange={(e) => setOldPwd(e.target.value)}
+                  className="font-mono bg-black/5 border-2 border-black focus-visible:ring-black rounded-none"
+                />
+              </div>
+            )}
+            <div className="space-y-2">
+              <label className="text-xs font-black uppercase tracking-widest">新密碼 (New Password)</label>
+              <Input
+                type="password"
+                placeholder="至少 4 個字元..."
+                value={newPwd}
+                onChange={(e) => setNewPwd(e.target.value)}
+                className="font-mono bg-black/5 border-2 border-black focus-visible:ring-black rounded-none"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-black uppercase tracking-widest">確認新密碼 (Confirm)</label>
+              <Input
+                type="password"
+                placeholder="再次輸入新密碼..."
+                value={confirmPwd}
+                onChange={(e) => setConfirmPwd(e.target.value)}
+                className="font-mono bg-black/5 border-2 border-black focus-visible:ring-black rounded-none"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="p-4 bg-secondary-background border-t-4 border-black flex gap-4 sm:justify-end">
+            <Button 
+              variant="neutral" 
+              onClick={() => setIsChangePwdOpen(false)} 
+              className="flex-1 sm:flex-none"
+            >
+              取消
+            </Button>
+            <Button 
+              onClick={handleChangePassword}
+              disabled={isSavingPwd || newPwd.length < 4 || newPwd !== confirmPwd || (!isDefaultPassword && !oldPwd)}
+              className="flex-1 sm:flex-none bg-black text-white hover:bg-ztmy-green hover:text-black font-bold border-2 border-transparent shadow-neo"
+            >
+              {isSavingPwd ? <i className="hn hn-refresh text-base animate-spin mr-2" /> : <i className="hn hn-save text-base mr-2" />}
+              儲存密碼
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* 登出確認 Dialog */}
+      <AlertDialog open={isLogoutConfirmOpen} onOpenChange={setIsLogoutConfirmOpen}>
+        <AlertDialogContent className="border-4 border-black rounded-none shadow-neo p-0 overflow-hidden max-w-sm">
+          <AlertDialogHeader className="p-6 bg-red-500 text-white border-b-4 border-black">
+            <AlertDialogTitle className="font-black uppercase tracking-widest flex items-center gap-2">
+              <i className="hn hn-logout text-xl" /> 確認登出？
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-white/80 font-mono text-xs mt-2">
+              您確定要登出管理員身分嗎？所有未儲存的變更將會遺失。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="p-4 bg-secondary-background flex gap-4">
+            <AlertDialogCancel className="flex-1 border-2 border-black shadow-none hover:bg-black/5 rounded-none font-bold">
+              取消
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleLogout}
+              className="flex-1 bg-red-500 text-white hover:bg-red-600 border-2 border-black shadow-neo rounded-none font-bold"
+            >
+              確定登出
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
     
     
