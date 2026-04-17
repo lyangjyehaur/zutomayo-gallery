@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
@@ -19,6 +20,7 @@ const allowedOrigins = [
   'http://localhost:5173',      // Vite dev server
   'http://localhost:4173',      // Vite preview
   'http://localhost:3000',      // 常見開發端口
+  'https://mv.ztmr.club',       // 你的正式環境前端網域
 ];
 
 // 從環境變數讀取額外允許的域名
