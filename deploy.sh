@@ -68,23 +68,66 @@ echo "請選擇要執行的操作："
 echo "1) 部署全部 (前端 + 後端)"
 echo "2) 僅部署前端 (Frontend)"
 echo "3) 僅部署後端 (Backend)"
+echo "4) 檢查服務狀態 (Health Check & Logs)"
 echo "0) 退出"
-read -p "請輸入選項 [1/2/3/0]: " choice
+read -p "請輸入選項 [1/2/3/4/0]: " choice
 
 if [ "$choice" == "0" ]; then
     echo "已退出部署。"
     exit 0
 fi
 
-if [[ "$choice" != "1" && "$choice" != "2" && "$choice" != "3" ]]; then
+if [[ "$choice" != "1" && "$choice" != "2" && "$choice" != "3" && "$choice" != "4" ]]; then
     echo -e "${RED}無效的選項！請重新執行腳本。${NC}"
     exit 1
+fi
+
+# 如果選擇檢查服務狀態，直接執行並退出
+if [ "$choice" == "4" ]; then
+    echo -e "\n${YELLOW}=== 服務狀態檢查 ===${NC}"
+    
+    echo -e "\n[PM2 狀態]"
+    if command -v pm2 &> /dev/null; then
+        pm2 status ztmy-gallery-api || echo -e "${RED}未找到 ztmy-gallery-api 服務。${NC}"
+    else
+        echo -e "${RED}未安裝 PM2。${NC}"
+    fi
+
+    echo -e "\n[API 健康檢查]"
+    BACKEND_PORT=$(grep -E "^PORT=" backend/.env 2>/dev/null | cut -d '=' -f2)
+    BACKEND_PORT=${BACKEND_PORT:-5010}
+    
+    HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:${BACKEND_PORT}/health || echo "FAILED")
+    if [ "$HTTP_STATUS" == "200" ]; then
+        echo -e "${GREEN}✓ 服務運作正常 (Port: ${BACKEND_PORT})${NC}"
+        # 抓取詳細狀態資訊
+        HEALTH_INFO=$(curl -s http://localhost:${BACKEND_PORT}/health)
+        echo -e "詳細資訊: ${HEALTH_INFO}"
+    else
+        echo -e "${RED}✗ 服務無回應或已停止 (HTTP Status: $HTTP_STATUS)${NC}"
+    fi
+    
+    echo -e "\n[最近 15 行日誌]"
+    if command -v pm2 &> /dev/null; then
+        pm2 logs ztmy-gallery-api --lines 15 --nostream || echo -e "${YELLOW}無法獲取日誌。${NC}"
+    fi
+    
+    echo -e "\n${GREEN}==========================================${NC}"
+    exit 0
 fi
 
 # ==========================================
 # 3. 獲取最新程式碼
 # ==========================================
 echo -e "\n${YELLOW}[Git] 正在拉取最新程式碼...${NC}"
+
+# 如果有未提交的變更 (如 package-lock.json)，嘗試捨棄它們
+if ! git diff-index --quiet HEAD --; then
+    echo -e "${YELLOW}偵測到伺服器上有本地變更，正在還原至線上最新版本...${NC}"
+    git reset --hard HEAD
+    git clean -fd
+fi
+
 git pull origin main || {
     echo -e "${RED}拉取程式碼失敗，請確認 Git 狀態或是否有衝突！${NC}"
     exit 1
@@ -210,12 +253,17 @@ deploy_frontend() {
 deploy_backend() {
     echo -e "\n${YELLOW}[Backend] 開始處理後端...${NC}"
     cd backend
+    
+    echo -e "${YELLOW}清理舊的 node_modules (為了確保 sqlite3 等二進位套件重新編譯)...${NC}"
+    rm -rf node_modules
+    
     echo "安裝後端依賴..."
     if [ "$PKG_MANAGER" = "pnpm" ]; then
         pnpm install --prod=false # 必須安裝 devDependencies 才能編譯 TypeScript
     else
         npm install --production=false
     fi
+    
     echo "編譯後端程式碼..."
     $PKG_BUILD
     
