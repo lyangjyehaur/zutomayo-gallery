@@ -10,6 +10,17 @@ interface MaintenancePageProps {
 export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
   const [timeLeft, setTimeLeft] = useState<string>('');
 
+  // 記錄虛擬頁面瀏覽：系統維護中
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (window as any).umami && typeof (window as any).umami.track === 'function') {
+      (window as any).umami.track((props: any) => ({
+        ...props,
+        url: '/virtual/maintenance',
+        title: '系統維護中'
+      }));
+    }
+  }, []);
+
   useEffect(() => {
     if (!eta) {
       setTimeLeft('未知');

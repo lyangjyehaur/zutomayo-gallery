@@ -16,6 +16,7 @@ import {
 import { MVItem } from "@/lib/types";
 import { initAnalytics } from "@/lib/analytics";
 import { printEgg } from "@/lib/egg";
+import { initGeo } from "@/lib/geo";
 import { MVCard } from "@/components/MVCard";
 import { MVDetailsModal } from "@/components/MVDetailsModal";
 import { Button } from "@/components/ui/button";
@@ -1424,10 +1425,11 @@ export default function RootApp() {
     }
   }, [isSwrLoading]);
 
-  // 全域初始化 Google Analytics 與 Umami
+  // 全域初始化 Google Analytics 與 Umami 及 地理位置探測
   useEffect(() => {
     initAnalytics();
     printEgg();
+    initGeo(); // 非同步執行，快取到 sessionStorage
   }, []);
 
   const error = swrError ? swrError.message : null;
