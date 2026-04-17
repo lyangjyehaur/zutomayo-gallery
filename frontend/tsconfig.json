@@ -14,7 +14,7 @@
       "@/*": ["./src/*"]
     },
     "skipLibCheck": true,
-    "types": ["react", "react-dom"]
+    "types": ["react", "react-dom", "vite-plugin-pwa/client"]
   },
   "include": ["src/**/*"]
 }
