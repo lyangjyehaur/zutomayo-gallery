@@ -254,25 +254,23 @@ deploy_backend() {
     echo -e "\n${YELLOW}[Backend] 開始處理後端...${NC}"
     cd backend
     
-    echo -e "${YELLOW}清理舊的 node_modules (為了確保 sqlite3 等二進位套件重新編譯)...${NC}"
+    echo -e "${YELLOW}清理舊的 node_modules...${NC}"
     rm -rf node_modules
     
     echo "安裝後端依賴..."
     if [ "$PKG_MANAGER" = "pnpm" ]; then
-        # pnpm >= 9 預設會阻擋安裝腳本 (如 node-gyp)，需手動允許這些二進位套件
+        # pnpm >= 9 預設會阻擋安裝腳本 (better-sqlite3 等原生套件需要)，需手動允許
         pnpm config set ignore-scripts false
+        pnpm install --prod=false # 必須安裝 devDependencies 才能編譯 TypeScript
         
-        # 強制讓 pnpm 使用 node-linker 或重新建構原生模組
-        pnpm install --prod=false
-        
-        echo -e "${YELLOW}強制重建 pnpm 二進位套件...${NC}"
+        echo -e "${YELLOW}強制重建 pnpm 二進位套件 (better-sqlite3)...${NC}"
         pnpm rebuild
         
         # 將設定改回預設值以策安全
         pnpm config set ignore-scripts true
     else
         npm install --production=false
-        echo -e "${YELLOW}強制重建 npm 二進位套件...${NC}"
+        echo -e "${YELLOW}強制重建 npm 二進位套件 (better-sqlite3)...${NC}"
         npm rebuild
     fi
     

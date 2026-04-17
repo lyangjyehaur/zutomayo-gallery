@@ -3,16 +3,16 @@ import { getDB } from '../services/db.service.js';
 
 export const getSystemStatus = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const db = await getDB();
-    const row = await db.get('SELECT value FROM meta_settings WHERE key = ?', ['maintenance_mode']);
+    const db = getDB();
+    const row = db.prepare('SELECT value FROM meta_settings WHERE key = ?').get('maintenance_mode') as any;
     // 預設為 true (站點初始化時默認開啟維護模式)
     const maintenance = row ? row.value === 'true' : true;
     
-    const typeRow = await db.get('SELECT value FROM meta_settings WHERE key = ?', ['maintenance_type']);
+    const typeRow = db.prepare('SELECT value FROM meta_settings WHERE key = ?').get('maintenance_type') as any;
     // 預設為 'ui' (介面升級)
     const type = typeRow ? typeRow.value : 'ui';
 
-    const etaRow = await db.get('SELECT value FROM meta_settings WHERE key = ?', ['maintenance_eta']);
+    const etaRow = db.prepare('SELECT value FROM meta_settings WHERE key = ?').get('maintenance_eta') as any;
     const eta = etaRow ? etaRow.value : null;
 
     res.json({ success: true, data: { maintenance, type, eta } });
@@ -33,30 +33,27 @@ export const toggleMaintenance = async (req: Request, res: Response, next: NextF
       return;
     }
 
-    const db = await getDB();
+    const db = getDB();
     
-    await db.run('BEGIN TRANSACTION');
-    
-    await db.run(
-      'INSERT INTO meta_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
-      ['maintenance_mode', maintenance ? 'true' : 'false']
-    );
+    const transaction = db.transaction(() => {
+      db.prepare(
+        'INSERT INTO meta_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+      ).run('maintenance_mode', maintenance ? 'true' : 'false');
 
-    if (type) {
-      await db.run(
-        'INSERT INTO meta_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
-        ['maintenance_type', type]
-      );
-    }
+      if (type) {
+        db.prepare(
+          'INSERT INTO meta_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+        ).run('maintenance_type', type);
+      }
 
-    if (eta !== undefined) {
-      await db.run(
-        'INSERT INTO meta_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
-        ['maintenance_eta', eta ? String(eta) : '']
-      );
-    }
-    
-    await db.run('COMMIT');
+      if (eta !== undefined) {
+        db.prepare(
+          'INSERT INTO meta_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+        ).run('maintenance_eta', eta ? String(eta) : '');
+      }
+    });
+
+    transaction();
 
     res.json({ success: true, data: { maintenance, type, eta } });
   } catch (error) {

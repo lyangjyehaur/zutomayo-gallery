@@ -19,8 +19,8 @@ const defaultAuthData: AuthData = { passkeys: [] };
 
 export class AuthService {
   async getPasskeys(): Promise<Passkey[]> {
-    const db = await getDB();
-    const rows = await db.all('SELECT * FROM auth_passkeys');
+    const db = getDB();
+    const rows = db.prepare('SELECT * FROM auth_passkeys').all() as any[];
     return rows.map(r => ({
       id: r.id,
       publicKey: r.publicKey,
@@ -32,9 +32,11 @@ export class AuthService {
   }
 
   async savePasskey(passkey: Passkey) {
-    const db = await getDB();
-    await db.run(
-      'INSERT OR REPLACE INTO auth_passkeys (id, publicKey, counter, transports, name, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
+    const db = getDB();
+    const stmt = db.prepare(
+      'INSERT OR REPLACE INTO auth_passkeys (id, publicKey, counter, transports, name, createdAt) VALUES (?, ?, ?, ?, ?, ?)'
+    );
+    stmt.run(
       passkey.id,
       passkey.publicKey,
       passkey.counter,
@@ -45,35 +47,35 @@ export class AuthService {
   }
 
   async removePasskey(id: string) {
-    const db = await getDB();
-    await db.run('DELETE FROM auth_passkeys WHERE id = ?', id);
+    const db = getDB();
+    db.prepare('DELETE FROM auth_passkeys WHERE id = ?').run(id);
   }
 
   async setCurrentChallenge(challenge: string) {
-    const db = await getDB();
-    await db.run('INSERT OR REPLACE INTO auth_settings (key, value) VALUES (?, ?)', 'currentChallenge', challenge);
+    const db = getDB();
+    db.prepare('INSERT OR REPLACE INTO auth_settings (key, value) VALUES (?, ?)').run('currentChallenge', challenge);
   }
 
   async getCurrentChallenge(): Promise<string | undefined> {
-    const db = await getDB();
-    const row = await db.get('SELECT value FROM auth_settings WHERE key = ?', 'currentChallenge');
+    const db = getDB();
+    const row = db.prepare('SELECT value FROM auth_settings WHERE key = ?').get('currentChallenge') as any;
     return row ? row.value : undefined;
   }
 
   async getPassword(): Promise<string | undefined> {
-    const db = await getDB();
-    const row = await db.get('SELECT value FROM auth_settings WHERE key = ?', 'password');
+    const db = getDB();
+    const row = db.prepare('SELECT value FROM auth_settings WHERE key = ?').get('password') as any;
     return row ? row.value : undefined;
   }
 
   async setPassword(password: string) {
-    const db = await getDB();
-    await db.run('INSERT OR REPLACE INTO auth_settings (key, value) VALUES (?, ?)', 'password', password);
+    const db = getDB();
+    db.prepare('INSERT OR REPLACE INTO auth_settings (key, value) VALUES (?, ?)').run('password', password);
   }
 
   async updatePasskeyCounter(id: string, counter: number) {
-    const db = await getDB();
-    await db.run('UPDATE auth_passkeys SET counter = ? WHERE id = ?', counter, id);
+    const db = getDB();
+    db.prepare('UPDATE auth_passkeys SET counter = ? WHERE id = ?').run(counter, id);
   }
 }
 

@@ -9,15 +9,16 @@ export const requireAdmin = async (req: Request, res: Response, next: NextFuncti
     return;
   }
 
-  const storedPassword = await authService.getPassword();
-
+  // 1. 如果是來自前端通行密鑰的臨時授權 Token，直接放行
   if (password === 'PASSKEY_AUTHORIZED_TOKEN_5173') {
     next();
     return;
   }
 
+  const storedPassword = await authService.getPassword();
+
   if (!storedPassword) {
-    // 系統中沒有設定密碼，使用環境變數或預設密碼進行明文比對
+    // 2. 如果資料庫沒設密碼，則比對 .env 中的 ADMIN_PASSWORD
     const expectedPassword = process.env.ADMIN_PASSWORD || 'zutomayo';
     if (password === expectedPassword) {
       next();
@@ -25,7 +26,7 @@ export const requireAdmin = async (req: Request, res: Response, next: NextFuncti
       res.status(401).json({ success: false, message: 'Unauthorized: 密碼錯誤' });
     }
   } else {
-    // 系統中有儲存密碼（必定是 bcrypt hash），進行加密比對
+    // 3. 如果資料庫已經儲存了密碼 (必定是 bcrypt hash)，進行加密比對
     const isMatch = await bcrypt.compare(password, storedPassword);
     
     if (isMatch) {

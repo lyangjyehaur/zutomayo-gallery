@@ -72,6 +72,7 @@
 | [Helmet](https://helmetjs.github.io/) | 7.1 | 安全 headers |
 | [express-rate-limit](https://github.com/express-rate-limit/express-rate-limit) | 7.1 | 請求限流 |
 | [CORS](https://github.com/expressjs/cors) | 2.8 | 跨域支援 |
+| [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) | 11.1 | 高效能同步資料庫驅動 |
 
 ---
 

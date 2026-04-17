@@ -92,11 +92,11 @@ const normalizeMetadata = (raw: unknown): Metadata => {
 
 export const getMetadata = async (): Promise<Metadata> => {
   if (runtimeMetadata) return runtimeMetadata;
-  const db = await getDB();
+  const db = getDB();
   
-  const albums = await db.all('SELECT * FROM meta_albums');
-  const artists = await db.all('SELECT * FROM meta_artists');
-  const settingsRows = await db.all('SELECT * FROM meta_settings');
+  const albums = db.prepare('SELECT * FROM meta_albums').all() as any[];
+  const artists = db.prepare('SELECT * FROM meta_artists').all() as any[];
+  const settingsRows = db.prepare('SELECT * FROM meta_settings').all() as any[];
 
   const albumMeta: Record<string, AlbumMeta> = {};
   for (const row of albums) {
@@ -131,44 +131,37 @@ export const getMetadata = async (): Promise<Metadata> => {
 };
 
 export const updateMetadata = async (data: Partial<Metadata>): Promise<Metadata> => {
-  const db = await getDB();
+  const db = getDB();
   const current = await getMetadata();
   
-  await db.run('BEGIN TRANSACTION');
-  try {
+  const transaction = db.transaction(() => {
     if (data.albumMeta) {
       current.albumMeta = data.albumMeta;
-      await db.run('DELETE FROM meta_albums');
-      const stmt = await db.prepare('INSERT INTO meta_albums (name, date, hideDate) VALUES (?, ?, ?)');
+      db.prepare('DELETE FROM meta_albums').run();
+      const stmt = db.prepare('INSERT INTO meta_albums (name, date, hideDate) VALUES (?, ?, ?)');
       for (const [name, meta] of Object.entries(data.albumMeta)) {
-        await stmt.run(name, meta.date || '', meta.hideDate ? 1 : 0);
+        stmt.run(name, meta.date || '', meta.hideDate ? 1 : 0);
       }
-      await stmt.finalize();
     }
 
     if (data.artistMeta) {
       current.artistMeta = data.artistMeta;
-      await db.run('DELETE FROM meta_artists');
-      const stmt = await db.prepare('INSERT INTO meta_artists (name, snsId, hideId) VALUES (?, ?, ?)');
+      db.prepare('DELETE FROM meta_artists').run();
+      const stmt = db.prepare('INSERT INTO meta_artists (name, snsId, hideId) VALUES (?, ?, ?)');
       for (const [name, meta] of Object.entries(data.artistMeta)) {
-        await stmt.run(name, meta.id || '', meta.hideId ? 1 : 0);
+        stmt.run(name, meta.id || '', meta.hideId ? 1 : 0);
       }
-      await stmt.finalize();
     }
 
     if (data.settings) {
       current.settings = { ...current.settings, ...data.settings };
-      const stmt = await db.prepare('INSERT OR REPLACE INTO meta_settings (key, value) VALUES (?, ?)');
-      await stmt.run('showAutoAlbumDate', current.settings.showAutoAlbumDate ? 'true' : 'false');
-      await stmt.run('announcements', JSON.stringify(current.settings.announcements || []));
-      await stmt.finalize();
+      const stmt = db.prepare('INSERT OR REPLACE INTO meta_settings (key, value) VALUES (?, ?)');
+      stmt.run('showAutoAlbumDate', current.settings.showAutoAlbumDate ? 'true' : 'false');
+      stmt.run('announcements', JSON.stringify(current.settings.announcements || []));
     }
+  });
 
-    await db.run('COMMIT');
-  } catch (e) {
-    await db.run('ROLLBACK');
-    throw e;
-  }
+  transaction();
   
   runtimeMetadata = normalizeMetadata(current);
   return runtimeMetadata;

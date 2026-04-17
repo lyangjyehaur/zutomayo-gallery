@@ -10,10 +10,10 @@ const router = Router();
 // 匯出 SQLite 備份 (供管理員下載)
 router.get('/export-db', requireAdmin, async (req, res) => {
   try {
-    const db = await getDB();
-    const dbPath = db.config.filename;
+    const db = getDB();
+    const dbPath = db.name;
     res.download(dbPath, 'zutomayo-gallery.sqlite');
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: '無法匯出資料庫' });
   }
 });
@@ -21,16 +21,16 @@ router.get('/export-db', requireAdmin, async (req, res) => {
 // 執行原生 SQL (供管理員操作)
 router.post('/db/query', requireAdmin, async (req, res) => {
   try {
-    const db = await getDB();
+    const db = getDB();
     const { sql } = req.body;
     if (!sql) return res.status(400).json({ error: 'SQL 不可為空' });
     
     if (sql.trim().toUpperCase().startsWith('SELECT') || sql.trim().toUpperCase().startsWith('PRAGMA')) {
-      const rows = await db.all(sql);
+      const rows = db.prepare(sql).all();
       res.json({ rows });
     } else {
-      const result = await db.run(sql);
-      res.json({ result: { changes: result.changes, lastID: result.lastID } });
+      const result = db.prepare(sql).run();
+      res.json({ result: { changes: result.changes, lastID: result.lastInsertRowid } });
     }
   } catch (error: any) {
     res.status(400).json({ error: error.message });

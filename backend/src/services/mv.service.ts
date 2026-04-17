@@ -6,8 +6,8 @@ let runtimeData: MVItem[] | null = null;
 const getRuntimeData = async (): Promise<MVItem[]> => {
   if (!runtimeData) {
     try {
-      const db = await getDB();
-      const rows = await db.all('SELECT * FROM mvs');
+      const db = getDB();
+      const rows = db.prepare('SELECT * FROM mvs').all() as any[];
       
       // 動態讀取所有欄位
       runtimeData = rows.map(row => {
@@ -156,29 +156,29 @@ export class MVService {
     }
     
     // 更新到資料庫
-    const db = await getDB();
+    const db = getDB();
     
-    // 開啟交易
-    await db.run('BEGIN TRANSACTION');
-    try {
+    // 使用 transaction 確保資料一致性
+    const transaction = db.transaction(() => {
       if (!partial) {
         // 全量更新：先清空資料庫
-        await db.run('DELETE FROM mvs');
+        db.prepare('DELETE FROM mvs').run();
       } else {
         // 部分更新：只刪除需要刪除的
+        const deleteStmt = db.prepare('DELETE FROM mvs WHERE id = ?');
         for (const id of deletedIds) {
-          await db.run('DELETE FROM mvs WHERE id = ?', id);
+          deleteStmt.run(id);
         }
       }
 
       // 獲取目前資料表的所有欄位，以便動態產生 INSERT 語法
-      const tableInfo = await db.all("PRAGMA table_info(mvs)");
+      const tableInfo = db.prepare("PRAGMA table_info(mvs)").all() as any[];
       const columns = tableInfo.map(col => col.name);
       
       const placeholders = columns.map(() => '?').join(', ');
       
       // 寫入/更新資料
-      const stmt = await db.prepare(`
+      const stmt = db.prepare(`
         INSERT OR REPLACE INTO mvs (${columns.join(', ')})
         VALUES (${placeholders})
       `);
@@ -194,15 +194,11 @@ export class MVService {
           // 其他字串或數字欄位直接返回，若 undefined 則存 NULL 或空字串
           return val !== undefined ? val : '';
         });
-        await stmt.run(...values);
+        stmt.run(...values);
       }
-      await stmt.finalize();
+    });
 
-      await db.run('COMMIT');
-    } catch (e) {
-      await db.run('ROLLBACK');
-      throw e;
-    }
+    transaction();
     
     // 更新成功後，更新運行時緩存
     runtimeData = finalData;

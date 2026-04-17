@@ -1,5 +1,4 @@
-import sqlite3 from 'sqlite3';
-import { open, Database } from 'sqlite';
+import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -13,17 +12,15 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-let dbInstance: Database<sqlite3.Database, sqlite3.Statement> | null = null;
+let dbInstance: Database.Database | null = null;
 
-export const initDB = async () => {
+export const initDB = () => {
   if (dbInstance) return dbInstance;
 
-  dbInstance = await open({
-    filename: dbPath,
-    driver: sqlite3.Database,
-  });
+  dbInstance = new Database(dbPath);
+  dbInstance.pragma('journal_mode = WAL');
 
-  await dbInstance.exec(`
+  dbInstance.exec(`
     CREATE TABLE IF NOT EXISTS mvs (
       id TEXT PRIMARY KEY,
       title TEXT,
@@ -72,7 +69,7 @@ export const initDB = async () => {
   `);
 
   // 自動化檢查與新增 MVs 表的欄位
-  const tableInfo = await dbInstance.all("PRAGMA table_info(mvs)");
+  const tableInfo = dbInstance.pragma('table_info(mvs)') as any[];
   const existingColumns = tableInfo.map(col => col.name);
   const expectedColumns = [
     'id', 'title', 'artist', 'year', 'date', 'youtube', 'bilibili', 
@@ -82,14 +79,14 @@ export const initDB = async () => {
   for (const col of expectedColumns) {
     if (!existingColumns.includes(col)) {
       console.log(`Auto-migrating: Adding missing column '${col}' to 'mvs' table...`);
-      await dbInstance.exec(`ALTER TABLE mvs ADD COLUMN ${col} TEXT`);
+      dbInstance.exec(`ALTER TABLE mvs ADD COLUMN ${col} TEXT`);
     }
   }
 
   return dbInstance;
 };
 
-export const getDB = async () => {
-  if (!dbInstance) return await initDB();
-  return dbInstance;
+export const getDB = () => {
+  if (!dbInstance) return initDB();
+  return dbInstance as Database.Database;
 };
