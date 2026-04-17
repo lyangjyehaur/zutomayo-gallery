@@ -40,11 +40,11 @@
     "react-masonry-css": "^1.0.16",
     "react-router-dom": "^6.22.3",
     "sass-embedded": "^1.99.0",
-    "scss": "^0.2.4",
     "shadcn": "^4.2.0",
     "sonner": "^2.0.7",
     "swr": "^2.4.1",
-    "tailwind-merge": "^2.6.1"
+    "tailwind-merge": "^2.6.1",
+    "workbox-window": "^7.4.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
@@ -58,7 +58,7 @@
     "tailwindcss-animate": "^1.0.7",
     "vite": "^5.4.2",
     "vite-plugin-pwa": "^1.2.0",
-    "vitest": "^4.1.4"
+    "vitest": "^2.1.8"
   },
   "overrides": {
     "node-domexception": "npm:domexception@^4.0.0"
