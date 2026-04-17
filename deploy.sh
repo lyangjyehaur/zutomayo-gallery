@@ -18,6 +18,12 @@ CONFIG_FILE="deploy.conf"
 # ==========================================
 # 工具檢查
 # ==========================================
+# 確保我們在專案根目錄執行 (透過檢查是否存在 package.json)
+if [ ! -f "package.json" ]; then
+    echo -e "${RED}錯誤：請在專案根目錄下執行此腳本！${NC}"
+    exit 1
+fi
+
 if command -v pnpm &> /dev/null; then
     PKG_MANAGER="pnpm"
     PKG_INSTALL="pnpm install"
@@ -85,6 +91,62 @@ git pull origin main || {
 }
 
 # ==========================================
+# 4. 檢查與確認 .env 設定
+# ==========================================
+check_and_edit_env() {
+    local env_file=$1
+    local env_name=$2
+    
+    echo -e "\n${YELLOW}=== 檢查 $env_name 環境變數 ===${NC}"
+    if [ ! -f "$env_file" ]; then
+        echo -e "${RED}警告: 找不到 $env_file 檔案！${NC}"
+        echo -e "正在為您建立一個空的 $env_file 檔案..."
+        touch "$env_file"
+    fi
+    
+    while true; current_content=$(cat "$env_file"); do
+        echo -e "\n當前 $env_file 內容如下："
+        echo -e "----------------------------------------"
+        if [ -z "$current_content" ]; then
+            echo -e "${YELLOW}(檔案為空)${NC}"
+        else
+            echo "$current_content"
+        fi
+        echo -e "----------------------------------------"
+        
+        read -p "內容是否正確？輸入 (y)確認繼續 / (e)開啟 vim 編輯: " env_choice
+        case $env_choice in
+            [Yy]* )
+                echo -e "${GREEN}$env_name 環境變數確認完畢。${NC}"
+                break
+                ;;
+            [Ee]* )
+                echo -e "正在開啟編輯器..."
+                # 優先使用 vim，如果沒有則使用 vi，再沒有則使用 nano
+                if command -v vim &> /dev/null; then
+                    vim "$env_file"
+                elif command -v vi &> /dev/null; then
+                    vi "$env_file"
+                else
+                    nano "$env_file"
+                fi
+                ;;
+            * )
+                echo -e "${RED}無效的輸入，請輸入 y 或 e。${NC}"
+                ;;
+        esac
+    done
+}
+
+if [[ "$choice" == "1" || "$choice" == "2" ]]; then
+    check_and_edit_env "frontend/.env" "前端 (Frontend)"
+fi
+
+if [[ "$choice" == "1" || "$choice" == "3" ]]; then
+    check_and_edit_env "backend/.env" "後端 (Backend)"
+fi
+
+# ==========================================
 # 部署前端函式
 # ==========================================
 deploy_frontend() {
@@ -100,9 +162,22 @@ deploy_frontend() {
     TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
     BACKUP_DIR="${FRONTEND_BACKUP_PATH}/${TIMESTAMP}"
 
-    # 確保目標與備份目錄存在
-    mkdir -p "$FRONTEND_DEPLOY_PATH"
-    mkdir -p "$BACKUP_DIR"
+    # 確保目標與備份目錄存在並有寫入權限
+    if [ ! -d "$FRONTEND_DEPLOY_PATH" ]; then
+        echo -e "${YELLOW}建立部署目錄: $FRONTEND_DEPLOY_PATH${NC}"
+        mkdir -p "$FRONTEND_DEPLOY_PATH" || {
+            echo -e "${RED}錯誤: 無法建立部署目錄 $FRONTEND_DEPLOY_PATH，請檢查權限！${NC}"
+            exit 1
+        }
+    fi
+    if [ ! -w "$FRONTEND_DEPLOY_PATH" ]; then
+        echo -e "${RED}錯誤: 對部署目錄 $FRONTEND_DEPLOY_PATH 沒有寫入權限！請使用 sudo 執行或更改權限。${NC}"
+        exit 1
+    fi
+    mkdir -p "$BACKUP_DIR" || {
+        echo -e "${RED}錯誤: 無法建立備份目錄 $BACKUP_DIR，請檢查權限！${NC}"
+        exit 1
+    }
 
     # 檢查部署目錄是否為空，如果不為空就執行備份
     if [ "$(ls -A $FRONTEND_DEPLOY_PATH)" ]; then
