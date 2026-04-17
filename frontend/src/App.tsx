@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { AdminPage } from "@/pages/AdminPage";
 import { AdminDBPage } from "@/pages/AdminDBPage";
 import { Toaster } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import {
   Popover,
   PopoverContent,
@@ -1430,6 +1431,48 @@ export default function RootApp() {
     initAnalytics();
     printEgg();
     initGeo(); // 非同步執行，快取到 sessionStorage
+  }, []);
+
+  // PWA 安裝提示
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      // 防止 Chrome 67 以前的版本自動顯示提示
+      e.preventDefault();
+      // 將事件儲存起來，以便稍後觸發
+      const deferredPrompt = e;
+      
+      // 延遲一點時間再顯示 toast，避免跟載入動畫衝突
+      setTimeout(() => {
+        toast("安裝 ZTMY Gallery", {
+          description: "將網站加入主畫面，享受全螢幕與離線瀏覽體驗！",
+          duration: 10000,
+          action: {
+            label: "安裝",
+            onClick: async () => {
+              // 顯示安裝提示
+              deferredPrompt.prompt();
+              // 等待使用者回應
+              const { outcome } = await deferredPrompt.userChoice;
+              if (outcome === 'accepted') {
+                if (window.umami) window.umami.track('Z_PWA_Install_Accepted');
+              } else {
+                if (window.umami) window.umami.track('Z_PWA_Install_Dismissed');
+              }
+            },
+          },
+          cancel: {
+            label: "稍後再說",
+            onClick: () => console.log('User dismissed PWA install'),
+          },
+        });
+      }, 3000);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
   }, []);
 
   const error = swrError ? swrError.message : null;
