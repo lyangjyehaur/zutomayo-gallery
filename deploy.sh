@@ -100,8 +100,15 @@ check_and_edit_env() {
     echo -e "\n${YELLOW}=== 檢查 $env_name 環境變數 ===${NC}"
     if [ ! -f "$env_file" ]; then
         echo -e "${RED}警告: 找不到 $env_file 檔案！${NC}"
-        echo -e "正在為您建立一個空的 $env_file 檔案..."
-        touch "$env_file"
+        
+        # 檢查是否有模板檔案
+        if [ -f "${env_file}.example" ]; then
+            echo -e "正在從模板 (${env_file}.example) 為您建立預設的 $env_file 檔案..."
+            cp "${env_file}.example" "$env_file"
+        else
+            echo -e "正在為您建立一個空的 $env_file 檔案..."
+            touch "$env_file"
+        fi
     fi
     
     while true; current_content=$(cat "$env_file"); do

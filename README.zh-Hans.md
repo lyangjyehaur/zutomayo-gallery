@@ -188,7 +188,11 @@ cd backend && npm run build
 
 ## 环境变量配置
 
-在部署或生产环境中，请根据实际情况设置环境变量（可在 `frontend/.env` 和 `backend/.env` 设置）：
+本项目提供了环境变量的模板文件（`.env.example`）。在部署或生产环境中，请将其复制为 `.env` 并根据实际情况修改：
+```bash
+cp frontend/.env.example frontend/.env
+cp backend/.env.example backend/.env
+```
 
 ### 前端环境变量 (`frontend/.env`)
 | 变量名称 | 说明 | 默认值 |
