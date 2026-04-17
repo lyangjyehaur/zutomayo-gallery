@@ -253,6 +253,41 @@ deploy_backend() {
         echo "儲存 PM2 設定..."
         pm2 save
     fi
+    
+    echo -e "\n${YELLOW}[Backend] 正在進行服務健康檢查...${NC}"
+    
+    # 嘗試從 backend/.env 讀取 PORT，預設為 5010
+    BACKEND_PORT=$(grep -E "^PORT=" .env | cut -d '=' -f2)
+    BACKEND_PORT=${BACKEND_PORT:-5010}
+    
+    # 最多嘗試 10 次，每次間隔 2 秒
+    MAX_RETRIES=10
+    RETRY_COUNT=0
+    HEALTH_CHECK_PASSED=false
+    
+    while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+        echo -e "等待服務啟動... (嘗試 $((RETRY_COUNT + 1))/$MAX_RETRIES)"
+        sleep 2
+        
+        # 呼叫 /health 端點並取得 HTTP 狀態碼
+        HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:${BACKEND_PORT}/health || echo "FAILED")
+        
+        if [ "$HTTP_STATUS" == "200" ]; then
+            HEALTH_CHECK_PASSED=true
+            break
+        fi
+        
+        RETRY_COUNT=$((RETRY_COUNT + 1))
+    done
+    
+    if [ "$HEALTH_CHECK_PASSED" = true ]; then
+        echo -e "${GREEN}✓ 服務健康檢查通過！後端已成功運行於 Port ${BACKEND_PORT}。${NC}"
+    else
+        echo -e "${RED}✗ 服務健康檢查失敗！無法連線到 http://localhost:${BACKEND_PORT}/health${NC}"
+        echo -e "${YELLOW}請使用 'pm2 logs ztmy-gallery-api' 指令查看詳細的錯誤日誌。${NC}"
+        # 這裡不 exit 1，因為雖然檢查失敗，但部署流程已經走完了，留給使用者自己查錯
+    fi
+
     cd ..
     echo -e "${GREEN}[Backend] 後端部署完成！${NC}"
 }

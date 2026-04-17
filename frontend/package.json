@@ -58,5 +58,8 @@
     "tailwindcss-animate": "^1.0.7",
     "vite": "^5.4.2",
     "vitest": "^4.1.4"
+  },
+  "overrides": {
+    "node-domexception": "npm:domexception@^4.0.0"
   }
 }
