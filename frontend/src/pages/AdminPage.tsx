@@ -1632,7 +1632,86 @@ const currentMV = data[activeIndex];
     );
   }
 
-  if (!currentMV) return null;
+  if (!currentMV) {
+    return (
+      <div className="h-screen bg-background text-foreground flex flex-col font-mono font-normal overflow-hidden">
+        {/* 頂部控制欄 */}
+        <div className="h-20 border-b-4 border-black bg-card flex items-center justify-between px-8 shadow-neo-sm z-40 shrink-0">
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="neutral" 
+              size="icon" 
+              onClick={() => navigate('/')} 
+              className="rounded-full bg-black text-white hover:bg-main hover:text-black border-2 border-transparent transition-all shadow-neo-sm"
+            >
+              <i className="hn hn-arrow-left text-xl" />
+            </Button>
+            <div>
+              <h1 className="text-xl font-black uppercase tracking-widest leading-none">管理員控制台</h1>
+              <div className="text-[10px] font-bold opacity-40 font-mono normal-case tracking-widest">ZTMY.ADMIN.PANEL</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="neutral" 
+              size="sm" 
+              onClick={() => navigate('/admin/db')}
+              className="border-2 border-transparent text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              title="資料庫管理（SQL EXPLORER）"
+            >
+              <i className="hn hn-table text-base" />
+            </Button>
+            <Button 
+              variant="neutral" 
+              size="sm" 
+              onClick={() => setIsLogoutConfirmOpen(true)}
+              className="border-2 border-transparent text-red-500 hover:text-red-600 hover:bg-red-50"
+              title="登出管理員"
+            >
+              <i className="hn hn-logout text-base" />
+            </Button>
+          </div>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center opacity-50">
+          <i className="hn hn-inbox text-4xl mb-4" />
+          <h2 className="text-xl font-black mb-2">沒有找到 MV 資料</h2>
+          <p className="text-sm">資料庫目前是空的，或是無法載入資料。</p>
+        </div>
+
+        {/* 登出確認對話框 */}
+        <AlertDialog open={isLogoutConfirmOpen} onOpenChange={setIsLogoutConfirmOpen}>
+          <AlertDialogContent className="border-4 border-black rounded-none shadow-neo-lg bg-card">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="font-black text-xl flex items-center gap-2 uppercase">
+                <i className="hn hn-exclamation-circle text-red-500 text-2xl" />
+                <span className="flex flex-col leading-tight">
+                  <span className="tracking-normal">確定要登出嗎？</span>
+                  <span className="text-[10px] font-mono opacity-40 normal-case">CONFIRM_LOGOUT</span>
+                </span>
+              </AlertDialogTitle>
+              <AlertDialogDescription className="font-mono text-sm font-bold opacity-80 pt-2">
+                登出後需要重新輸入密碼或使用 Passkey 驗證才能再次進入管理後台。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="mt-6 flex gap-2">
+              <AlertDialogCancel 
+                className="flex-1 border-2 border-black hover:bg-secondary-background shadow-neo-sm rounded-none font-bold"
+              >
+                取消
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleLogout}
+                className="flex-1 bg-red-500 text-white hover:bg-red-600 border-2 border-black shadow-neo rounded-none font-bold"
+              >
+                確定登出
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    );
+  }
+
   return (
 
     <div className="h-screen bg-background text-foreground flex flex-col font-mono font-normal overflow-hidden">
