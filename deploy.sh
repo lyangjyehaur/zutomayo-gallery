@@ -259,9 +259,21 @@ deploy_backend() {
     
     echo "安裝後端依賴..."
     if [ "$PKG_MANAGER" = "pnpm" ]; then
-        pnpm install --prod=false # 必須安裝 devDependencies 才能編譯 TypeScript
+        # pnpm >= 9 預設會阻擋安裝腳本 (如 node-gyp)，需手動允許這些二進位套件
+        pnpm config set ignore-scripts false
+        
+        # 強制讓 pnpm 使用 node-linker 或重新建構原生模組
+        pnpm install --prod=false
+        
+        echo -e "${YELLOW}強制重建 pnpm 二進位套件...${NC}"
+        pnpm rebuild
+        
+        # 將設定改回預設值以策安全
+        pnpm config set ignore-scripts true
     else
         npm install --production=false
+        echo -e "${YELLOW}強制重建 npm 二進位套件...${NC}"
+        npm rebuild
     fi
     
     echo "編譯後端程式碼..."
