@@ -3,10 +3,11 @@ import { Helmet } from "react-helmet-async";
 import { VERSION_CONFIG } from "@/config/version";
 
 interface MaintenancePageProps {
+  type?: 'data' | 'ui';
   eta?: string | null;
 }
 
-export function MaintenancePage({ eta }: MaintenancePageProps) {
+export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
   const [timeLeft, setTimeLeft] = useState<string>('');
 
   useEffect(() => {
@@ -51,7 +52,7 @@ export function MaintenancePage({ eta }: MaintenancePageProps) {
   return (
     <div className="dark min-h-screen bg-background text-foreground font-base flex flex-col items-center justify-center p-6 selection:bg-main selection:text-black crt relative overflow-hidden">
       <Helmet>
-        <title>系統維護中 - ZUTOMAYO MV Gallery</title>
+        <title>{type === 'ui' ? '系統升級中' : '系統維護中'} - ZUTOMAYO MV Gallery</title>
       </Helmet>
       
       {/* 背景格線與掃描線 */}
@@ -67,7 +68,7 @@ export function MaintenancePage({ eta }: MaintenancePageProps) {
                 系統狀態 <span className="text-[8px] font-mono normal-case">System_Status</span>
               </span>
               <span className="tracking-normal text-yellow-500 flex items-baseline gap-1.5">
-                維護中 <span className="text-[8px] font-mono normal-case">Maintenance</span>
+                {type === 'ui' ? '升級中' : '維護中'} <span className="text-[8px] font-mono normal-case">{type === 'ui' ? 'Upgrading' : 'Maintenance'}</span>
               </span>
             </span>
           </div>
@@ -79,18 +80,20 @@ export function MaintenancePage({ eta }: MaintenancePageProps) {
           </div>
           
           <div className="flex flex-col items-center gap-2">
-            <h1 className="text-3xl font-black uppercase tracking-widest animate-glitch text-yellow-500 mb-1">
-              系統維護中
+            <h1 className="text-3xl font-black uppercase tracking-widest text-yellow-500 mb-1">
+              {type === 'ui' ? '系統升級中' : '系統維護中'}
             </h1>
             <p className="text-xs font-mono opacity-60 tracking-widest uppercase">
-              SYSTEM_UNDER_MAINTENANCE
+              {type === 'ui' ? 'SYSTEM_UPGRADE_IN_PROGRESS' : 'SYSTEM_UNDER_MAINTENANCE'}
             </p>
           </div>
           
           <div className="w-full h-1 bg-border/30 my-2"></div>
           
           <p className="text-sm font-bold opacity-80 leading-relaxed max-w-xs">
-            站長目前正在進行資料庫升級或系統維護，請稍後再回來。
+            {type === 'ui' 
+              ? '資料庫主視覺與 UI 介面正在進行全新升級，敬請期待。'
+              : '站長目前正在進行資料庫維護與系統更新，請稍後再回來。'}
           </p>
 
           <div className="mt-4 px-8 py-3 border-2 border-black bg-black text-main uppercase flex flex-col items-center gap-3 shadow-[4px_4px_0_0_rgba(0,0,0,0.3)]">
@@ -109,7 +112,7 @@ export function MaintenancePage({ eta }: MaintenancePageProps) {
       <div className="mt-12 text-[10px] uppercase tracking-[0.2em] opacity-30 text-center flex flex-col items-center gap-1">
         <span>© {new Date().getFullYear()} ZTMY MV 資料庫 V{VERSION_CONFIG.app}</span>
         <span className="opacity-60 normal-case text-[8px]">
-          ZUTOMATO_MV_GALLERY
+          ZUTOMAYO_MV_GALLERY
         </span>
       </div>
     </div>

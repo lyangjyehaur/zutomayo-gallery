@@ -1405,7 +1405,7 @@ export default function RootApp() {
     revalidateOnFocus: false,
   });
 
-  const { data: systemStatus, mutate: mutateSystemStatus } = useSWR<{ maintenance: boolean; eta?: string | null }>(
+  const { data: systemStatus, mutate: mutateSystemStatus } = useSWR<{ maintenance: boolean; type?: 'data' | 'ui'; eta?: string | null }>(
     `${apiUrl.replace('/mvs', '/system')}/status`,
     fetcher,
     { revalidateOnFocus: true }
@@ -1439,7 +1439,7 @@ export default function RootApp() {
   };
 
   if (systemStatus?.maintenance && !isAdminRoute) {
-    return <MaintenancePage eta={systemStatus.eta} />;
+    return <MaintenancePage type={systemStatus.type || 'ui'} eta={systemStatus.eta} />;
   }
 
   return (

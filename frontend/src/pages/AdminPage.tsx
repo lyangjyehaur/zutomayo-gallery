@@ -676,7 +676,7 @@ interface AdminPageProps {
     artistMeta: Record<string, { id?: string; hideId?: boolean }>;
     settings: { showAutoAlbumDate: boolean };
   };
-  systemStatus?: { maintenance: boolean; eta?: string | null };
+  systemStatus?: { maintenance: boolean; type?: 'data' | 'ui'; eta?: string | null };
   onRefresh?: () => void;
 }
 
@@ -924,6 +924,7 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
     settings: { showAutoAlbumDate: boolean; announcements?: string[] };
   }>({ albumMeta: {}, artistMeta: {}, settings: { showAutoAlbumDate: false, announcements: [] } });
   const [localMaintenance, setLocalMaintenance] = useState(false);
+  const [localMaintenanceType, setLocalMaintenanceType] = useState<'data' | 'ui'>('ui');
   const [localMaintenanceEta, setLocalMaintenanceEta] = useState<string>('');
   const [isMetadataDialogOpen, setIsMetadataDialogOpen] = useState(false);
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
@@ -934,6 +935,7 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
 
   useEffect(() => {
     setLocalMaintenance(systemStatus?.maintenance || false);
+    setLocalMaintenanceType(systemStatus?.type || 'ui');
     setLocalMaintenanceEta(systemStatus?.eta || '');
   }, [systemStatus]);
 
@@ -1085,14 +1087,14 @@ const currentMV = data[activeIndex];
       });
       if (!response.ok) throw new Error('保存 Metadata 失敗');
 
-      if (localMaintenance !== systemStatus?.maintenance || localMaintenanceEta !== (systemStatus?.eta || '')) {
+      if (localMaintenance !== systemStatus?.maintenance || localMaintenanceType !== (systemStatus?.type || 'ui') || localMaintenanceEta !== (systemStatus?.eta || '')) {
         const sysResponse = await fetch(`${apiUrl.replace('/mvs', '/system')}/maintenance`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
             'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
           },
-          body: JSON.stringify({ maintenance: localMaintenance, eta: localMaintenanceEta })
+          body: JSON.stringify({ maintenance: localMaintenance, type: localMaintenanceType, eta: localMaintenanceEta })
         });
         if (!sysResponse.ok) throw new Error('保存系統狀態失敗');
       }
@@ -2249,17 +2251,50 @@ const currentMV = data[activeIndex];
               </div>
               
               {localMaintenance && (
-                <div className="flex flex-col gap-2 pt-3 border-t-2 border-yellow-500/30">
-                  <div className="flex flex-col">
-                    <div className="text-xs font-black tracking-widest text-yellow-600">預估恢復時間 (選填)</div>
-                    <div className="text-[10px] font-bold opacity-40 font-mono normal-case">Estimated Time to Recovery</div>
+                <div className="flex flex-col gap-3 pt-3 border-t-2 border-yellow-500/30">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-col">
+                      <div className="text-xs font-black tracking-widest text-yellow-600">維護類型</div>
+                      <div className="text-[10px] font-bold opacity-40 font-mono normal-case">Maintenance Type</div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="maintenanceType"
+                          value="ui"
+                          checked={localMaintenanceType === 'ui'}
+                          onChange={() => setLocalMaintenanceType('ui')}
+                          className="accent-yellow-500"
+                        />
+                        <span className="text-xs font-bold text-yellow-600">介面升級 (UI Upgrade)</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="maintenanceType"
+                          value="data"
+                          checked={localMaintenanceType === 'data'}
+                          onChange={() => setLocalMaintenanceType('data')}
+                          className="accent-yellow-500"
+                        />
+                        <span className="text-xs font-bold text-yellow-600">數據維護 (Data Maintenance)</span>
+                      </label>
+                    </div>
                   </div>
-                  <Input 
-                    type="datetime-local" 
-                    value={localMaintenanceEta} 
-                    onChange={(e) => setLocalMaintenanceEta(e.target.value)} 
-                    className="font-mono text-sm bg-background border-2 border-black focus-visible:ring-black h-8"
-                  />
+
+                  <div className="flex flex-col gap-2 mt-2">
+                    <div className="flex flex-col">
+                      <div className="text-xs font-black tracking-widest text-yellow-600">預估恢復時間 (選填)</div>
+                      <div className="text-[10px] font-bold opacity-40 font-mono normal-case">Estimated Time to Recovery</div>
+                    </div>
+                    <Input 
+                      type="datetime-local" 
+                      value={localMaintenanceEta} 
+                      onChange={(e) => setLocalMaintenanceEta(e.target.value)} 
+                      className="font-mono text-sm bg-background border-2 border-black focus-visible:ring-black h-8"
+                    />
+                  </div>
                 </div>
               )}
             </div>
