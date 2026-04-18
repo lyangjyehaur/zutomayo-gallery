@@ -12,6 +12,9 @@ import { initDB } from './services/db.service.js';
 const app = express();
 const PORT = process.env.PORT || 5010;
 
+// 信任反向代理（如 Nginx），這樣 express-rate-limit 才能獲取到正確的真實客戶端 IP
+app.set('trust proxy', 1);
+
 // 初始化資料庫
 await initDB();
 
