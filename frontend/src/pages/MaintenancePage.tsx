@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { VERSION_CONFIG } from "@/config/version";
+import { initGeo } from "@/lib/geo";
 
 interface MaintenancePageProps {
   type?: 'data' | 'ui';
@@ -9,6 +10,7 @@ interface MaintenancePageProps {
 
 export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
   const [timeLeft, setTimeLeft] = useState<string>('');
+  const [geoLabel, setGeoLabel] = useState<string>("DETECTING_REGION...");
 
   // 記錄虛擬頁面瀏覽：系統維護中
   useEffect(() => {
@@ -19,6 +21,11 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
         title: '系統維護中'
       }));
     }
+    
+    // 取得地理位置標籤
+    initGeo().then(info => {
+      setGeoLabel(info.isChinaIP ? "內地版" : "海外版");
+    });
   }, []);
 
   useEffect(() => {
@@ -122,8 +129,9 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
       
       <div className="mt-12 text-[10px] uppercase tracking-[0.2em] opacity-30 text-center flex flex-col items-center gap-1">
         <span>© {new Date().getFullYear()} ZTMY MV 資料庫 V{VERSION_CONFIG.app}</span>
-        <span className="opacity-60 normal-case text-[8px]">
-          ZUTOMAYO_MV_GALLERY
+        <span className="opacity-60 normal-case text-[8px] flex flex-col gap-0.5">
+          <span>ZUTOMAYO_MV_GALLERY</span>
+          <span>BUILD_{import.meta.env.VITE_BUILD_HASH || 'dev'} | {geoLabel}</span>
         </span>
       </div>
     </div>

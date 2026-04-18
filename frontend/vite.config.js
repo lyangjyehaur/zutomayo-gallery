@@ -1,6 +1,7 @@
 import path from "path"
 import { fileURLToPath } from 'url'
 import { readFileSync, writeFileSync, existsSync, cpSync } from 'fs'
+import { execSync } from 'child_process'
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
 import { VitePWA } from 'vite-plugin-pwa'
@@ -13,9 +14,15 @@ const pkg = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'ut
 // 注入版本號到環境變數，可以在程式碼中透過 import.meta.env.VITE_APP_VERSION 取得
 process.env.VITE_APP_VERSION = pkg.version
 
-// 注入建置日期
+// 注入建置日期與 Git Hash
 const now = new Date()
 process.env.VITE_BUILD_DATE = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
+try {
+  process.env.VITE_BUILD_HASH = execSync('git rev-parse --short HEAD').toString().trim()
+} catch (e) {
+  process.env.VITE_BUILD_HASH = 'unknown'
+}
 
 // https://vite.dev/config/
 export default defineConfig({

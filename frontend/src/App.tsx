@@ -175,10 +175,17 @@ function App({
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" ? window.innerWidth < 1024 : false,
   );
+  const [geoLabel, setGeoLabel] = useState<string>("DETECTING_REGION...");
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
     window.addEventListener("resize", handleResize);
+    
+    // 取得地理位置標籤
+    initGeo().then(info => {
+      setGeoLabel(info.isChinaIP ? "內地版" : "海外版");
+    });
+    
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
@@ -1261,8 +1268,9 @@ function App({
           <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-8 md:gap-4 text-[10px] uppercase tracking-[0.2em]">
             <div className="opacity-30 text-center md:text-left flex flex-col leading-tight items-center md:items-start md:flex-1 md:basis-0">
               <span className="tracking-normal">© {new Date().getFullYear()} ZTMY MV 資料庫 V{VERSION_CONFIG.app}</span>
-              <span className="opacity-60 normal-case text-[8px] mt-1">
-                ZUTOMATO_MV_GALLERY
+              <span className="opacity-60 normal-case text-[8px] mt-1 flex flex-col gap-0.5">
+                <span>ZUTOMAYO_MV_GALLERY</span>
+                <span>BUILD_{import.meta.env.VITE_BUILD_HASH || 'dev'} | {geoLabel}</span>
               </span>
             </div>
 
