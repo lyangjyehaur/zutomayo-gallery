@@ -83,28 +83,27 @@ export function WalineComments({ path, className = '' }: WalineCommentsProps) {
         // 修改 Waline 實例中的 gravatar 預設行為
         // Waline v3 預設會使用 gravatar.com，如果沒有提供自訂 imageUploader 或 avatar 配置
         // 但由於 Waline v3 API 移除了直接的 avatar CDN 設定，我們透過動態修改 DOM 來處理
-        if (geoInfo.isChinaIP) {
-          observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-              if (mutation.type === 'childList') {
-                const imgs = containerRef.current?.querySelectorAll('img') as NodeListOf<HTMLImageElement>;
-                imgs?.forEach(img => {
-                  if (img.src && (img.src.includes('gravatar.com') || img.src.includes('seccdn.alipay.com') || img.src.includes('sdn.geekzu.org'))) {
-                    const originalUrl = new URL(img.src);
-                    const queryParams = originalUrl.search;
-                    const pathParts = originalUrl.pathname.split('/');
-                    const hash = pathParts[pathParts.length - 1]; // 取得 MD5 hash
-                    
-                    img.src = `https://cravatar.cn/avatar/${hash}${queryParams}`;
-                  }
-                });
-              }
-            });
+        observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            if (mutation.type === 'childList') {
+              const imgs = containerRef.current?.querySelectorAll('img') as NodeListOf<HTMLImageElement>;
+              imgs?.forEach(img => {
+                if (img.src && (img.src.includes('gravatar.com') || img.src.includes('seccdn.alipay.com') || img.src.includes('sdn.geekzu.org'))) {
+                  const originalUrl = new URL(img.src);
+                  const queryParams = originalUrl.search;
+                  const pathParts = originalUrl.pathname.split('/');
+                  const hash = pathParts[pathParts.length - 1]; // 取得 MD5 hash
+                  
+                  // 根據 IP 地區動態切換頭像 CDN
+                  img.src = `https://${gravatarHost}/${hash}${queryParams}`;
+                }
+              });
+            }
           });
-          
-          if (containerRef.current) {
-            observer.observe(containerRef.current, { childList: true, subtree: true });
-          }
+        });
+        
+        if (containerRef.current) {
+          observer.observe(containerRef.current, { childList: true, subtree: true });
         }
         
         initializedRef.current = true;
