@@ -163,6 +163,7 @@ function App({
   isLoading,
   error,
   metadata,
+  systemStatus,
 }: {
   mvData: MVItem[];
   isLoading: boolean;
@@ -172,6 +173,7 @@ function App({
     artistMeta: Record<string, { id?: string; hideId?: boolean }>;
     settings: { showAutoAlbumDate: boolean; announcements?: string[] };
   };
+  systemStatus?: { maintenance: boolean; type?: 'data' | 'ui'; eta?: string | null; buildTime?: string | null };
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -1675,6 +1677,7 @@ export default function RootApp() {
     isLoading,
     error,
     metadata: metadataData || defaultMetadata,
+    systemStatus,
   };
 
   if (systemStatus?.maintenance && !isAdminRoute) {
