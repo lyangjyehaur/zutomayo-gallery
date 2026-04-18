@@ -351,7 +351,7 @@ const PhotoItem = ({ photo, index, onPhotoClick, delayMs }: PhotoItemProps) => {
             <img
               alt={photo.caption}
               src={photo.src}
-              className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ${
+              className={`absolute inset-0 w-full h-full object-contain transition-all duration-700 ${
                 isLoaded ? 'opacity-100 scale-100 blur-0' : 'opacity-0 scale-110 blur-xl'
               }`}
               loading="lazy"
