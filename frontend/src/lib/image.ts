@@ -54,7 +54,9 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
           format = match ? match[1].toLowerCase() : 'jpg';
         }
         
-        const name = mode === 'full' ? 'large' : (mode === 'small' ? 'small' : 'thumb');
+        // 注意：Twitter 官方 API 裡，name=thumb 會強制回傳 150x150 的裁切正方形！
+        // 為了保持真實長寬比例供瀑布流排版使用，我們將原本的 thumb 改為請求 'small' 尺寸 (最長邊 680px)
+        const name = mode === 'full' ? 'large' : 'small';
         
         // 組合出 Twitter 官方支援的格式，例如：https://pbs.twimg.com/media/xxx?format=png&name=large
         return `${cleanUrl}?format=${format}&name=${name}`;
@@ -83,7 +85,8 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
         format = match ? match[1].toLowerCase() : 'jpg';
       }
       
-      const name = mode === 'raw' ? 'orig' : (mode === 'full' ? 'large' : (mode === 'small' ? 'small' : 'thumb'));
+      // 同理，代理伺服器在拉取 Twitter 圖源時，也不能用 thumb，否則代理也是拿到被裁切的 1:1 圖片
+      const name = mode === 'raw' ? 'orig' : (mode === 'full' ? 'large' : 'small');
       targetUrl = `${cleanUrl}?format=${format}&name=${name}`;
     }
 
