@@ -1286,7 +1286,7 @@ function App({
                   title="前往開發者個人網站"
                 >
                   <img 
-                    src={`https://${geoInfo.isChinaIP ? 'cravatar.cn' : 'www.gravatar.com'}/avatar/818f972b24bbd182dc7667fbf7bdf8f2?s=80&d=retro`} 
+                    src={`https://${geoInfo.isChinaIP ? 'cravatar.cn' : 'gravatar.com'}/avatar/2ad947c5152cd8d6d2f9b5bd450d939b?s=80&d=retro`} 
                     alt="DANERSAKA" 
                     className="w-8 h-8 rounded-sm border-2 border-current group-hover:border-black transition-colors"
                   />

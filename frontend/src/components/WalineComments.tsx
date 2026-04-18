@@ -45,7 +45,7 @@ export function WalineComments({ path, className = '' }: WalineCommentsProps) {
         
         // 針對大陸用戶，Gravatar 頭像可能被牆，改用 Cravatar 鏡像 (透過 DOM 攔截)
         // Cravatar.cn 是專為中國大陸優化的 Gravatar 替代方案
-        const gravatarHost = geoInfo.isChinaIP ? 'cravatar.cn/avatar' : 'www.gravatar.com/avatar';
+        const gravatarHost = geoInfo.isChinaIP ? 'cravatar.cn/avatar' : 'gravatar.com/avatar';
         
         init({
           el: containerRef.current,
