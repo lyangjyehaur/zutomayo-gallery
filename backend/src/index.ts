@@ -79,6 +79,14 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false, // 允許嵌入外部資源
 }));
 
+// 健康檢查 (放在 CORS 之前，允許本機 curl 等無 Origin 請求)
+app.get('/health', (req, res) => res.json({
+  success: true,
+  status: 'ZTMY_SERVER_ALIVE',
+  timestamp: new Date().toISOString(),
+  uptime: process.uptime(),
+}));
+
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -129,14 +137,6 @@ app.use('/api/', (req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/mvs', mvRoutes);
 app.use('/api/system', systemRoutes);
-
-// 健康檢查
-app.get('/health', (req, res) => res.json({
-  success: true,
-  status: 'ZTMY_SERVER_ALIVE',
-  timestamp: new Date().toISOString(),
-  uptime: process.uptime(),
-}));
 
 // 404 處理 - 必須在所有路由之後
 app.use(notFoundHandler);
