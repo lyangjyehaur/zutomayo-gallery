@@ -536,6 +536,7 @@
     animation: cyber-scan-fast 4.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
     pointer-events: none;
     mix-blend-mode: hard-light;
+    opacity: 0;
   }
   
   /* 第二條掃描線 (慢，偶發) */
@@ -552,21 +553,25 @@
     clip-path: polygon(0 -5%, 100% -5%, 100% 0%, 0 0%);
     animation: cyber-scan-slow 7.2s cubic-bezier(0.1, 0.7, 1.0, 0.1) infinite;
     pointer-events: none;
-    opacity: 0.8;
+    opacity: 0;
   }
 
   @keyframes cyber-scan-fast {
-    0%, 20% { clip-path: polygon(0 -15%, 100% -15%, 100% 0%, 0 0%); transform: skewX(0deg); }
-    25% { clip-path: polygon(0 45%, 100% 45%, 100% 60%, 0 60%); transform: skewX(-5deg); }
-    30% { clip-path: polygon(0 120%, 100% 120%, 100% 135%, 0 135%); transform: skewX(0deg); }
-    100% { clip-path: polygon(0 120%, 100% 120%, 100% 135%, 0 135%); }
+    0%, 20% { clip-path: polygon(0 -15%, 100% -15%, 100% 0%, 0 0%); transform: skewX(0deg); opacity: 0; }
+    21% { opacity: 1; }
+    25% { clip-path: polygon(0 45%, 100% 45%, 100% 60%, 0 60%); transform: skewX(-5deg); opacity: 1; }
+    29% { opacity: 1; }
+    30% { clip-path: polygon(0 120%, 100% 120%, 100% 135%, 0 135%); transform: skewX(0deg); opacity: 0; }
+    100% { clip-path: polygon(0 120%, 100% 120%, 100% 135%, 0 135%); opacity: 0; }
   }
   
   @keyframes cyber-scan-slow {
-    0%, 75% { clip-path: polygon(0 -5%, 100% -5%, 100% 0%, 0 0%); transform: scaleY(1); }
-    80% { clip-path: polygon(0 20%, 100% 20%, 100% 25%, 0 25%); transform: scaleY(1.1); }
-    85% { clip-path: polygon(0 80%, 100% 80%, 100% 85%, 0 85%); transform: scaleY(1.1); }
-    90%, 100% { clip-path: polygon(0 120%, 100% 120%, 100% 135%, 0 135%); transform: scaleY(1); }
+    0%, 75% { clip-path: polygon(0 -5%, 100% -5%, 100% 0%, 0 0%); transform: scaleY(1); opacity: 0; }
+    76% { opacity: 0.8; }
+    80% { clip-path: polygon(0 20%, 100% 20%, 100% 25%, 0 25%); transform: scaleY(1.1); opacity: 0.8; }
+    85% { clip-path: polygon(0 80%, 100% 80%, 100% 85%, 0 85%); transform: scaleY(1.1); opacity: 0.8; }
+    89% { opacity: 0.8; }
+    90%, 100% { clip-path: polygon(0 120%, 100% 120%, 100% 135%, 0 135%); transform: scaleY(1); opacity: 0; }
   }
 
   /* 8. 常駐偶發效果 - Rolling Slice (偶發性橫向掃描線錯位) */

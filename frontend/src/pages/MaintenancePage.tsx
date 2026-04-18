@@ -154,9 +154,19 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
         </a>
         <span className="flex items-center gap-1 flex-wrap justify-center">
           <span className="opacity-30">© {new Date().getFullYear()} ZTMY MV 資料庫 V{VERSION_CONFIG.app} | </span>
-          <Tooltip>
+          <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
-              <span className="cursor-help border-b border-dashed border-current hover:text-main transition-colors select-none opacity-50 hover:opacity-100">{geoInfo.labelCn}</span>
+              <span 
+                className="cursor-help border-b border-dashed border-current hover:text-main transition-colors select-none opacity-50 hover:opacity-100"
+                onClick={(e) => {
+                  e.preventDefault();
+                }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                {geoInfo.labelCn}
+              </span>
             </TooltipTrigger>
             <TooltipContent side="top" align="center" sideOffset={10} className="max-w-[250px] text-left z-[100] bg-main text-main-foreground shadow-md opacity-100">
               <p className="text-xs leading-relaxed font-bold tracking-normal normal-case opacity-100">{geoInfo.desc}</p>

@@ -57,6 +57,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { WalineComments } from "@/components/WalineComments";
+import { SpeedRatingSurvey } from "@/components/SpeedRatingSurvey";
 
 import {
   Select,
@@ -173,6 +174,7 @@ function App({
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [shouldRenderFeedback, setShouldRenderFeedback] = useState(false);
+  const [isSurveyForceOpen, setIsSurveyForceOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" ? window.innerWidth < 1024 : false,
   );
@@ -1112,6 +1114,27 @@ function App({
           </TooltipContent>
         </Tooltip>
 
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              onClick={() => setIsSurveyForceOpen(true)}
+              variant="neutral"
+              size="icon"
+              className="z-[35] w-10 h-10 md:w-12 md:h-12 rounded-none transition-colors hover:bg-main hover:text-black"
+            >
+              <i className="hn hn-clock text-xl md:text-2xl"></i>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left" align="center" sideOffset={10}>
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs font-black tracking-widest">加載速度調查 (Demo)</p>
+              <p className="text-[10px] font-mono opacity-60 normal-case">
+                SPEED_SURVEY
+              </p>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+
         <div className="z-40 relative">
           <ThemeToggle isIconOnly={true} />
         </div>
@@ -1312,12 +1335,24 @@ function App({
 
               <span className="flex items-center gap-1 flex-wrap justify-center md:justify-start">
                 <span className="opacity-30">© {new Date().getFullYear()} ZTMY MV 資料庫 構築 {import.meta.env.VITE_BUILD_DATE?.replace(/-/g, '')} {import.meta.env.VITE_BUILD_HASH || 'dev'}</span>
-                <Tooltip>
+                <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
-                    <span className="cursor-help border-b border-dashed border-current hover:text-main transition-colors select-none opacity-30 hover:opacity-30">{geoInfo.labelCn}</span>
+                    <span 
+                      className="cursor-help border-b border-dashed border-current hover:text-main transition-colors select-none opacity-30 hover:opacity-100"
+                      onClick={(e) => {
+                        e.preventDefault();
+                      }}
+                      onTouchStart={(e) => {
+                        // 在手機版上，觸控時阻止事件冒泡，確保 Tooltip 可以順利彈出
+                        // 不需要 e.preventDefault()，以免阻止點擊事件
+                        e.stopPropagation();
+                      }}
+                    >
+                      {geoInfo.labelCn}
+                    </span>
                   </TooltipTrigger>
                   <TooltipContent side="top" align="start" sideOffset={10} className="max-w-[250px] text-left z-[100] bg-main text-main-foreground shadow-md opacity-100">
-                    <p className="text-xs leading-relaxed font-bold pacity-100">{geoInfo.desc}</p>
+                    <p className="text-xs leading-relaxed font-bold opacity-100">{geoInfo.desc}</p>
                   </TooltipContent>
                 </Tooltip>
               </span>
@@ -1433,6 +1468,9 @@ function App({
           )}
         </div>
       </div>
+
+      {/* 加載速度評價彈窗 */}
+      <SpeedRatingSurvey forceOpen={isSurveyForceOpen} onCloseForce={() => setIsSurveyForceOpen(false)} />
 
       {/* 詳情彈窗 */}
       <MVDetailsModal
