@@ -1142,7 +1142,7 @@ function App({
           </TooltipContent>
         </Tooltip>
 
-        {isAdminAuthenticated && (
+        {isAdminAuthenticated && false && (
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
               <Button
@@ -1510,7 +1510,9 @@ function App({
         </div>
       </div>
 
+      {/* 暫時隱藏加載速度評價彈窗
       <SpeedRatingSurvey forceOpen={isSurveyForceOpen} onCloseForce={() => setIsSurveyForceOpen(false)} />
+      */}
 
       {/* 詳情彈窗 */}
       <MVDetailsModal
