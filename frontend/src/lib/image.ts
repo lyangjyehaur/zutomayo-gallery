@@ -95,9 +95,12 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
     } else if (mode === 'full') {
       params.push('f:webp');
     } else if (mode === 'small') {
-      params.push('rs:fill:400', 'f:webp');
+      // 首頁卡片與預覽使用的 small 模式，也改用 fit:contain 保持真實比例，避免 rs:fill 的裁切
+      params.push('rs:fit:600', 'f:webp');
     } else {
-      params.push('rs:fill:200', 'f:webp');
+      // 瀑布流使用的 thumb 模式，改用 fit:contain 保持真實比例，避免 rs:fill 的裁切
+      // rs:fit 會在指定邊界內等比例縮放，不會改變圖片原有的長寬比
+      params.push('rs:fit:400', 'f:webp');
     }
     return `https://img.ztmr.club/${params.join('/')}/${base64Url}`;
   } catch {
