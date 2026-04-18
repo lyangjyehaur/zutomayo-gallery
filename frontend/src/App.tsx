@@ -1344,15 +1344,25 @@ function App({
                         e.preventDefault();
                       }}
                       onTouchStart={(e) => {
-                        // 在手機版上，觸控時阻止事件冒泡，確保 Tooltip 可以順利彈出
-                        // 不需要 e.preventDefault()，以免阻止點擊事件
+                        e.stopPropagation();
+                      }}
+                      onPointerDown={(e) => {
+                        // 解決部分移動端瀏覽器 (如 iOS Safari) 不觸發 tooltip 的問題
                         e.stopPropagation();
                       }}
                     >
                       {geoInfo.labelCn}
                     </span>
                   </TooltipTrigger>
-                  <TooltipContent side="top" align="start" sideOffset={10} className="max-w-[250px] text-left z-[100] bg-main text-main-foreground shadow-md opacity-100">
+                  <TooltipContent 
+                    side="top" 
+                    align="start" 
+                    sideOffset={10} 
+                    className="max-w-[250px] text-left z-[100] bg-main text-main-foreground shadow-md opacity-100"
+                    onPointerDownOutside={(e) => {
+                      // 點擊外面時關閉 tooltip
+                    }}
+                  >
                     <p className="text-xs leading-relaxed font-bold opacity-100">{geoInfo.desc}</p>
                   </TooltipContent>
                 </Tooltip>

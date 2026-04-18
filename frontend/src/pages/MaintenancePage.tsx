@@ -164,11 +164,20 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
                 onTouchStart={(e) => {
                   e.stopPropagation();
                 }}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                }}
               >
                 {geoInfo.labelCn}
               </span>
             </TooltipTrigger>
-            <TooltipContent side="top" align="center" sideOffset={10} className="max-w-[250px] text-left z-[100] bg-main text-main-foreground shadow-md opacity-100">
+            <TooltipContent 
+              side="top" 
+              align="center" 
+              sideOffset={10} 
+              className="max-w-[250px] text-left z-[100] bg-main text-main-foreground shadow-md opacity-100"
+              onPointerDownOutside={(e) => {}}
+            >
               <p className="text-xs leading-relaxed font-bold tracking-normal normal-case opacity-100">{geoInfo.desc}</p>
             </TooltipContent>
           </Tooltip>
