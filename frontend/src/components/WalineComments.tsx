@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
-import '@waline/client/style';
 import { initGeo } from '@/lib/geo';
+// Import Waline styles and our overrides
+import '@waline/client/style';
+import './WalineComments.css';
 
 interface WalineCommentsProps {
   path: string;
@@ -69,7 +71,7 @@ export function WalineComments({ path, className = '' }: WalineCommentsProps) {
             `${unpkgHost}/@waline/emojis@1.4.0/bmoji/bmoji_hmm.png`,
             `${unpkgHost}/@waline/emojis@1.4.0/bmoji/bmoji_what.png`
         ],
-          meta: ['nick', 'mail', 'link'],
+          meta: ['nick', 'mail'],
           requiredMeta: ['nick'],
           wordLimit: 200,
           pageSize: 10,
@@ -98,6 +100,13 @@ export function WalineComments({ path, className = '' }: WalineCommentsProps) {
                   img.src = `https://${gravatarHost}/${hash}${queryParams}`;
                 }
               });
+
+              // 替 wl-mail 增加 placeholder 說明
+              const mailInput = containerRef.current?.querySelector('.wl-mail') as HTMLInputElement;
+              if (mailInput && !mailInput.getAttribute('data-custom-placeholder')) {
+                mailInput.placeholder = '留信箱可免登入顯示頭像';
+                mailInput.setAttribute('data-custom-placeholder', 'true');
+              }
             }
           });
         });

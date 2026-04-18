@@ -102,6 +102,23 @@ const AnimatedMVCardItem = memo(function AnimatedMVCardItem({
 
   // 偵測是否離開可視範圍來暫停動畫
   const [isInView, setIsInView] = useState(true);
+  const [isTabActive, setIsTabActive] = useState(true);
+
+  // 監聽分頁可見性，避免分頁閒置時動畫計時器堆積
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsTabActive(!document.hidden);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    // 初始化狀態
+    handleVisibilityChange();
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
   useEffect(() => {
     if (!elementRef.current) return;
     const observer = new IntersectionObserver(
@@ -112,7 +129,8 @@ const AnimatedMVCardItem = memo(function AnimatedMVCardItem({
     return () => observer.disconnect();
   }, []);
 
-  const isEffectivelyPaused = isPaused || !isInView;
+  // 如果父層要求暫停、不在可視範圍內，或者分頁被隱藏，就徹底暫停動畫
+  const isEffectivelyPaused = isPaused || !isInView || !isTabActive;
 
   const className = shouldLoad
     ? "animate-in fade-in slide-in-from-bottom-4 duration-500 motion-reduce:animate-none"
@@ -655,8 +673,8 @@ function App({
 
       <main className="mx-auto px-4 w-full max-w-7xl pt-8 pb-8 border-t-2 border-border relative flex-1 max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-[80%]">
         {/* 過濾控制列 */}
-        <div className="flex flex-col md:flex-row gap-4 mb-12 max-[768px]:w-[100vw] max-[768px]:relative max-[768px]:left-1/2 max-[768px]:-translate-x-1/2 max-[768px]:px-4">
-          <div className="relative w-full md:flex-1">
+        <div className="flex flex-col md:flex-row gap-4 mb-12 max-[768px]:w-[90vw] max-[768px]:relative max-[768px]:left-1/2 max-[768px]:-translate-x-1/2 max-[768px]:px-4">
+          <div className="relative w-full md:flex-[1] min-[1120px]:flex-[1]">
             <i className="hn hn-search text-xl absolute left-3 top-1/2 -translate-y-1/2 opacity-50"></i>
             <Input
               type="text"
@@ -685,7 +703,7 @@ function App({
             />
           </div>
 
-          <div className="flex flex-wrap md:flex-nowrap gap-2 md:gap-4 w-full md:w-auto">
+          <div className="grid grid-cols-3 gap-2 md:gap-4 w-full md:flex-[2] min-[1120px]:flex-[1]">
             <Popover open={openYear} onOpenChange={setOpenYear}>
               <PopoverTrigger asChild>
                 <Button
@@ -693,7 +711,7 @@ function App({
                   role="combobox"
                   aria-expanded={openYear}
                   data-active={openYear}
-                  className="flex-1 md:w-[160px] justify-between text-xs md:text-sm px-2 md:px-4 min-w-0"
+                  className="w-full justify-between text-xs md:text-sm px-2 md:px-4 min-w-0"
                   data-umami-event="Z_Filter_Toggle"
                   data-umami-event-type="year"
                 >
@@ -706,7 +724,7 @@ function App({
                       <span className="truncate w-full block">所有年份</span>
                     )}
                   </div>
-                  <i className="hn hn-chevron-down ml-1 md:ml-2 size-4 shrink-0 opacity-50 hidden sm:block" />
+                  <i className="hn hn-chevron-down-solid ml-1 size-3 shrink-0 opacity-50 hidden sm:flex items-center justify-center text-[10px]" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent
@@ -755,7 +773,7 @@ function App({
                   role="combobox"
                   aria-expanded={openAlbum}
                   data-active={openAlbum}
-                  className="flex-1 md:w-[180px] justify-between text-xs md:text-sm px-2 md:px-4 min-w-0"
+                  className="w-full justify-between text-xs md:text-sm px-2 md:px-4 min-w-0"
                   data-umami-event="Z_Filter_Toggle"
                   data-umami-event-type="album"
                 >
@@ -768,7 +786,7 @@ function App({
                       <span className="truncate w-full block">所有專輯</span>
                     )}
                   </div>
-                  <i className="hn hn-chevron-down ml-1 md:ml-2 size-4 shrink-0 opacity-50 hidden sm:block" />
+                  <i className="hn hn-chevron-down-solid ml-1 size-3 shrink-0 opacity-50 hidden sm:flex items-center justify-center text-[10px]" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent
@@ -856,7 +874,7 @@ function App({
                   role="combobox"
                   aria-expanded={openArtist}
                   data-active={openArtist}
-                  className="flex-1 md:w-[240px] justify-between text-xs md:text-sm px-2 md:px-4 min-w-0"
+                  className="w-full justify-between text-xs md:text-sm px-2 md:px-4 min-w-0"
                   data-umami-event="Z_Filter_Toggle"
                   data-umami-event-type="artist"
                 >
@@ -869,7 +887,7 @@ function App({
                       <span className="truncate w-full block">所有製作</span>
                     )}
                   </div>
-                  <i className="hn hn-chevron-down ml-1 md:ml-2 size-4 shrink-0 opacity-50 hidden sm:block" />
+                  <i className="hn hn-chevron-down-solid ml-1 size-3 shrink-0 opacity-50 hidden sm:flex items-center justify-center text-[10px]" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent

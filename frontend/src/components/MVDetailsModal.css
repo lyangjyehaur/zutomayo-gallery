@@ -258,21 +258,4 @@
   display: none !important;
 }
 
-.waline-wrapper {
-  --waline-theme-color: #00ff9d !important;
-  --waline-active-color: #00cc7d !important;
-}
-.waline-wrapper .wl-panel {
-  background: rgba(0, 0, 0, 0.3) !important;
-  border: 2px solid #333 !important;
-}
-.waline-wrapper .wl-input,
-.waline-wrapper .wl-editor {
-  background: rgba(0, 0, 0, 0.5) !important;
-  color: #fff !important;
-}
-.waline-wrapper .wl-btn.primary {
-  background: var(--waline-theme-color) !important;
-  color: #000 !important;
-  border: 2px solid #000 !important;
-}
+/* Waline Comments 已經移至 WalineComments.css，這裡清空對應的重複樣式 */

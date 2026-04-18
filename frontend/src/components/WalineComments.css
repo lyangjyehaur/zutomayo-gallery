@@ -1,0 +1,354 @@
+/* 
+  ========================================
+  Neo-brutalism Custom Styles for Waline
+  ========================================
+  Only keeping variables and minimal overrides here.
+  We import the official @waline/client/style first, then apply these on top.
+*/
+
+/* Variables Override */
+:root {
+  --waline-theme-color: var(--color-main) !important;
+  --waline-active-color: var(--color-main) !important;
+  --waline-color: var(--color-foreground) !important;
+  --waline-bg-color: transparent !important;
+  --waline-bg-color-light: rgba(0, 0, 0, 0.05) !important;
+  --waline-bg-color-hover: rgba(0, 0, 0, 0.1) !important;
+  --waline-border-color: #000000 !important;
+  --waline-disable-bg-color: rgba(0, 0, 0, 0.1) !important;
+  --waline-disable-color: #666666 !important;
+  --waline-code-bg-color: rgba(0, 0, 0, 0.05) !important;
+  --waline-info-bg-color: rgba(0, 0, 0, 0.05) !important;
+  --waline-info-color: var(--color-foreground) !important;
+  --waline-border: 3px solid #000000 !important;
+  --waline-box-shadow: 4px 4px 0px 0px #000000 !important;
+  --waline-avatar-radius: 0 !important; /* Square avatars for Neo-brutalism */
+}
+
+.waline-wrapper,
+[data-waline] {
+  --waline-theme-color: var(--color-main) !important;
+  --waline-active-color: var(--color-main) !important;
+  --waline-color: var(--color-foreground) !important;
+  --waline-bg-color: transparent !important;
+  --waline-bg-color-light: rgba(0, 0, 0, 0.05) !important;
+  --waline-bg-color-hover: rgba(0, 0, 0, 0.1) !important;
+  --waline-border-color: #000000 !important;
+  --waline-disable-bg-color: rgba(0, 0, 0, 0.1) !important;
+  --waline-disable-color: #666666 !important;
+  --waline-code-bg-color: rgba(0, 0, 0, 0.05) !important;
+  --waline-info-bg-color: rgba(0, 0, 0, 0.05) !important;
+  --waline-info-color: var(--color-foreground) !important;
+  --waline-border: 3px solid #000000 !important;
+  --waline-box-shadow: 4px 4px 0px 0px #000000 !important;
+  --waline-avatar-radius: 0 !important;
+  
+  font-family: 'Mono', monospace !important;
+  color: var(--waline-color) !important;
+}
+
+/* Dark Theme overrides removed as they are now handled by global variables */
+
+/* -------------------------------------
+   Neo-brutalism Structural Overrides 
+   ------------------------------------- */
+
+/* Fix border color inheritance for all elements inside waline */
+.waline-wrapper * {
+  border-color: #000000 !important;
+}
+
+/* Force specific borders to use black color */
+.waline-wrapper .wl-panel,
+.waline-wrapper .wl-header,
+.waline-wrapper .wl-btn,
+.waline-wrapper .wl-card,
+.waline-wrapper .wl-avatar,
+.waline-wrapper .wl-meta > span,
+.waline-wrapper .wl-badge,
+.waline-wrapper .wl-reaction-votes,
+.waline-wrapper .wl-emoji-popup,
+.waline-wrapper .wl-tab,
+.waline-wrapper .wl-quote,
+.waline-wrapper .wl-tab-wrapper::-webkit-scrollbar-thumb:vertical {
+  border-color: #000000 !important;
+}
+
+
+.waline-wrapper .wl-panel {
+  background: var(--waline-bg-color) !important;
+  border: 4px solid #000000 !important;
+  border-radius: 0 !important;
+  box-shadow: 4px 4px 0px 0px #000000 !important;
+  margin-bottom: 24px !important;
+}
+
+.waline-wrapper .wl-panel:focus-within {
+  transform: none !important;
+  box-shadow: 4px 4px 0px 0px #000000 !important;
+}
+
+.waline-wrapper .wl-header {
+  border-bottom: 3px solid #000000 !important;
+  border-radius: 0 !important;
+}
+
+.waline-wrapper .wl-header label {
+  min-width: auto !important;
+}
+
+.waline-wrapper .wl-header-item {
+  padding: 4px 0 !important; /* 增加上下 padding 讓 header 變高 */
+}
+
+.waline-wrapper .wl-header-item:not(:last-child) {
+  border-right: 3px solid #000000 !important;
+}
+
+@media (max-width: 580px) {
+  .waline-wrapper .wl-header-item:not(:last-child) {
+    border-right: none !important;
+    border-bottom: 3px solid #000000 !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .waline-wrapper .wl-text-number {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 2px !important;
+    white-space: nowrap !important;
+  }
+}
+
+/* Input Panel */
+.waline-wrapper .wl-editor {
+  padding: 16px !important;
+  margin: 0 !important;
+  background: transparent !important;
+  color: var(--waline-color) !important;
+}
+
+.waline-wrapper .wl-input {
+  background: transparent !important;
+  color: var(--waline-color) !important;
+}
+
+.waline-wrapper .wl-input::placeholder,
+.waline-wrapper .wl-editor::placeholder {
+  color: var(--waline-color) !important;
+  opacity: 0.5 !important;
+}
+
+/* 登入/用戶資訊區塊 */
+.waline-wrapper .wl-user img {
+  border: 3px solid #000000 !important;
+  box-shadow: none !important;
+}
+
+.waline-wrapper .wl-user {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Buttons */
+.waline-wrapper .wl-btn {
+  border-radius: 0 !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  border: 2px solid #000000 !important;
+  box-shadow: 3px 3px 0px 0px #000000 !important;
+  transition: all 0.1s ease !important;
+  background: var(--color-secondary-background) !important;
+  color: var(--waline-color) !important;
+  cursor: pointer !important;
+}
+
+.waline-wrapper .wl-btn:hover,
+.waline-wrapper .wl-btn:active {
+  transform: translate(3px, 3px) !important;
+  box-shadow: none !important;
+  color: #000000 !important;
+  background: var(--color-main) !important;
+}
+
+.waline-wrapper .wl-btn.primary {
+  background: var(--waline-theme-color) !important;
+  color: var(--color-background) !important;
+}
+
+.waline-wrapper .wl-btn.primary:hover,
+.waline-wrapper .wl-btn.primary:active {
+  color: var(--color-background) !important;
+}
+
+/* Comments List */
+.waline-wrapper .wl-card {
+  border-bottom: none !important;
+  padding-bottom: 8px !important;
+  margin-bottom: 0 !important;
+}
+
+.waline-wrapper .wl-content p {
+  word-wrap: break-word !important;
+  word-break: break-all !important;
+}
+
+.waline-wrapper .wl-card-item:last-child > .wl-card {
+  border-bottom: none !important;
+}
+
+/* 留言引用區塊 (Quote) */
+.waline-wrapper .wl-quote {
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 12px 0 !important;
+  border-radius: 0 !important;
+}
+
+/* 隱藏空的引用區塊 */
+.waline-wrapper .wl-quote:empty {
+  display: none !important;
+}
+
+.waline-wrapper .wl-avatar {
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.waline-wrapper .wl-avatar img {
+  border-radius: 0 !important;
+  border: 3px solid #000000 !important;
+  box-shadow: none !important;
+}
+
+/* 認證與管理員圖示 (Verified & Admin Icon) */
+.waline-wrapper .verified-icon,
+.waline-wrapper .administrator-icon {
+  box-shadow: none !important;
+  width: 1.5em !important;
+  height: 1.5em !important;
+  background: #000000 !important;
+  border-radius: 50% !important; /* 確保背景是圓形的，讓 icon 看起來更像徽章 */
+  padding: 0px !important;       /* 移除額外 padding，讓背景縮小緊貼圖示本身 */
+}
+
+/* 在引用的回覆內，頭像與 icon 都比較小，因此也稍微縮小 icon */
+.waline-wrapper .wl-quote .verified-icon,
+.waline-wrapper .wl-quote .administrator-icon {
+  width: 1.2em !important;
+  height: 1.2em !important;
+}
+
+.waline-wrapper .wl-avatar img {
+  border-radius: 0 !important;
+}
+
+/* Metadata pills (browser, OS, etc.) */
+.waline-wrapper .wl-card .wl-meta > span {
+  background: var(--waline-info-bg-color) !important;
+  border: 2px solid #000000 !important;
+  padding: 2px 6px !important;
+  border-radius: 0 !important;
+  font-family: 'Mono', monospace !important;
+  font-size: 10px !important;
+  color: var(--color-main) !important;
+  opacity: 0.8 !important; /* 淡一點的 main color */
+  box-shadow: none !important;
+}
+
+/* Badges (Admin) */
+.waline-wrapper .wl-card .wl-badge {
+  border: 2px solid #000000 !important;
+  border-radius: 0 !important;
+  color: var(--color-background) !important;
+  background: var(--waline-color) !important;
+  font-weight: bold !important;
+}
+
+/* Reactions */
+.waline-wrapper .wl-reaction-item {
+  border: none !important;
+  transition: all 0.2s ease !important;
+  padding: 4px !important;
+}
+
+.waline-wrapper .wl-reaction-item:hover,
+.waline-wrapper .wl-reaction-item.active {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: scale(1.1) !important;
+}
+
+.waline-wrapper .wl-reaction-votes {
+  border: 2px solid #000000 !important;
+  border-radius: 0 !important;
+  background: var(--color-secondary-background) !important;
+  color: var(--color-foreground) !important;
+  font-family: 'Mono', monospace !important;
+  box-shadow: none !important;
+}
+
+.waline-wrapper .wl-reaction-item.active .wl-reaction-votes,
+.waline-wrapper .wl-reaction-item:hover .wl-reaction-votes {
+  background: var(--color-main) !important;
+  color: #000000 !important;
+}
+
+/* Reply-to 區域 */
+.waline-wrapper .wl-reply-to {
+  margin-top: 0 !important;
+}
+
+/* Emoji popup */
+.waline-wrapper .wl-emoji-popup {
+  border-radius: 0 !important;
+  border: 3px solid #000000 !important;
+  box-shadow: 6px 6px 0px 0px #000000 !important;
+  background: var(--waline-bg-color-light) !important;
+  backdrop-filter: blur(10px);
+}
+
+.waline-wrapper .wl-emoji-popup .wl-tab.active {
+  border-radius: 0 !important;
+  border: 3px solid #000000 !important;
+  border-bottom: none !important;
+  background: transparent !important;
+}
+
+.waline-wrapper .wl-emoji-popup .wl-tab-wrapper::-webkit-scrollbar-thumb:vertical {
+  border-radius: 0 !important;
+  border: 2px solid #000000 !important;
+  background: var(--waline-theme-color) !important;
+}
+
+/* Fix action icons color */
+.waline-wrapper .wl-action:hover,
+.waline-wrapper .wl-card .wl-delete:hover,
+.waline-wrapper .wl-card .wl-like:hover,
+.waline-wrapper .wl-card .wl-reply:hover,
+.waline-wrapper .wl-card .wl-edit:hover {
+  color: var(--waline-theme-color) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Text colors */
+.waline-wrapper,
+.waline-wrapper p,
+.waline-wrapper span,
+.waline-wrapper label,
+.waline-wrapper input,
+.waline-wrapper button,
+.waline-wrapper textarea,
+.waline-wrapper .wl-header label,
+.waline-wrapper .wl-header input,
+.waline-wrapper .wl-count,
+.waline-wrapper .wl-card span.wl-nick {
+  color: var(--waline-color) !important;
+}
