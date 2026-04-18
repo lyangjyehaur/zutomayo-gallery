@@ -25,8 +25,14 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
     
     // 取得地理位置標籤
     initGeo().then(info => {
-      setGeoLabelCn(info.isChinaIP ? "內地版" : "海外版");
-      setGeoLabelEn(info.isChinaIP ? "MAINLAND" : "OVERSEAS");
+      if (info.isVPN) {
+        // 彩蛋：VPN/翻牆用戶 (時區在大陸但 IP 在海外)
+        setGeoLabelCn("躍遷版");
+        setGeoLabelEn("WARP");
+      } else {
+        setGeoLabelCn(info.isChinaIP ? "內地版" : "海外版");
+        setGeoLabelEn(info.isChinaIP ? "MAINLAND" : "OVERSEAS");
+      }
     });
   }, []);
 
