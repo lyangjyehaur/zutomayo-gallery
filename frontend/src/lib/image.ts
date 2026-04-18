@@ -38,6 +38,11 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
   try {
     let targetUrl = rawUrl;
     
+    // 如果是相對路徑的本地資源（如 /default.jpg），直接回傳，不需要過代理
+    if (targetUrl.startsWith('/')) {
+      return targetUrl;
+    }
+    
     // ==== 針對海外用戶的優化處理 ====
     // 注意：如果是 'raw' (下載原圖) 模式，為了避免前端 CORS 問題以及確保能正確注入自定義檔名 (Content-Disposition)，
     // 我們強制所有用戶 (包含海外用戶) 在下載原圖時都走我們的代理伺服器。

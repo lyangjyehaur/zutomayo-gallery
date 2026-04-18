@@ -42,7 +42,7 @@ const sample = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
 export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, isPaused, forceLoad = false, hideCrt = false, initialDelay }: { coverImages: string[]; title: string; isPaused?: boolean; forceLoad?: boolean; hideCrt?: boolean; initialDelay?: number }) {
   const urls = useMemo(() => {
     const normalized = (coverImages || []).map((u) => u?.trim()).filter(Boolean) as string[];
-    if (normalized.length === 0) return ['default.jpg'];
+    if (normalized.length === 0) return ['/default.jpg'];
     return normalized;
   }, [coverImages]);
 
@@ -324,7 +324,7 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
 
 export const MVCard = memo(function MVCard({ mv, isFav, onToggleFav, onClick, isPaused }: MVCardProps & { isPaused?: boolean }) {
   const artistName = (mv.artist || []).map(a => a.trim()).filter(Boolean).join(', ') || "未知 (Unknown)";
-  const fallbackThumbUrl = getProxyImgUrl(mv.coverImages?.[0] || 'default.jpg', 'thumb');
+  const fallbackThumbUrl = getProxyImgUrl(mv.coverImages?.[0] || '/default.jpg', 'thumb');
   const [containerRef, containerWidth] = useContainerWidth();
   
   const isCompact = containerWidth < 280;

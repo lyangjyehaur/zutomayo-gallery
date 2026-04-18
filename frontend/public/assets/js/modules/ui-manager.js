@@ -44,7 +44,7 @@ export class UIManager {
     generateCardHTML(mv) {
         const isFav = this.app.state.favorites.includes(mv.id);
         const hasMultipleImgs = mv.coverImages && mv.coverImages.length > 1;
-        const thumbUrl = this.app.utils.getProxyImgUrl(mv.coverImages?.[0] || 'default.jpg', 'thumb');
+        const thumbUrl = this.app.utils.getProxyImgUrl(mv.coverImages?.[0] || '/default.jpg', 'thumb');
 
         let imgSection = '';
         if (hasMultipleImgs) {
