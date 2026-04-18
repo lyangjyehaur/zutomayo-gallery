@@ -327,7 +327,8 @@ function App({
   // 收藏切換
   const toggleFav = useCallback(
     (id: string) => {
-      const newFavs = favorites.includes(id)
+      const isRemoving = favorites.includes(id);
+      const newFavs = isRemoving
         ? favorites.filter((favId) => favId !== id)
         : [...favorites, id];
       setFavorites(newFavs);
@@ -339,8 +340,39 @@ function App({
         channel.postMessage(newFavs);
         channel.close();
       }
+
+      // 顯示 Toast 提示
+      const mvTitle = mvData.find((m) => m.id === id)?.title || "作品";
+      if (isRemoving) {
+        toast("已取消收藏", {
+          description: mvTitle,
+          action: {
+            label: "復原",
+            onClick: () => {
+              // 在復原時，因為我們還沒有更新到最新的 toggleFav 閉包，
+              // 直接在這裡執行加入收藏的邏輯
+              setFavorites((prev) => {
+                if (prev.includes(id)) return prev;
+                const restoredFavs = [...prev, id];
+                storage.set(STORAGE_KEYS.FAVORITES, restoredFavs);
+                if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+                  const channel = new BroadcastChannel("favorites_sync");
+                  channel.postMessage(restoredFavs);
+                  channel.close();
+                }
+                return restoredFavs;
+              });
+              toast("已加入收藏", { description: mvTitle });
+            },
+          },
+        });
+      } else {
+        toast("已加入收藏", {
+          description: mvTitle,
+        });
+      }
     },
-    [favorites],
+    [favorites, mvData],
   );
 
   // 監聽其他標籤頁的收藏變化
@@ -591,9 +623,9 @@ function App({
           </div>
         )}
 
-      <main className="container mx-auto px-4 max-w-7xl pt-8 pb-8 border-t-2 border-border relative flex-1">
+      <main className="mx-auto px-4 w-full max-w-7xl pt-8 pb-8 border-t-2 border-border relative flex-1 max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-[80%]">
         {/* 過濾控制列 */}
-        <div className="flex flex-col md:flex-row gap-4 mb-12">
+        <div className="flex flex-col md:flex-row gap-4 mb-12 max-[768px]:w-[100vw] max-[768px]:relative max-[768px]:left-1/2 max-[768px]:-translate-x-1/2 max-[768px]:px-4">
           <div className="relative w-full md:flex-1">
             <i className="hn hn-search text-xl absolute left-3 top-1/2 -translate-y-1/2 opacity-50"></i>
             <Input
@@ -863,9 +895,27 @@ function App({
           </div>
         </div>
 
+        {/* 收藏模式常駐提示 */}
+        {showFavOnly && (
+          <div className="mb-8 -mt-6 max-[768px]:w-[100vw] max-[768px]:relative max-[768px]:left-1/2 max-[768px]:-translate-x-1/2 max-[768px]:px-4">
+            <div className="p-4 bg-yellow-400/10 border-2 border-yellow-500/50 flex items-start gap-3 md:gap-4 rounded-none">
+              <i className="hn hn-exclamation-triangle text-yellow-500 text-xl md:text-2xl shrink-0 mt-1 md:mt-0"></i>
+              <div className="flex flex-col gap-1 md:gap-1.5">
+                <span className="text-xs md:text-sm font-black text-yellow-600 dark:text-yellow-400 flex flex-col md:flex-row md:items-center gap-1 md:gap-2 leading-tight">
+                  <span>請注意：收藏功能基於瀏覽器本地存儲實現</span>
+                  <span className="text-[10px] font-mono opacity-70 normal-case md:border-l-2 md:border-yellow-500/30 md:pl-2">LOCAL_STORAGE_WARNING</span>
+                </span>
+                <span className="text-[10px] md:text-xs opacity-80 text-yellow-600 dark:text-yellow-400/80 leading-relaxed">
+                  若清除瀏覽器數據或更換設備，您的收藏項目將會丟失。
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 畫廊網格與空狀態 */}
         {filteredData.length > 0 ? (
-          <div className="grid grid-cols-1 min-[460px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 max-[520px]:grid-cols-1 max-[900px]:grid-cols-2 max-[1120px]:grid-cols-3 grid-cols-4 gap-4 md:gap-6">
             {filteredData.slice(0, visibleCount).map((mv, idx) => {
               const batchIdx = Math.max(0, idx - lastBatchStartRef.current);
               return (
@@ -949,13 +999,14 @@ function App({
       </main>
 
       {/* 右下角懸浮控制面板 (Control Hub) */}
-      <div className="absolute right-0 bottom-0 top-0 pointer-events-none z-50 w-20 md:w-24">
-        <div className="sticky top-0 h-[100dvh] max-h-full flex flex-col justify-end items-end pb-[calc(1.5rem+env(safe-area-inset-bottom))] pr-[calc(1rem+env(safe-area-inset-right))] md:pr-6 pointer-events-none">
-          <div className="flex flex-col items-end -space-y-[2px] pointer-events-auto">
-            {/* 返回頂部按鈕 - 僅在向下滾動後顯示 */}
-            <div
-              className={`transition-all duration-300 ${scrolled ? "h-10 md:h-12 opacity-100 mb-[8px]" : "h-0 opacity-0 mb-0 pointer-events-none"}`}
-            >
+      <div className="fixed inset-x-0 bottom-0 pointer-events-none z-50 flex justify-center">
+        <div className="w-full max-w-7xl max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-[80%] relative px-4">
+          <div className="absolute bottom-0 right-4 translate-x-full pb-[calc(1.5rem+env(safe-area-inset-bottom))] max-[768px]:pb-[calc(4.5rem+env(safe-area-inset-bottom))] pointer-events-none flex flex-col justify-end items-start pl-2 md:pl-4">
+            <div className="flex flex-col items-center -space-y-[2px] pointer-events-auto">
+              {/* 返回頂部按鈕 - 僅在向下滾動後顯示 */}
+              <div
+                className={`transition-all duration-300 ${scrolled ? "h-10 md:h-12 opacity-100 mb-[8px]" : "h-0 opacity-0 mb-0 pointer-events-none"}`}
+              >
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -1064,18 +1115,19 @@ function App({
         <div className="z-40 relative">
           <ThemeToggle isIconOnly={true} />
         </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-      </div>
       </div>
 
       {/* 頁尾 Footer */}
       <footer className="bg-card relative overflow-hidden">
         <div className="absolute inset-0 opacity-5 pointer-events-none crt-lines"></div>
-        <div className="container mx-auto px-4 pb-16 pt-8 max-w-7xl relative">
+        <div className="mx-auto px-4 pb-16 pt-8 w-full max-w-7xl relative max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-full">
           {/* 三語版權聲明區塊 & 導航 */}
-          <div className="p-8 border-4 border-black bg-black/5 relative group">
-            <div className="absolute -top-4 left-6 bg-black text-main px-3 py-1 text-[10px] font-black border-2 border-main">
+          <div className="p-6 md:p-8 border-4 border-black bg-black/5 relative group">
+            <div className="absolute -top-4 left-4 md:left-6 bg-black text-main px-3 py-1 text-[10px] font-black border-2 border-main">
               <div className="flex flex-col leading-tight">
                 <span className="opacity-90">
                   版權/法律聲明
@@ -1086,9 +1138,9 @@ function App({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-10 items-center">
+            <div className="grid grid-cols-1 min-[520px]:grid-cols-2 min-[900px]:grid-cols-3 min-[1120px]:grid-cols-4 gap-8 md:gap-10 items-center">
               {/* 中文 & 多語言 */}
-              <div className="space-y-6 md:col-span-3">
+              <div className="space-y-6 min-[520px]:col-span-1 min-[900px]:col-span-2 min-[1120px]:col-span-3">
                 <div className="space-y-3">
                   <p className="text-[10px] leading-relaxed opacity-60">
                     本站為「<span lang="ja">ずっと真夜中でいいのに。</span>
@@ -1126,7 +1178,7 @@ function App({
               </div>
 
               {/* 導航與資源 */}
-              <div className="border-t-2 md:border-t-0 md:border-l-2 border-black/10 pt-6 md:pt-0 md:pl-8 md:col-span-1 flex flex-col justify-center">
+              <div className="border-t-2 min-[520px]:border-t-0 min-[520px]:border-l-2 border-black/10 pt-6 min-[520px]:pt-0 pl-0 min-[520px]:pl-6 md:pl-8 col-span-1 flex flex-col justify-center">
                 {/* 外部依賴與資源聲明 */}
                 <div className="flex flex-col gap-2">
                   <span className="text-xs font-black mb-2 opacity-30 flex flex-col leading-tight">
@@ -1529,7 +1581,7 @@ export default function RootApp() {
         <Route path="/debug/fb/:mvid?" element={<DebugFancyboxMasonry />} />
         <Route path="/debug/modal" element={<DebugMVModalLightbox />} />
       </Routes>
-      <Toaster />
+      <Toaster position="top-center" />
     </>
   );
 }

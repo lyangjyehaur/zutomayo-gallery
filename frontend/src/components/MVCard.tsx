@@ -6,6 +6,24 @@ import { useLazyImage } from '@/hooks/useLazyImage';
 
 import { Switch } from '@/components/ui/switch';
 
+function useContainerWidth() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(500); // 預設大於臨界點，避免初次渲染閃爍
+
+  useEffect(() => {
+    if (!ref.current) return;
+    const observer = new ResizeObserver((entries) => {
+      if (entries[0]) {
+        setWidth(entries[0].contentRect.width);
+      }
+    });
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return [ref, width] as const;
+}
+
 interface MVCardProps {
   mv: MVItem;
   isFav: boolean;
@@ -307,9 +325,14 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
 export const MVCard = memo(function MVCard({ mv, isFav, onToggleFav, onClick, isPaused }: MVCardProps & { isPaused?: boolean }) {
   const artistName = (mv.artist || []).map(a => a.trim()).filter(Boolean).join(', ') || "未知 (Unknown)";
   const fallbackThumbUrl = getProxyImgUrl(mv.coverImages?.[0] || 'default.jpg', 'thumb');
+  const [containerRef, containerWidth] = useContainerWidth();
+  
+  const isCompact = containerWidth < 280;
+  const isVeryCompact = containerWidth < 320;
 
   return (
     <div
+      ref={containerRef}
       className="relative group isolate cursor-pointer transition-all hover:translate-x-1 hover:translate-y-1 mv-card"
       data-umami-event="Z_MV_Card_Click"
       data-umami-event-title={mv.title}
@@ -324,48 +347,91 @@ export const MVCard = memo(function MVCard({ mv, isFav, onToggleFav, onClick, is
         className="border-2 bg-card text-foreground transition-all group-hover:shadow-none"
         media={<CoverCarousel coverImages={mv.coverImages ?? []} title={mv.title} isPaused={isPaused} />}
       >
-        <div className="flex flex-col gap-3 bg-main px-4 py-3 text-[10px] text-main-foreground uppercase md:text-xs">
-          <div className="flex items-end justify-between gap-3">
-            <div className="min-w-0">
-              <div className="mb-1 font-black tracking-[0.2em] opacity-70 flex items-baseline gap-1.5">
-                <span className="tracking-normal">發行</span>
-                <span className="text-[8px] font-mono opacity-60 normal-case tracking-normal">Release</span>
+        <div className={`flex flex-col ${!isVeryCompact ? 'gap-3 px-4 py-3 text-xs' : 'gap-2 px-3 py-2 text-[10px]'} bg-main text-main-foreground uppercase transition-all duration-300`}>
+          <div className={`flex ${!isCompact ? 'flex-row items-end justify-between gap-4' : 'flex-col gap-3'}`}>
+            
+            {/* 上排左側：發行 + 製作 (在 compact 模式下並排，非 compact 模式下也是並排但各自獨立) */}
+            <div className={`flex justify-between items-end ${!isCompact ? 'gap-6 min-w-0 flex-1' : 'gap-3 w-full'}`}>
+              {/* 發行 */}
+              <div className="min-w-0 flex-1">
+                <div className={`mb-1 font-black opacity-70 flex items-baseline ${!isVeryCompact ? 'tracking-[0.2em] gap-1.5' : 'tracking-[0.1em] gap-1'}`}>
+                  <span className="tracking-normal">發行</span>
+                  <span className="text-[8px] font-mono opacity-60 normal-case tracking-normal">Release</span>
+                </div>
+                <p className={`truncate text-center border-2 border-border bg-main text-main-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] h-[24px] flex items-center justify-center ${!isVeryCompact ? 'px-2' : 'px-1.5'}`}>
+                  {mv.date}
+                </p>
               </div>
-              <p className="truncate border-2 border-border bg-main px-2 py-1 text-main-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                {mv.date}
-              </p>
-            </div>
-            <div className="min-w-0 text-right">
-              <div className="mb-1 font-black tracking-[0.2em] opacity-70 flex items-baseline justify-end gap-1.5">
-                <span className="text-[8px] font-mono opacity-60 normal-case tracking-normal">Artist</span>
-                <span className="tracking-normal">製作</span>
+              
+              {/* 製作 */}
+              <div className={`min-w-0 flex-1 ${!isCompact ? 'text-left' : 'text-right'}`}>
+                <div className={`mb-1 font-black opacity-70 flex items-baseline ${!isCompact ? 'justify-start' : 'justify-end'} ${!isVeryCompact ? 'gap-1.5' : 'gap-1'}`}>
+                  {!isCompact ? (
+                    <>
+                      <span className={`tracking-normal ${!isVeryCompact ? 'tracking-[0.2em]' : 'tracking-[0.1em]'}`}>製作</span>
+                      <span className="text-[8px] font-mono opacity-60 normal-case tracking-normal">Artist</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-[8px] font-mono opacity-60 normal-case tracking-normal">Artist</span>
+                      <span className={`tracking-normal ${!isVeryCompact ? 'tracking-[0.2em]' : 'tracking-[0.1em]'}`}>製作</span>
+                    </>
+                  )}
+                </div>
+                <p className={`truncate text-center border-2 border-border bg-main text-main-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] h-[24px] flex items-center justify-center ${!isVeryCompact ? 'px-2' : 'px-1.5'}`} lang="ja">
+                  {artistName}
+                </p>
               </div>
-              <p className="truncate border-2 border-border bg-main px-2 py-1 text-main-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]" lang="ja">
-                {artistName}
-              </p>
             </div>
+            
+            {/* 上排右側：收藏 (非 compact 模式) */}
+            {!isCompact && (
+              <div className="min-w-0 text-left shrink-0 ml-2">
+                <div className={`mb-1 font-black opacity-70 flex items-baseline justify-start ${!isVeryCompact ? 'gap-1.5' : 'gap-1'}`}>
+                  <span className={`tracking-normal ${!isVeryCompact ? 'tracking-[0.2em]' : 'tracking-[0.1em]'}`}>收藏</span>
+                  <span className="text-[8px] font-mono opacity-60 normal-case tracking-normal">Favorite</span>
+                </div>
+                <div 
+                  onClick={(e) => e.stopPropagation()} 
+                  className={`flex items-center justify-start h-[24px]`}
+                  data-umami-event="Z_Toggle_Favorite"
+                  data-umami-event-title={mv.title}
+                  data-umami-event-id={mv.id}
+                  data-umami-event-action={isFav ? 'remove' : 'add'}
+                >
+                  <Switch 
+                    checked={isFav}
+                    onCheckedChange={onToggleFav}
+                    className="origin-left"
+                  />
+                </div>
+              </div>
+            )}
           </div>
           
-          <div className="flex items-center justify-between border-t-2 border-border/20 pt-3">
-            <div className="font-black tracking-[0.2em] opacity-70 flex items-baseline gap-1.5">
-              <span className="tracking-normal">收藏</span>
-              <span className="text-[8px] font-mono opacity-60 normal-case tracking-normal">Favorite</span>
+          {/* 下排：收藏 (compact 模式專用) */}
+          {isCompact && (
+            <div className={`flex items-center justify-between border-t-2 border-border/20 ${!isVeryCompact ? 'pt-3' : 'pt-2'}`}>
+              <div className={`font-black opacity-70 flex items-baseline ${!isVeryCompact ? 'tracking-[0.2em] gap-1.5' : 'tracking-[0.1em] gap-1'}`}>
+                <span className="tracking-normal">收藏</span>
+                <span className="text-[8px] font-mono opacity-60 normal-case tracking-normal">Favorite</span>
+              </div>
+              <div 
+                onClick={(e) => e.stopPropagation()} 
+                className="flex items-center justify-end h-[24px]"
+                data-umami-event="Z_Toggle_Favorite"
+                data-umami-event-title={mv.title}
+                data-umami-event-id={mv.id}
+                data-umami-event-action={isFav ? 'remove' : 'add'}
+              >
+                <Switch 
+                  checked={isFav}
+                  onCheckedChange={onToggleFav}
+                  className="origin-right"
+                />
+              </div>
             </div>
-            <div 
-              onClick={(e) => e.stopPropagation()} 
-              className="flex items-center"
-              data-umami-event="Z_Toggle_Favorite"
-              data-umami-event-title={mv.title}
-              data-umami-event-id={mv.id}
-              data-umami-event-action={isFav ? 'remove' : 'add'}
-            >
-              <Switch 
-                checked={isFav}
-                onCheckedChange={onToggleFav}
-                className="scale-90"
-              />
-            </div>
-          </div>
+          )}
         </div>
       </ImageCard>
     </div>

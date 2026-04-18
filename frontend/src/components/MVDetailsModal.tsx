@@ -218,44 +218,46 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
               {/* 影片播放區 (Monitor) */}
               <div className="w-full flex flex-col border-4 border-black shadow-shadow bg-card" ref={playerRef}>
                 {/* Monitor Header / Signal Switcher */}
-                <div className="flex items-center justify-between px-4 py-2 border-b-4 border-black bg-black/5">
-                  <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between px-2 min-[430px]:px-4 py-2 border-b-4 border-black bg-black/5">
+                  <div className="flex items-center gap-1.5 min-[430px]:gap-3">
                     <div className="w-2.5 h-2.5 bg-green-500 animate-pulse shadow-[2px_2px_0_0_rgba(34,197,94,0.4)]"></div>
-                    <span className="text-[10px] font-black uppercase tracking-widest flex flex-col leading-tight">
-                      <span className="tracking-normal flex items-baseline gap-1.5 opacity-60">
-                        訊號源 <span className="text-[8px] font-mono normal-case">Signal_Source</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest flex flex-col leading-tight min-w-0">
+                      <span className="tracking-normal flex items-baseline gap-1 min-[430px]:gap-1.5 opacity-60 min-w-0">
+                        <span className="whitespace-nowrap">訊號源</span>
+                        <span className="text-[8px] font-mono normal-case truncate">Signal_Source</span>
                       </span>
-                      <span className="tracking-normal text-green-500 flex items-baseline gap-1.5">
-                        已連線 <span className="text-[8px] font-mono normal-case">Connected</span>
+                      <span className="tracking-normal text-green-500 flex items-baseline gap-1 min-[430px]:gap-1.5 min-w-0">
+                        <span className="whitespace-nowrap">已連線</span>
+                        <span className="text-[8px] font-mono normal-case truncate">Connected</span>
                       </span>
                     </span>
                   </div>
                   
                   {mv?.bilibili && mv?.youtube && (
-                    <div className="flex gap-3">
+                    <div className="flex gap-1.5 min-[430px]:gap-3">
                       <button 
                         onClick={() => { setVideoPlatform('youtube'); setIsVideoActivated(false); }}
-                        className={`px-3 py-1.5 text-[10px] font-black uppercase transition-all border-2 border-black flex items-center gap-1.5 ${videoPlatform === 'youtube' ? 'bg-main text-black translate-y-[2px] translate-x-[2px] shadow-none' : 'bg-card text-foreground shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:bg-main/20 hover:-translate-y-[1px] hover:-translate-x-[1px] hover:shadow-[3px_3px_0_0_rgba(0,0,0,1)]'}`}
+                        className={`px-1.5 min-[430px]:px-3 py-1 min-[430px]:py-1.5 text-[8px] min-[430px]:text-[10px] font-black uppercase transition-all border-2 border-black flex items-center gap-1 min-[430px]:gap-1.5 ${videoPlatform === 'youtube' ? 'bg-[#ff0000] text-white translate-y-[2px] translate-x-[2px] shadow-none' : 'bg-card text-foreground shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:bg-[#ff0000]/20 hover:-translate-y-[1px] hover:-translate-x-[1px] hover:shadow-[3px_3px_0_0_rgba(0,0,0,1)]'}`}
                         data-umami-event="Z_Switch_Video_Platform"
                         data-umami-event-platform="youtube"
                         data-umami-event-title={mv?.title}
                       >
-                        <i className="hn hn-video-camera text-sm"></i> YouTube
+                        <i className="hn hn-youtube text-[10px] min-[430px]:text-sm"></i> YouTube
                       </button>
                       <button 
                         onClick={() => { setVideoPlatform('bilibili'); setIsVideoActivated(false); }}
-                        className={`px-3 py-1.5 text-[10px] font-black uppercase transition-all border-2 border-black flex items-center gap-1.5 ${videoPlatform === 'bilibili' ? 'bg-[#00aeec] text-white translate-y-[2px] translate-x-[2px] shadow-none' : 'bg-card text-foreground shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:bg-[#00aeec]/20 hover:-translate-y-[1px] hover:-translate-x-[1px] hover:shadow-[3px_3px_0_0_rgba(0,0,0,1)]'}`}
+                        className={`px-1.5 min-[430px]:px-3 py-1 min-[430px]:py-1.5 text-[8px] min-[430px]:text-[10px] font-black uppercase transition-all border-2 border-black flex items-center gap-1 min-[430px]:gap-1.5 ${videoPlatform === 'bilibili' ? 'bg-[#FB7299] text-white translate-y-[2px] translate-x-[2px] shadow-none' : 'bg-card text-foreground shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:bg-[#FB7299]/20 hover:-translate-y-[1px] hover:-translate-x-[1px] hover:shadow-[3px_3px_0_0_rgba(0,0,0,1)]'}`}
                         data-umami-event="Z_Switch_Video_Platform"
                         data-umami-event-platform="bilibili"
                         data-umami-event-title={mv?.title}
                       >
-                        <i className="hn hn-pc text-sm"></i> Bilibili
+                        <i className="hn hn-retro-pc text-[10px] min-[430px]:text-sm"></i> Bilibili
                       </button>
                     </div>
                   )}
                   {(!mv?.bilibili || !mv?.youtube) && (
-                    <div className="px-3 py-1.5 text-[10px] font-black uppercase border-2 border-black flex items-center gap-1.5 bg-card shadow-[2px_2px_0_0_rgba(0,0,0,1)] opacity-70">
-                      {mv?.youtube ? <><i className="hn hn-video-camera text-sm"></i> YouTube</> : <><i className="hn hn-pc text-sm"></i> Bilibili</>}
+                    <div className="px-1.5 min-[430px]:px-3 py-1 min-[430px]:py-1.5 text-[8px] min-[430px]:text-[10px] font-black uppercase border-2 border-black flex items-center gap-1 min-[430px]:gap-1.5 bg-card shadow-[2px_2px_0_0_rgba(0,0,0,1)] opacity-70">
+                      {mv?.youtube ? <><i className="hn hn-youtube text-[10px] min-[430px]:text-sm"></i> YouTube</> : <><i className="hn hn-retro-pc text-[10px] min-[430px]:text-sm"></i> Bilibili</>}
                     </div>
                   )}
                 </div>
@@ -278,14 +280,14 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                       
                       <div className="relative z-40 flex flex-col items-center gap-6">
                         {/* 播放按鈕 - 背景模糊、無陰影、無懸浮位移 */}
-                        <div className="bg-main/50 backdrop-blur px-10 py-5 border-4 border-black flex flex-col items-center gap-3">
-                          <div className="flex items-center gap-3 mb-1">
-                            <i className="hn hn-play text-3xl text-black"></i>
-                            <span className="font-black tracking-widest text-black text-2xl">PLAY</span>
+                        <div className="bg-main/50 backdrop-blur px-6 min-[430px]:px-10 py-3 min-[430px]:py-5 border-4 border-black flex flex-col items-center gap-2 min-[430px]:gap-3">
+                          <div className="flex items-center gap-2 min-[430px]:gap-3 mb-0 min-[430px]:mb-1">
+                            <i className="hn hn-play text-xl min-[430px]:text-3xl text-black"></i>
+                            <span className="font-black tracking-widest text-black text-lg min-[430px]:text-2xl">PLAY</span>
                           </div>
-                          <span className="glitch-text text-black font-black tracking-widest text-[10px] uppercase flex flex-col items-center leading-tight opacity-70">
+                          <span className="glitch-text text-black font-black tracking-widest text-[8px] min-[430px]:text-[10px] uppercase flex flex-col items-center leading-tight opacity-70">
                             <span className="tracking-normal">初始化訊號串流</span>
-                            <span className="text-[8px] font-mono opacity-80 normal-case mt-0.5">Initialize_Signal_Stream</span>
+                            <span className="text-[6px] min-[430px]:text-[8px] font-mono opacity-80 normal-case mt-0.5">Initialize_Signal_Stream</span>
                           </span>
                         </div>
                       </div>
@@ -318,19 +320,19 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                 className="flex flex-col bg-card border-4 border-border shadow-shadow relative overflow-hidden max-h-[50vh] lg:max-h-none min-h-0 transition-none"
                 style={{ height: descHeight ? `${descHeight}px` : 'auto' }}
               >
-                <div className="flex items-center justify-between px-4 py-4 border-b-4 border-black bg-black/5 shrink-0 z-10">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2.5 h-2.5 bg-blue-500 animate-pulse shadow-[2px_2px_0_0_rgba(59,130,246,0.4)]"></div>
+                <div className="flex items-center justify-between px-3 min-[430px]:px-4 py-2 min-[430px]:py-4 border-b-4 border-black bg-black/5 shrink-0 z-10">
+                  <div className="flex items-center gap-2 min-[430px]:gap-3">
+                    <div className="w-2 h-2 min-[430px]:w-2.5 min-[430px]:h-2.5 bg-blue-500 animate-pulse shadow-[2px_2px_0_0_rgba(59,130,246,0.4)]"></div>
                     <span className="text-[10px] font-black uppercase tracking-widest flex flex-col leading-tight">
-                      <span className="tracking-normal flex items-baseline gap-1.5 opacity-60">
-                        影像資訊 <span className="text-[8px] font-mono normal-case">Video_Description_v{VERSION_CONFIG.app}</span>
+                      <span className="tracking-normal flex items-baseline gap-1 min-[430px]:gap-1.5 opacity-60">
+                        影像資訊 <span className="text-[6px] min-[430px]:text-[8px] font-mono normal-case">Video_Description_v{VERSION_CONFIG.app}</span>
                       </span>
                     </span>
                   </div>
                 </div>
                 <ScrollArea className="flex-1 min-h-0 custom-scrollbar w-full">
-                  <div className="p-8 pt-6">
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap opacity-90 font-base" lang="ja">{mv?.description}</p>
+                  <div className="p-4 min-[430px]:p-8 pt-4 min-[430px]:pt-6">
+                    <p className="text-xs min-[430px]:text-sm leading-relaxed whitespace-pre-wrap opacity-90 font-base" lang="ja">{mv?.description}</p>
                   </div>
                 </ScrollArea>
               </div>

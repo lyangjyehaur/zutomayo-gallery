@@ -175,24 +175,24 @@ export default function ImageCard({ imageUrl, caption, className, children, medi
         {/* 滾動標題區域 */}
         <div 
           ref={outerRef}
-          className="relative overflow-hidden border-b-2 border-border bg-main px-0 py-3 text-main-foreground"
+          className="relative overflow-hidden border-b-2 border-border bg-main px-0 py-2 min-[521px]:py-3 text-main-foreground"
           title={caption}
           data-testid="image-card-caption-container"
           lang={lang}
         >
-          <span
-            ref={measureRef}
-            aria-hidden="true"
-            data-testid="image-card-caption-measure"
-            className="pointer-events-none absolute invisible inline-block whitespace-nowrap px-3 font-heading uppercase tracking-wide"
-          >
+            <span
+              ref={measureRef}
+              aria-hidden="true"
+              data-testid="image-card-caption-measure"
+              className="pointer-events-none absolute invisible inline-block whitespace-nowrap px-2 min-[521px]:px-3 font-heading uppercase tracking-wide text-xs min-[521px]:text-sm"
+            >
             {caption}
           </span>
 
           {shouldWrapText ? (
             <span
               data-testid="image-card-caption-wrap"
-              className="block whitespace-normal break-words px-3 text-center font-heading leading-snug"
+              className="block whitespace-normal break-words px-2 min-[521px]:px-3 text-center font-heading leading-snug text-xs min-[521px]:text-sm"
             >
               {caption}
             </span>
@@ -200,18 +200,18 @@ export default function ImageCard({ imageUrl, caption, className, children, medi
             <div className="overflow-hidden">
               <div
                 data-testid="image-card-caption-track"
-                className="flex w-max whitespace-nowrap font-heading uppercase tracking-wide"
+                className="flex w-max whitespace-nowrap font-heading uppercase tracking-wide text-xs min-[521px]:text-sm"
                 style={{
                   ...marqueeStyle,
                   gap: `${MARQUEE_GAP}px`,
                 }}
               >
-                <span className="shrink-0 px-3">
+                <span className="shrink-0 px-2 min-[521px]:px-3">
                   {caption}
                 </span>
                 <span
                   aria-hidden="true"
-                  className="shrink-0 px-3"
+                  className="shrink-0 px-2 min-[521px]:px-3"
                 >
                   {caption}
                 </span>
@@ -220,7 +220,7 @@ export default function ImageCard({ imageUrl, caption, className, children, medi
           ) : (
             <span
               data-testid="image-card-caption-static"
-              className="block truncate px-3 text-center font-heading uppercase tracking-wide"
+              className="block truncate px-2 min-[521px]:px-3 text-center font-heading uppercase tracking-wide text-xs min-[521px]:text-sm"
             >
               {caption}
             </span>
