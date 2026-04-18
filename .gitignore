@@ -141,6 +141,7 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 # Backend Data & SQLite
+backend/data/*.sqlite
 backend/data/*.sqlite-journal
 backend/data/*.sqlite-wal
 backend/data/*.sqlite-shm
