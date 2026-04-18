@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { VERSION_CONFIG } from "@/config/version";
-import { initGeo } from "@/lib/geo";
+import { useGeoLabel } from "@/hooks/useGeoLabel";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface MaintenancePageProps {
   type?: 'data' | 'ui';
@@ -10,8 +15,7 @@ interface MaintenancePageProps {
 
 export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
   const [timeLeft, setTimeLeft] = useState<string>('');
-  const [geoLabelCn, setGeoLabelCn] = useState<string>("判斷中...");
-  const [geoLabelEn, setGeoLabelEn] = useState<string>("DETECTING...");
+  const geoInfo = useGeoLabel();
 
   // 記錄虛擬頁面瀏覽：系統維護中
   useEffect(() => {
@@ -22,18 +26,6 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
         title: '系統維護中'
       }));
     }
-    
-    // 取得地理位置標籤
-    initGeo().then(info => {
-      if (info.isVPN) {
-        // 彩蛋：VPN/翻牆用戶 (時區在大陸但 IP 在海外)
-        setGeoLabelCn("躍遷版");
-        setGeoLabelEn("WARP");
-      } else {
-        setGeoLabelCn(info.isChinaIP ? "內地版" : "海外版");
-        setGeoLabelEn(info.isChinaIP ? "MAINLAND" : "OVERSEAS");
-      }
-    });
   }, []);
 
   useEffect(() => {
@@ -135,11 +127,24 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
         </div>
       </div>
       
-      <div className="mt-12 text-[10px] uppercase tracking-[0.2em] opacity-30 text-center flex flex-col items-center gap-1">
-        <span>© {new Date().getFullYear()} ZTMY MV 資料庫 V{VERSION_CONFIG.app} | {geoLabelCn}</span>
-        <span className="opacity-60 normal-case text-[8px] flex flex-col gap-0.5">
+      <div className="mt-12 text-[10px] uppercase tracking-[0.2em] text-center flex flex-col items-center gap-1">
+        <span className="flex items-center gap-1 flex-wrap justify-center">
+          <span className="opacity-30">© {new Date().getFullYear()} ZTMY MV 資料庫 V{VERSION_CONFIG.app} | </span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="cursor-help border-b border-dashed border-current hover:text-main transition-colors select-none opacity-50 hover:opacity-100">{geoInfo.labelCn}</span>
+            </TooltipTrigger>
+            <TooltipContent side="top" align="center" sideOffset={10} className="max-w-[250px] text-left z-[100] bg-main text-main-foreground shadow-md opacity-100">
+              <p className="text-xs leading-relaxed font-bold tracking-normal normal-case opacity-100">{geoInfo.desc}</p>
+            </TooltipContent>
+          </Tooltip>
+        </span>
+        <span className="opacity-30 normal-case text-[8px] flex flex-col gap-0.5">
           <span>ZUTOMAYO_MV_GALLERY</span>
-          <span>BUILD_{import.meta.env.VITE_BUILD_DATE?.replace(/-/g, '')}_{import.meta.env.VITE_BUILD_HASH || 'dev'} | {geoLabelEn}</span>
+          <span className="flex items-center gap-1 flex-wrap justify-center">
+            BUILD_{import.meta.env.VITE_BUILD_DATE?.replace(/-/g, '')}_{import.meta.env.VITE_BUILD_HASH || 'dev'} | 
+            <span className="uppercase">{geoInfo.labelEn}</span>
+          </span>
         </span>
       </div>
     </div>

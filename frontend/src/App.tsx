@@ -17,6 +17,7 @@ import { MVItem } from "@/lib/types";
 import { initAnalytics } from "@/lib/analytics";
 import { printEgg } from "@/lib/egg";
 import { initGeo } from "@/lib/geo";
+import { useGeoLabel } from "@/hooks/useGeoLabel";
 import { MVCard } from "@/components/MVCard";
 import { MVDetailsModal } from "@/components/MVDetailsModal";
 import { Button } from "@/components/ui/button";
@@ -175,25 +176,12 @@ function App({
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" ? window.innerWidth < 1024 : false,
   );
-  const [geoLabelCn, setGeoLabelCn] = useState<string>("判斷中...");
-  const [geoLabelEn, setGeoLabelEn] = useState<string>("DETECTING...");
+  
+  const geoInfo = useGeoLabel();
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
     window.addEventListener("resize", handleResize);
-    
-    // 取得地理位置標籤
-    initGeo().then(info => {
-      if (info.isVPN) {
-        // 彩蛋：VPN/翻牆用戶 (時區在大陸但 IP 在海外)
-        setGeoLabelCn("躍遷版");
-        setGeoLabelEn("WARP");
-      } else {
-        setGeoLabelCn(info.isChinaIP ? "內地版" : "海外版");
-        setGeoLabelEn(info.isChinaIP ? "MAINLAND" : "OVERSEAS");
-      }
-    });
-    
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
@@ -1273,12 +1261,25 @@ function App({
             </div>
           </div>
 
-          <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-8 md:gap-4 text-[10px] uppercase tracking-[0.2em]">
-            <div className="opacity-30 text-center md:text-left flex flex-col leading-tight items-center md:items-start md:flex-1 md:basis-0">
-              <span className="tracking-normal">© {new Date().getFullYear()} ZTMY MV 資料庫 V{VERSION_CONFIG.app} | {geoLabelCn}</span>
-              <span className="opacity-60 normal-case text-[8px] mt-1 flex flex-col gap-0.5">
+          <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-8 md:gap-4 text-[10px] tracking-[0.2em]">
+            <div className="text-center md:text-left flex flex-col leading-tight items-center md:items-start md:flex-1 md:basis-0">
+              <span className="tracking-normal flex items-center gap-1 flex-wrap justify-center md:justify-start">
+                <span className="opacity-30">© {new Date().getFullYear()} ZTMY MV 資料庫 構築 {import.meta.env.VITE_BUILD_DATE?.replace(/-/g, '')} {import.meta.env.VITE_BUILD_HASH || 'dev'}</span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="cursor-help border-b border-dashed border-current hover:text-main transition-colors select-none opacity-50 hover:opacity-100">{geoInfo.labelCn}</span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" align="start" sideOffset={10} className="max-w-[250px] text-left z-[100] bg-main text-main-foreground shadow-md opacity-100">
+                    <p className="text-xs leading-relaxed font-bold tracking-normal normal-case opacity-100">{geoInfo.desc}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </span>
+              <span className="opacity-30 normal-case text-[8px] mt-1 flex flex-col gap-0.5">
                 <span>ZUTOMAYO_MV_GALLERY</span>
-                <span>BUILD_{import.meta.env.VITE_BUILD_DATE?.replace(/-/g, '')}_{import.meta.env.VITE_BUILD_HASH || 'dev'} | {geoLabelEn}</span>
+                <span className="flex items-center gap-1 flex-wrap justify-center md:justify-start">
+                  BUILD_{import.meta.env.VITE_BUILD_DATE?.replace(/-/g, '')}_{import.meta.env.VITE_BUILD_HASH || 'dev'} | 
+                  <span className="uppercase">{geoInfo.labelEn}</span>
+                </span>
               </span>
             </div>
 
