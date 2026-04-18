@@ -43,8 +43,9 @@ export function WalineComments({ path, className = '' }: WalineCommentsProps) {
         // 針對大陸用戶，unpkg.com 經常被干擾，改用 jsDelivr 的 Fastly 節點作為替代方案
         const unpkgHost = geoInfo.isChinaIP ? '//fastly.jsdelivr.net/npm' : '//unpkg.com';
         
-        // 針對大陸用戶，Gravatar 頭像可能被牆，改用 V2EX 鏡像 (透過 DOM 攔截)
-        const gravatarHost = geoInfo.isChinaIP ? 'cdn.v2ex.com/gravatar' : 'www.gravatar.com/avatar';
+        // 針對大陸用戶，Gravatar 頭像可能被牆，改用 Cravatar 鏡像 (透過 DOM 攔截)
+        // Cravatar.cn 是專為中國大陸優化的 Gravatar 替代方案
+        const gravatarHost = geoInfo.isChinaIP ? 'cravatar.cn/avatar' : 'www.gravatar.com/avatar';
         
         init({
           el: containerRef.current,
@@ -94,7 +95,7 @@ export function WalineComments({ path, className = '' }: WalineCommentsProps) {
                     const pathParts = originalUrl.pathname.split('/');
                     const hash = pathParts[pathParts.length - 1]; // 取得 MD5 hash
                     
-                    img.src = `https://cdn.v2ex.com/gravatar/${hash}${queryParams}`;
+                    img.src = `https://cravatar.cn/avatar/${hash}${queryParams}`;
                   }
                 });
               }
