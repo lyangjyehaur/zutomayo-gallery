@@ -1114,10 +1114,11 @@ function App({
           </TooltipContent>
         </Tooltip>
 
-        <Tooltip>
+        <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
             <Button
               onClick={() => setIsSurveyForceOpen(true)}
+              onTouchStart={(e) => e.stopPropagation()}
               variant="neutral"
               size="icon"
               className="z-[35] w-10 h-10 md:w-12 md:h-12 rounded-none transition-colors hover:bg-main hover:text-black"

@@ -5,10 +5,11 @@
         <div
           className={`transition-all duration-300 overflow-hidden ${scrolled ? "h-12 opacity-100 mb-[2px]" : "h-0 opacity-0 mb-0"}`}
         >
-          <Tooltip>
+          <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
               <Button
                 onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                onTouchStart={(e) => e.stopPropagation()}
                 variant="neutral"
                 size="icon"
                 className="z-[50] w-12 h-12 rounded-none transition-colors hover:bg-main hover:text-black bg-card text-foreground"
@@ -27,12 +28,13 @@
           </Tooltip>
         </div>
 
-        <Tooltip>
+        <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
             <Button
               onClick={() =>
                 setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))
               }
+              onTouchStart={(e) => e.stopPropagation()}
               variant="neutral"
               size="icon"
               data-active={sortOrder === "asc"}
@@ -54,10 +56,11 @@
           </TooltipContent>
         </Tooltip>
 
-        <Tooltip>
+        <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
             <Button
               onClick={() => navigate(showFavOnly ? "/" : "/favorites")}
+              onTouchStart={(e) => e.stopPropagation()}
               variant="neutral"
               size="icon"
               data-active={showFavOnly}
@@ -81,10 +84,11 @@
           </TooltipContent>
         </Tooltip>
 
-        <Tooltip>
+        <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
             <Button
               onClick={() => setIsFeedbackOpen(!isFeedbackOpen)}
+              onTouchStart={(e) => e.stopPropagation()}
               variant="neutral"
               size="icon"
               data-active={isFeedbackOpen}
