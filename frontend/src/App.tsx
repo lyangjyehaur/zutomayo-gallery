@@ -1282,11 +1282,16 @@ function App({
                   href="https://dan.tw"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 font-black border-2 border-main px-4 py-2 bg-black text-main group"
+                  className="flex items-center justify-center gap-3 font-black border-2 border-main px-4 py-2 bg-black text-main group transition-all hover:bg-main hover:text-black"
                   title="前往開發者個人網站"
                 >
-                  <div className="flex flex-col items-center leading-tight">
-                    <div className="flex gap-2">
+                  <img 
+                    src="https://cravatar.cn/avatar/818f972b24bbd182dc7667fbf7bdf8f2?s=80&d=retro" 
+                    alt="DANERSAKA" 
+                    className="w-8 h-8 rounded-sm border-2 border-current group-hover:border-black transition-colors"
+                  />
+                  <div className="flex flex-col items-start leading-tight">
+                    <div className="flex gap-2 items-center">
                       <span className="opacity-90">由 飯糰 製作</span>
                       <i className="hn hn-heart-solid text-red-500 group-hover:animate-pulse text-[12px] leading-none"></i>
                     </div>

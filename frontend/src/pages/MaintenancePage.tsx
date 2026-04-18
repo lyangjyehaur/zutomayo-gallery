@@ -128,6 +128,30 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
       </div>
       
       <div className="mt-12 text-[10px] uppercase tracking-[0.2em] text-center flex flex-col items-center gap-1">
+        <a
+          href="https://dan.tw"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-3 font-black border-2 border-main px-4 py-2 bg-black text-main group transition-all hover:bg-main hover:text-black mb-4"
+          title="前往開發者個人網站"
+        >
+          <img 
+            src="https://cravatar.cn/avatar/818f972b24bbd182dc7667fbf7bdf8f2?s=80&d=retro" 
+            alt="DANERSAKA" 
+            className="w-8 h-8 rounded-sm border-2 border-current group-hover:border-black transition-colors"
+          />
+          <div className="flex flex-col items-start leading-tight">
+            <div className="flex gap-2 items-center">
+              <span className="opacity-90">由 飯糰 製作</span>
+              <i className="hn hn-heart-solid text-red-500 group-hover:animate-pulse text-[12px] leading-none"></i>
+            </div>
+            <span className="text-[8px] font-mono">
+              <span className="opacity-60">MADE_WITH{" "}</span>
+              <i className="hn hn-heart-solid opacity-90 text-red-500 group-hover:animate-pulse text-[10px] leading-none"></i>{" "}
+              <span className="opacity-60">BY_DANERSAKA</span>
+            </span>
+          </div>
+        </a>
         <span className="flex items-center gap-1 flex-wrap justify-center">
           <span className="opacity-30">© {new Date().getFullYear()} ZTMY MV 資料庫 V{VERSION_CONFIG.app} | </span>
           <Tooltip>
