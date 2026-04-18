@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 export function useActiveTimer(thresholdSeconds = 60, onTrigger: () => void) {
   const activeTimeRef = useRef(0);
   const lastActiveTimeRef = useRef(Date.now());
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (localStorage.getItem('speed_rating_shown')) return;
@@ -19,13 +19,9 @@ export function useActiveTimer(thresholdSeconds = 60, onTrigger: () => void) {
 
     timerRef.current = setInterval(() => {
       const now = Date.now();
-      // 如果距離上次操作在 5 秒內，算作「正在交互」
       if (now - lastActiveTimeRef.current < 5000) {
         activeTimeRef.current += 1;
-        
-        // 為了避免打斷用戶，要求用戶至少暫停操作 2 秒才彈窗
         const isPaused = now - lastActiveTimeRef.current > 2000;
-        
         if (activeTimeRef.current >= thresholdSeconds && isPaused) {
           onTrigger();
           localStorage.setItem('speed_rating_shown', 'true');
@@ -70,12 +66,10 @@ const StarRating = ({ onRate }: { onRate: (rating: number) => void }) => {
               onRate(hoverRating);
             }}
           >
-            {/* 底色星星 */}
             <svg viewBox="0 0 24 24" className="w-10 h-10 text-foreground fill-current stroke-current opacity-20" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
             </svg>
             
-            {/* 實心星星 (全星或半星) */}
             {(isFull || isHalf) && (
               <div 
                 className="absolute top-0 left-0 overflow-hidden text-main"
@@ -115,18 +109,13 @@ export function SpeedRatingSurvey({ forceOpen = false, onCloseForce }: { forceOp
   };
 
   const handleRate = async (rating: number) => {
-    // 顯示成功提示
     toast.success(`感謝您的 ${rating} 星評價！`, {
       description: '您的反饋已記錄，這將幫助我們優化加載速度。'
     });
     setSubmitted(true);
-    
-    // 這裡未來可以接入真實的後端 API
-    console.log('Submitted rating:', rating);
-    
     setTimeout(() => {
       handleOpenChange(false);
-      setTimeout(() => setSubmitted(false), 300); // 關閉動畫結束後重置狀態
+      setTimeout(() => setSubmitted(false), 300);
     }, 1500);
   };
 
@@ -152,7 +141,7 @@ export function SpeedRatingSurvey({ forceOpen = false, onCloseForce }: { forceOp
             <>
               <div className="text-center space-y-2">
                 <p className="text-sm font-bold">您覺得目前的網頁加載速度如何？</p>
-                <p className="text-xs opacity-60 font-bold bg-foreground/5 inline-block px-2 py-1">💡 支援半星評分，滑動預覽</p>
+                <p className="text-xs opacity-60 font-bold bg-foreground/5 inline-block px-2 py-1">支援半星評分，滑動預覽</p>
               </div>
               <div className="py-2">
                 <StarRating onRate={handleRate} />

@@ -175,6 +175,7 @@ function App({
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [shouldRenderFeedback, setShouldRenderFeedback] = useState(false);
   const [isSurveyForceOpen, setIsSurveyForceOpen] = useState(false);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" ? window.innerWidth < 1024 : false,
   );
@@ -185,6 +186,33 @@ function App({
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("ztmy_admin_pwd");
+    if (!saved) return;
+
+    const apiUrl = import.meta.env.VITE_API_URL || "https://api.ztmr.club/api/mvs";
+    let cancelled = false;
+
+    fetch(`${apiUrl}/verify-admin`, {
+      method: "POST",
+      headers: { "x-admin-password": saved },
+    })
+      .then((res) => {
+        if (cancelled) return;
+        if (res.ok) {
+          setIsAdminAuthenticated(true);
+          return;
+        }
+        localStorage.removeItem("ztmy_admin_pwd");
+        setIsAdminAuthenticated(false);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // 處理反饋抽屜的延遲卸載，以保留滑出動畫
@@ -1114,27 +1142,29 @@ function App({
           </TooltipContent>
         </Tooltip>
 
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <Button
-              onClick={() => setIsSurveyForceOpen(true)}
-              onTouchStart={(e) => e.stopPropagation()}
-              variant="neutral"
-              size="icon"
-              className="z-[35] w-10 h-10 md:w-12 md:h-12 rounded-none transition-colors hover:bg-main hover:text-black"
-            >
-              <i className="hn hn-clock text-xl md:text-2xl"></i>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="left" align="center" sideOffset={10}>
-            <div className="flex flex-col gap-0.5">
-              <p className="text-xs font-black tracking-widest">加載速度調查 (Demo)</p>
-              <p className="text-[10px] font-mono opacity-60 normal-case">
-                SPEED_SURVEY
-              </p>
-            </div>
-          </TooltipContent>
-        </Tooltip>
+        {isAdminAuthenticated && (
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={() => setIsSurveyForceOpen(true)}
+                onTouchStart={(e) => e.stopPropagation()}
+                variant="neutral"
+                size="icon"
+                className="z-[35] w-10 h-10 md:w-12 md:h-12 rounded-none transition-colors hover:bg-main hover:text-black"
+              >
+                <i className="hn hn-clock text-xl md:text-2xl"></i>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left" align="center" sideOffset={10}>
+              <div className="flex flex-col gap-0.5">
+                <p className="text-xs font-black tracking-widest">加載速度調查 (Demo)</p>
+                <p className="text-[10px] font-mono opacity-60 normal-case">
+                  SPEED_SURVEY
+                </p>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        )}
 
         <div className="z-40 relative">
           <ThemeToggle isIconOnly={true} />
@@ -1480,7 +1510,6 @@ function App({
         </div>
       </div>
 
-      {/* 加載速度評價彈窗 */}
       <SpeedRatingSurvey forceOpen={isSurveyForceOpen} onCloseForce={() => setIsSurveyForceOpen(false)} />
 
       {/* 詳情彈窗 */}
