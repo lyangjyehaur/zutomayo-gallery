@@ -155,3 +155,4 @@ deploy-local.sh
 
 # Agent memory
 backend-memory.md
+frontend-memory.md
