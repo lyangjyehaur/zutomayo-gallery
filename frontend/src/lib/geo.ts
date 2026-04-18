@@ -8,10 +8,21 @@ export interface GeoInfo {
 let geoCache: GeoInfo | null = null;
 
 /**
+ * 清除目前的地理位置快取 (用於讓用戶主動重新偵測，或處理網路環境切換)
+ */
+export const clearGeoCache = () => {
+  geoCache = null;
+  if (typeof window !== 'undefined') {
+    sessionStorage.removeItem('geo_info');
+  }
+};
+
+/**
  * 初始化並獲取用戶的地理位置資訊
  * 優先從 sessionStorage 讀取快取，若無則呼叫 Cloudflare Trace API
  */
-export const initGeo = async (): Promise<GeoInfo> => {
+export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
+  if (forceRefresh) clearGeoCache();
   if (geoCache) return geoCache;
 
   try {

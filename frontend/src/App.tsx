@@ -1576,7 +1576,7 @@ export default function RootApp() {
   useEffect(() => {
     initAnalytics();
     printEgg();
-    initGeo(); // 非同步執行，快取到 sessionStorage
+    initGeo(true); // 強制清除快取並重新偵測，以應對用戶開關 VPN 的情況
   }, []);
 
   // PWA 安裝提示
