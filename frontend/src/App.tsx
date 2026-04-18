@@ -10,7 +10,6 @@ import {
   Routes,
   Route,
   useNavigate,
-  useParams,
   useLocation,
 } from "react-router-dom";
 import { MVItem } from "@/lib/types";
@@ -175,7 +174,6 @@ function App({
   };
 }) {
   const navigate = useNavigate();
-  const { id: routeMvId } = useParams();
   const location = useLocation();
 
   // 狀態管理
@@ -191,6 +189,7 @@ function App({
   });
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [isGeoTooltipOpen, setIsGeoTooltipOpen] = useState(false);
   const [shouldRenderFeedback, setShouldRenderFeedback] = useState(false);
   const [isSurveyForceOpen, setIsSurveyForceOpen] = useState(false);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
@@ -246,8 +245,10 @@ function App({
   }, [isFeedbackOpen]);
 
   // 從路由派生狀態
-  const showFavOnly = location.pathname === "/favorites";
-  const selectedMvId = routeMvId || null;
+  const showFavOnly = location.pathname === "/favorites" || location.state?.fromFav;
+  // 從路由中解析 id，避免依賴 useParams() 以支援 layout 模式不卸載元件
+  const mvIdMatch = location.pathname.match(/^\/mv\/([^/]+)/);
+  const selectedMvId = mvIdMatch ? mvIdMatch[1] : null;
 
   // 動態獲取唯一的年份、專輯與藝術家清單，並處理分組
   const {
@@ -620,7 +621,7 @@ function App({
           </span>
         </div>
         <p className="text-sm opacity-70 mb-8">{error}</p>
-        <Button onClick={() => window.location.reload()} variant="reverse" data-umami-event="Z_Retry_Connection">
+        <Button onClick={() => window.location.reload()} variant="default" className="hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none" data-umami-event="Z_Retry_Connection">
           重試連線
         </Button>
       </div>
@@ -972,7 +973,7 @@ function App({
                   mv={mv}
                   isFav={favorites.includes(mv.id)}
                   onToggleFav={() => toggleFav(mv.id)}
-                  onClick={() => navigate(`/mv/${mv.id}`)}
+                  onClick={() => navigate(`/mv/${mv.id}`, { state: { fromFav: showFavOnly } })}
                   delayMs={Math.min(batchIdx, 24) * 20}
                   isPaused={isGlobalPaused}
                 />
@@ -1268,7 +1269,7 @@ function App({
                         className="hover:text-main transition-colors flex items-center gap-2 group"
                         title="像素圖示庫 (HackerNoon Pixel Icons)"
                       >
-                        <i className="hn hn-external-link text-sm opacity-50 shrink-0" />
+                        <i className="hn hn-external-link text-[10px] opacity-50 shrink-0" />
                         <span className="flex items-center flex-wrap gap-x-1.5 leading-tight">
                           <span className="whitespace-nowrap">像素圖示庫</span>
                           <span className="text-[10px] font-mono opacity-60 normal-case break-words">
@@ -1298,7 +1299,7 @@ function App({
                         className="hover:text-main transition-colors flex items-center gap-2 group"
                         title="像素字型 (Fusion Pixel Font)"
                       >
-                        <i className="hn hn-external-link text-sm opacity-50 shrink-0" />
+                        <i className="hn hn-external-link text-[10px] opacity-50 shrink-0" />
                         <span className="flex items-center flex-wrap gap-x-1.5 leading-tight">
                           <span className="whitespace-nowrap">像素字型</span>
                           <span className="text-[10px] font-mono opacity-60 break-words">
@@ -1328,7 +1329,7 @@ function App({
                         className="hover:text-main transition-colors flex items-center gap-2 group"
                         title="UI 設計系統 (Neobrutalism UI)"
                       >
-                        <i className="hn hn-external-link text-sm opacity-50 shrink-0" />
+                        <i className="hn hn-external-link text-[10px] opacity-50 shrink-0" />
                         <span className="flex items-center flex-wrap gap-x-1.5 leading-tight">
                           <span className="whitespace-nowrap">UI 設計系統</span>
                           <span className="text-[10px] font-mono opacity-60 break-words">
@@ -1355,7 +1356,7 @@ function App({
                         className="hover:text-main transition-colors flex items-center gap-2 group"
                         title="燈箱元件 (Fancybox UI)"
                       >
-                        <i className="hn hn-external-link text-sm opacity-50 shrink-0" />
+                        <i className="hn hn-external-link text-[10px] opacity-50 shrink-0" />
                         <span className="flex items-center flex-wrap gap-x-1.5 leading-tight">
                           <span className="whitespace-nowrap">燈箱元件</span>
                           <span className="text-[10px] font-mono opacity-60 break-words">
@@ -1384,7 +1385,7 @@ function App({
 
               <span className="flex items-center gap-1 flex-wrap justify-center md:justify-start">
                 <span className="opacity-30">© {new Date().getFullYear()} ZTMY MV 資料庫 構築 {import.meta.env.VITE_BUILD_DATE?.replace(/-/g, '')} {import.meta.env.VITE_BUILD_HASH || 'dev'}</span>
-                <Tooltip delayDuration={0}>
+                <Tooltip delayDuration={0} open={isGeoTooltipOpen} onOpenChange={setIsGeoTooltipOpen}>
                   <TooltipTrigger asChild>
                     <span 
                       className="cursor-help border-b border-dashed border-current hover:text-main transition-colors select-none opacity-30 hover:opacity-100"
@@ -1393,6 +1394,8 @@ function App({
                       }}
                       onTouchStart={(e) => {
                         e.stopPropagation();
+                        // 移動端點擊時切換 tooltip 狀態
+                        setIsGeoTooltipOpen(prev => !prev);
                       }}
                       onPointerDown={(e) => {
                         // 解決部分移動端瀏覽器 (如 iOS Safari) 不觸發 tooltip 的問題
@@ -1407,8 +1410,9 @@ function App({
                     align="start" 
                     sideOffset={10} 
                     className="max-w-[250px] text-left z-[100] bg-main text-main-foreground shadow-md opacity-100"
-                    onPointerDownOutside={(e) => {
+                    onPointerDownOutside={() => {
                       // 點擊外面時關閉 tooltip
+                      setIsGeoTooltipOpen(false);
                     }}
                   >
                     <p className="text-xs leading-relaxed font-bold opacity-100">{geoInfo.desc}</p>
@@ -1428,13 +1432,27 @@ function App({
                   href="https://dan.tw"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-3 font-black border-2 border-main px-4 py-2 bg-black text-main group transition-all hover:bg-main hover:text-black"
+                  className="flex items-center justify-center gap-3 font-black border-2 border-main px-4 py-2 bg-black text-main group transition-all hover:bg-main hover:text-black ztmy-avatar-trigger"
                   title="前往開發者個人網站"
+                  onMouseLeave={(e) => {
+                    const img = e.currentTarget.querySelector('img');
+                    if (img) {
+                      img.style.animation = 'none';
+                      void img.offsetWidth; // 觸發 reflow
+                      img.style.animation = 'var(--animate-avatar-land)';
+                    }
+                  }}
+                  onMouseEnter={(e) => {
+                    const img = e.currentTarget.querySelector('img');
+                    if (img) {
+                      img.style.animation = 'var(--animate-avatar-jump)';
+                    }
+                  }}
                 >
                   <img 
                     src={`https://${geoInfo.isChinaIP ? 'cravatar.cn' : 'gravatar.com'}/avatar/2ad947c5152cd8d6d2f9b5bd450d939b?s=80&d=retro`} 
                     alt="DANERSAKA" 
-                    className="w-8 h-8 rounded-sm border-2 border-current group-hover:border-black transition-colors"
+                    className="w-8 h-8 rounded-sm border-2 border-current group-hover:border-black transition-colors origin-bottom"
                   />
                   <div className="flex flex-col items-start leading-tight">
                     <div className="flex gap-2 items-center">
@@ -1535,7 +1553,13 @@ function App({
       {/* 詳情彈窗 */}
       <MVDetailsModal
         mv={selectedMv}
-        onClose={() => navigate(showFavOnly ? "/favorites" : "/")}
+        onClose={() => {
+          if (window.history.state && window.history.state.idx > 0) {
+            navigate(-1);
+          } else {
+            navigate(showFavOnly ? "/favorites" : "/", { replace: true });
+          }
+        }}
       />
     </div>
   );
@@ -1656,9 +1680,11 @@ export default function RootApp() {
   return (
     <>
       <Routes>
-        <Route path="/" element={<App {...commonProps} />} />
-        <Route path="/favorites" element={<App {...commonProps} />} />
-        <Route path="/mv/:id" element={<App {...commonProps} />} />
+        <Route path="/" element={<App {...commonProps} />}>
+          <Route index element={null} />
+          <Route path="favorites" element={null} />
+          <Route path="mv/:id" element={null} />
+        </Route>
         <Route
           path="/admin"
           element={

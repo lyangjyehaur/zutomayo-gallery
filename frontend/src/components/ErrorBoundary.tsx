@@ -104,7 +104,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <Button 
                 onClick={this.handleReset}
                 variant="default"
-                className="border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                className="border-2 border-black hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none"
                 data-umami-event="Z_Error_Recovery"
                 data-umami-event-action="retry"
               >
@@ -113,7 +113,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <Button 
                 onClick={this.handleReload}
                 variant="neutral"
-                className="border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                className="border-2 border-black hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none"
                 data-umami-event="Z_Error_Recovery"
                 data-umami-event-action="reload"
               >
@@ -121,8 +121,8 @@ export class ErrorBoundary extends Component<Props, State> {
               </Button>
               <Button 
                 onClick={() => window.location.href = '/'}
-                variant="reverse"
-                className="border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                variant="default"
+                className="border-2 border-black hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none"
                 data-umami-event="Z_Error_Recovery"
                 data-umami-event-action="home"
               >
