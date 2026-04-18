@@ -20,6 +20,7 @@ export function WalineComments({ path, className = '' }: WalineCommentsProps) {
   const initializedRef = useRef(false);
 
   useEffect(() => {
+    let observer: MutationObserver | null = null;
     if (!containerRef.current || initializedRef.current) return;
 
     const initWaline = async () => {
@@ -41,6 +42,9 @@ export function WalineComments({ path, className = '' }: WalineCommentsProps) {
           
         // 針對大陸用戶，unpkg.com 經常被干擾，改用 jsDelivr 的 Fastly 節點作為替代方案
         const unpkgHost = geoInfo.isChinaIP ? '//fastly.jsdelivr.net/npm' : '//unpkg.com';
+        
+        // 針對大陸用戶，Gravatar 頭像可能被牆，改用 V2EX 鏡像 (透過 DOM 攔截)
+        const gravatarHost = geoInfo.isChinaIP ? 'cdn.v2ex.com/gravatar' : 'www.gravatar.com/avatar';
         
         init({
           el: containerRef.current,
@@ -68,8 +72,39 @@ export function WalineComments({ path, className = '' }: WalineCommentsProps) {
           requiredMeta: ['nick'],
           wordLimit: 200,
           pageSize: 10,
-          locale: { reactionTitle: ''}
+          locale: { reactionTitle: ''},
+          search: false,
+          imageUploader: false,
+          highlighter: false,
+          texRenderer: false
         });
+        
+        // 修改 Waline 實例中的 gravatar 預設行為
+        // Waline v3 預設會使用 gravatar.com，如果沒有提供自訂 imageUploader 或 avatar 配置
+        // 但由於 Waline v3 API 移除了直接的 avatar CDN 設定，我們透過動態修改 DOM 來處理
+        if (geoInfo.isChinaIP) {
+          observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+              if (mutation.type === 'childList') {
+                const imgs = containerRef.current?.querySelectorAll('img') as NodeListOf<HTMLImageElement>;
+                imgs?.forEach(img => {
+                  if (img.src && (img.src.includes('gravatar.com') || img.src.includes('seccdn.alipay.com') || img.src.includes('sdn.geekzu.org'))) {
+                    const originalUrl = new URL(img.src);
+                    const queryParams = originalUrl.search;
+                    const pathParts = originalUrl.pathname.split('/');
+                    const hash = pathParts[pathParts.length - 1]; // 取得 MD5 hash
+                    
+                    img.src = `https://cdn.v2ex.com/gravatar/${hash}${queryParams}`;
+                  }
+                });
+              }
+            });
+          });
+          
+          if (containerRef.current) {
+            observer.observe(containerRef.current, { childList: true, subtree: true });
+          }
+        }
         
         initializedRef.current = true;
       } catch (error) {
@@ -83,6 +118,9 @@ export function WalineComments({ path, className = '' }: WalineCommentsProps) {
       // 清理 Waline 实例
       if (containerRef.current) {
         containerRef.current.innerHTML = '';
+      }
+      if (observer) {
+        observer.disconnect();
       }
       initializedRef.current = false;
     };
