@@ -1,5 +1,20 @@
 import { Request, Response, NextFunction } from 'express';
 import { getDB } from '../services/db.service.js';
+import fs from 'fs';
+import path from 'path';
+
+// 取得編譯時間的變數 (只在伺服器啟動時讀取一次)
+let buildTime: string | null = null;
+try {
+  // index.js 位於 dist/ 目錄下，所以取它的修改時間作為編譯時間
+  const indexFilePath = path.join(process.cwd(), 'dist', 'index.js');
+  if (fs.existsSync(indexFilePath)) {
+    const stats = fs.statSync(indexFilePath);
+    buildTime = stats.mtime.toISOString();
+  }
+} catch (err) {
+  console.warn('Unable to determine backend build time', err);
+}
 
 export const getSystemStatus = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -15,7 +30,7 @@ export const getSystemStatus = async (req: Request, res: Response, next: NextFun
     const etaRow = db.prepare('SELECT value FROM meta_settings WHERE key = ?').get('maintenance_eta') as any;
     const eta = etaRow ? etaRow.value : null;
 
-    res.json({ success: true, data: { maintenance, type, eta } });
+    res.json({ success: true, data: { maintenance, type, eta, buildTime } });
   } catch (error) {
     next(error);
   }

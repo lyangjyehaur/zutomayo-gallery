@@ -1384,7 +1384,11 @@ function App({
             <div className="text-center md:text-left flex flex-col leading-tight items-center md:items-start md:flex-1 md:basis-0">
 
               <span className="flex items-center gap-1 flex-wrap justify-center md:justify-start">
-                <span className="opacity-30">© {new Date().getFullYear()} ZTMY MV 資料庫 構築 {import.meta.env.VITE_BUILD_DATE?.replace(/-/g, '')} {import.meta.env.VITE_BUILD_HASH || 'dev'}</span>
+                <span className="opacity-30">
+                  © {new Date().getFullYear()} ZTMY MV 資料庫 
+                  | FE: {import.meta.env.VITE_BUILD_DATE?.replace(/-/g, '')} {import.meta.env.VITE_BUILD_HASH || 'dev'}
+                  {systemStatus?.buildTime && ` | BE: ${new Date(systemStatus.buildTime).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(/\//g, '')}`}
+                </span>
                 <Tooltip delayDuration={0} open={isGeoTooltipOpen} onOpenChange={setIsGeoTooltipOpen}>
                   <TooltipTrigger asChild>
                     <span 
@@ -1597,7 +1601,7 @@ export default function RootApp() {
     revalidateOnFocus: false,
   });
 
-  const { data: systemStatus, mutate: mutateSystemStatus } = useSWR<{ maintenance: boolean; type?: 'data' | 'ui'; eta?: string | null }>(
+  const { data: systemStatus, mutate: mutateSystemStatus } = useSWR<{ maintenance: boolean; type?: 'data' | 'ui'; eta?: string | null; buildTime?: string | null }>(
     `${apiUrl.replace('/mvs', '/system')}/status`,
     fetcher,
     { revalidateOnFocus: true }

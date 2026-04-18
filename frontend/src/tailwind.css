@@ -40,6 +40,29 @@
 }
 
 @theme inline {
+  --animate-avatar-jump: avatar-jump 1.5s cubic-bezier(0.28, 0.84, 0.42, 1) infinite;
+  @keyframes avatar-jump {
+    0% { transform: translateY(0) rotate(0) scale(1, 1); }
+    10% { transform: translateY(0) rotate(0) scale(1.2, 0.8); }
+    20% { transform: translateY(-12px) rotate(-15deg) scale(0.9, 1.1); }
+    30% { transform: translateY(-14px) rotate(15deg) scale(1, 1); }
+    40% { transform: translateY(-12px) rotate(-12deg) scale(1, 1); }
+    50% { transform: translateY(-14px) rotate(12deg) scale(1, 1); }
+    60% { transform: translateY(-12px) rotate(-10deg) scale(1, 1); }
+    70% { transform: translateY(-14px) rotate(8deg) scale(1, 1); }
+    80% { transform: translateY(0) rotate(0) scale(1.15, 0.85); }
+    90% { transform: translateY(-3px) rotate(0) scale(0.98, 1.02); }
+    100% { transform: translateY(0) rotate(0) scale(1, 1); }
+  }
+
+  --animate-avatar-land: avatar-land 0.4s cubic-bezier(0.28, 0.84, 0.42, 1) forwards;
+  @keyframes avatar-land {
+    0% { transform: translateY(0) rotate(0) scale(1, 1); }
+    30% { transform: translateY(0) rotate(0) scale(1.15, 0.85); }
+    60% { transform: translateY(-4px) rotate(0) scale(0.95, 1.05); }
+    100% { transform: translateY(0) rotate(0) scale(1, 1); }
+  }
+  
   --color-main: var(--main);
   --color-background: var(--background);
   --color-secondary-background: var(--secondary-background);

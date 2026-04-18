@@ -676,7 +676,7 @@ interface AdminPageProps {
     artistMeta: Record<string, { id?: string; hideId?: boolean }>;
     settings: { showAutoAlbumDate: boolean };
   };
-  systemStatus?: { maintenance: boolean; type?: 'data' | 'ui'; eta?: string | null };
+  systemStatus?: { maintenance: boolean; type?: 'data' | 'ui'; eta?: string | null; buildTime?: string | null };
   onRefresh?: () => void;
 }
 
@@ -1735,6 +1735,12 @@ const currentMV = data[activeIndex];
           <h1 className="font-black uppercase tracking-tighter text-xl border-l-4 border-black pl-4">
             數據管理後台 V{VERSION_CONFIG.app}
           </h1>
+          {systemStatus?.buildTime && (
+            <span className="hidden md:inline-flex items-center gap-1.5 text-xs font-mono px-2 py-1 bg-muted border-2 border-black/10 rounded-sm ml-2">
+              <i className="hn hn-server" />
+              Build: {new Date(systemStatus.buildTime).toLocaleString()}
+            </span>
+          )}
         </div>
         <div className="flex gap-4">
           <Button 

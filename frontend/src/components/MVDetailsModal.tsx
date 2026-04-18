@@ -40,6 +40,12 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
   const [videoPlatform, setVideoPlatform] = useState<'youtube' | 'bilibili'>('bilibili');
   const [isVideoActivated, setIsVideoActivated] = useState(false);
   
+  // 防止在退場動畫期間連續觸發 onClose 導致路由亂跳
+  const isClosingRef = useRef(false);
+  useEffect(() => {
+    if (mv) isClosingRef.current = false;
+  }, [mv]);
+  
   // 使用 ref 追踪燈箱狀態，避免觸發重渲染
   const isLightboxOpenRef = useRef(false);
 
@@ -176,7 +182,12 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
           </>
         )}
       </Helmet>
-    <Dialog open={!!mv} onOpenChange={(open) => !open && !isLightboxOpenRef.current && onClose()}>
+    <Dialog open={!!mv} onOpenChange={(open) => {
+      if (!open && !isLightboxOpenRef.current && !isClosingRef.current) {
+        isClosingRef.current = true;
+        onClose();
+      }
+    }}>
       <DialogContent
         className="max-w-none border-none [&>button]:hidden"
         onPointerDownOutside={handlePointerDownOutside}
@@ -185,7 +196,6 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
         <DialogHeader className="relative z-30 pt-10 py-6 border-b-4 border-border">
           <DialogClose 
               className="absolute top-4 right-4 md:top-6 md:right-8 z-50 bg-background text-foreground border-3 border-foreground shadow-neo-sm hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all w-10 h-10 flex items-center justify-center rounded-none"
-              onClick={onClose}
               data-umami-event="Z_Close_MV_Modal"
               data-umami-event-title={mv?.title}
             >
