@@ -10,7 +10,7 @@ export const requireAdmin = async (req: Request, res: Response, next: NextFuncti
   }
 
   // 1. 如果是來自前端通行密鑰的臨時授權 Token，直接放行
-  if (password === 'PASSKEY_AUTHORIZED_TOKEN_5173') {
+  if (authService.isValidSessionToken(password)) {
     next();
     return;
   }

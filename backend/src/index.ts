@@ -13,7 +13,16 @@ const app = express();
 const PORT = process.env.PORT || 5010;
 
 // 信任反向代理（如 Nginx），這樣 express-rate-limit 才能獲取到正確的真實客戶端 IP
-app.set('trust proxy', 1);
+const trustProxy = process.env.TRUST_PROXY;
+if (trustProxy === 'true') {
+  app.set('trust proxy', true);
+} else if (trustProxy && !isNaN(Number(trustProxy))) {
+  app.set('trust proxy', Number(trustProxy));
+} else if (trustProxy) {
+  app.set('trust proxy', trustProxy);
+} else {
+  app.set('trust proxy', false);
+}
 
 // 初始化資料庫
 await initDB();
@@ -31,10 +40,20 @@ if (process.env.ALLOWED_ORIGINS) {
   allowedOrigins.push(...process.env.ALLOWED_ORIGINS.split(','));
 }
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     // 允許無 origin 的請求（如移動應用或 curl）
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin) {
+      if (isProduction && !allowedOrigins.includes('*')) {
+        console.warn(`[CORS] Blocked request without origin in production`);
+        return callback(new Error('Not allowed by CORS'));
+      }
+      return callback(null, true);
+    }
+    
+    if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
       callback(null, true);
     } else {
       console.warn(`[CORS] Blocked request from origin: ${origin}`);
@@ -67,7 +86,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // 請求限流 - 一般 API
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 分鐘
-  max: 100, // 每個 IP 100 次請求
+  max: 1000, // 每個 IP 1000 次請求
   message: {
     success: false,
     error: '請求過於頻繁，請稍後再試',
@@ -96,6 +115,15 @@ const writeLimiter = rateLimit({
 
 // 應用限流中間件
 app.use('/api/', apiLimiter);
+
+// 針對寫入路由套用 writeLimiter
+app.use('/api/', (req, res, next) => {
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+    writeLimiter(req, res, next);
+  } else {
+    next();
+  }
+});
 
 // API 路由註冊
 app.use('/api/auth', authRoutes);

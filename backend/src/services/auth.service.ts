@@ -1,4 +1,5 @@
 import { getDB } from './db.service.js';
+import crypto from 'crypto';
 
 export interface Passkey {
   id: string;
@@ -18,6 +19,22 @@ interface AuthData {
 const defaultAuthData: AuthData = { passkeys: [] };
 
 export class AuthService {
+  private sessionTokens: Set<string> = new Set();
+
+  public generateSessionToken(): string {
+    const token = crypto.randomBytes(32).toString('hex');
+    this.sessionTokens.add(token);
+    // Token 過期時間：24 小時
+    setTimeout(() => {
+      this.sessionTokens.delete(token);
+    }, 24 * 60 * 60 * 1000);
+    return token;
+  }
+
+  public isValidSessionToken(token: string): boolean {
+    return this.sessionTokens.has(token);
+  }
+
   async getPasskeys(): Promise<Passkey[]> {
     const db = getDB();
     const rows = db.prepare('SELECT * FROM auth_passkeys').all() as any[];

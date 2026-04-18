@@ -130,8 +130,9 @@ export const verifyAuth = async (req: Request, res: Response) => {
     if (verification.verified) {
       await authService.updatePasskeyCounter(passkey.id, verification.authenticationInfo.newCounter);
       const isDefaultPassword = !(await authService.getPassword());
-      // 給前端一個固定的授權 token，而非使用密碼，以免把 hash 傳出去
-      return res.json({ success: true, token: 'PASSKEY_AUTHORIZED_TOKEN_5173', isDefaultPassword });
+      // 給前端一個安全的授權 token，以免把 hash 傳出去
+      const token = authService.generateSessionToken();
+      return res.json({ success: true, token, isDefaultPassword });
     }
     res.status(400).json({ success: false });
   } catch (error: any) {
