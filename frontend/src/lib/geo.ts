@@ -34,18 +34,17 @@ export const initGeo = async (): Promise<GeoInfo> => {
     
     // 獲取使用者本地時區
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    // 定義中國大陸標準時區 (不含港澳台，避免將港澳台用戶誤判為翻牆)
     const chinaTimezones = [
       'Asia/Shanghai', 'Asia/Urumqi', 'Asia/Chongqing', 
-      'Asia/Harbin', 'Asia/Kashgar', 'Asia/Macau', 
-      'Asia/Hong_Kong', 'Asia/Taipei'
+      'Asia/Harbin', 'Asia/Kashgar'
     ];
     const isChinaTimezone = chinaTimezones.includes(timeZone);
     
     const isChinaIP = ipCountry === 'CN';
     
-    // 判斷是否為翻牆的 VPN 用戶 (IP 顯示在海外，但本地時區是中國標準時間)
-    // 這裡我們嚴格判定 'Asia/Shanghai' 等大陸時區為 VPN 潛在用戶
-    const isVPN = !isChinaIP && ['Asia/Shanghai', 'Asia/Urumqi', 'Asia/Chongqing', 'Asia/Harbin', 'Asia/Kashgar'].includes(timeZone);
+    // 判斷是否為翻牆的 VPN 用戶 (IP 顯示在海外，但本地時區是中國大陸標準時間)
+    const isVPN = !isChinaIP && isChinaTimezone;
 
     geoCache = { ipCountry, isChinaTimezone, isChinaIP, isVPN };
     

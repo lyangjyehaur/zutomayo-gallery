@@ -887,10 +887,10 @@ function App({
               <i className="hn hn-robot text-5xl"></i>
             </div>
             <div className="flex flex-col items-center leading-tight mb-2">
-              <h3 className="text-xl font-black tracking-widest uppercase">
+              <h3 className="text-xl font-black">
                 找不到訊號
               </h3>
-              <span className="text-[10px] font-mono opacity-40 normal-case">
+              <span className="text-[10px] font-mono opacity-40">
                 NO_SIGNAL_FOUND
               </span>
             </div>
@@ -934,21 +934,15 @@ function App({
         {/* 完全加載完畢提示 */}
         {filteredData.length > 0 && visibleCount >= filteredData.length && (
           <div className="w-full py-18 mt-10 flex flex-col items-center justify-center opacity-30 select-none">
-            <div className="flex items-center gap-4 text-xs font-mono font-black tracking-[0.3em] uppercase">
+            <div className="flex items-center gap-4 text-xs font-mono font-black">
               <span className="w-12 h-0.5 bg-current"></span>
               <span className="flex flex-col items-center leading-tight">
                 <span className="opacity-70">歸檔邊界</span>
-                <span className="text-[10px] font-mono opacity-40 normal-case tracking-normal">
+                <span className="text-[10px] font-mono opacity-40">
                   END_OF_ARCHIVE
                 </span>
               </span>
               <span className="w-12 h-0.5 bg-current"></span>
-            </div>
-            <div className="mt-3 text-[10px] font-mono tracking-[0.2em] flex flex-col items-center leading-tight">
-              <span className="opacity-70 tracking-normal">所有訊號已接收</span>
-              <span className="opacity-40 normal-case">
-                ALL_SIGNALS_RECEIVED
-              </span>
             </div>
           </div>
         )}
@@ -1081,12 +1075,12 @@ function App({
         <div className="container mx-auto px-4 pb-16 pt-8 max-w-7xl relative">
           {/* 三語版權聲明區塊 & 導航 */}
           <div className="p-8 border-4 border-black bg-black/5 relative group">
-            <div className="absolute -top-4 left-6 bg-black text-main px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] border-2 border-main">
+            <div className="absolute -top-4 left-6 bg-black text-main px-3 py-1 text-[10px] font-black border-2 border-main">
               <div className="flex flex-col leading-tight">
-                <span className="opacity-90 tracking-normal">
+                <span className="opacity-90">
                   版權/法律聲明
                 </span>
-                <span className="font-mono opacity-60 normal-case">
+                <span className="font-mono opacity-60">
                   Legal_Signal_Broadcast
                 </span>
               </div>
@@ -1135,9 +1129,9 @@ function App({
               <div className="border-t-2 md:border-t-0 md:border-l-2 border-black/10 pt-6 md:pt-0 md:pl-8 md:col-span-1 flex flex-col justify-center">
                 {/* 外部依賴與資源聲明 */}
                 <div className="flex flex-col gap-2">
-                  <span className="text-xs font-black uppercase tracking-widest mb-2 opacity-30 flex flex-col leading-tight">
-                    <span className="tracking-normal">外部資源</span>
-                    <span className="text-[10px] font-mono opacity-60 normal-case">
+                  <span className="text-xs font-black mb-2 opacity-30 flex flex-col leading-tight">
+                    <span>外部資源</span>
+                    <span className="text-[10px] font-mono opacity-60">
                       External_Resources
                     </span>
                   </span>
@@ -1152,7 +1146,7 @@ function App({
                       >
                         <i className="hn hn-external-link text-sm opacity-50 shrink-0" />
                         <span className="flex items-center flex-wrap gap-x-1.5 leading-tight">
-                          <span className="tracking-normal whitespace-nowrap">像素圖示庫</span>
+                          <span className="whitespace-nowrap">像素圖示庫</span>
                           <span className="text-[10px] font-mono opacity-60 normal-case break-words">
                             HackerNoon Pixel Icons
                           </span>
@@ -1165,8 +1159,8 @@ function App({
                         className="opacity-50 hover:opacity-100 hover:text-main transition-all ml-7 flex items-baseline gap-1.5"
                         title="授權：CC BY 4.0 (CC BY 4.0 License)"
                       >
-                        <span className="tracking-normal">授權：CC BY 4.0</span>
-                        <span className="text-[8px] font-mono opacity-60 normal-case tracking-normal">
+                        <span>授權：CC BY 4.0</span>
+                        <span className="text-[8px] font-mono opacity-60">
                           License
                         </span>
                       </a>
@@ -1182,8 +1176,8 @@ function App({
                       >
                         <i className="hn hn-external-link text-sm opacity-50 shrink-0" />
                         <span className="flex items-center flex-wrap gap-x-1.5 leading-tight">
-                          <span className="tracking-normal whitespace-nowrap">像素字型</span>
-                          <span className="text-[10px] font-mono opacity-60 normal-case break-words">
+                          <span className="whitespace-nowrap">像素字型</span>
+                          <span className="text-[10px] font-mono opacity-60 break-words">
                             Fusion Pixel Font
                           </span>
                         </span>
@@ -1195,8 +1189,8 @@ function App({
                         className="opacity-50 hover:opacity-100 hover:text-main transition-all ml-7 flex items-baseline gap-1.5"
                         title="授權：OFL 1.1 (SIL OFL 1.1)"
                       >
-                        <span className="tracking-normal">授權：OFL 1.1</span>
-                        <span className="text-[8px] font-mono opacity-60 normal-case tracking-normal">
+                        <span>授權：OFL 1.1</span>
+                        <span className="text-[8px] font-mono opacity-60">
                           License
                         </span>
                       </a>
@@ -1212,8 +1206,8 @@ function App({
                       >
                         <i className="hn hn-external-link text-sm opacity-50 shrink-0" />
                         <span className="flex items-center flex-wrap gap-x-1.5 leading-tight">
-                          <span className="tracking-normal whitespace-nowrap">UI 設計系統</span>
-                          <span className="text-[10px] font-mono opacity-60 normal-case break-words">
+                          <span className="whitespace-nowrap">UI 設計系統</span>
+                          <span className="text-[10px] font-mono opacity-60 break-words">
                             Neobrutalism UI
                           </span>
                         </span>
@@ -1222,8 +1216,8 @@ function App({
                         className="opacity-50 ml-7 flex items-baseline gap-1.5"
                         title="授權：MIT (MIT License)"
                       >
-                        <span className="tracking-normal">授權：MIT</span>
-                        <span className="text-[8px] font-mono opacity-60 normal-case tracking-normal">
+                        <span>授權：MIT</span>
+                        <span className="text-[8px] font-mono opacity-60">
                           License
                         </span>
                       </span>
@@ -1239,8 +1233,8 @@ function App({
                       >
                         <i className="hn hn-external-link text-sm opacity-50 shrink-0" />
                         <span className="flex items-center flex-wrap gap-x-1.5 leading-tight">
-                          <span className="tracking-normal whitespace-nowrap">燈箱元件</span>
-                          <span className="text-[10px] font-mono opacity-60 normal-case break-words">
+                          <span className="whitespace-nowrap">燈箱元件</span>
+                          <span className="text-[10px] font-mono opacity-60 break-words">
                             Fancybox UI
                           </span>
                         </span>
@@ -1249,8 +1243,8 @@ function App({
                         className="opacity-50 ml-7 flex items-baseline gap-1.5"
                         title="授權：GPLv3 (GPLv3 License)"
                       >
-                        <span className="tracking-normal">授權：GPLv3</span>
-                        <span className="text-[8px] font-mono opacity-60 normal-case tracking-normal">
+                        <span>授權：GPLv3</span>
+                        <span className="text-[8px] font-mono opacity-60">
                           License
                         </span>
                       </span>
@@ -1261,26 +1255,26 @@ function App({
             </div>
           </div>
 
-          <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-8 md:gap-4 text-[10px] tracking-[0.2em]">
+          <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-8 md:gap-4 text-[10px]">
             <div className="text-center md:text-left flex flex-col leading-tight items-center md:items-start md:flex-1 md:basis-0">
-              <span className="tracking-normal flex items-center gap-1 flex-wrap justify-center md:justify-start">
+
+              <span className="flex items-center gap-1 flex-wrap justify-center md:justify-start">
                 <span className="opacity-30">© {new Date().getFullYear()} ZTMY MV 資料庫 構築 {import.meta.env.VITE_BUILD_DATE?.replace(/-/g, '')} {import.meta.env.VITE_BUILD_HASH || 'dev'}</span>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className="cursor-help border-b border-dashed border-current hover:text-main transition-colors select-none opacity-50 hover:opacity-100">{geoInfo.labelCn}</span>
+                    <span className="cursor-help border-b border-dashed border-current hover:text-main transition-colors select-none opacity-30 hover:opacity-30">{geoInfo.labelCn}</span>
                   </TooltipTrigger>
                   <TooltipContent side="top" align="start" sideOffset={10} className="max-w-[250px] text-left z-[100] bg-main text-main-foreground shadow-md opacity-100">
-                    <p className="text-xs leading-relaxed font-bold tracking-normal normal-case opacity-100">{geoInfo.desc}</p>
+                    <p className="text-xs leading-relaxed font-bold pacity-100">{geoInfo.desc}</p>
                   </TooltipContent>
                 </Tooltip>
               </span>
-              <span className="opacity-30 normal-case text-[8px] mt-1 flex flex-col gap-0.5">
-                <span>ZUTOMAYO_MV_GALLERY</span>
-                <span className="flex items-center gap-1 flex-wrap justify-center md:justify-start">
-                  BUILD_{import.meta.env.VITE_BUILD_DATE?.replace(/-/g, '')}_{import.meta.env.VITE_BUILD_HASH || 'dev'} | 
-                  <span className="uppercase">{geoInfo.labelEn}</span>
+
+              <span className="opacity-18 normal-case text-[8px] mt-1">
+                <span>ZUTOMAYO_MV_GALLERY_BUILD_{import.meta.env.VITE_BUILD_DATE?.replace(/-/g, '')}_{import.meta.env.VITE_BUILD_HASH || 'dev'}_{geoInfo.labelEn}
                 </span>
               </span>
+
             </div>
 
               <div className="flex flex-col items-center gap-4 order-first md:order-none md:flex-none">
@@ -1288,18 +1282,18 @@ function App({
                   href="https://dan.tw"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 font-black border-2 border-black px-4 py-2 bg-main text-black shadow-neo-sm hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all group"
+                  className="flex items-center justify-center gap-2 font-black border-2 border-main px-4 py-2 bg-black text-main group"
                   title="前往開發者個人網站"
                 >
                   <div className="flex flex-col items-center leading-tight">
-                    <div className="flex items-center gap-2">
-                      <span className="tracking-normal">由 飯糰 製作</span>
+                    <div className="flex gap-2">
+                      <span className="opacity-90">由 飯糰 製作</span>
                       <i className="hn hn-heart-solid text-red-500 group-hover:animate-pulse text-[12px] leading-none"></i>
                     </div>
-                    <span className="text-[8px] opacity-60 normal-case tracking-normal">
-                      MADE_WITH{" "}
-                      <i className="hn hn-heart-solid text-red-500 group-hover:animate-pulse text-[10px] leading-none"></i>{" "}
-                      BY_DANERSAKA
+                    <span className="text-[8px] font-mono">
+                      <span className="opacity-60">MADE_WITH{" "}</span>
+                      <i className="hn hn-heart-solid opacity-90 text-red-500 group-hover:animate-pulse text-[10px] leading-none"></i>{" "}
+                      <span className="opacity-60">BY_DANERSAKA</span>
                     </span>
                   </div>
                 </a>
@@ -1312,7 +1306,7 @@ function App({
                       >
                 <i className="hn hn-github text-sm" />
                 <span className="flex flex-col leading-tight">
-                  <span className="tracking-normal">開源專案</span>
+                  <span>開源專案</span>
                   <span className="text-[8px] opacity-60 normal-case">
                     Open Source Repository
                   </span>
@@ -1321,7 +1315,7 @@ function App({
             </div>
 
             <div className="opacity-30 text-center md:text-right flex flex-col leading-tight items-center md:items-end md:flex-1 md:basis-0">
-              <span className="tracking-normal">
+              <span>
                 本專案為粉絲自製 所有媒體資源版權歸屬 <a href="https://zutomayo.net" target="_blank" rel="noopener noreferrer" className="hover:text-main underline decoration-dashed underline-offset-2 transition-colors">ZUTOMAYO</a>
               </span>
               <span className="text-[8px] mt-1 opacity-60 normal-case">
