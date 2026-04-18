@@ -23,7 +23,7 @@ export const clearGeoCache = () => {
  */
 const fetchIpCountry = async (): Promise<string> => {
   // 備用 API 列表 (皆為免費、支援 HTTPS、無 CORS 限制、回傳格式簡單的服務)
-  const controllers = [new AbortController(), new AbortController()];
+  const controllers = [new AbortController(), new AbortController(), new AbortController()];
   
   const fetchers = [
     // 1. Cloudflare Trace API (原本的)
@@ -44,6 +44,16 @@ const fetchIpCountry = async (): Promise<string> => {
         const code = text.trim();
         if (code.length === 2) return code;
         throw new Error('Invalid IP API response');
+      }),
+
+    // 3. 第三備用：ip.country.is
+    // 極度精簡的開源專案，回傳 {"ip":"...","country":"TW"}
+    fetch('https://api.country.is', { signal: controllers[2].signal })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('country.is failed');
+        const data = await res.json();
+        if (data && data.country) return data.country;
+        throw new Error('Invalid country.is response');
       })
   ];
 
