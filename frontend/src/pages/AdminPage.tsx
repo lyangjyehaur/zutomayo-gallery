@@ -895,6 +895,23 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
   const [pendingDeleteMV, setPendingDeleteMV] = useState<MVItem | null>(null);
   const [pendingDeleteImageIdx, setPendingDeleteImageIdx] = useState<number | null>(null);
 
+  // 圖片拖曳排序狀態
+  const [draggedImageIdx, setDraggedImageIdx] = useState<number | null>(null);
+  const [dragOverImageIdx, setDragOverImageIdx] = useState<number | null>(null);
+  const [draggableIdx, setDraggableIdx] = useState<number | null>(null);
+
+  // 控制圖片編輯器高級設置的展開狀態
+  const [expandedImageIndices, setExpandedImageIndices] = useState<Set<number>>(new Set());
+
+  const toggleImageExpand = (idx: number) => {
+    setExpandedImageIndices(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(idx)) newSet.delete(idx);
+      else newSet.add(idx);
+      return newSet;
+    });
+  };
+
   // 圖片列表分批加載狀態
   const [imageDisplayLimit, setImageDisplayLimit] = useState(12);
   const imageSentinelRef = useRef<HTMLDivElement>(null);
@@ -1418,6 +1435,42 @@ const currentMV = data[activeIndex];
     } catch (err: any) {
       toast.error('尺寸獲取失敗: ' + err.message);
     }
+  };
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedImageIdx(index);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/html", "");
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverImageIdx !== index) {
+      setDragOverImageIdx(index);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedImageIdx(null);
+    setDragOverImageIdx(null);
+    setDraggableIdx(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedImageIdx === null || draggedImageIdx === dropIndex) {
+      handleDragEnd();
+      return;
+    }
+    
+    const newImages = [...(currentMV.images || [])];
+    const draggedImage = newImages[draggedImageIdx];
+    newImages.splice(draggedImageIdx, 1);
+    newImages.splice(dropIndex, 0, draggedImage);
+    
+    updateField('images', newImages);
+    handleDragEnd();
   };
 
   const addImage = () => {
@@ -2219,11 +2272,37 @@ const currentMV = data[activeIndex];
               )}
 
               <div className="space-y-4">
-                {visibleImages.map((img, imgIdx) => (
-                  <div key={imgIdx} className="p-4 border-2 border-black bg-background shadow-neo-sm relative group">
+                {visibleImages.map((img, imgIdx) => {
+                  const isExpanded = expandedImageIndices.has(imgIdx);
+                  const isVideo = img.thumbnail || img.url?.match(/\.(mp4|webm)$/i) || img.url?.includes('video.twimg.com');
+                  return (
+                  <div 
+                    key={imgIdx} 
+                    draggable={draggableIdx === imgIdx}
+                    onDragStart={(e) => handleDragStart(e, imgIdx)}
+                    onDragOver={(e) => handleDragOver(e, imgIdx)}
+                    onDragEnd={handleDragEnd}
+                    onDrop={(e) => handleDrop(e, imgIdx)}
+                    className={`p-4 border-2 shadow-neo-sm relative group transition-all duration-200 ${
+                      draggedImageIdx === imgIdx ? 'opacity-50 scale-[0.98] z-50 border-dashed border-black/30 bg-black/5' : 'border-black bg-background'
+                    } ${
+                      dragOverImageIdx === imgIdx ? 'border-dashed border-blue-500 bg-black/5 -translate-y-1' : ''
+                    }`}
+                  >
+                    {/* 拖曳把手 */}
+                    <div 
+                      className="absolute -top-2 -left-2 bg-white border-2 border-black p-1 rounded-full cursor-grab active:cursor-grabbing text-black opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-black/5"
+                      onMouseEnter={() => setDraggableIdx(imgIdx)}
+                      onMouseLeave={() => setDraggableIdx(null)}
+                      title="拖曳排序"
+                    >
+                      <i className="hn hn-menu text-base" />
+                    </div>
+
                     <button 
                       onClick={() => removeImage(imgIdx)}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity border-2 border-black"
+                      className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity border-2 border-black z-10"
+                      title="刪除圖片"
                     >
                       <i className="hn hn-trash text-base" />
                     </button>
@@ -2245,36 +2324,67 @@ const currentMV = data[activeIndex];
                             <a href={img.tweetUrl} target="_blank" rel="noreferrer" className="underline truncate max-w-[200px]">{img.tweetUrl}</a>
                           </div>
                         )}
-                        <div className="grid grid-cols-2 gap-2">
-                           <div className="flex items-center gap-2 bg-black/5 px-2 rounded">
-                              <span className="text-[10px] font-bold opacity-40">W</span>
-                              <Input 
-                                type="number" 
-                                placeholder="寬度" 
-                                value={img.width || ''} 
-                                onChange={(e) => updateImage(imgIdx, 'width', parseInt(e.target.value))} 
-                                className={`h-7 border-none bg-transparent shadow-none ${!img.width ? 'text-red-500' : ''}`} />
-                           </div>
-                           <div className="flex items-center gap-2 bg-black/5 px-2 rounded">
-                              <span className="text-[10px] font-bold opacity-40">H</span>
-                              <Input 
-                                type="number" 
-                                placeholder="高度" 
-                                value={img.height || ''} 
-                                onChange={(e) => updateImage(imgIdx, 'height', parseInt(e.target.value))} 
-                                className={`h-7 border-none bg-transparent shadow-none ${!img.height ? 'text-red-500' : ''}`} />
-                           </div>
+                        <div className="flex gap-2 items-center">
+                          <div className="grid grid-cols-2 gap-2 flex-1">
+                             <div className="flex items-center gap-2 bg-black/5 px-2 rounded">
+                                <span className="text-[10px] font-bold opacity-40">W</span>
+                                <Input 
+                                  type="number" 
+                                  placeholder="寬度" 
+                                  value={img.width || ''} 
+                                  onChange={(e) => updateImage(imgIdx, 'width', parseInt(e.target.value))} 
+                                  className={`h-7 border-none bg-transparent shadow-none ${!img.width ? 'text-red-500' : ''}`} />
+                             </div>
+                             <div className="flex items-center gap-2 bg-black/5 px-2 rounded">
+                                <span className="text-[10px] font-bold opacity-40">H</span>
+                                <Input 
+                                  type="number" 
+                                  placeholder="高度" 
+                                  value={img.height || ''} 
+                                  onChange={(e) => updateImage(imgIdx, 'height', parseInt(e.target.value))} 
+                                  className={`h-7 border-none bg-transparent shadow-none ${!img.height ? 'text-red-500' : ''}`} />
+                             </div>
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => toggleImageExpand(imgIdx)}
+                            className="shrink-0 h-7 text-xs border-2 border-black/20 hover:border-black"
+                          >
+                            <i className={`hn hn-chevron-${isExpanded ? 'up' : 'down'} mr-1`} />
+                            {isExpanded ? '收起詳細設定' : '展開詳細設定'}
+                          </Button>
                         </div>
-                        <Input placeholder="說明文字 (Caption)" value={img.caption || ''} onChange={(e) => updateImage(imgIdx, 'caption', e.target.value)} />
-                        <Input placeholder="替代文字 (Alt)" value={img.alt || ''} onChange={(e) => updateImage(imgIdx, 'alt', e.target.value)} />
-                        <RichTextEditor
-                          value={img.richText || ''}
-                          onChange={(value) => updateImage(imgIdx, 'richText', value)}
-                        />
+                        
+                        {isExpanded && (
+                          <div className="space-y-2 pt-2 border-t-2 border-dashed border-black/10 mt-2">
+                            <Input placeholder="說明文字 (Caption)" value={img.caption || ''} onChange={(e) => updateImage(imgIdx, 'caption', e.target.value)} />
+                            <Input placeholder="替代文字 (Alt)" value={img.alt || ''} onChange={(e) => updateImage(imgIdx, 'alt', e.target.value)} />
+                            <RichTextEditor
+                              value={img.richText || ''}
+                              onChange={(value) => updateImage(imgIdx, 'richText', value)}
+                            />
+                          </div>
+                        )}
+                        {!isExpanded && (img.caption || img.alt || img.richText) && (
+                          <div className="text-[10px] text-black/50 font-bold flex gap-2">
+                            {img.caption && <span>✓ 包含說明</span>}
+                            {img.richText && <span>✓ 包含富文本</span>}
+                          </div>
+                        )}
                       </div>
-                      <div className="bg-black/5 border-2 border-dashed border-black/10 flex items-center justify-center overflow-hidden">
+                      <div className="bg-black/5 border-2 border-dashed border-black/10 flex items-center justify-center overflow-hidden relative group/preview">
                         {img.url ? (
-                          <img src={getProxyImgUrl(img.thumbnail || img.url, 'thumb')} className="max-h-40 object-contain" alt="預覽 (preview)" />
+                          <>
+                            <img src={getProxyImgUrl(img.thumbnail || img.url, 'thumb')} className="max-h-40 object-contain" alt="預覽 (preview)" />
+                            {isVideo && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+                                <div className="bg-black/80 text-white rounded-full p-2 border-2 border-white/20">
+                                  <i className="hn hn-play text-2xl ml-1" />
+                                </div>
+                              </div>
+                            )}
+                          </>
                         ) : (
                           <span className="text-[10px] flex flex-col items-center leading-tight">
                             <span className="opacity-50">無預覽</span>
@@ -2284,7 +2394,7 @@ const currentMV = data[activeIndex];
                       </div>
                     </div>
                   </div>
-                ))}
+                )})}
                 
                 {/* 圖片列表分段載入哨兵 */}
                 {imageDisplayLimit < (currentMV.images?.length || 0) && (
