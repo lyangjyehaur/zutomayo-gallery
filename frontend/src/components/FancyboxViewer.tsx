@@ -541,6 +541,9 @@ export default function FancyboxViewer({
           type: photo.isVideo ? 'html5video' : 'image', // 告訴 Fancybox 這是影片
           // 針對影片加入 HTML5 Video 的屬性，解決跨域與防盜鏈問題
           ...(photo.isVideo && {
+            width: photo.width,
+            height: photo.height,
+            ratio: (photo.width && photo.height) ? photo.width / photo.height : undefined,
             Html: {
               video: {
                 // 移除 crossOrigin: 'anonymous'，因為 Twitter CDN 影片不支援 CORS，
@@ -661,6 +664,19 @@ export default function FancyboxViewer({
           flex-direction: column !important;
           align-items: stretch !important;
           justify-content: stretch !important;
+        }
+
+        /* 確保 HTML5 影片元素完美貼合 Fancybox 提供的比例容器 */
+        .fancybox__html5video {
+          width: 100% !important;
+          height: 100% !important;
+          object-fit: contain; /* 讓影片保持比例顯示，不裁切也不扭曲 */
+          background: transparent;
+        }
+        
+        /* 移除影片外層預設的背景顏色，避免邊緣殘留黑線 */
+        .fancybox__html5video-wrap {
+          background: transparent !important;
         }
 
         .fancybox__carousel {
