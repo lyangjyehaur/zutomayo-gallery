@@ -151,7 +151,7 @@ backend/data/metadata.json
 
 # Deployment config
 deploy.conf
-deploy-local.sh
+deploy-local.conf
 
 # Agent memory
 backend-memory.md
@@ -161,3 +161,4 @@ frontend-memory.md
 /scraper/
 
 frontend/memory.md
+deploy-local.sh

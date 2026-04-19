@@ -680,32 +680,6 @@ interface AdminPageProps {
   onRefresh?: () => void;
 }
 
-// 將 Twitter 原始日期格式轉換為帶有時區資訊的 ISO 8601 字串 (YYYY-MM-DDTHH:mm:ss+ZZ:ZZ)
-const formatTweetDate = (dateString?: string) => {
-  if (!dateString) return '';
-  const d = new Date(dateString);
-  // 若解析失敗，保留原始字串
-  if (isNaN(d.getTime())) return dateString; 
-
-  // 取得使用者本地時間的各個部分
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  const hh = String(d.getHours()).padStart(2, '0');
-  const min = String(d.getMinutes()).padStart(2, '0');
-  const ss = String(d.getSeconds()).padStart(2, '0');
-
-  // 計算時區偏移量 (getTimezoneOffset 回傳的是 UTC - Local 的分鐘數)
-  // 例如台北 (UTC+8) 會回傳 -480
-  const tzOffset = d.getTimezoneOffset();
-  const offsetSign = tzOffset > 0 ? '-' : '+';
-  const offsetHours = String(Math.floor(Math.abs(tzOffset) / 60)).padStart(2, '0');
-  const offsetMinutes = String(Math.abs(tzOffset) % 60).padStart(2, '0');
-
-  // 組合成 ISO 8601 格式帶時區
-  return `${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}${offsetSign}${offsetHours}:${offsetMinutes}`;
-};
-
 export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPageProps) {
   // 認證狀態
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -1441,7 +1415,7 @@ const currentMV = data[activeIndex];
                 tweetText: newImagesData[existingIdx].tweetText || media.text,
                 tweetAuthor: newImagesData[existingIdx].tweetAuthor || media.user_name,
                 tweetHandle: newImagesData[existingIdx].tweetHandle || media.user_screen_name,
-                tweetDate: newImagesData[existingIdx].tweetDate || formatTweetDate(media.date)
+                tweetDate: newImagesData[existingIdx].tweetDate || media.date
               };
               markFieldChanged(targetId, `images.${existingIdx}`);
             } else {
@@ -1469,7 +1443,7 @@ const currentMV = data[activeIndex];
                 tweetText: media.text,
                 tweetAuthor: media.user_name,
                 tweetHandle: media.user_screen_name,
-                tweetDate: formatTweetDate(media.date)
+                tweetDate: media.date
               });
             }
           }
@@ -1622,7 +1596,7 @@ const currentMV = data[activeIndex];
         tweetText: firstMedia.text,
         tweetAuthor: firstMedia.user_name,
         tweetHandle: firstMedia.user_screen_name,
-        tweetDate: formatTweetDate(firstMedia.date)
+        tweetDate: firstMedia.date
       };
 
       newImages[imgIdx] = { 
@@ -1643,7 +1617,7 @@ const currentMV = data[activeIndex];
             tweetText: resolvedMediaList[i].text,
             tweetAuthor: resolvedMediaList[i].user_name,
             tweetHandle: resolvedMediaList[i].user_screen_name,
-            tweetDate: formatTweetDate(resolvedMediaList[i].date),
+            tweetDate: resolvedMediaList[i].date,
             groupId,
             width: 0,
             height: 0
