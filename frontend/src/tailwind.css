@@ -722,12 +722,15 @@
   background-color: color-mix(in srgb, var(--secondary-background) 85%, transparent) !important; /* 提高不透明度，讓顏色更深更實 */
   backdrop-filter: blur(12px) !important; /* 加強毛玻璃效果 */
   -webkit-backdrop-filter: blur(12px) !important;
+  transform: translate3d(0, 0, 0) !important; /* 強制開啟 GPU 渲染以修復 Windows Chrome 的 blur 錯誤 */
+  -webkit-backface-visibility: hidden; /* 強制硬體加速 */
+  backface-visibility: hidden;
   color: #FFFFFF !important; /* 預設圖標：白色 */
 }
 
 /* Hover: 按下的效果 (取消浮起，改為向右下壓，縮小陰影) */
 .fancybox__container .f-button:hover {
-  transform: translate(4px, 4px) !important;
+  transform: translate3d(4px, 4px, 0) !important;
   box-shadow: 0px 0px 0px #000000 !important; /* 按下時陰影完全消失 */
   background-color: color-mix(in srgb, var(--main) 80%, transparent) !important; /* Hover 半透明主色 */
   color: #000000 !important; /* Hover 圖標：黑色 */
@@ -735,7 +738,7 @@
 
 /* Active: 完全按到底 (無陰影) */
 .fancybox__container .f-button:active {
-  transform: translate(4px, 4px) !important; /* 推到底 */
+  transform: translate3d(4px, 4px, 0) !important; /* 推到底 */
   box-shadow: 0px 0px 0px #000000 !important;
 }
 
@@ -750,6 +753,9 @@
   background-color: color-mix(in srgb, var(--secondary-background) 85%, transparent) !important; /* 提高不透明度，讓顏色更深更實 */
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
+  transform: translate3d(0, 0, 0) !important;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
   margin-right: -3px !important; /* 補償更粗的邊框重疊 */
 }
 
@@ -891,14 +897,14 @@
 .fancybox__container .f-button[data-carousel-go-prev]::before {
   -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="17 5 17 7 16 7 16 8 15 8 15 9 14 9 14 10 13 10 13 11 12 11 12 13 13 13 13 14 14 14 14 15 15 15 15 16 16 16 16 17 17 17 17 19 16 19 16 20 14 20 14 19 13 19 13 18 12 18 12 17 11 17 11 16 10 16 10 15 9 15 9 14 8 14 8 13 7 13 7 11 8 11 8 10 9 10 9 9 10 9 10 8 11 8 11 7 12 7 12 6 13 6 13 5 14 5 14 4 16 4 16 5 17 5"/></svg>');
   mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="17 5 17 7 16 7 16 8 15 8 15 9 14 9 14 10 13 10 13 11 12 11 12 13 13 13 13 14 14 14 14 15 15 15 15 16 16 16 16 17 17 17 17 19 16 19 16 20 14 20 14 19 13 19 13 18 12 18 12 17 11 17 11 16 10 16 10 15 9 15 9 14 8 14 8 13 7 13 7 11 8 11 8 10 9 10 9 9 10 9 10 8 11 8 11 7 12 7 12 6 13 6 13 5 14 5 14 4 16 4 16 5 17 5"/></svg>');
-  transform: translate(-50%, -50%) !important; /* 取消其他位移 */
+  transform: translate3d(-50%, -50%, 0) !important; /* 取消其他位移 */
 }
 
 .fancybox__container .f-button.is-next::before,
 .fancybox__container .f-button[data-carousel-go-next]::before {
   -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="7 19 7 17 8 17 8 16 9 16 9 15 10 15 10 14 11 14 11 13 12 13 12 11 11 11 11 10 10 10 10 9 9 9 9 8 8 8 8 7 7 7 7 5 8 5 8 4 10 4 10 5 11 5 11 6 12 6 12 7 13 7 13 8 14 8 14 9 15 9 15 10 16 10 16 11 17 11 17 13 16 13 16 14 15 14 15 15 14 15 14 16 13 16 13 17 12 17 12 18 11 18 11 19 10 19 10 20 8 20 8 19 7 19"/></svg>');
   mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="7 19 7 17 8 17 8 16 9 16 9 15 10 15 10 14 11 14 11 13 12 13 12 11 11 11 11 10 10 10 10 9 9 9 9 8 8 8 8 7 7 7 7 5 8 5 8 4 10 4 10 5 11 5 11 6 12 6 12 7 13 7 13 8 14 8 14 9 15 9 15 10 16 10 16 11 17 11 17 13 16 13 16 14 15 14 15 15 14 15 14 16 13 16 13 17 12 17 12 18 11 18 11 19 10 19 10 20 8 20 8 19 7 19"/></svg>');
-  transform: translate(-50%, -50%) !important; /* 取消其他位移 */
+  transform: translate3d(-50%, -50%, 0) !important; /* 取消其他位移 */
 }
 
 /* 針對左右箭頭按鈕單獨設定 top 偏移 */
@@ -908,7 +914,7 @@
 .fancybox__container .f-button[data-carousel-go-next]::before {
   top: 50% !important; /* 強制覆寫之前殘留的 73% */
   left: 50% !important;
-  transform: translate(-50%, -50%) !important;
+  transform: translate3d(-50%, -50%, 0) !important;
 }
 
 /* 強制移除所有 Fancybox 縮圖 (Thumbs) 相關的圓角，以符合 Neobrutalism */
