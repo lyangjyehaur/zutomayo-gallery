@@ -1283,7 +1283,9 @@ const currentMV = data[activeIndex];
       
       await Promise.all(chunk.map(async (imgIdx) => {
         try {
-          const result = await probeImageSize(images[imgIdx].url);
+          // 針對影片：優先使用 thumbnail 來探測尺寸，避免丟出 .mp4 導致探測失敗
+          const targetUrlToProbe = images[imgIdx].thumbnail || images[imgIdx].url;
+          const result = await probeImageSize(targetUrlToProbe);
           const width = result.data?.width || result.width;
           const height = result.data?.height || result.height;
           
@@ -1396,7 +1398,9 @@ const currentMV = data[activeIndex];
     }
 
     try {
-      const result = await probeImageSize(urlToProbe);
+      // 針對影片：優先使用 thumbnail 來探測尺寸，避免丟出 .mp4 導致探測失敗
+      const targetUrlToProbe = urlToProbe || url;
+      const result = await probeImageSize(targetUrlToProbe);
       
       // 標記寬高字段變動
       markFieldChanged(targetId, `images.${imgIdx}.width`);
