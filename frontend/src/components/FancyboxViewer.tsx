@@ -129,6 +129,11 @@ const getExtensionFromUrl = (urlStr: string): string => {
     // 處理一般圖片網址
     const match = urlObj.pathname.match(/\.([a-zA-Z0-9]+)$/);
     if (match) return match[1].toLowerCase();
+
+    // 如果沒有副檔名但網域是 Twitter 影片，預設為 mp4
+    if (urlObj.hostname === 'video.twimg.com') {
+      return 'mp4';
+    }
     
     return 'jpg';
   } catch {
@@ -451,6 +456,7 @@ export default function FancyboxViewer({
             width,
             height,
             rawFilename: fullFilename,
+            isVideo, // 加入 isVideo 標記
           };
         }),
       );
@@ -532,6 +538,7 @@ export default function FancyboxViewer({
           downloadFilename: photo.rawFilename || photo.caption, // <-- 改用帶有副檔名的檔名
           // Do not pass caption to Fancybox API to completely prevent native caption rendering
           alt: photo.caption,     // 讓 img 標籤加上 alt 屬性，修復 DOM 備用方案
+          type: photo.isVideo ? 'html5video' : 'image', // 告訴 Fancybox 這是影片
         };
       });
 
