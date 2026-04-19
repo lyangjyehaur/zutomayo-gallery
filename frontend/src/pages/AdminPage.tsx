@@ -680,21 +680,41 @@ interface AdminPageProps {
   onRefresh?: () => void;
 }
 
-// 將 Twitter 原始日期格式轉換為 YYYY-MM-DD HH:mm:ss
+// 將 Twitter 原始日期格式轉換為使用者當地時區的 YYYY-MM-DD HH:mm:ss
 const formatTweetDate = (dateString?: string) => {
   if (!dateString) return '';
   const d = new Date(dateString);
   // 若解析失敗，保留原始字串
   if (isNaN(d.getTime())) return dateString; 
 
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  const hh = String(d.getHours()).padStart(2, '0');
-  const min = String(d.getMinutes()).padStart(2, '0');
-  const ss = String(d.getSeconds()).padStart(2, '0');
+  try {
+    // 取得使用者當前瀏覽器的時區 (例如: Asia/Taipei)
+    const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+    // 使用 sv-SE 語系來強制輸出 YYYY-MM-DD HH:mm:ss 格式，並指定使用者的時區
+    const formatted = d.toLocaleString('sv-SE', {
+      timeZone: userTimeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+    
+    return formatted;
+  } catch (e) {
+    // 若極少數瀏覽器不支援 Intl API，降級回原本的 getHours 組合法
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
 
-  return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+    return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+  }
 };
 
 export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPageProps) {
