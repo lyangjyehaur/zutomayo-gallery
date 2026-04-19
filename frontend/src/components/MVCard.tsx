@@ -330,6 +330,10 @@ export const MVCard = memo(function MVCard({ mv, isFav, onToggleFav, onClick, is
   const isCompact = containerWidth < 280;
   const isVeryCompact = containerWidth < 320;
 
+  // 嘗試從圖片列表中提取第一張有 tweetDate 的圖片作為代表時間
+  const tweetDate = mv.images?.find(img => img.tweetDate)?.tweetDate;
+  const displayDate = tweetDate ? tweetDate.split('T')[0] : mv.date; // 如果有推文時間，只顯示日期部分 (YYYY-MM-DD)
+
   return (
     <div
       ref={containerRef}
@@ -352,14 +356,16 @@ export const MVCard = memo(function MVCard({ mv, isFav, onToggleFav, onClick, is
             
             {/* 上排左側：發行 + 製作 (在 compact 模式下並排，非 compact 模式下也是並排但各自獨立) */}
             <div className={`flex justify-between items-end ${!isCompact ? 'gap-6 min-w-0 flex-1' : 'gap-3 w-full'}`}>
-              {/* 發行 */}
+              {/* 發行 / 推文 */}
               <div className="min-w-0 flex-1">
                 <div className={`mb-1 font-black opacity-70 flex items-baseline ${!isVeryCompact ? 'tracking-[0.2em] gap-1.5' : 'tracking-[0.1em] gap-1'}`}>
-                  <span className="tracking-normal">發行</span>
-                  <span className="text-[8px] font-mono opacity-60 normal-case tracking-normal">Release</span>
+                  <span className="tracking-normal">{tweetDate ? '推文' : '發行'}</span>
+                  <span className="text-[8px] font-mono opacity-60 normal-case tracking-normal">
+                    {tweetDate ? 'Tweet' : 'Release'}
+                  </span>
                 </div>
                 <p className={`truncate text-center border-2 border-border bg-main text-main-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] h-[24px] flex items-center justify-center ${!isVeryCompact ? 'px-2' : 'px-1.5'}`}>
-                  {mv.date}
+                  {displayDate}
                 </p>
               </div>
               

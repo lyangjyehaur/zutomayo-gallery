@@ -213,6 +213,7 @@ const FancyboxCaptionOverlay = ({ api, photos }: { api: any; photos: PhotoData[]
 
   const title = photos[activeIndex]?.caption ?? '';
   const richText = photos[activeIndex]?.richText ?? '';
+  const tweetDate = photos[activeIndex]?.tweetDate;
 
   const isHidden = isZooming || isThumbsHidden;
 
@@ -245,8 +246,13 @@ const FancyboxCaptionOverlay = ({ api, photos }: { api: any; photos: PhotoData[]
         style={{ height: captionHeight !== 'auto' ? `${captionHeight}px` : 'auto' }}
       >
         <div ref={captionContentRef}>
-          <div className="ztmy-fb-caption-header">
+          <div className="ztmy-fb-caption-header flex justify-between items-center">
             <h4>{title}</h4>
+            {tweetDate && (
+              <span className="text-[10px] font-mono opacity-70 bg-white/10 px-2 py-0.5 rounded border border-white/20 tracking-wider whitespace-nowrap ml-4">
+                {tweetDate.replace('T', ' ').substring(0, 16)}
+              </span>
+            )}
           </div>
           <div className="ztmy-fb-caption-rich">
             <div className="rich-text" dangerouslySetInnerHTML={{ __html: richText || '暫無描述 (NO_METADATA_FOUND)' }} />
@@ -394,6 +400,13 @@ const PhotoItem = ({ photo, index, onPhotoClick, delayMs }: PhotoItemProps) => {
                 </div>
               </div>
             )}
+            
+            {/* 推文日期標籤 (顯示於右下角) */}
+            {photo.tweetDate && (
+              <div className="absolute bottom-2 right-2 flex items-center justify-center bg-black/60 text-white/80 rounded px-1.5 py-0.5 shadow-sm backdrop-blur-sm border border-white/10 z-10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <span className="font-mono text-[9px] tracking-wider">{photo.tweetDate.split('T')[0]}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -490,6 +503,7 @@ export default function FancyboxViewer({
             isGif,   // 加入 isGif 標記
             groupId: img.groupId,
             tweetUrl: img.tweetUrl,
+            tweetDate: img.tweetDate, // 明確傳遞推文時間
             ...img // 保留其他可能的新增欄位
           };
         }),
