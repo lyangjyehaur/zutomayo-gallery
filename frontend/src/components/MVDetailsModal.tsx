@@ -536,9 +536,15 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
               {/* Waline 評論區 */}
               {mv && (
                 <div className="mt-8 pt-8">
-                  <h4 className="font-bold border-b-3 border-black pb-2 flex items-center gap-2 uppercase tracking-widest mb-4">
-                    <i className="hn hn-message text-xl text-ztmy-blue"></i>
-                    評論
+                  <h4 className="font-bold border-b-3 border-black pb-2 flex items-center justify-between gap-2 uppercase tracking-widest mb-4">
+                    <div className="flex items-center gap-2">
+                      <i className="hn hn-message text-xl text-ztmy-blue"></i>
+                      評論
+                    </div>
+                    <div className="text-xs font-mono font-normal opacity-50 tracking-normal flex items-center gap-1.5">
+                      <i className="hn hn-eye"></i>
+                      <span className="waline-pageview-count" data-path={`/mv/${mv.id}`}>...</span>
+                    </div>
                   </h4>
                   <WalineComments
                     path={`/mv/${mv.id}`}

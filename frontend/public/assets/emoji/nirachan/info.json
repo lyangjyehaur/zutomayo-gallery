@@ -1,0 +1,7 @@
+{
+    "name": "Nira醬",
+    "prefix": "nirachan_",
+    "type": "gif",
+    "icon": "cheering",
+    "items": ["cheering", "confused", "grimace", "heart", "idle", "like", "no", "singing", "sleeping", "wagging"]
+}

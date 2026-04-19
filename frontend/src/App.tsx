@@ -1629,7 +1629,14 @@ function App({
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 relative z-10">
           {shouldRenderFeedback && (
-            <WalineComments path="/site-feedback" className="waline-wrapper" />
+            <WalineComments 
+              path="/site-feedback" 
+              className="waline-wrapper" 
+              reactionTitle={navigator.language.includes('zh-CN') || navigator.language.includes('zh-SG') ? '喜欢这个网站吗？' : 
+                             navigator.language.includes('zh') ? '喜歡這個網站嗎？' : 
+                             navigator.language.includes('ja') ? 'このサイトは気に入りましたか？' : 
+                             'Do you like this site?'}
+            />
           )}
         </div>
       </div>

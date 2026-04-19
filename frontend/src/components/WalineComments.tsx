@@ -7,6 +7,7 @@ import './WalineComments.css';
 interface WalineCommentsProps {
   path: string;
   className?: string;
+  reactionTitle?: string;
 }
 
 declare global {
@@ -17,12 +18,63 @@ declare global {
   }
 }
 
-export function WalineComments({ path, className = '' }: WalineCommentsProps) {
+export function WalineComments({
+  path,
+  className = '',
+  reactionTitle
+}: WalineCommentsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef(false);
 
+  // 取得使用者語言偏好
+  const getLanguage = () => {
+    if (typeof window === 'undefined') return 'zh-TW';
+    const lang = navigator.language.toLowerCase();
+    if (lang.includes('zh-cn') || lang.includes('zh-sg')) return 'zh-CN';
+    if (lang.includes('zh')) return 'zh-TW';
+    if (lang.includes('ja')) return 'ja';
+    return 'en';
+  };
+
+  const currentLang = getLanguage();
+
+  // 根據語言返回對應文案
+  const getLocaleText = (key: 'reactionTitleMV' | 'reactionTitleSite' | 'placeholder' | 'login') => {
+    const locales = {
+      'zh-TW': {
+        reactionTitleMV: '這支 MV 給你的印象是？',
+        reactionTitleSite: '喜歡這個網站嗎？',
+        placeholder: '歡迎留言討論！(支援 Markdown 語法與圖片上傳)',
+        login: '登入 (可選)'
+      },
+      'zh-CN': {
+        reactionTitleMV: '这支 MV 给你的印象是？',
+        reactionTitleSite: '喜欢这个网站吗？',
+        placeholder: '欢迎留言讨论！(支持 Markdown 语法与图片上传)',
+        login: '登录 (可选)'
+      },
+      'ja': {
+        reactionTitleMV: 'このMVの印象はどうですか？',
+        reactionTitleSite: 'このサイトは気に入りましたか？',
+        placeholder: 'コメントをどうぞ！ (Markdownと画像アップロードに対応しています)',
+        login: 'ログイン (任意)'
+      },
+      'en': {
+        reactionTitleMV: 'What is your impression of this MV?',
+        reactionTitleSite: 'Do you like this site?',
+        placeholder: 'Welcome to leave a comment! (Markdown and images are supported)',
+        login: 'Login (Optional)'
+      }
+    };
+    return locales[currentLang][key];
+  };
+
+  // 如果外部沒有傳入 reactionTitle，則使用預設的 MV 文案
+  const finalReactionTitle = reactionTitle || getLocaleText('reactionTitleMV');
+
   useEffect(() => {
     let observer: MutationObserver | null = null;
+    let walineInstance: any = null;
     if (!containerRef.current || initializedRef.current) return;
 
     const initWaline = async () => {
@@ -49,37 +101,52 @@ export function WalineComments({ path, className = '' }: WalineCommentsProps) {
         // Cravatar.cn 是專為中國大陸優化的 Gravatar 替代方案
         const gravatarHost = geoInfo.isChinaIP ? 'cravatar.cn/avatar' : 'gravatar.com/avatar';
         
-        init({
+        walineInstance = init({
           el: containerRef.current,
           serverURL, // 根據 IP 地區動態切換
           path,
 
           dark: 'html.dark',
-        emoji: [
+          emoji: [
+            '/assets/emoji/nirachan',
             `${unpkgHost}/@waline/emojis@1.4.0/bmoji`,
             `${unpkgHost}/@waline/emojis@1.4.0/bilibili`,
             `${unpkgHost}/@waline/emojis@1.4.0/qq`,
             `${unpkgHost}/@waline/emojis@1.4.0/weibo`,
             `${unpkgHost}/@waline/emojis@1.4.0/tieba`,
             `${unpkgHost}/@waline/emojis@1.4.0/alus`
-        ],
-        reaction: [
-            `${unpkgHost}/@waline/emojis@1.4.0/bmoji/bmoji_good.png`,
-            `${unpkgHost}/@waline/emojis@1.4.0/bmoji/bmoji_unavailble_doge.png`,
-            `${unpkgHost}/@waline/emojis@1.4.0/bmoji/bmoji_call.png`,
-            `${unpkgHost}/@waline/emojis@1.4.0/bmoji/bmoji_roll_eye.png`,
-            `${unpkgHost}/@waline/emojis@1.4.0/bmoji/bmoji_hmm.png`,
-            `${unpkgHost}/@waline/emojis@1.4.0/bmoji/bmoji_what.png`
-        ],
+          ],
+          reaction: [
+            '/assets/emoji/nirachan/nirachan_heart.gif',
+            '/assets/emoji/nirachan/nirachan_cheering.gif',
+            '/assets/emoji/nirachan/nirachan_grimace.gif',
+            '/assets/emoji/nirachan/nirachan_like.gif',
+            '/assets/emoji/nirachan/nirachan_singing.gif',
+            '/assets/emoji/nirachan/nirachan_wagging.gif',
+            '/assets/emoji/nirachan/nirachan_idle.gif',
+            '/assets/emoji/nirachan/nirachan_sleeping.gif',
+            '/assets/emoji/nirachan/nirachan_confused.gif',
+            '/assets/emoji/nirachan/nirachan_no.gif'
+          ],
           meta: ['nick', 'mail'],
           requiredMeta: ['nick'],
           wordLimit: 200,
           pageSize: 10,
-          locale: { reactionTitle: ''},
-          search: false,
-          imageUploader: false,
-          highlighter: false,
-          texRenderer: false
+          pageview: true,
+          
+          // 開啟豐富的留言板功能
+          search: true,          // 允許搜尋 GIF 動圖
+          imageUploader: true,   // 允許上傳圖片
+          highlighter: true,     // 開啟程式碼高亮
+          texRenderer: true,     // 開啟數學公式渲染
+          
+          // 優化：自訂登入提示，增加互動性
+          locale: { 
+            reactionTitle: finalReactionTitle,
+            placeholder: getLocaleText('placeholder'),
+            login: getLocaleText('login')
+          },
+          lang: currentLang
         });
         
         // 修改 Waline 實例中的 gravatar 預設行為
@@ -125,6 +192,9 @@ export function WalineComments({ path, className = '' }: WalineCommentsProps) {
 
     return () => {
       // 清理 Waline 实例
+      if (walineInstance && typeof walineInstance.destroy === 'function') {
+        walineInstance.destroy();
+      }
       if (containerRef.current) {
         containerRef.current.innerHTML = '';
       }
