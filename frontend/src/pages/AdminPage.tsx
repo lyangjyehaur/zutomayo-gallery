@@ -902,6 +902,16 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
 
   // 控制圖片編輯器高級設置的展開狀態
   const [expandedImageIndices, setExpandedImageIndices] = useState<Set<number>>(new Set());
+  const [editingImageIdx, setEditingImageIdx] = useState<number | null>(null);
+  const [activeSection, setActiveSection] = useState<'basic' | 'media' | 'images' | 'schema'>('images');
+  const [hoveredGroupId, setHoveredGroupId] = useState<string | null>(null);
+
+  // 批量新增與分組狀態
+  const [isBatchAddOpen, setIsBatchAddOpen] = useState(false);
+  const [batchTweetUrls, setBatchTweetUrls] = useState('');
+  const [batchAddStatus, setBatchAddStatus] = useState<{ total: number, current: number, failedUrls: string[], isProcessing: boolean } | null>(null);
+  const [selectedImageIndices, setSelectedImageIndices] = useState<Set<number>>(new Set());
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
 
   const toggleImageExpand = (idx: number) => {
     setExpandedImageIndices(prev => {
@@ -1127,18 +1137,19 @@ const currentMV = data[activeIndex];
     }
   };
   useEffect(() => {
-    setImageDisplayLimit(12);
+    setImageDisplayLimit(24);
   }, [activeIndex]);
 
   const visibleImages = useMemo(() => {
     return (currentMV?.images || []).slice(0, imageDisplayLimit);
   }, [currentMV?.images, imageDisplayLimit]);
 
-  // 滾動自動加載圖片列表邏輯 (Admin 側)
   const handleImageObserver = useCallback((entries: IntersectionObserverEntry[]) => {
     const [target] = entries;
-    if (target.isIntersecting && currentMV?.images && imageDisplayLimit < currentMV.images.length) {
-      setImageDisplayLimit(prev => prev + 12);
+    if (target.isIntersecting && currentMV?.images) {
+      if (imageDisplayLimit < currentMV.images.length) {
+        setImageDisplayLimit(prev => prev + 24);
+      }
     }
   }, [currentMV?.images, imageDisplayLimit]);
 
@@ -1252,7 +1263,23 @@ const currentMV = data[activeIndex];
     setData(prevData => prevData.map(mv => {
       if (mv.id !== targetId) return mv;
       const newImages = [...(mv.images || [])];
-      newImages[imgIdx] = { ...newImages[imgIdx], [field]: value };
+      
+      const currentImg = newImages[imgIdx];
+      const groupId = currentImg.groupId;
+      // 所有欄位除了白名單外的都同步
+      const nonSyncFields = ['url', 'thumbnail', 'caption', 'alt', 'width', 'height'];
+      
+      newImages[imgIdx] = { ...currentImg, [field]: value };
+      
+      if (groupId && !nonSyncFields.includes(field)) {
+        newImages.forEach((img, idx) => {
+          if (idx !== imgIdx && img.groupId === groupId) {
+            newImages[idx] = { ...img, [field]: value };
+            markFieldChanged(targetId, `images.${idx}.${field}`);
+          }
+        });
+      }
+      
       return { ...mv, images: newImages };
     }));
   };
@@ -1275,6 +1302,150 @@ const currentMV = data[activeIndex];
       return await response.json();
     } catch (err) {
       throw err;
+    }
+  };
+
+  // 清理空值的自訂欄位
+  const handleCleanEmptyCustomFields = () => {
+    if (!currentMV?.images) return;
+    const targetId = currentMV.id;
+    let modified = false;
+    
+    const newImages = currentMV.images.map((img, idx) => {
+      const newImg = { ...img };
+      const reservedKeys = ['url', 'thumbnail', 'caption', 'alt', 'richText', 'width', 'height', 'tweetUrl', 'groupId', 'tweetText', 'tweetAuthor', 'tweetHandle', 'tweetDate'];
+      
+      Object.keys(newImg).forEach(key => {
+        if (!reservedKeys.includes(key)) {
+          const val = newImg[key];
+          if (val === undefined || val === null || (typeof val === 'string' && val.trim() === '')) {
+            delete newImg[key];
+            modified = true;
+            markFieldChanged(targetId, `images.${idx}.${key}`);
+          }
+        }
+      });
+      return newImg;
+    });
+
+    if (modified) {
+      setData(prevData => prevData.map(mv => mv.id === targetId ? { ...mv, images: newImages } : mv));
+      toast.success('已清理所有空值的自訂欄位！');
+    } else {
+      toast.info('沒有需要清理的空欄位。');
+    }
+  };
+
+  const handleBatchAddTweets = async (urlsToProcess?: string[]) => {
+    if (!currentMV) return;
+    const targetId = currentMV.id;
+    const urls = urlsToProcess || batchTweetUrls.split('\n').map(u => u.trim()).filter(u => u);
+    
+    if (urls.length === 0) return;
+    
+    setBatchAddStatus({ total: urls.length, current: 0, failedUrls: [], isProcessing: true });
+    
+    let currentFailedUrls: string[] = [];
+    let newExtractedImages: any[] = [];
+    let existingImagesModified = false;
+    let newImagesData = [...(currentMV.images || [])];
+
+    for (let i = 0; i < urls.length; i++) {
+      const url = urls[i];
+      try {
+        const apiUrl = (import.meta.env.VITE_API_URL || '/api').replace(/\/mvs$/, '') + '/mvs/twitter-resolve';
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' },
+          body: JSON.stringify({ url }),
+        });
+        
+        if (!response.ok) throw new Error('推文解析失敗');
+        const json = await response.json();
+        
+        if (json.success && json.data && json.data.length > 0) {
+          const groupId = json.data.length > 1 ? `tweet-${Date.now()}-${Math.floor(Math.random() * 1000)}` : undefined;
+          
+          for (const media of json.data) {
+            // 檢查該媒體 URL 是否已存在於當前的圖片列表中
+            const existingIdx = newImagesData.findIndex(img => img.url === media.url);
+            
+            if (existingIdx !== -1) {
+              // 若已存在，補充缺少的資訊並加入群組
+              existingImagesModified = true;
+              newImagesData[existingIdx] = {
+                ...newImagesData[existingIdx],
+                thumbnail: newImagesData[existingIdx].thumbnail || media.thumbnail || '',
+                tweetUrl: newImagesData[existingIdx].tweetUrl || url,
+                groupId: newImagesData[existingIdx].groupId || groupId,
+                tweetText: newImagesData[existingIdx].tweetText || media.text,
+                tweetAuthor: newImagesData[existingIdx].tweetAuthor || media.user_name,
+                tweetHandle: newImagesData[existingIdx].tweetHandle || media.user_screen_name,
+                tweetDate: newImagesData[existingIdx].tweetDate || media.date
+              };
+              markFieldChanged(targetId, `images.${existingIdx}`);
+            } else {
+              // 若不存在，加入到新圖片列表並探測尺寸
+              let width = 0;
+              let height = 0;
+              try {
+                const probeResult = await probeImageSize(media.thumbnail || media.url);
+                width = probeResult.data?.width || probeResult.width;
+                height = probeResult.data?.height || probeResult.height;
+              } catch (e) {
+                // ignore probe error
+              }
+              
+              newExtractedImages.push({
+                url: media.url,
+                thumbnail: media.thumbnail || '',
+                tweetUrl: url,
+                caption: '',
+                alt: '',
+                richText: '',
+                width,
+                height,
+                groupId,
+                tweetText: media.text,
+                tweetAuthor: media.user_name,
+                tweetHandle: media.user_screen_name,
+                tweetDate: media.date
+              });
+            }
+          }
+        } else {
+          throw new Error('找不到媒體');
+        }
+      } catch (err) {
+        currentFailedUrls.push(url);
+      }
+      
+      setBatchAddStatus(prev => prev ? { ...prev, current: i + 1, failedUrls: currentFailedUrls } : null);
+    }
+    
+    if (newExtractedImages.length > 0 || existingImagesModified) {
+      if (newExtractedImages.length > 0) {
+        markFieldChanged(targetId, 'images');
+        newImagesData = [...newImagesData, ...newExtractedImages];
+      }
+      
+      setData(prevData => prevData.map(mv => {
+        if (mv.id !== targetId) return mv;
+        return { ...mv, images: newImagesData };
+      }));
+      
+      if (newExtractedImages.length > 0) {
+        setImageDisplayLimit(prev => prev + newExtractedImages.length);
+      }
+    }
+    
+    setBatchAddStatus(prev => prev ? { ...prev, isProcessing: false } : null);
+    
+    if (currentFailedUrls.length === 0) {
+      toast.success(`解析完成: 新增 ${newExtractedImages.length} 個媒體${existingImagesModified ? '，並更新了已存在的媒體資訊' : ''}`);
+      setTimeout(() => setIsBatchAddOpen(false), 1500);
+    } else {
+      toast.warning(`完成，但有 ${currentFailedUrls.length} 個連結解析失敗`);
     }
   };
 
@@ -1381,11 +1552,22 @@ const currentMV = data[activeIndex];
       const newImages = [...(currentMV.images || [])];
       
       // 更新當前索引的圖片為第一個解析出的媒體
-      newImages[imgIdx] = { 
-        ...newImages[imgIdx], 
+      const groupId = `tweet-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      
+      const updateData = {
         url: firstMedia.url,
         thumbnail: firstMedia.thumbnail || '', // 如果是影片會有縮圖
-        tweetUrl: url // 儲存原始推文 URL
+        tweetUrl: url, // 儲存原始推文 URL
+        groupId: resolvedMediaList.length > 1 ? groupId : undefined,
+        tweetText: firstMedia.text,
+        tweetAuthor: firstMedia.user_name,
+        tweetHandle: firstMedia.user_screen_name,
+        tweetDate: firstMedia.date
+      };
+
+      newImages[imgIdx] = { 
+        ...newImages[imgIdx], 
+        ...updateData
       };
       
       // 如果推文有多張圖片/影片，將後續的媒體插入到當前圖片後面
@@ -1398,6 +1580,11 @@ const currentMV = data[activeIndex];
             alt: newImages[imgIdx].alt || '',
             richText: newImages[imgIdx].richText || '',
             tweetUrl: url,
+            tweetText: resolvedMediaList[i].text,
+            tweetAuthor: resolvedMediaList[i].user_name,
+            tweetHandle: resolvedMediaList[i].user_screen_name,
+            tweetDate: resolvedMediaList[i].date,
+            groupId,
             width: 0,
             height: 0
           });
@@ -1457,6 +1644,22 @@ const currentMV = data[activeIndex];
     setDraggableIdx(null);
   };
 
+  // 取得群組標識 (A, B, C...)
+  const getGroupLetter = (groupId: string | undefined, allImages: MVImage[] | undefined) => {
+    if (!groupId || !allImages) return '';
+    const uniqueGroups = Array.from(new Set(allImages.filter(img => img.groupId).map(img => img.groupId)));
+    const index = uniqueGroups.indexOf(groupId);
+    if (index === -1) return '';
+    // A-Z, AA, AB...
+    let letter = '';
+    let tempIndex = index;
+    do {
+      letter = String.fromCharCode(65 + (tempIndex % 26)) + letter;
+      tempIndex = Math.floor(tempIndex / 26) - 1;
+    } while (tempIndex >= 0);
+    return letter;
+  };
+
   const handleDrop = (e: React.DragEvent, dropIndex: number) => {
     e.preventDefault();
     if (draggedImageIdx === null || draggedImageIdx === dropIndex) {
@@ -1466,8 +1669,51 @@ const currentMV = data[activeIndex];
     
     const newImages = [...(currentMV.images || [])];
     const draggedImage = newImages[draggedImageIdx];
-    newImages.splice(draggedImageIdx, 1);
-    newImages.splice(dropIndex, 0, draggedImage);
+    const dropImage = newImages[dropIndex];
+    
+    // 若拖曳的圖片有分組
+    if (draggedImage.groupId) {
+      if (dropImage.groupId === draggedImage.groupId) {
+        // 同組內部排序：只移動該張圖片
+        newImages.splice(draggedImageIdx, 1);
+        // 因為刪除了一個元素，如果 dropIndex > draggedImageIdx，實際插入位置要 -1，但 splice 是針對當前陣列操作
+        // 所以直接用 splice 處理
+        // 為了避免 index 偏移問題，先移除再計算插入
+        const actualDropIndex = dropIndex > draggedImageIdx ? dropIndex - 1 : dropIndex;
+        newImages.splice(dropIndex, 0, draggedImage);
+      } else {
+        // 跨組移動：將整個群組移動到目標位置
+        const groupItems = newImages.filter(img => img.groupId === draggedImage.groupId);
+        const filteredImages = newImages.filter(img => img.groupId !== draggedImage.groupId);
+        const newDropIndex = filteredImages.indexOf(dropImage);
+        filteredImages.splice(newDropIndex >= 0 ? newDropIndex : dropIndex, 0, ...groupItems);
+        updateField('images', filteredImages);
+        handleDragEnd();
+        return;
+      }
+    } else {
+      // 無分組圖片移動
+      if (dropImage.groupId) {
+        // 避免插入到群組中間，找到該群組的邊界
+        const groupStartIndex = newImages.findIndex(img => img.groupId === dropImage.groupId);
+        let groupEndIndex = -1;
+        for (let i = newImages.length - 1; i >= 0; i--) {
+          if (newImages[i].groupId === dropImage.groupId) {
+            groupEndIndex = i;
+            break;
+          }
+        }
+        // 判斷是放在群組前半還是後半
+        const insertIndex = dropIndex - groupStartIndex > (groupEndIndex - groupStartIndex) / 2 ? groupEndIndex + 1 : groupStartIndex;
+        
+        newImages.splice(draggedImageIdx, 1);
+        const actualInsertIndex = insertIndex > draggedImageIdx ? insertIndex - 1 : insertIndex;
+        newImages.splice(actualInsertIndex, 0, draggedImage);
+      } else {
+        newImages.splice(draggedImageIdx, 1);
+        newImages.splice(dropIndex, 0, draggedImage);
+      }
+    }
     
     updateField('images', newImages);
     handleDragEnd();
@@ -1481,6 +1727,10 @@ const currentMV = data[activeIndex];
   };
 
   const removeImage = (imgIdx: number) => {
+    // 關閉編輯彈窗
+    if (editingImageIdx === imgIdx) {
+      setEditingImageIdx(null);
+    }
     // 打開刪除確認 Drawer
     setPendingDeleteImageIdx(imgIdx);
     setPendingDeleteMV(null);
@@ -1986,9 +2236,16 @@ const currentMV = data[activeIndex];
         <div className="flex-1 h-full overflow-y-auto p-12 custom-scrollbar bg-card/50">
           <div className="max-w-4xl mx-auto space-y-12 pb-24">
             
+            {/* 分頁導航列 */}
+            <div className="flex gap-2 mb-8 border-b-4 border-black/20 pb-4 overflow-x-auto sticky top-0 z-20 bg-background/80 backdrop-blur pt-2">
+              <button onClick={() => setActiveSection('basic')} className={`px-4 py-2 font-black uppercase border-2 transition-all shrink-0 ${activeSection === 'basic' ? 'bg-main text-main-foreground border-main shadow-neo' : 'bg-card text-card-foreground border-border hover:bg-main/10'}`}>01 基礎資訊</button>
+              <button onClick={() => setActiveSection('media')} className={`px-4 py-2 font-black uppercase border-2 transition-all shrink-0 ${activeSection === 'media' ? 'bg-main text-main-foreground border-main shadow-neo' : 'bg-card text-card-foreground border-border hover:bg-main/10'}`}>02 媒體關聯</button>
+              <button onClick={() => setActiveSection('images')} className={`px-4 py-2 font-black uppercase border-2 transition-all shrink-0 ${activeSection === 'images' ? 'bg-ztmy-green text-black border-ztmy-green shadow-neo' : 'bg-card text-card-foreground border-border hover:bg-ztmy-green/20'}`}>03 設定圖庫</button>
+              <button onClick={() => setActiveSection('schema')} className={`px-4 py-2 font-black uppercase border-2 transition-all shrink-0 ${activeSection === 'schema' ? 'bg-foreground text-background border-foreground shadow-neo' : 'bg-card text-card-foreground border-border hover:bg-foreground/10'}`}>00 資料架構</button>
+            </div>
 
-            
             {/* 基礎資訊區塊 */}
+            <div className={activeSection !== 'basic' ? 'hidden' : ''}>
             <section className="space-y-6">
               <div className="flex flex-col gap-1">
                 <h3 className="text-sm font-black uppercase text-main bg-main/10 inline-block px-2">01 基礎資訊</h3>
@@ -2053,8 +2310,10 @@ const currentMV = data[activeIndex];
                 </div>
               </div>
             </section>
+            </div>
 
             {/* 媒體與關聯區塊 */}
+            <div className={activeSection !== 'media' ? 'hidden' : ''}>
             <section className="space-y-6">
               <div className="flex flex-col gap-1">
                 <h3 className="text-sm font-black uppercase text-main bg-main/10 inline-block px-2">02 媒體與關聯</h3>
@@ -2204,8 +2463,10 @@ const currentMV = data[activeIndex];
                 </div>
               </div>
             </section>
+            </div>
 
             {/* 設定圖管理 (瀑布流數據源) */}
+            <div className={activeSection !== 'images' ? 'hidden' : ''}>
             <section className="space-y-6">
               <div className="flex justify-between items-center">
                 <div className="flex flex-col gap-1">
@@ -2219,6 +2480,38 @@ const currentMV = data[activeIndex];
                   </span>
                 </div>
                 <div className="flex gap-2">
+                  {isSelectionMode && selectedImageIndices.size > 0 && (
+                    <Button 
+                      variant="neutral" 
+                      size="sm" 
+                      className="bg-blue-500 text-white hover:bg-blue-600 border-2 border-black"
+                      onClick={() => {
+                        const groupId = `group-${Date.now()}`;
+                        const targetId = currentMV.id;
+                        const newImages = [...(currentMV.images || [])];
+                        selectedImageIndices.forEach(idx => {
+                          newImages[idx] = { ...newImages[idx], groupId };
+                          markFieldChanged(targetId, `images.${idx}.groupId`);
+                        });
+                        setData(prevData => prevData.map(mv => mv.id === targetId ? { ...mv, images: newImages } : mv));
+                        setSelectedImageIndices(new Set());
+                        setIsSelectionMode(false);
+                        toast.success(`成功將 ${selectedImageIndices.size} 張圖片分為一組`);
+                      }}
+                    >
+                      <i className="hn hn-link text-base mr-2" /> 設為同組
+                    </Button>
+                  )}
+                  <Button 
+                    variant={isSelectionMode ? "default" : "outline"} 
+                    size="sm" 
+                    onClick={() => {
+                      setIsSelectionMode(!isSelectionMode);
+                      setSelectedImageIndices(new Set());
+                    }}
+                  >
+                    <i className="hn hn-check-square text-base mr-2" /> {isSelectionMode ? '取消選擇' : '手動分組'}
+                  </Button>
                   <Button 
                     variant="neutral" 
                     size="sm" 
@@ -2272,129 +2565,363 @@ const currentMV = data[activeIndex];
               )}
 
               <div className="space-y-4">
-                {visibleImages.map((img, imgIdx) => {
-                  const isExpanded = expandedImageIndices.has(imgIdx);
-                  const isVideo = img.thumbnail || img.url?.match(/\.(mp4|webm)$/i) || img.url?.includes('video.twimg.com');
-                  return (
-                  <div 
-                    key={imgIdx} 
-                    draggable={draggableIdx === imgIdx}
-                    onDragStart={(e) => handleDragStart(e, imgIdx)}
-                    onDragOver={(e) => handleDragOver(e, imgIdx)}
-                    onDragEnd={handleDragEnd}
-                    onDrop={(e) => handleDrop(e, imgIdx)}
-                    className={`p-4 border-2 shadow-neo-sm relative group transition-all duration-200 ${
-                      draggedImageIdx === imgIdx ? 'opacity-50 scale-[0.98] z-50 border-dashed border-black/30 bg-black/5' : 'border-black bg-background'
-                    } ${
-                      dragOverImageIdx === imgIdx ? 'border-dashed border-blue-500 bg-black/5 -translate-y-1' : ''
-                    }`}
-                  >
-                    {/* 拖曳把手 */}
-                    <div 
-                      className="absolute -top-2 -left-2 bg-white border-2 border-black p-1 rounded-full cursor-grab active:cursor-grabbing text-black opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-black/5"
-                      onMouseEnter={() => setDraggableIdx(imgIdx)}
-                      onMouseLeave={() => setDraggableIdx(null)}
-                      title="拖曳排序"
-                    >
-                      <i className="hn hn-menu text-base" />
-                    </div>
-
-                    <button 
-                      onClick={() => removeImage(imgIdx)}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity border-2 border-black z-10"
-                      title="刪除圖片"
-                    >
-                      <i className="hn hn-trash text-base" />
-                    </button>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="md:col-span-2 space-y-2">
-                        <div className="flex gap-2">
-                          <Input 
-                            placeholder="圖片 URL 或 推文連結" 
-                            value={img.url} 
-                            onChange={(e) => updateImage(imgIdx, 'url', e.target.value)} 
-                            className={`flex-1 ${!img.url?.trim() ? 'border-red-500/50 bg-red-500/5' : ''}`} />
-                          <Button variant="neutral" size="icon" onClick={() => handleProbe(imgIdx, img.url)} title="自動偵測尺寸與解析推文">
-                            <i className="hn hn-expand text-base" />
-                          </Button>
-                        </div>
-                        {img.tweetUrl && (
-                          <div className="text-xs text-blue-500 flex items-center gap-1">
-                            <span>已解析自:</span>
-                            <a href={img.tweetUrl} target="_blank" rel="noreferrer" className="underline truncate max-w-[200px]">{img.tweetUrl}</a>
-                          </div>
-                        )}
-                        <div className="flex gap-2 items-center">
-                          <div className="grid grid-cols-2 gap-2 flex-1">
-                             <div className="flex items-center gap-2 bg-black/5 px-2 rounded">
-                                <span className="text-[10px] font-bold opacity-40">W</span>
-                                <Input 
-                                  type="number" 
-                                  placeholder="寬度" 
-                                  value={img.width || ''} 
-                                  onChange={(e) => updateImage(imgIdx, 'width', parseInt(e.target.value))} 
-                                  className={`h-7 border-none bg-transparent shadow-none ${!img.width ? 'text-red-500' : ''}`} />
-                             </div>
-                             <div className="flex items-center gap-2 bg-black/5 px-2 rounded">
-                                <span className="text-[10px] font-bold opacity-40">H</span>
-                                <Input 
-                                  type="number" 
-                                  placeholder="高度" 
-                                  value={img.height || ''} 
-                                  onChange={(e) => updateImage(imgIdx, 'height', parseInt(e.target.value))} 
-                                  className={`h-7 border-none bg-transparent shadow-none ${!img.height ? 'text-red-500' : ''}`} />
-                             </div>
-                          </div>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => toggleImageExpand(imgIdx)}
-                            className="shrink-0 h-7 text-xs border-2 border-black/20 hover:border-black"
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                  {visibleImages.map((img, imgIdx) => {
+                    const isVideo = img.url?.match(/\.(mp4|webm)$/i) || img.url?.includes('video.twimg.com') || (img.thumbnail && img.thumbnail !== img.url);
+                    return (
+                      <div
+                        key={imgIdx}
+                        draggable={draggableIdx === imgIdx}
+                        onDragStart={(e) => handleDragStart(e, imgIdx)}
+                        onDragOver={(e) => handleDragOver(e, imgIdx)}
+                        onDragEnd={handleDragEnd}
+                        onDrop={(e) => handleDrop(e, imgIdx)}
+                        onMouseEnter={() => img.groupId && setHoveredGroupId(img.groupId)}
+                        onMouseLeave={() => img.groupId && setHoveredGroupId(null)}
+                        className={`group relative flex flex-col border-4 transition-all duration-200 bg-card ${
+                          draggedImageIdx === imgIdx ? 'opacity-50 scale-[0.98] z-50 border-dashed border-black/30' : 'hover:-translate-y-1 hover:shadow-neo-sm'
+                        } ${dragOverImageIdx === imgIdx ? 'border-dashed border-blue-500 bg-blue-50/50' : ''} ${
+                          hoveredGroupId && img.groupId === hoveredGroupId ? 'ring-4 ring-offset-2 z-20 scale-[1.02]' : ''
+                        }`}
+                        style={{
+                          borderColor: img.groupId ? `hsl(${Array.from(img.groupId).reduce((acc, char) => acc + char.charCodeAt(0), 0) % 360}, 70%, 50%)` : 'black',
+                          ringColor: img.groupId ? `hsl(${Array.from(img.groupId).reduce((acc, char) => acc + char.charCodeAt(0), 0) % 360}, 70%, 50%)` : undefined
+                        }}
+                      >
+                        {/* 拖曳把手 */}
+                        {!isSelectionMode && (
+                          <div
+                            className="absolute top-1 left-1 bg-white/90 backdrop-blur border-2 border-black p-1 rounded cursor-grab active:cursor-grabbing text-black opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-white flex items-center justify-center"
+                            onMouseEnter={() => setDraggableIdx(imgIdx)}
+                            onMouseLeave={() => setDraggableIdx(null)}
+                            title="拖曳排序"
                           >
-                            <i className={`hn hn-chevron-${isExpanded ? 'up' : 'down'} mr-1`} />
-                            {isExpanded ? '收起詳細設定' : '展開詳細設定'}
-                          </Button>
-                        </div>
+                            <i className="hn hn-list text-sm" />
+                          </div>
+                        )}
                         
-                        {isExpanded && (
-                          <div className="space-y-2 pt-2 border-t-2 border-dashed border-black/10 mt-2">
-                            <Input placeholder="說明文字 (Caption)" value={img.caption || ''} onChange={(e) => updateImage(imgIdx, 'caption', e.target.value)} />
-                            <Input placeholder="替代文字 (Alt)" value={img.alt || ''} onChange={(e) => updateImage(imgIdx, 'alt', e.target.value)} />
-                            <RichTextEditor
-                              value={img.richText || ''}
-                              onChange={(value) => updateImage(imgIdx, 'richText', value)}
-                            />
-                          </div>
+                        {/* 刪除按鈕 */}
+                        {!isSelectionMode && (
+                          <button
+                            onClick={() => removeImage(imgIdx)}
+                            className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity border-2 border-black z-10 hover:bg-red-600"
+                            title="刪除圖片"
+                          >
+                            <i className="hn hn-trash text-sm" />
+                          </button>
                         )}
-                        {!isExpanded && (img.caption || img.alt || img.richText) && (
-                          <div className="text-[10px] text-black/50 font-bold flex gap-2">
-                            {img.caption && <span>✓ 包含說明</span>}
-                            {img.richText && <span>✓ 包含富文本</span>}
+
+                        {/* 編輯按鈕 (置中顯示) */}
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-0 pointer-events-none">
+                          <button
+                            onClick={() => setEditingImageIdx(imgIdx)}
+                            className="pointer-events-auto bg-black text-white font-bold text-xs px-3 py-1.5 rounded-full border-2 border-white/20 shadow-lg flex items-center gap-1 hover:bg-ztmy-green hover:text-black hover:border-black transition-colors"
+                          >
+                            <i className="hn hn-edit text-sm" />
+                            編輯
+                          </button>
+                        </div>
+
+                        {/* 縮圖區域 */}
+                        <div className="aspect-square bg-black/5 border-b-4 border-black/10 flex items-center justify-center overflow-hidden relative cursor-pointer group/thumb" onClick={() => !isSelectionMode && setEditingImageIdx(imgIdx)} style={{ borderBottomColor: img.groupId ? `hsl(${Array.from(img.groupId).reduce((acc, char) => acc + char.charCodeAt(0), 0) % 360}, 70%, 50%)` : undefined }}>
+                          {isSelectionMode && (
+                            <div 
+                              className={`absolute inset-0 z-20 flex items-start justify-start p-2 transition-all ${selectedImageIndices.has(imgIdx) ? 'bg-blue-500/20' : 'hover:bg-black/10'}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const newSet = new Set(selectedImageIndices);
+                                if (newSet.has(imgIdx)) newSet.delete(imgIdx);
+                                else newSet.add(imgIdx);
+                                setSelectedImageIndices(newSet);
+                              }}
+                            >
+                              <div className={`w-6 h-6 border-2 border-black rounded flex items-center justify-center bg-white ${selectedImageIndices.has(imgIdx) ? 'text-blue-600' : 'text-transparent'}`}>
+                                <i className="hn hn-check font-black" />
+                              </div>
+                            </div>
+                          )}
+                          
+                        {/* 顯示群組色塊邊框指示 (讓同一組的圖片有相同顏色或特徵) */}
+                          {img.groupId && (
+                            <div className="absolute top-0 right-0 w-8 h-8 rounded-bl-full pointer-events-none z-10 opacity-70" 
+                                 style={{ backgroundColor: `hsl(${Array.from(img.groupId).reduce((acc, char) => acc + char.charCodeAt(0), 0) % 360}, 70%, 50%)` }}>
+                            </div>
+                          )}
+                          {img.url ? (
+                            <>
+                              <img src={getProxyImgUrl(img.thumbnail || img.url, 'thumb')} className="w-full h-full object-cover" alt="預覽" />
+                              {isVideo && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+                                  <div className="bg-black/80 text-white rounded-full p-2 border-2 border-white/20">
+                                    <i className="hn hn-play text-xl ml-0.5" />
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-[10px] flex flex-col items-center leading-tight opacity-40">
+                              <i className="hn hn-image text-2xl mb-1" />
+                              無圖片
+                            </span>
+                          )}
+                        </div>
+
+                        {/* 狀態資訊列 */}
+                        <div className="p-2 text-[10px] flex flex-col gap-1 bg-secondary text-secondary-foreground relative">
+                          {img.groupId && (
+                            <div 
+                              className="absolute -top-3 -right-2 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-sm flex items-center gap-1 z-10"
+                              title={`已分組: ${img.groupId}`}
+                              style={{ backgroundColor: `hsl(${Array.from(img.groupId).reduce((acc, char) => acc + char.charCodeAt(0), 0) % 360}, 70%, 40%)` }}
+                            >
+                              <i className="hn hn-link text-[8px] shrink-0" /> 
+                              Group {getGroupLetter(img.groupId, currentMV.images)}
+                            </div>
+                          )}
+                          <div className="flex justify-between items-center font-mono">
+                            <span className={`font-bold ${!img.width || !img.height ? 'text-red-500' : 'opacity-60'}`}>
+                              {img.width && img.height ? `${img.width}x${img.height}` : '⚠️ 無尺寸'}
+                            </span>
+                            <button
+                              onClick={() => handleProbe(imgIdx, img.url)}
+                              className="text-blue-500 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="自動偵測尺寸"
+                            >
+                              <i className="hn hn-expand" />
+                            </button>
                           </div>
-                        )}
+                          <div className="flex justify-between items-center">
+                            <span className="truncate opacity-50 font-mono flex-1" title={img.url}>
+                              {img.url ? (() => {
+                                try { return new URL(img.url).pathname.split('/').pop() } catch { return '無效網址' }
+                              })() : '未設定 URL'}
+                            </span>
+                            {img.tweetUrl && (
+                              <a href={img.tweetUrl} target="_blank" rel="noreferrer" className="text-blue-500 hover:text-blue-700 ml-1 flex-shrink-0" title="開啟原始推文" onClick={e => e.stopPropagation()}>
+                                <i className="hn hn-twitter" />
+                              </a>
+                            )}
+                          </div>
+                          <div className="flex gap-1 mt-1">
+                            {img.caption && <i className="hn hn-comment text-green-600" title="包含說明文字" />}
+                            {img.richText && <i className="hn hn-align-left text-blue-600" title="包含富文本" />}
+                          </div>
+                        </div>
                       </div>
-                      <div className="bg-black/5 border-2 border-dashed border-black/10 flex items-center justify-center overflow-hidden relative group/preview">
-                        {img.url ? (
-                          <>
-                            <img src={getProxyImgUrl(img.thumbnail || img.url, 'thumb')} className="max-h-40 object-contain" alt="預覽 (preview)" />
-                            {isVideo && (
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
-                                <div className="bg-black/80 text-white rounded-full p-2 border-2 border-white/20">
-                                  <i className="hn hn-play text-2xl ml-1" />
+                    );
+                  })}
+                </div>
+                
+                {/* 圖片編輯彈窗 */}
+                <Dialog open={editingImageIdx !== null} onOpenChange={(open) => !open && setEditingImageIdx(null)}>
+                  <DialogContent className="max-w-[95vw] w-full border-4 border-black shadow-neo p-0 overflow-hidden bg-card text-card-foreground h-[95vh]">
+                    {editingImageIdx !== null && currentMV.images && currentMV.images[editingImageIdx] && (
+                        <div className="flex flex-col h-full">
+                        <DialogHeader className="p-4 bg-ztmy-green border-b-4 border-black flex-shrink-0 text-black">
+                          <DialogTitle className="text-xl font-black uppercase flex items-center gap-2">
+                            <i className="hn hn-image text-xl" /> 編輯圖片資訊 (索引: {editingImageIdx})
+                          </DialogTitle>
+                          <DialogDescription className="text-black font-bold opacity-80 text-xs">
+                            設定圖片的 URL、尺寸、說明與富文本內容
+                          </DialogDescription>
+                        </DialogHeader>
+                        
+                        <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-secondary-background space-y-6">
+                          {currentMV.images[editingImageIdx].groupId && (
+                            <div className="bg-blue-50 border-l-4 border-blue-500 p-3 text-sm text-blue-700 flex items-start gap-2 rounded shadow-sm">
+                                <i className="hn hn-info-circle text-lg mt-0.5" />
+                                <div>
+                                  <p className="font-bold">此圖片已分組 (Group {getGroupLetter(currentMV.images[editingImageIdx].groupId, currentMV.images)})</p>
+                                  <p className="opacity-80">修改下方表單的「推文連結」、「富文本」與「自訂欄位」，將自動同步至同群組的其他圖片。「說明文字」與「替代文字」則單獨保存。</p>
                                 </div>
                               </div>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-[10px] flex flex-col items-center leading-tight">
-                            <span className="opacity-50">無預覽</span>
-                            <span className="font-mono opacity-30 normal-case">NO_PREVIEW</span>
-                          </span>
-                        )}
+                          )}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {/* 左側：預覽與尺寸 */}
+                            <div className="space-y-4">
+                              <div className="aspect-square bg-black/5 border-2 border-dashed border-black/20 flex items-center justify-center overflow-hidden relative rounded">
+                                {currentMV.images[editingImageIdx].url ? (
+                                  <>
+                                    <img src={getProxyImgUrl(currentMV.images[editingImageIdx].thumbnail || currentMV.images[editingImageIdx].url, 'thumb')} className="w-full h-full object-contain" alt="預覽" />
+                                    {(currentMV.images[editingImageIdx].url?.match(/\.(mp4|webm)$/i) || currentMV.images[editingImageIdx].url?.includes('video.twimg.com') || (currentMV.images[editingImageIdx].thumbnail && currentMV.images[editingImageIdx].thumbnail !== currentMV.images[editingImageIdx].url)) && (
+                                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+                                        <div className="bg-black/80 text-white rounded-full p-2 border-2 border-white/20">
+                                          <i className="hn hn-play text-2xl ml-1" />
+                                        </div>
+                                      </div>
+                                    )}
+                                  </>
+                                ) : (
+                                  <span className="text-xs font-bold opacity-40 uppercase">No Preview</span>
+                                )}
+                              </div>
+                              
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-bold opacity-60 uppercase">Width (寬)</label>
+                                  <Input 
+                                    type="number" 
+                                    value={currentMV.images[editingImageIdx].width || ''} 
+                                    onChange={(e) => updateImage(editingImageIdx, 'width', parseInt(e.target.value))} 
+                                    className={`h-8 text-sm ${!currentMV.images[editingImageIdx].width ? 'border-red-500 bg-red-50' : ''}`} 
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-bold opacity-60 uppercase">Height (高)</label>
+                                  <Input 
+                                    type="number" 
+                                    value={currentMV.images[editingImageIdx].height || ''} 
+                                    onChange={(e) => updateImage(editingImageIdx, 'height', parseInt(e.target.value))} 
+                                    className={`h-8 text-sm ${!currentMV.images[editingImageIdx].height ? 'border-red-500 bg-red-50' : ''}`} 
+                                  />
+                                </div>
+                              </div>
+                              
+                              <Button 
+                                variant="outline" 
+                                className="w-full border-2 border-black hover:bg-black hover:text-white transition-colors"
+                                onClick={() => handleProbe(editingImageIdx, currentMV.images![editingImageIdx].url)}
+                              >
+                                <i className="hn hn-expand mr-2" /> 自動偵測尺寸 / 解析推文
+                              </Button>
+                            </div>
+                            
+                            {/* 右側：表單 */}
+                            <div className="md:col-span-2 space-y-4">
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold opacity-60 uppercase flex justify-between">
+                                  <span>圖片 URL 或 推文連結</span>
+                                  {currentMV.images[editingImageIdx].tweetUrl && (
+                                    <span className="text-blue-600 truncate max-w-[200px]" title={currentMV.images[editingImageIdx].tweetUrl}>
+                                      已解析: <a href={currentMV.images[editingImageIdx].tweetUrl} target="_blank" rel="noreferrer" className="underline">{currentMV.images[editingImageIdx].tweetUrl}</a>
+                                    </span>
+                                  )}
+                                </label>
+                                <Input 
+                                  placeholder="https://..." 
+                                  value={currentMV.images[editingImageIdx].url} 
+                                  onChange={(e) => updateImage(editingImageIdx, 'url', e.target.value)} 
+                                  className={`${!currentMV.images[editingImageIdx].url?.trim() ? 'border-red-500 bg-red-50' : ''}`} 
+                                />
+                              </div>
+                              
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold opacity-60 uppercase">原始推文連結 (自動解析來源)</label>
+                                <Input 
+                                  placeholder="https://x.com/..." 
+                                  value={currentMV.images[editingImageIdx].tweetUrl || ''} 
+                                  onChange={(e) => updateImage(editingImageIdx, 'tweetUrl', e.target.value)} 
+                                />
+                              </div>
+                              
+                              <div className="space-y-1">
+                                  <label className="text-[10px] font-bold opacity-60 uppercase">說明文字 (Caption)</label>
+                                  <Input 
+                                    placeholder="可選填，此項不會同步至群組" 
+                                    value={currentMV.images[editingImageIdx].caption || ''} 
+                                    onChange={(e) => updateImage(editingImageIdx, 'caption', e.target.value)} 
+                                  />
+                                </div>
+                                
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-bold opacity-60 uppercase">替代文字 (Alt)</label>
+                                  <Input 
+                                    placeholder="可選填，此項不會同步至群組" 
+                                    value={currentMV.images[editingImageIdx].alt || ''} 
+                                    onChange={(e) => updateImage(editingImageIdx, 'alt', e.target.value)} 
+                                  />
+                                </div>
+                              
+                              <div className="space-y-1 pt-2">
+                                <RichTextEditor
+                                  value={currentMV.images[editingImageIdx].richText || ''}
+                                  onChange={(value) => updateImage(editingImageIdx, 'richText', value)}
+                                />
+                              </div>
+                              {/* 動態渲染擴充欄位 */}
+                              {Object.keys(currentMV.images[editingImageIdx]).filter(key => !['url', 'thumbnail', 'caption', 'alt', 'richText', 'width', 'height', 'tweetUrl', 'groupId'].includes(key)).map(key => {
+                                const isTweetField = ['tweetText', 'tweetAuthor', 'tweetHandle', 'tweetDate'].includes(key);
+                                return (
+                                <div className="space-y-1" key={key}>
+                                  <label className="text-[10px] font-bold opacity-60 uppercase flex justify-between">
+                                    <span>{key} {isTweetField ? '(推文資訊)' : '(自訂欄位)'}</span>
+                                    {!isTweetField && (
+                                      <button 
+                                        onClick={() => {
+                                          const newImages = [...currentMV.images!];
+                                          delete newImages[editingImageIdx][key];
+                                          setData(prevData => prevData.map(mv => mv.id === currentMV.id ? { ...mv, images: newImages } : mv));
+                                          markFieldChanged(currentMV.id, `images.${editingImageIdx}`);
+                                        }}
+                                        className="text-red-500 hover:text-red-700"
+                                        title="刪除此欄位"
+                                      >
+                                        <i className="hn hn-times" />
+                                      </button>
+                                    )}
+                                  </label>
+                                  {key === 'tweetText' ? (
+                                    <Textarea 
+                                      value={currentMV.images![editingImageIdx][key] || ''} 
+                                      onChange={(e) => updateImage(editingImageIdx, key, e.target.value)}
+                                      className="min-h-[80px] text-xs" 
+                                    />
+                                  ) : (
+                                    <Input 
+                                      value={currentMV.images![editingImageIdx][key] || ''} 
+                                      onChange={(e) => updateImage(editingImageIdx, key, e.target.value)} 
+                                    />
+                                  )}
+                                </div>
+                              )})}
+                              
+                              <div className="pt-2 border-t-2 border-dashed border-black/10">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  className="w-full text-xs border-dashed"
+                                  onClick={() => {
+                                    const fieldName = window.prompt('請輸入新欄位的名稱 (英文)');
+                                    if (fieldName && fieldName.trim()) {
+                                      updateImage(editingImageIdx, fieldName.trim(), '');
+                                    }
+                                  }}
+                                >
+                                  <i className="hn hn-plus mr-2" /> 新增自訂欄位
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <DialogFooter className="p-4 bg-secondary border-t-4 border-black flex-shrink-0 flex justify-between items-center">
+                          <div className="flex gap-2">
+                            <Button variant="neutral" onClick={() => removeImage(editingImageIdx)} className="bg-red-100 text-red-600 hover:bg-red-500 hover:text-white border-red-200">
+                              <i className="hn hn-trash mr-2" /> 刪除此圖片
+                            </Button>
+                            <Button variant="outline" onClick={handleCleanEmptyCustomFields} className="border-dashed text-black/60 hover:text-black">
+                              <i className="hn hn-refresh mr-2" /> 清理空值欄位
+                            </Button>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button variant="outline" onClick={() => setEditingImageIdx(null)}>
+                              關閉
+                            </Button>
+                            <Button 
+                              className="bg-black text-white hover:bg-ztmy-green hover:text-black"
+                              onClick={() => {
+                                // Save is auto, just close
+                                setEditingImageIdx(null);
+                              }}
+                            >
+                              完成編輯
+                            </Button>
+                          </div>
+                        </DialogFooter>
                       </div>
-                    </div>
-                  </div>
-                )})}
+                    )}
+                  </DialogContent>
+                </Dialog>
                 
                 {/* 圖片列表分段載入哨兵 */}
                 {imageDisplayLimit < (currentMV.images?.length || 0) && (
@@ -2419,21 +2946,30 @@ const currentMV = data[activeIndex];
                 )}
                 
                 {/* 底部的新增圖片按鈕 */}
-                <div className="pt-4 border-t-4 border-black/10">
+                <div className="pt-4 border-t-4 border-black/10 flex gap-4">
                   <Button 
                     variant="default" 
-                    className="w-full h-16 bg-black text-white hover:bg-ztmy-green hover:text-black font-black uppercase tracking-widest text-lg shadow-neo transition-all"
+                    className="flex-1 h-16 bg-black text-white hover:bg-ztmy-green hover:text-black font-black uppercase tracking-widest text-lg shadow-neo transition-all"
                     onClick={addImage}
                   >
-                    <i className="hn hn-image text-2xl mr-3" /> 新增圖片 / 貼上推文
+                    <i className="hn hn-image text-2xl mr-3" /> 新增單張圖片
                   </Button>
-                  <p className="text-center text-xs font-bold opacity-50 mt-2">
-                    Tip: 貼上 Twitter 網址並點擊自動偵測，可一次載入多張圖片與影片
-                  </p>
+                  <Button 
+                    variant="default" 
+                    className="flex-1 h-16 bg-blue-600 text-white hover:bg-blue-400 hover:text-black font-black uppercase tracking-widest text-lg shadow-neo transition-all"
+                    onClick={() => setIsBatchAddOpen(true)}
+                  >
+                    <i className="hn hn-twitter text-2xl mr-3" /> 批量推文解析
+                  </Button>
                 </div>
+                <p className="text-center text-xs font-bold opacity-50 mt-2">
+                  Tip: 點擊「批量推文解析」可一次貼上多行 Twitter 網址，並自動分為同一個群組
+                </p>
               </div>
             </section>
+            </div>
                         {/* 數據架構維護工具 (Schema Maintenance) */}
+            <div className={activeSection !== 'schema' ? 'hidden' : ''}>
             <section className="p-6 border-4 border-dashed border-black bg-main/5 space-y-4">
               <div className="flex items-start gap-2">
                 <div className="flex flex-col gap-1">
@@ -2475,11 +3011,65 @@ const currentMV = data[activeIndex];
                   <i className="hn hn-refresh text-base" /> 執行全局同步
                 </Button>
               </div>
-            </section>
-
+              </section>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* 批量推文解析 Dialog */}
+      <Dialog open={isBatchAddOpen} onOpenChange={(open) => !batchAddStatus?.isProcessing && setIsBatchAddOpen(open)}>
+        <DialogContent className="max-w-2xl border-4 border-black shadow-neo p-0 overflow-hidden bg-card text-card-foreground">
+          <DialogHeader className="p-6 bg-blue-600 text-white border-b-4 border-black">
+            <DialogTitle className="text-xl font-black uppercase flex items-center gap-2">
+              <i className="hn hn-twitter text-2xl" /> 批量推文解析
+            </DialogTitle>
+            <DialogDescription className="text-white/80 font-mono text-xs mt-2">
+              貼上多行 Twitter 網址，系統將自動解析並將每個推文中的媒體分為同一組。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-6 space-y-4">
+            <Textarea
+              placeholder="https://x.com/...&#10;https://x.com/..."
+              value={batchTweetUrls}
+              onChange={(e) => setBatchTweetUrls(e.target.value)}
+              disabled={batchAddStatus?.isProcessing}
+              className="min-h-[200px] font-mono text-sm"
+            />
+            {batchAddStatus && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs font-bold uppercase">
+                  <span>處理進度: {batchAddStatus.current} / {batchAddStatus.total}</span>
+                  {batchAddStatus.failedUrls.length > 0 && (
+                    <span className="text-red-500">失敗: {batchAddStatus.failedUrls.length}</span>
+                  )}
+                </div>
+                <Progress value={(batchAddStatus.current / batchAddStatus.total) * 100} className="h-2 border-2 border-black" />
+                {batchAddStatus.failedUrls.length > 0 && !batchAddStatus.isProcessing && (
+                  <div className="text-xs text-red-500 mt-2 max-h-20 overflow-y-auto border border-red-200 p-2">
+                    <p className="font-bold">以下網址解析失敗：</p>
+                    {batchAddStatus.failedUrls.map((u, i) => <div key={i}>{u}</div>)}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter className="p-4 bg-secondary border-t-4 border-black flex gap-2">
+            <Button variant="outline" onClick={() => setIsBatchAddOpen(false)} disabled={batchAddStatus?.isProcessing}>
+              取消
+            </Button>
+            <Button 
+              className="bg-blue-600 text-white hover:bg-blue-700"
+              onClick={() => handleBatchAddTweets()}
+              disabled={!batchTweetUrls.trim() || batchAddStatus?.isProcessing}
+            >
+              {batchAddStatus?.isProcessing ? (
+                <><i className="hn hn-refresh animate-spin mr-2" /> 處理中...</>
+              ) : '開始解析'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 保存確認 AlertDialog */}
       <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>

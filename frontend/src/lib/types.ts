@@ -5,6 +5,9 @@ export interface MVImage {
   alt?: string;
   width?: number;
   height?: number;
+  tweetUrl?: string;
+  thumbnail?: string;
+  groupId?: string;
   [key: string]: any;
 }
 

@@ -112,6 +112,10 @@ interface PhotoData {
   width?: number;
   height?: number;
   rawFilename?: string;
+  isVideo?: boolean;
+  groupId?: string;
+  tweetUrl?: string;
+  [key: string]: any;
 }
 
 // 輔助函數：從 URL 提取副檔名
@@ -428,7 +432,7 @@ export default function FancyboxViewer({
       const photosWithDimensions = await Promise.all(
         filteredImages.map(async (img, index) => {
           const thumbUrl = img.thumbnail ? getProxyImgUrl(img.thumbnail, 'thumb') : getProxyImgUrl(img.url, 'thumb');
-          const isVideo = img.url.match(/\.(mp4|webm)$/i) || img.url.includes('video.twimg.com');
+          const isVideo = img.url.match(/\.(mp4|webm)$/i) || img.url.includes('video.twimg.com') || (img.thumbnail && img.thumbnail !== img.url);
           const fullUrl = isVideo ? img.url : getProxyImgUrl(img.url, 'full');
 
           let width = img.width;
@@ -457,6 +461,9 @@ export default function FancyboxViewer({
             height,
             rawFilename: fullFilename,
             isVideo, // 加入 isVideo 標記
+            groupId: img.groupId,
+            tweetUrl: img.tweetUrl,
+            ...img // 保留其他可能的新增欄位
           };
         }),
       );

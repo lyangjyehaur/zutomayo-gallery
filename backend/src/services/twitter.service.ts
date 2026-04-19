@@ -2,6 +2,10 @@ export interface TwitterMedia {
   url: string;        // 真實的直連網址 (圖片或 mp4)
   type: string;       // 'image', 'video', 'gif'
   thumbnail?: string; // 如果是影片，這裡會有預覽圖網址
+  text?: string;      // 推文原文
+  user_name?: string; // 推主名字
+  user_screen_name?: string; // 推主用戶名 (@後的字串)
+  date?: string;      // 發布時間
 }
 
 export const TwitterService = {
@@ -38,7 +42,11 @@ export const TwitterService = {
           mediaList.push({
             url: media.url, 
             type: media.type, // 'image', 'video', 'gif'
-            thumbnail: media.thumbnail_url || undefined
+            thumbnail: media.thumbnail_url || undefined,
+            text: data.text,
+            user_name: data.user_name,
+            user_screen_name: data.user_screen_name,
+            date: data.date
           });
         });
       }
