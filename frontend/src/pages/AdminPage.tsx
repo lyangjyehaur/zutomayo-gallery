@@ -680,6 +680,23 @@ interface AdminPageProps {
   onRefresh?: () => void;
 }
 
+// 將 Twitter 原始日期格式轉換為 YYYY-MM-DD HH:mm:ss
+const formatTweetDate = (dateString?: string) => {
+  if (!dateString) return '';
+  const d = new Date(dateString);
+  // 若解析失敗，保留原始字串
+  if (isNaN(d.getTime())) return dateString; 
+
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  const ss = String(d.getSeconds()).padStart(2, '0');
+
+  return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+};
+
 export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPageProps) {
   // 認證狀態
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -1415,7 +1432,7 @@ const currentMV = data[activeIndex];
                 tweetText: newImagesData[existingIdx].tweetText || media.text,
                 tweetAuthor: newImagesData[existingIdx].tweetAuthor || media.user_name,
                 tweetHandle: newImagesData[existingIdx].tweetHandle || media.user_screen_name,
-                tweetDate: newImagesData[existingIdx].tweetDate || media.date
+                tweetDate: newImagesData[existingIdx].tweetDate || formatTweetDate(media.date)
               };
               markFieldChanged(targetId, `images.${existingIdx}`);
             } else {
@@ -1443,7 +1460,7 @@ const currentMV = data[activeIndex];
                 tweetText: media.text,
                 tweetAuthor: media.user_name,
                 tweetHandle: media.user_screen_name,
-                tweetDate: media.date
+                tweetDate: formatTweetDate(media.date)
               });
             }
           }
@@ -1596,7 +1613,7 @@ const currentMV = data[activeIndex];
         tweetText: firstMedia.text,
         tweetAuthor: firstMedia.user_name,
         tweetHandle: firstMedia.user_screen_name,
-        tweetDate: firstMedia.date
+        tweetDate: formatTweetDate(firstMedia.date)
       };
 
       newImages[imgIdx] = { 
@@ -1617,7 +1634,7 @@ const currentMV = data[activeIndex];
             tweetText: resolvedMediaList[i].text,
             tweetAuthor: resolvedMediaList[i].user_name,
             tweetHandle: resolvedMediaList[i].user_screen_name,
-            tweetDate: resolvedMediaList[i].date,
+            tweetDate: formatTweetDate(resolvedMediaList[i].date),
             groupId,
             width: 0,
             height: 0
