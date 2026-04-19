@@ -614,7 +614,6 @@ export default function FancyboxViewer({
                 loop: true,     // 循環播放
                 muted: true,    // 預設靜音 (避免瀏覽器阻擋自動播放)
                 playsinline: true,
-                controlsList: 'nodownload' // 隱藏下載按鈕 (Fancybox 已經有提供)
               },
             },
           }),
@@ -629,10 +628,6 @@ export default function FancyboxViewer({
         mainClass: 'fancybox-neo-container',
         // Disable native caption by unbinding the default plugin/template entirely
         Caption: false,
-        template: {
-          // Remove caption element from the main template
-          main: '<div class="fancybox__container" role="dialog" aria-modal="true" aria-label="{{MODAL}}" tabindex="-1">\n      <div class="fancybox__backdrop"></div>\n      <div class="fancybox__carousel"></div>\n      <div class="fancybox__footer"></div>\n    </div>',
-        },
         on: {
           ready: (api) => {
             handleAfterOpen();
@@ -671,12 +666,12 @@ export default function FancyboxViewer({
         Carousel: {
           infinite: true,
           transition: 'slide',
-        },
-        Toolbar: {
-          display: {
-            left: ['counter'],
-            middle: [],
-            right: ['download', 'thumbs', 'zoomIn', 'zoomOut', 'toggle1to1', 'fullscreen', 'close'],
+          Toolbar: {
+            display: {
+              left: ['counter'],
+              middle: [],
+              right: ['download', 'zoomIn', 'zoomOut', 'toggle1to1', 'autoplay', 'thumbs', 'close'],
+            },
           },
         },
         Images: {
