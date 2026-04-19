@@ -1237,11 +1237,30 @@ const currentMV = data[activeIndex];
   // 更新單個欄位
   const updateField = (field: keyof MVItem, value: any) => {
     const targetId = currentMV.id;
+    // 在原始數據中尋找這筆 MV (使用最初載入的 ID 來找)
     const originalMv = originalDataRef.current.find(mv => mv.id === targetId);
     
     // 檢查值是否真的變動 (如果是新增的 MV，originalMv 會是 undefined，此時必然標記變動)
     if (!originalMv || JSON.stringify(originalMv[field]) !== JSON.stringify(value)) {
-      markFieldChanged(targetId, field as string);
+      if (field === 'id') {
+        const newId = value as string;
+        // 如果修改的是 ID，必須遷移 changedFields 追蹤的鍵值，否則追蹤會斷鏈
+        setChangedFields(prev => {
+          const newMap = new Map(prev);
+          const fields = newMap.get(targetId) || new Set();
+          fields.add('id');
+          newMap.set(newId, fields);
+          newMap.delete(targetId);
+          return newMap;
+        });
+        
+        // 如果這是一筆已存在資料庫的 MV 被改了 ID，標記舊 ID 刪除，避免產生重複資料
+        if (originalMv && originalMv.id !== newId) {
+          setDeletedIds(prev => new Set(prev).add(originalMv.id));
+        }
+      } else {
+        markFieldChanged(targetId, field as string);
+      }
     }
     
     setData(prevData => prevData.map(mv => 
