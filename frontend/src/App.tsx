@@ -178,11 +178,31 @@ function App({
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 狀態管理
-  const [search, setSearch] = useState<string>("");
-  const [yearFilter, setYearFilter] = useState<string[]>([]);
-  const [albumFilter, setAlbumFilter] = useState<string[]>([]);
-  const [artistFilter, setArtistFilter] = useState<string[]>([]);
+  // 過濾狀態
+  const [search, setSearch] = useState(() => {
+    try { return sessionStorage.getItem('mv_filter_search') || ''; } catch { return ''; }
+  });
+  const [yearFilter, setYearFilter] = useState<string[]>(() => {
+    try { const saved = sessionStorage.getItem('mv_filter_year'); return saved ? JSON.parse(saved) : []; } catch { return []; }
+  });
+  const [albumFilter, setAlbumFilter] = useState<string[]>(() => {
+    try { const saved = sessionStorage.getItem('mv_filter_album'); return saved ? JSON.parse(saved) : []; } catch { return []; }
+  });
+  const [artistFilter, setArtistFilter] = useState<string[]>(() => {
+    try { const saved = sessionStorage.getItem('mv_filter_artist'); return saved ? JSON.parse(saved) : []; } catch { return []; }
+  });
+  
+  // 儲存過濾狀態到 sessionStorage
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('mv_filter_search', search);
+      sessionStorage.setItem('mv_filter_year', JSON.stringify(yearFilter));
+      sessionStorage.setItem('mv_filter_album', JSON.stringify(albumFilter));
+      sessionStorage.setItem('mv_filter_artist', JSON.stringify(artistFilter));
+    } catch (e) {
+      console.error('Failed to save filter state to sessionStorage:', e);
+    }
+  }, [search, yearFilter, albumFilter, artistFilter]);
   const [openYear, setOpenYear] = useState(false);
   const [openAlbum, setOpenAlbum] = useState(false);
   const [openArtist, setOpenArtist] = useState(false);
@@ -211,7 +231,7 @@ function App({
     const saved = localStorage.getItem("ztmy_admin_pwd");
     if (!saved) return;
 
-    const apiUrl = import.meta.env.VITE_API_URL || "https://api.ztmr.club/api/mvs";
+    const apiUrl = import.meta.env.VITE_API_URL || "/api/mvs";
     let cancelled = false;
 
     fetch(`${apiUrl}/verify-admin`, {
@@ -676,37 +696,38 @@ function App({
 
       <main className="mx-auto px-4 w-full max-w-7xl pt-8 pb-8 border-t-2 border-border relative flex-1 max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-[80%]">
         {/* 過濾控制列 */}
-        <div className="flex flex-col md:flex-row gap-4 mb-12 max-[768px]:w-[90vw] max-[768px]:relative max-[768px]:left-1/2 max-[768px]:-translate-x-1/2 max-[768px]:px-4">
-          <div className="relative w-full md:flex-[1] min-[1120px]:flex-[1]">
-            <i className="hn hn-search text-xl absolute left-3 top-1/2 -translate-y-1/2 opacity-50"></i>
-            <Input
-              type="text"
-              placeholder="關鍵字檢索..."
-              className="w-full pl-10"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onBlur={(e) => {
-                if (e.target.value.trim() !== '' && window.umami && typeof window.umami.track === 'function') {
-                  window.umami.track('Z_Input_Change', {
-                    type: 'input[type="text"]',
-                    label: '關鍵字檢索',
-                    value: e.target.value.substring(0, 100)
-                  });
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && search.trim() !== '' && window.umami && typeof window.umami.track === 'function') {
-                  window.umami.track('Z_Input_Change', {
-                    type: 'input[type="text"]',
-                    label: '關鍵字檢索',
-                    value: search.substring(0, 100)
-                  });
-                }
-              }}
-            />
-          </div>
+        <div className="flex flex-col gap-2 mt-8 mb-8 max-[768px]:w-[90vw] max-[768px]:relative max-[768px]:left-1/2 max-[768px]:-translate-x-1/2 max-[768px]:px-4">
+          <div className="flex flex-col md:flex-row gap-4 w-full">
+            <div className="relative w-full md:flex-[1] min-[1120px]:flex-[1]">
+              <i className="hn hn-search text-xl absolute left-3 top-1/2 -translate-y-1/2 opacity-50"></i>
+              <Input
+                type="text"
+                placeholder="關鍵字檢索..."
+                className="w-full pl-10"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onBlur={(e) => {
+                  if (e.target.value.trim() !== '' && window.umami && typeof window.umami.track === 'function') {
+                    window.umami.track('Z_Input_Change', {
+                      type: 'input[type="text"]',
+                      label: '關鍵字檢索',
+                      value: e.target.value.substring(0, 100)
+                    });
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && search.trim() !== '' && window.umami && typeof window.umami.track === 'function') {
+                    window.umami.track('Z_Input_Change', {
+                      type: 'input[type="text"]',
+                      label: '關鍵字檢索',
+                      value: search.substring(0, 100)
+                    });
+                  }
+                }}
+              />
+            </div>
 
-          <div className="grid grid-cols-3 gap-2 md:gap-4 w-full md:flex-[2] min-[1120px]:flex-[1]">
+            <div className="grid grid-cols-3 gap-2 md:gap-4 w-full md:flex-[2] min-[1120px]:flex-[1]">
             <Popover open={openYear} onOpenChange={setOpenYear}>
               <PopoverTrigger asChild>
                 <Button
@@ -944,6 +965,66 @@ function App({
               </PopoverContent>
             </Popover>
           </div>
+        </div>
+
+        {/* 活躍篩選項標籤顯示區塊 */}
+          {(yearFilter.length > 0 || albumFilter.length > 0 || artistFilter.length > 0) && (
+            <div className="flex flex-wrap gap-2 items-center mt-3 mb-4 max-[768px]:w-[90vw] max-[768px]:relative max-[768px]:left-1/2 max-[768px]:-translate-x-1/2 max-[768px]:px-0">
+              <span className="text-xs font-bold opacity-50 mr-1 hidden sm:inline-block">目前篩選：</span>
+              
+              {yearFilter.map(year => (
+                <div key={`year-${year}`} className="flex items-center bg-card border-2 border-border text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-neo-sm group">
+                  <span className="opacity-50 mr-1 sm:mr-1.5 hidden min-[430px]:inline-block">年份</span>
+                  <span className="font-bold mr-1">{year}</span>
+                  <button 
+                    onClick={() => setYearFilter(yearFilter.filter(y => y !== year))}
+                    className="opacity-50 hover:opacity-100 transition-opacity ml-1 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 rounded-sm w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center"
+                  >
+                    <i className="hn hn-times text-[8px] sm:text-[10px]"></i>
+                  </button>
+                </div>
+              ))}
+
+              {albumFilter.map(album => (
+                <div key={`album-${album}`} className="flex items-center bg-card border-2 border-border text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-neo-sm group">
+                  <span className="opacity-50 mr-1 sm:mr-1.5 hidden min-[430px]:inline-block">專輯</span>
+                  <span className="font-bold mr-1 truncate max-w-[100px] sm:max-w-[200px]" title={album}>{album}</span>
+                  <button 
+                    onClick={() => setAlbumFilter(albumFilter.filter(a => a !== album))}
+                    className="opacity-50 hover:opacity-100 transition-opacity ml-1 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 rounded-sm w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center"
+                  >
+                    <i className="hn hn-times text-[8px] sm:text-[10px]"></i>
+                  </button>
+                </div>
+              ))}
+
+              {artistFilter.map(artist => (
+                <div key={`artist-${artist}`} className="flex items-center bg-card border-2 border-border text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-neo-sm group">
+                  <span className="opacity-50 mr-1 sm:mr-1.5 hidden min-[430px]:inline-block">製作</span>
+                  <span className="font-bold mr-1 truncate max-w-[80px] sm:max-w-[150px]" title={artist}>{artist}</span>
+                  <button 
+                    onClick={() => setArtistFilter(artistFilter.filter(a => a !== artist))}
+                    className="opacity-50 hover:opacity-100 transition-opacity ml-1 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 rounded-sm w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center"
+                  >
+                    <i className="hn hn-times text-[8px] sm:text-[10px]"></i>
+                  </button>
+                </div>
+              ))}
+
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => {
+                  setYearFilter([]);
+                  setAlbumFilter([]);
+                  setArtistFilter([]);
+                }}
+                className="text-[10px] sm:text-xs h-6 sm:h-7 px-1.5 sm:px-2 hover:bg-red-500/10 hover:text-red-500 opacity-60 hover:opacity-100 ml-1 border border-transparent hover:border-red-500/20"
+              >
+                清除全部
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* 收藏模式常駐提示 */}
@@ -1388,8 +1469,9 @@ function App({
               <span className="flex items-center gap-1 flex-wrap justify-center md:justify-start">
                 <span className="opacity-30">
                   © {new Date().getFullYear()} ZTMY MV 資料庫 
-                  | FE: {import.meta.env.VITE_BUILD_DATE?.replace(/-/g, '')} {import.meta.env.VITE_BUILD_HASH || 'dev'}
-                  {systemStatus?.buildTime && ` | BE: ${new Date(systemStatus.buildTime).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(/\//g, '')}`}
+                  | FE: {VERSION_CONFIG.app} (🕒 {VERSION_CONFIG.buildDate.replace(/-/g, '')})
+                  {systemStatus?.version && ` | BE: ${systemStatus.version}`}
+                  {systemStatus?.buildTime && ` (🕒 ${new Date(systemStatus.buildTime).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(/\//g, '')})`}
                 </span>
                 <Tooltip delayDuration={0} open={isGeoTooltipOpen} onOpenChange={setIsGeoTooltipOpen}>
                   <TooltipTrigger asChild>
@@ -1579,7 +1661,7 @@ const fetcher = (url: string) =>
 
 // 為了支援 useParams，我們需要導出一個包裹了路由環境的組件
 export default function RootApp() {
-  const apiUrl = import.meta.env.VITE_API_URL || "https://api.ztmr.club/api/mvs";
+  const apiUrl = import.meta.env.VITE_API_URL || "/api/mvs";
   const defaultMetadata = {
     albumMeta: {},
     artistMeta: {},

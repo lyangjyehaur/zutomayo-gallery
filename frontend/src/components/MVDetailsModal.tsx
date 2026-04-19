@@ -10,6 +10,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { MVItem } from '@/lib/types';
 import { getProxyImgUrl } from '@/lib/image';
+import { initGeo } from '@/lib/geo';
 import LightGalleryViewer, { GALLERY_BREAKPOINTS } from '@/components/LightGalleryViewer';
 import FancyboxViewer from '@/components/FancyboxViewer';
 import { WalineComments } from '@/components/WalineComments';
@@ -39,6 +40,13 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
   // 影片播放狀態
   const [videoPlatform, setVideoPlatform] = useState<'youtube' | 'bilibili'>('bilibili');
   const [isVideoActivated, setIsVideoActivated] = useState(false);
+  const [isChinaIP, setIsChinaIP] = useState(false);
+
+  useEffect(() => {
+    initGeo().then(info => {
+      setIsChinaIP(info.isChinaIP);
+    });
+  }, []);
   
   // 防止在退場動畫期間連續觸發 onClose 導致路由亂跳
   const isClosingRef = useRef(false);
@@ -49,14 +57,19 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
   // 使用 ref 追踪燈箱狀態，避免觸發重渲染
   const isLightboxOpenRef = useRef(false);
 
-  // 當切換影片時重置狀態
+  // 當切換影片或獲取到 IP 狀態時重置平台選擇
   useEffect(() => {
-    setIsVideoActivated(false);
     isLightboxOpenRef.current = false;
-    // 預設選擇有資料的平台
-    if (mv?.bilibili) setVideoPlatform('bilibili');
-    else if (mv?.youtube) setVideoPlatform('youtube');
-  }, [mv?.id]);
+    
+    // 根據是否為牆內 IP 決定優先順序
+    if (isChinaIP) {
+      if (mv?.bilibili) setVideoPlatform('bilibili');
+      else if (mv?.youtube) setVideoPlatform('youtube');
+    } else {
+      if (mv?.youtube) setVideoPlatform('youtube');
+      else if (mv?.bilibili) setVideoPlatform('bilibili');
+    }
+  }, [mv?.id, isChinaIP]);
 
   // 網頁標題管理
   useEffect(() => {
@@ -106,7 +119,13 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
     distance: 0,
     duration: 0,
   });
+  const marqueeStateRef = useRef(marqueeState);
   const isScrolled = scrollTop > 20;
+
+  // 同步 marqueeState 到 ref
+  useEffect(() => {
+    marqueeStateRef.current = marqueeState;
+  }, [marqueeState]);
 
   // 當 modal 開啟時才重置一些狀態
   useEffect(() => {
@@ -114,6 +133,9 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
       setDescHeight(undefined);
       setScrollTop(0);
       setMarqueeState({ isMarquee: false, distance: 0, duration: 0 });
+      
+      // 確保影片播放狀態被重置
+      setIsVideoActivated(false);
     }
   }, [mv]);
 
@@ -259,15 +281,13 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                           const distance = textWidth + gap;
                           const duration = Math.max(distance / 48, 8);
                           
-                          setMarqueeState((prev) => {
-                            if (prev.isMarquee && prev.distance === distance && prev.duration === duration) return prev;
-                            return { isMarquee: true, distance, duration };
-                          });
+                          if (!marqueeStateRef.current.isMarquee || marqueeStateRef.current.distance !== distance || marqueeStateRef.current.duration !== duration) {
+                            setMarqueeState({ isMarquee: true, distance, duration });
+                          }
                         } else {
-                          setMarqueeState(prev => {
-                            if (!prev.isMarquee) return prev;
-                            return { isMarquee: false, distance: 0, duration: 0 };
-                          });
+                          if (marqueeStateRef.current.isMarquee) {
+                            setMarqueeState({ isMarquee: false, distance: 0, duration: 0 });
+                          }
                         }
                       };
 
@@ -338,16 +358,23 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                 {/* Monitor Header / Signal Switcher */}
                 <div className="flex items-center justify-between px-2 min-[430px]:px-4 py-2 border-b-4 border-black bg-black/5">
                   <div className="flex items-center gap-1.5 min-[430px]:gap-3">
-                    <div className="w-2.5 h-2.5 bg-green-500 animate-pulse shadow-[2px_2px_0_0_rgba(34,197,94,0.4)]"></div>
+                    <div className={`w-2.5 h-2.5 animate-pulse ${videoPlatform === 'youtube' && isChinaIP ? 'bg-red-500 shadow-[2px_2px_0_0_rgba(239,68,68,0.4)]' : 'bg-green-500 shadow-[2px_2px_0_0_rgba(34,197,94,0.4)]'}`}></div>
                     <span className="text-[10px] font-black uppercase tracking-widest flex flex-col leading-tight min-w-0">
                       <span className="tracking-normal flex items-baseline gap-1 min-[430px]:gap-1.5 opacity-60 min-w-0">
                         <span className="whitespace-nowrap">訊號源</span>
                         <span className="text-[8px] font-mono normal-case truncate">Signal_Source</span>
                       </span>
-                      <span className="tracking-normal text-green-500 flex items-baseline gap-1 min-[430px]:gap-1.5 min-w-0">
-                        <span className="whitespace-nowrap">已連線</span>
-                        <span className="text-[8px] font-mono normal-case truncate">Connected</span>
-                      </span>
+                      {videoPlatform === 'youtube' && isChinaIP ? (
+                        <span className="tracking-normal text-red-500 flex items-baseline gap-1 min-[430px]:gap-1.5 min-w-0">
+                          <span className="whitespace-nowrap">已斷開</span>
+                          <span className="text-[8px] font-mono normal-case truncate">Disconnected</span>
+                        </span>
+                      ) : (
+                        <span className="tracking-normal text-green-500 flex items-baseline gap-1 min-[430px]:gap-1.5 min-w-0">
+                          <span className="whitespace-nowrap">已連線</span>
+                          <span className="text-[8px] font-mono normal-case truncate">Connected</span>
+                        </span>
+                      )}
                     </span>
                   </div>
                   
@@ -384,8 +411,11 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                 <div className="aspect-video bg-black overflow-hidden relative group isolate">
                   {!isVideoActivated ? (
                     <div 
-                      className="absolute inset-0 z-20 cursor-pointer flex items-center justify-center overflow-hidden"
-                      onClick={() => setIsVideoActivated(true)}
+                      className={`absolute inset-0 z-20 flex items-center justify-center overflow-hidden ${videoPlatform === 'youtube' && isChinaIP ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                      onClick={() => {
+                        if (videoPlatform === 'youtube' && isChinaIP) return;
+                        setIsVideoActivated(true);
+                      }}
                       data-umami-event="Z_Play_Video"
                       data-umami-event-platform={videoPlatform}
                       data-umami-event-title={mv?.title}
@@ -393,21 +423,40 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                       <div className="absolute inset-0 z-0">
                         <CoverCarousel coverImages={mv?.coverImages ?? []} title={mv?.title || ''} isPaused={false} forceLoad={true} hideCrt={true} />
                       </div>
-                      <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors z-10" />
+                      <div className={`absolute inset-0 transition-colors z-10 ${videoPlatform === 'youtube' && isChinaIP ? 'bg-black/60' : 'bg-black/40 group-hover:bg-black/20'}`} />
                       <div className="absolute inset-0 opacity-20 pointer-events-none crt-lines z-15"></div>
                       
                       <div className="relative z-40 flex flex-col items-center gap-6">
                         {/* 播放按鈕 - 背景模糊、無陰影、無懸浮位移 */}
-                        <div className="bg-main/50 backdrop-blur px-6 min-[430px]:px-10 py-3 min-[430px]:py-5 border-4 border-black flex flex-col items-center gap-2 min-[430px]:gap-3">
-                          <div className="flex items-center gap-2 min-[430px]:gap-3 mb-0 min-[430px]:mb-1">
-                            <i className="hn hn-play text-xl min-[430px]:text-3xl text-black"></i>
-                            <span className="font-black tracking-widest text-black text-lg min-[430px]:text-2xl">PLAY</span>
+                        {videoPlatform === 'youtube' && isChinaIP ? (
+                          <div className="flex flex-col items-center gap-3 min-[430px]:gap-4">
+                            <div className="bg-red-900/50 backdrop-blur px-6 min-[430px]:px-10 py-3 min-[430px]:py-5 border-4 border-red-500 flex flex-col items-center gap-2 min-[430px]:gap-3">
+                              <div className="flex items-center gap-2 min-[430px]:gap-3 mb-0 min-[430px]:mb-1">
+                                <i className="hn hn-times-solid text-xl min-[430px]:text-3xl text-red-500"></i>
+                                <span className="font-black tracking-widest text-red-500 text-lg min-[430px]:text-2xl">OFFLINE</span>
+                              </div>
+                              <span className="glitch-text text-red-400 font-black tracking-widest text-[8px] min-[430px]:text-[10px] uppercase flex flex-col items-center leading-tight opacity-70">
+                                <span className="tracking-normal">信號源斷開</span>
+                                <span className="text-[6px] min-[430px]:text-[8px] font-mono opacity-80 normal-case mt-0.5">Signal_Disconnected</span>
+                              </span>
+                            </div>
+                            <div className="bg-black/60 backdrop-blur-sm px-4 py-2 border-2 border-red-500/50 text-red-400 text-xs min-[430px]:text-sm font-bold flex items-center gap-2">
+                                <span className="text-base animate-bounce">👻</span>
+                                <span>訊號被神秘力量攔截啦！去隔壁頻道看看吧？</span>
+                              </div>
                           </div>
-                          <span className="glitch-text text-black font-black tracking-widest text-[8px] min-[430px]:text-[10px] uppercase flex flex-col items-center leading-tight opacity-70">
-                            <span className="tracking-normal">初始化訊號串流</span>
-                            <span className="text-[6px] min-[430px]:text-[8px] font-mono opacity-80 normal-case mt-0.5">Initialize_Signal_Stream</span>
-                          </span>
-                        </div>
+                        ) : (
+                          <div className="bg-main/50 backdrop-blur px-6 min-[430px]:px-10 py-3 min-[430px]:py-5 border-4 border-black flex flex-col items-center gap-2 min-[430px]:gap-3">
+                            <div className="flex items-center gap-2 min-[430px]:gap-3 mb-0 min-[430px]:mb-1">
+                              <i className="hn hn-play text-xl min-[430px]:text-3xl text-black"></i>
+                              <span className="font-black tracking-widest text-black text-lg min-[430px]:text-2xl">PLAY</span>
+                            </div>
+                            <span className="glitch-text text-black font-black tracking-widest text-[8px] min-[430px]:text-[10px] uppercase flex flex-col items-center leading-tight opacity-70">
+                              <span className="tracking-normal">初始化訊號串流</span>
+                              <span className="text-[6px] min-[430px]:text-[8px] font-mono opacity-80 normal-case mt-0.5">Initialize_Signal_Stream</span>
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ) : (
