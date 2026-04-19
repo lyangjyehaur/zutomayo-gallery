@@ -100,6 +100,22 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
   const leftColumnRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
   const [descHeight, setDescHeight] = useState<number | undefined>(undefined);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [marqueeState, setMarqueeState] = useState({
+    isMarquee: false,
+    distance: 0,
+    duration: 0,
+  });
+  const isScrolled = scrollTop > 20;
+
+  // 當 modal 開啟時才重置一些狀態
+  useEffect(() => {
+    if (mv) {
+      setDescHeight(undefined);
+      setScrollTop(0);
+      setMarqueeState({ isMarquee: false, distance: 0, duration: 0 });
+    }
+  }, [mv]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -193,7 +209,7 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
         onPointerDownOutside={handlePointerDownOutside}
         onInteractOutside={handleInteractOutside}
       >
-        <DialogHeader className="relative z-30 pt-10 py-6 border-b-4 border-border">
+        <DialogHeader className="relative z-30 pt-10 py-6 border-b-4 border-border shadow-md transition-all duration-200">
           <DialogClose 
               className="absolute top-4 right-4 md:top-6 md:right-8 z-50 bg-background text-foreground border-3 border-foreground shadow-neo-sm hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all w-10 h-10 flex items-center justify-center rounded-none"
               data-umami-event="Z_Close_MV_Modal"
@@ -202,14 +218,100 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
               <i className="hn hn-times text-2xl"></i>
             </DialogClose>
           
-          <DialogTitle className="text-2xl pr-16 cursor-default transition-colors uppercase tracking-tighter font-black flex flex-col md:flex-row md:items-center gap-x-4 gap-y-2" lang="ja">
-            <span className="ztmy-cyber-title shrink-0 w-fit" data-text={mv?.title}>
-              <span className="ztmy-cyber-text" data-text={mv?.title}>
-                {mv?.title}
+          <DialogTitle 
+            className="text-2xl pr-16 cursor-default uppercase tracking-tighter font-black flex flex-col md:flex-row md:items-center gap-x-4 overflow-hidden w-full" 
+            lang="ja"
+            style={{
+              rowGap: typeof window !== 'undefined' && window.innerWidth < 768
+                ? Math.max(0, 8 - scrollTop / 5) + 'px'
+                : '8px'
+            }}
+          >
+            {/* MV Title */}
+            <span className="ztmy-cyber-title shrink-0 max-w-full md:max-w-[40%] flex min-w-0" data-text={mv?.title}>
+              <span className="ztmy-cyber-text relative flex min-w-0 w-full overflow-hidden group" data-text={mv?.title}>
+                <span 
+                  className={`inline-block whitespace-nowrap ${marqueeState.isMarquee ? 'overflow-visible animate-card-title-marquee' : 'max-w-full truncate'}`}
+                  style={{
+                    '--marquee-distance': `${marqueeState.distance}px`,
+                    '--marquee-duration': `${marqueeState.duration}s`,
+                    animationName: marqueeState.isMarquee ? 'card-title-marquee' : 'none',
+                    animationTimingFunction: 'linear',
+                    animationIterationCount: 'infinite'
+                  } as React.CSSProperties}
+                  ref={(node) => {
+                    if (node) {
+                      const parent = node.parentElement;
+                      if (!parent) return;
+                      
+                      const handleResize = () => {
+                        const firstChild = node.children[0] as HTMLElement;
+                        if (!firstChild) return;
+                        
+                        const isCurrentlyMarquee = node.classList.contains('animate-card-title-marquee');
+                        
+                        // 計算文字真實寬度，如果是跑馬燈狀態，需要減去我們加上的 32px padding
+                        const textWidth = firstChild.offsetWidth - (isCurrentlyMarquee ? 32 : 0);
+                        const parentWidth = parent.clientWidth;
+
+                        if (textWidth > parentWidth) {
+                          const gap = 32;
+                          const distance = textWidth + gap;
+                          const duration = Math.max(distance / 48, 8);
+                          
+                          setMarqueeState((prev) => {
+                            if (prev.isMarquee && prev.distance === distance && prev.duration === duration) return prev;
+                            return { isMarquee: true, distance, duration };
+                          });
+                        } else {
+                          setMarqueeState(prev => {
+                            if (!prev.isMarquee) return prev;
+                            return { isMarquee: false, distance: 0, duration: 0 };
+                          });
+                        }
+                      };
+
+                      // 避免重複綁定 ResizeObserver
+                      if ((node as any)._resizeObserver) {
+                        (node as any)._resizeObserver.disconnect();
+                      }
+
+                      const resizeObserver = new ResizeObserver(() => {
+                        handleResize();
+                      });
+                      
+                      if (node.parentElement) {
+                        resizeObserver.observe(node.parentElement);
+                      }
+                      resizeObserver.observe(node);
+                      (node as any)._resizeObserver = resizeObserver;
+                      
+                      // 初始觸發一次計算，並在幾毫秒後再觸發一次以確保字體等資源已載入
+                      handleResize();
+                      setTimeout(handleResize, 100);
+                      setTimeout(handleResize, 500);
+                    }
+                  }}
+                >
+                  <span style={{ display: 'inline-block', paddingRight: marqueeState.isMarquee ? '32px' : '0px' }}>{mv?.title}</span>
+                  <span style={{ display: marqueeState.isMarquee ? 'inline-block' : 'none', paddingRight: marqueeState.isMarquee ? '32px' : '0px' }} aria-hidden="true">{mv?.title}</span>
+                </span>
               </span>
             </span>
             {mv?.keywords && mv.keywords.length > 0 && (
-              <div className="flex-1 flex flex-wrap items-center gap-2 opacity-80 italic text-sm font-bold tracking-normal normal-case md:pt-1.5">
+              <div 
+                className="flex-1 flex flex-wrap items-center gap-2 italic text-sm font-bold tracking-normal normal-case md:pt-1.5 min-w-0 md:opacity-80 md:flex md:!max-h-full"
+                style={{
+                  maxHeight: typeof window !== 'undefined' && window.innerWidth < 768 
+                    ? Math.max(0, 80 - scrollTop) + 'px' 
+                    : undefined,
+                  opacity: typeof window !== 'undefined' && window.innerWidth < 768 
+                    ? Math.max(0, 1 - scrollTop / 40) * 0.8
+                    : undefined,
+                  overflow: 'hidden',
+                  visibility: typeof window !== 'undefined' && window.innerWidth < 768 && scrollTop >= 80 ? 'hidden' : 'visible'
+                }}
+              >
                 {mv.keywords.map((k, i) => (
                   <span key={i} lang={k.lang || undefined}>#{k.text}</span>
                 ))}
@@ -221,7 +323,13 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex-1 overflow-y-auto lg:overflow-hidden px-8 py-8 custom-scrollbar relative z-20">
+        <div 
+          className="flex-1 overflow-y-auto lg:overflow-hidden px-8 py-8 custom-scrollbar relative z-20"
+          onScroll={(e) => {
+            const target = e.currentTarget;
+            setScrollTop(target.scrollTop);
+          }}
+        >
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-screen-2xl mx-auto lg:h-full">
             {/* 左側/上方區域：影片 + 描述 + 畫廊 */}
             <div className="space-y-4 lg:sticky lg:top-0 flex flex-col min-h-0 lg:h-full" ref={leftColumnRef}>

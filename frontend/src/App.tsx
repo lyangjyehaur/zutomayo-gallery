@@ -1642,6 +1642,7 @@ export default function RootApp() {
         toast("安裝 ZTMY Gallery", {
           description: "將網站加入主畫面，享受全螢幕與離線瀏覽體驗！",
           duration: 10000,
+          position: "bottom-center",
           action: {
             label: "安裝",
             onClick: async () => {
