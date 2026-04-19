@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { Fancybox as NativeFancybox } from '@fancyapps/ui';
 import '@fancyapps/ui/dist/fancybox/fancybox.css';
@@ -24,6 +24,7 @@ interface FancyboxViewerProps {
   breakpointColumns?: typeof GALLERY_BREAKPOINTS;
   className?: string;
   enablePagination?: boolean;
+  autoLoadMore?: boolean; // 新增配置項：是否自動載入下一頁
   onLightboxOpen?: () => void;
   onLightboxClose?: () => void;
 }
@@ -113,6 +114,7 @@ interface PhotoData {
   height?: number;
   rawFilename?: string;
   isVideo?: boolean;
+  isGif?: boolean;
   groupId?: string;
   tweetUrl?: string;
   [key: string]: any;
@@ -343,7 +345,7 @@ const PhotoItem = ({ photo, index, onPhotoClick, delayMs }: PhotoItemProps) => {
         data-filename={photo.rawFilename || photo.caption}
         onClick={handleClick}
       >
-        <div className="border-3 border-black bg-card shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all w-full">
+        <div className="border-3 border-black bg-card shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all w-full group">
           <div className="relative bg-secondary-background overflow-hidden w-full" style={{ aspectRatio: aspectRatio || '16 / 9' }}>
             <div
               className={`absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2 transition-opacity duration-500 pointer-events-none ${
@@ -360,7 +362,7 @@ const PhotoItem = ({ photo, index, onPhotoClick, delayMs }: PhotoItemProps) => {
             <img
               alt={photo.caption}
               src={photo.src}
-              className={`absolute inset-0 w-full h-full object-contain transition-all duration-700 ${
+              className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ${
                 isLoaded ? 'opacity-100 scale-100 blur-0' : 'opacity-0 scale-110 blur-xl'
               }`}
               loading="lazy"
@@ -378,6 +380,20 @@ const PhotoItem = ({ photo, index, onPhotoClick, delayMs }: PhotoItemProps) => {
                 setIsLoaded(true);
               }}
             />
+            
+            {/* GIF 標籤 */}
+            {photo.isGif && (
+              <div className="absolute top-2 left-2 flex items-center justify-center bg-black/60 text-white rounded px-2 py-0.5 shadow-sm backdrop-blur-sm border border-white/10 z-10 pointer-events-none">
+                <span className="font-black text-[10px] tracking-widest">GIF</span>
+              </div>
+            )}
+            {photo.isVideo && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none transition-opacity group-hover:bg-black/30 z-10 backdrop-blur-[1px]">
+                <div className="bg-black/70 text-white p-2 sm:p-3 border-2 border-white/20 shadow-lg flex items-center justify-center backdrop-blur-md transform transition-transform group-hover:scale-110">
+                  <i className="hn hn-play-solid text-xl sm:text-2xl ml-0.5" />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -396,9 +412,23 @@ export default function FancyboxViewer({
   breakpointColumns = defaultBreakpointColumns,
   className = '',
   enablePagination = true,
+  autoLoadMore = false, // 預設手動點擊
   onLightboxOpen,
   onLightboxClose,
 }: FancyboxViewerProps) {
+  // 將 images 陣列轉換為我們內部使用的格式，並進行過濾
+  const processedImages = useMemo(() => {
+    return images
+      .filter((img) => img.url && img.url.trim() !== '')
+      .map(img => ({
+        ...img,
+        // 確保 tweetDate 轉為可用於比較的數值，如果沒有就當作 0
+        _sortTime: img.tweetDate ? new Date(img.tweetDate).getTime() : 0
+      }))
+      // 根據發布時間降冪排序 (最新的在前)
+      .sort((a, b) => b._sortTime - a._sortTime);
+  }, [images]);
+
   const [displayedPhotos, setDisplayedPhotos] = useState<PhotoData[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -406,6 +436,9 @@ export default function FancyboxViewer({
   const [hasMore, setHasMore] = useState(true);
   const lastBatchStartRef = useRef(0);
   const displayedCountRef = useRef(0);
+  
+  // Intersection Observer 用的哨兵
+  const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
 
   const fancyboxRef = useRef<ReturnType<typeof NativeFancybox.show> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -427,12 +460,13 @@ export default function FancyboxViewer({
 
   const getPhotosFromRange = useCallback(
     async (startIndex: number, count: number): Promise<PhotoData[]> => {
-      const filteredImages = images.slice(startIndex, startIndex + count).filter((img) => img.url && img.url.trim() !== '');
+      const filteredImages = processedImages.slice(startIndex, startIndex + count);
 
       const photosWithDimensions = await Promise.all(
         filteredImages.map(async (img, index) => {
           const thumbUrl = img.thumbnail ? getProxyImgUrl(img.thumbnail, 'thumb') : getProxyImgUrl(img.url, 'thumb');
-          const isVideo = img.url.match(/\.(mp4|webm)$/i) || img.url.includes('video.twimg.com') || (img.thumbnail && img.thumbnail !== img.url);
+          const isVideo = img.url.match(/\.(mp4|webm)$/i) || img.url.includes('video.twimg.com') || (img.thumbnail && img.thumbnail !== img.url && !img.url.match(/\.gif$/i));
+          const isGif = img.url.match(/\.gif$/i) || img.url.includes('tweet_video_thumb');
           const fullUrl = isVideo ? img.url : getProxyImgUrl(img.url, 'full');
 
           let width = img.width;
@@ -454,13 +488,14 @@ export default function FancyboxViewer({
           return {
             src: thumbUrl,
             full: fullUrl,
-            raw: isVideo ? img.url : getProxyImgUrl(img.url, 'raw', fullFilename),
+            raw: isVideo ? getProxyImgUrl(img.url, 'raw', fullFilename) : getProxyImgUrl(img.url, 'raw', fullFilename),
             caption,
             richText: img.richText || '',
             width,
             height,
             rawFilename: fullFilename,
             isVideo, // 加入 isVideo 標記
+            isGif,   // 加入 isGif 標記
             groupId: img.groupId,
             tweetUrl: img.tweetUrl,
             ...img // 保留其他可能的新增欄位
@@ -470,11 +505,11 @@ export default function FancyboxViewer({
 
       return photosWithDimensions;
     },
-    [images, mvTitle, preloadImageDimensions],
+    [processedImages, mvTitle, preloadImageDimensions],
   );
 
   useEffect(() => {
-    if (images.length === 0) {
+    if (processedImages.length === 0) {
       setLoading(false);
       setHasMore(false);
       return;
@@ -485,10 +520,10 @@ export default function FancyboxViewer({
       lastBatchStartRef.current = 0;
       setDisplayedPhotos(firstPagePhotos);
       setCurrentPage(1);
-      setHasMore(firstPagePhotos.length < images.length);
+      setHasMore(firstPagePhotos.length < processedImages.length);
       setLoading(false);
     });
-  }, [images, itemsPerPage, getPhotosFromRange]);
+  }, [processedImages, itemsPerPage, getPhotosFromRange]);
 
   const loadMore = useCallback(() => {
     if (loadingMore || !hasMore) return;
@@ -497,16 +532,46 @@ export default function FancyboxViewer({
 
     const startIndex = currentPage * itemsPerPage;
     getPhotosFromRange(startIndex, itemsPerPage).then((newPhotos) => {
-      if (newPhotos.length > 0) {
-        lastBatchStartRef.current = displayedCountRef.current;
-        setDisplayedPhotos((prev) => [...prev, ...newPhotos]);
-        setCurrentPage((prev) => prev + 1);
-      }
+      // 為了能看清楚 Loading 動畫，不論自動或手動都增加一點延遲
+      const delay = 1200;
+      setTimeout(() => {
+        if (newPhotos.length > 0) {
+          lastBatchStartRef.current = displayedCountRef.current;
+          setDisplayedPhotos((prev) => {
+            const existingUrls = new Set(prev.map(p => p.src));
+            const uniqueNewPhotos = newPhotos.filter(p => !existingUrls.has(p.src));
+            return [...prev, ...uniqueNewPhotos];
+          });
+          setCurrentPage((prev) => prev + 1);
+        }
 
-      setHasMore(startIndex + newPhotos.length < images.length);
-      setLoadingMore(false);
+        setHasMore(startIndex + newPhotos.length < processedImages.length);
+        setLoadingMore(false);
+      }, delay);
     });
-  }, [currentPage, images.length, loadingMore, hasMore, itemsPerPage, getPhotosFromRange]);
+  }, [currentPage, processedImages.length, loadingMore, hasMore, itemsPerPage, getPhotosFromRange, autoLoadMore]);
+
+  // 實作無限滾動 (Infinite Scroll) - 僅在 autoLoadMore 開啟時生效
+  useEffect(() => {
+    const sentinel = loadMoreSentinelRef.current;
+    if (!sentinel || !hasMore || loadingMore || !enablePagination || !autoLoadMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMore();
+        }
+      },
+      {
+        root: null,
+        rootMargin: '400px', // 提早 400px 觸發載入，讓使用者感覺不到延遲
+        threshold: 0.1,
+      }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, loadMore, enablePagination, autoLoadMore]);
 
   const handleAfterOpen = useCallback(() => {
     document.dispatchEvent(new CustomEvent('lightboxBeforeOpen', { detail: { provider: 'fb' } }));
@@ -553,10 +618,11 @@ export default function FancyboxViewer({
             ratio: (photo.width && photo.height) ? photo.width / photo.height : undefined,
             Html: {
               video: {
-                // 移除 crossOrigin: 'anonymous'，因為 Twitter CDN 影片不支援 CORS，
-                // 加上 crossOrigin 反而會導致 403 或 CORS 阻擋。
-                // 防盜鏈 (403) 已經透過 index.html 的 meta referrer 解決。
-                playsinline: true, // 避免 iOS 強制全螢幕
+                autoplay: true, // 自動播放
+                loop: true,     // 循環播放
+                muted: true,    // 預設靜音 (避免瀏覽器阻擋自動播放)
+                playsinline: true,
+                controlsList: 'nodownload' // 隱藏下載按鈕 (Fancybox 已經有提供)
               },
             },
           }),
@@ -613,13 +679,19 @@ export default function FancyboxViewer({
         Carousel: {
           infinite: true,
           transition: 'slide',
-          Toolbar: {
-            display: {
-              left: ['counter'],
-              middle: [],
-              right: ['download', 'thumbs', 'zoomIn', 'zoomOut', 'toggle1to1', 'fullscreen', 'close'],
-            },
+        },
+        Toolbar: {
+          display: {
+            left: ['counter'],
+            middle: [],
+            right: ['download', 'thumbs', 'zoomIn', 'zoomOut', 'toggle1to1', 'fullscreen', 'close'],
           },
+        },
+        Images: {
+          initialSize: 'fit',
+          Panzoom: {
+            maxScale: 3,
+          }
         },
       });
     },
@@ -637,7 +709,7 @@ export default function FancyboxViewer({
       <div ref={containerRef} className={`p-4 sm:p-6 lg:p-10 min-h-screen font-mono ${className}`}>
         {showHeader && <SkeletonHeader />}
         <ResponsiveMasonry breakpointColumns={breakpointColumns} className="" columnClassName="">
-          {Array.from({ length: Math.min(itemsPerPage, images.length || 4) }).map((_, i) => (
+          {Array.from({ length: Math.min(itemsPerPage, processedImages.length || 4) }).map((_, i) => (
             <SkeletonItem key={i} />
           ))}
         </ResponsiveMasonry>
@@ -645,7 +717,7 @@ export default function FancyboxViewer({
     );
   }
 
-  if (images.length === 0) {
+  if (processedImages.length === 0) {
     return (
       <div className={`p-4 sm:p-6 lg:p-10 min-h-screen font-mono ${className}`}>
         <p className="text-sm opacity-50 italic text-center py-10 border-2 border-dashed border-white/5">暫無設定圖資料</p>
@@ -673,17 +745,58 @@ export default function FancyboxViewer({
           justify-content: stretch !important;
         }
 
-        /* 確保 HTML5 影片元素完美貼合 Fancybox 提供的比例容器 */
+        /* Twitter 影片播放優化 */
         .fancybox__html5video {
           width: 100% !important;
           height: 100% !important;
-          object-fit: contain; /* 讓影片保持比例顯示，不裁切也不扭曲 */
+          object-fit: contain;
           background: transparent;
         }
         
-        /* 移除影片外層預設的背景顏色，避免邊緣殘留黑線 */
         .fancybox__html5video-wrap {
           background: transparent !important;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        /* Cyberpunk Glitch Text Animation */
+        .ztmy-cyber-text {
+          position: relative;
+        }
+        .ztmy-cyber-text::before,
+        .ztmy-cyber-text::after {
+          content: attr(data-text);
+          position: absolute;
+          top: 0;
+          left: 0;
+          opacity: 0.8;
+        }
+        .ztmy-cyber-text::before {
+          left: 2px;
+          text-shadow: -1px 0 red;
+          animation: glitch-anim-1 3s infinite linear alternate-reverse;
+        }
+        .ztmy-cyber-text::after {
+          left: -2px;
+          text-shadow: -1px 0 blue;
+          animation: glitch-anim-2 4s infinite linear alternate-reverse;
+        }
+        @keyframes glitch-anim-1 {
+          0% { clip-path: inset(20% 0 80% 0); }
+          20% { clip-path: inset(60% 0 10% 0); }
+          40% { clip-path: inset(40% 0 50% 0); }
+          60% { clip-path: inset(80% 0 5% 0); }
+          80% { clip-path: inset(10% 0 70% 0); }
+          100% { clip-path: inset(30% 0 20% 0); }
+        }
+        @keyframes glitch-anim-2 {
+          0% { clip-path: inset(10% 0 60% 0); }
+          20% { clip-path: inset(30% 0 20% 0); }
+          40% { clip-path: inset(70% 0 10% 0); }
+          60% { clip-path: inset(20% 0 50% 0); }
+          80% { clip-path: inset(50% 0 30% 0); }
+          100% { clip-path: inset(5% 0 80% 0); }
         }
 
         .fancybox__carousel {
@@ -931,24 +1044,41 @@ export default function FancyboxViewer({
       </div>
 
       {enablePagination && hasMore && (
-        <div className="mt-8 lg:mt-12 flex justify-center">
-          <button
-            onClick={loadMore}
-            disabled={loadingMore}
-            className="group px-6 sm:px-8 py-3 sm:py-4 bg-card border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none active:translate-x-2 active:translate-y-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-black uppercase tracking-tighter text-sm sm:text-lg flex flex-col items-center gap-1 min-w-[200px]"
-            data-umami-event="Z_Load_More_Images"
-            data-umami-event-mv={mvTitle}
-            data-umami-event-count={displayedPhotos.length}
-          >
-            <span className="flex flex-col items-center leading-tight">
-              <span className="tracking-normal">
-                {loadingMore ? '載入中...' : '載入更多'} ({displayedPhotos.length} / {images.length})
+        <div ref={loadMoreSentinelRef} className="mt-8 lg:mt-12 flex justify-center py-10">
+          {loadingMore ? (
+            <div className="flex flex-col items-center leading-tight opacity-50 animate-pulse relative z-10">
+              {/* Glitch / Cyberpunk 風格 Loading */}
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-2 h-2 bg-blue-500 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+                <div className="w-2 h-2 bg-ztmy-green animate-pulse" style={{ animationDelay: '300ms' }} />
+                <div className="w-2 h-2 bg-black dark:bg-white animate-pulse shadow-[0_0_8px_rgba(255,255,255,0.8)]" style={{ animationDelay: '600ms' }} />
+              </div>
+              <span className="tracking-[0.2em] font-black uppercase text-sm mb-1 ztmy-cyber-text" data-text="INITIALIZING_DATA_STREAM...">
+                INITIALIZING_DATA_STREAM...
               </span>
-              <span className="text-[10px] font-mono opacity-60 normal-case">
-                {loadingMore ? 'Loading...' : 'Load_More_Assets'}
+              <span className="text-[10px] font-mono normal-case tracking-widest opacity-60">
+                [ ASSETS: {displayedPhotos.length} / {processedImages.length} ]
               </span>
-            </span>
-          </button>
+            </div>
+          ) : (
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="group px-6 sm:px-8 py-3 sm:py-4 bg-card border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none active:translate-x-2 active:translate-y-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-black uppercase tracking-tighter text-sm sm:text-lg flex flex-col items-center gap-1 min-w-[200px]"
+              data-umami-event="Z_Load_More_Images"
+              data-umami-event-mv={mvTitle}
+              data-umami-event-count={displayedPhotos.length}
+            >
+              <span className="flex flex-col items-center leading-tight">
+                <span className="tracking-normal">
+                  {loadingMore ? '載入中...' : '載入更多'} ({displayedPhotos.length} / {processedImages.length})
+                </span>
+                <span className="text-[10px] font-mono opacity-60 normal-case">
+                  {loadingMore ? 'Loading...' : 'Load_More_Assets'}
+                </span>
+              </span>
+            </button>
+          )}
         </div>
       )}
 

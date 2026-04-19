@@ -2252,6 +2252,20 @@ const currentMV = data[activeIndex];
                 <span className="text-[10px] font-bold opacity-40 font-mono normal-case ml-2">01_Basic_Information</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-xs font-bold uppercase flex flex-col leading-tight">
+                    <div className="flex items-center justify-between">
+                      <span className="opacity-70">前台展示設定</span>
+                      <Switch 
+                        checked={currentMV.autoLoadMore || false}
+                        onCheckedChange={(checked) => updateField('autoLoadMore', checked)}
+                      />
+                    </div>
+                    <span className="text-[10px] font-mono opacity-40 normal-case mt-1">
+                      {currentMV.autoLoadMore ? '自動載入更多圖片 (Infinite Scroll)' : '手動點擊按鈕載入更多'}
+                    </span>
+                  </label>
+                </div>
                 <div className="space-y-2 col-span-1">
                   <label className="text-xs font-bold uppercase flex flex-col leading-tight">
                     <span className="opacity-70">MV 唯一 ID</span>
@@ -2567,7 +2581,8 @@ const currentMV = data[activeIndex];
               <div className="space-y-4">
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                   {visibleImages.map((img, imgIdx) => {
-                    const isVideo = img.url?.match(/\.(mp4|webm)$/i) || img.url?.includes('video.twimg.com') || (img.thumbnail && img.thumbnail !== img.url);
+                    const isGif = img.url?.match(/\.gif$/i) || img.url?.includes('tweet_video_thumb');
+                    const isVideo = (img.url?.match(/\.(mp4|webm)$/i) || img.url?.includes('video.twimg.com') || (img.thumbnail && img.thumbnail !== img.url)) && !isGif;
                     return (
                       <div
                         key={imgIdx}
@@ -2743,7 +2758,13 @@ const currentMV = data[activeIndex];
                                 {currentMV.images[editingImageIdx].url ? (
                                   <>
                                     <img src={getProxyImgUrl(currentMV.images[editingImageIdx].thumbnail || currentMV.images[editingImageIdx].url, 'thumb')} className="w-full h-full object-contain" alt="預覽" />
-                                    {(currentMV.images[editingImageIdx].url?.match(/\.(mp4|webm)$/i) || currentMV.images[editingImageIdx].url?.includes('video.twimg.com') || (currentMV.images[editingImageIdx].thumbnail && currentMV.images[editingImageIdx].thumbnail !== currentMV.images[editingImageIdx].url)) && (
+                                    {/* GIF 標籤 */}
+                                    {currentMV.images[editingImageIdx].url?.match(/\.gif$/i) || currentMV.images[editingImageIdx].url?.includes('tweet_video_thumb') ? (
+                                      <div className="absolute top-2 left-2 flex items-center justify-center bg-black/60 text-white rounded px-2 py-0.5 shadow-sm backdrop-blur-sm border border-white/10 z-10 pointer-events-none">
+                                        <span className="font-black text-[10px] tracking-widest">GIF</span>
+                                      </div>
+                                    ) : null}
+                                    {((currentMV.images[editingImageIdx].url?.match(/\.(mp4|webm)$/i) || currentMV.images[editingImageIdx].url?.includes('video.twimg.com') || (currentMV.images[editingImageIdx].thumbnail && currentMV.images[editingImageIdx].thumbnail !== currentMV.images[editingImageIdx].url)) && !(currentMV.images[editingImageIdx].url?.match(/\.gif$/i) || currentMV.images[editingImageIdx].url?.includes('tweet_video_thumb'))) && (
                                       <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
                                         <div className="bg-black/80 text-white rounded-full p-2 border-2 border-white/20">
                                           <i className="hn hn-play text-2xl ml-1" />

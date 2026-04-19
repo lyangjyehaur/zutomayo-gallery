@@ -518,6 +518,7 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                     mvTitle={mv.title}
                     mvId={mv.id}
                     itemsPerPage={12}
+                    autoLoadMore={mv.autoLoadMore || false} // 由 Admin 後台設定控制
                     showHeader={false}
                     enablePagination={true}
                     breakpointColumns={GALLERY_BREAKPOINTS}

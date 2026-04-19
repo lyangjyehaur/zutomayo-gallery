@@ -77,6 +77,20 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
     }
     // ==== 海外用戶優化結束 ====
 
+    // ==== 處理 Twitter 影片連結 (video.twimg.com) ====
+    if (targetUrl.includes('video.twimg.com')) {
+      // 若是海外用戶，直接回傳直連網址
+      if (isOverseas) {
+        return targetUrl;
+      }
+      
+      // 若是大陸用戶，使用自有的 Nginx 反向代理
+      // 例如將 https://video.twimg.com/ext_tw_video/... 轉換為 https://v-proxy.ztmr.club/ext_tw_video/...
+      // 您可以將 v-proxy.ztmr.club 替換為您實際配置的影片反代網域
+      const videoProxyDomain = import.meta.env.VITE_TWITTER_VIDEO_PROXY || 'https://v-proxy.ztmr.club';
+      return targetUrl.replace('https://video.twimg.com', videoProxyDomain);
+    }
+
     // ==== 中國大陸用戶（或需要代理的圖片）的處理 ====
     // 處理 Twitter 圖片連結的 URL 參數重組（給代理伺服器用）
     if (targetUrl.includes('pbs.twimg.com')) {
@@ -110,7 +124,8 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
       // rs:fit 會在指定邊界內等比例縮放，不會改變圖片原有的長寬比
       params.push('rs:fit:400', 'f:webp');
     }
-    return `https://img.ztmr.club/${params.join('/')}/${base64Url}`;
+    const imgProxyDomain = import.meta.env.VITE_TWITTER_IMG_PROXY || 'https://img.ztmr.club';
+    return `${imgProxyDomain}/${params.join('/')}/${base64Url}`;
   } catch {
     return rawUrl;
   }
