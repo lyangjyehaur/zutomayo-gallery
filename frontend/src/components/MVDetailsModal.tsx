@@ -460,24 +460,26 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                       </div>
                     </div>
                   ) : (
-                    videoPlatform === 'youtube' && mv?.youtube ? (
-                      <iframe 
-                        src={`https://www.youtube.com/embed/${mv.youtube}?autoplay=1&rel=0`}
-                        className="w-full h-full"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                        title={mv.title}
-                        lang="ja"
-                      />
-                    ) : mv?.bilibili ? (
-                      <iframe 
-                        src={`//player.bilibili.com/player.html?bvid=${mv.bilibili}&page=1&high_quality=1&autoplay=1`}
-                        className="w-full h-full"
-                        scrolling="no" frameBorder="0" allowFullScreen
-                        title={mv.title}
-                        lang="ja"
-                      />
-                    ) : null
+                      videoPlatform === 'youtube' && mv?.youtube ? (
+                        <iframe 
+                          src={`https://www.youtube.com/embed/${mv.youtube}?autoplay=1&rel=0`}
+                          className="w-full h-full"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          title={mv.title}
+                          lang="ja"
+                          referrerPolicy="strict-origin-when-cross-origin"
+                        />
+                      ) : mv?.bilibili ? (
+                        <iframe 
+                          src={`//player.bilibili.com/player.html?bvid=${mv.bilibili}&page=1&high_quality=1&autoplay=1`}
+                          className="w-full h-full"
+                          scrolling="no" frameBorder="0" allowFullScreen
+                          title={mv.title}
+                          lang="ja"
+                          referrerPolicy="strict-origin-when-cross-origin"
+                        />
+                      ) : null
                   )}
                 </div>
               </div>

@@ -198,6 +198,7 @@ export class UIManager {
                 const clone = document.getElementById('iframe-template').content.cloneNode(true);
                 const ifr = clone.querySelector('iframe');
                 ifr.src = type === 'bilibili' ? `https://player.bilibili.com/player.html?bvid=${vid}&autoplay=1&poster=1&muted=false` : `https://www.youtube.com/embed/${vid}?autoplay=1`;
+                ifr.referrerPolicy = 'strict-origin-when-cross-origin';
                 container.appendChild(clone);
             };
         };
