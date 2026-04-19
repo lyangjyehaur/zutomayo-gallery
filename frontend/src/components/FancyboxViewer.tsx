@@ -539,6 +539,17 @@ export default function FancyboxViewer({
           // Do not pass caption to Fancybox API to completely prevent native caption rendering
           alt: photo.caption,     // 讓 img 標籤加上 alt 屬性，修復 DOM 備用方案
           type: photo.isVideo ? 'html5video' : 'image', // 告訴 Fancybox 這是影片
+          // 針對影片加入 HTML5 Video 的屬性，解決跨域與防盜鏈問題
+          ...(photo.isVideo && {
+            Html: {
+              video: {
+                // 移除 crossOrigin: 'anonymous'，因為 Twitter CDN 影片不支援 CORS，
+                // 加上 crossOrigin 反而會導致 403 或 CORS 阻擋。
+                // 防盜鏈 (403) 已經透過 index.html 的 meta referrer 解決。
+                playsinline: true, // 避免 iOS 強制全螢幕
+              },
+            },
+          }),
         };
       });
 
