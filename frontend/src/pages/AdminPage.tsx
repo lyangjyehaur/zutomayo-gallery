@@ -1305,7 +1305,22 @@ const currentMV = data[activeIndex];
     }
   };
 
-  // 清理空值的自訂欄位
+  // 一鍵依推文時間排序
+  const handleSortByDate = () => {
+    if (!currentMV?.images) return;
+    const targetId = currentMV.id;
+    
+    // 降冪排序：最新的推文在前，沒有日期的往後排
+    const sortedImages = [...currentMV.images].sort((a, b) => {
+      const timeA = a.tweetDate ? new Date(a.tweetDate).getTime() : 0;
+      const timeB = b.tweetDate ? new Date(b.tweetDate).getTime() : 0;
+      return timeB - timeA;
+    });
+
+    setData(prevData => prevData.map(mv => mv.id === targetId ? { ...mv, images: sortedImages } : mv));
+    markFieldChanged(targetId, 'images');
+    toast.success('已依據推文發布時間重新排序！');
+  };
   const handleCleanEmptyCustomFields = () => {
     if (!currentMV?.images) return;
     const targetId = currentMV.id;
@@ -1350,6 +1365,18 @@ const currentMV = data[activeIndex];
     let existingImagesModified = false;
     let newImagesData = [...(currentMV.images || [])];
 
+    // 輔助函數：提取 Twitter 媒體核心 ID 進行比對
+    const getTwitterMediaId = (url: string) => {
+      if (!url) return null;
+      // 比對圖片: pbs.twimg.com/media/XXXXX
+      const imgMatch = url.match(/\/media\/([a-zA-Z0-9_-]+)/);
+      if (imgMatch) return imgMatch[1];
+      // 比對影片: ext_tw_video/XXXXX
+      const vidMatch = url.match(/\/ext_tw_video\/([a-zA-Z0-9_-]+)/);
+      if (vidMatch) return vidMatch[1];
+      return url; // 如果不是推特，就回傳原網址
+    };
+
     for (let i = 0; i < urls.length; i++) {
       const url = urls[i];
       try {
@@ -1367,8 +1394,15 @@ const currentMV = data[activeIndex];
           const groupId = json.data.length > 1 ? `tweet-${Date.now()}-${Math.floor(Math.random() * 1000)}` : undefined;
           
           for (const media of json.data) {
-            // 檢查該媒體 URL 是否已存在於當前的圖片列表中
-            const existingIdx = newImagesData.findIndex(img => img.url === media.url);
+            // 使用核心 ID 比對，忽略推特網址尾綴參數的干擾
+            const targetMediaId = getTwitterMediaId(media.url);
+            const existingIdx = newImagesData.findIndex(img => {
+              if (targetMediaId) {
+                const imgId = getTwitterMediaId(img.url);
+                return imgId === targetMediaId;
+              }
+              return img.url === media.url;
+            });
             
             if (existingIdx !== -1) {
               // 若已存在，補充缺少的資訊並加入群組
@@ -2525,6 +2559,15 @@ const currentMV = data[activeIndex];
                     }}
                   >
                     <i className="hn hn-check-square text-base mr-2" /> {isSelectionMode ? '取消選擇' : '手動分組'}
+                  </Button>
+                  <Button 
+                    variant="neutral" 
+                    size="sm" 
+                    onClick={handleSortByDate} 
+                    className="border-dashed hover:bg-black/5"
+                    title="將圖片依據推文發布時間降冪排列"
+                  >
+                    <i className="hn hn-sort-amount-desc text-base mr-2" /> 依時間排序
                   </Button>
                   <Button 
                     variant="neutral" 

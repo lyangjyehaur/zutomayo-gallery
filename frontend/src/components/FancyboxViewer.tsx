@@ -416,17 +416,9 @@ export default function FancyboxViewer({
   onLightboxOpen,
   onLightboxClose,
 }: FancyboxViewerProps) {
-  // 將 images 陣列轉換為我們內部使用的格式，並進行過濾
+  // 將 images 陣列過濾出有效圖片 (移除強制時間排序，尊重後台儲存的陣列順序)
   const processedImages = useMemo(() => {
-    return images
-      .filter((img) => img.url && img.url.trim() !== '')
-      .map(img => ({
-        ...img,
-        // 確保 tweetDate 轉為可用於比較的數值，如果沒有就當作 0
-        _sortTime: img.tweetDate ? new Date(img.tweetDate).getTime() : 0
-      }))
-      // 根據發布時間降冪排序 (最新的在前)
-      .sort((a, b) => b._sortTime - a._sortTime);
+    return images.filter((img) => img.url && img.url.trim() !== '');
   }, [images]);
 
   const [displayedPhotos, setDisplayedPhotos] = useState<PhotoData[]>([]);
