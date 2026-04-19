@@ -676,7 +676,7 @@ interface AdminPageProps {
     artistMeta: Record<string, { id?: string; hideId?: boolean }>;
     settings: { showAutoAlbumDate: boolean };
   };
-  systemStatus?: { maintenance: boolean; type?: 'data' | 'ui'; eta?: string | null; buildTime?: string | null };
+  systemStatus?: { maintenance: boolean; type?: 'data' | 'ui'; eta?: string | null; buildTime?: string | null; version?: string | null };
   onRefresh?: () => void;
 }
 
@@ -1325,8 +1325,78 @@ const currentMV = data[activeIndex];
   const handleProbe = async (imgIdx: number, url: string) => {
     if (!url) return;
     const targetId = currentMV.id;
+    let urlToProbe = url;
+    let resolvedMediaList: any[] = [];
+
+    // 如果是推文網址，先呼叫後端解析
+    if (url.match(/(?:x|twitter)\.com\/[^/]+\/status\/\d+/)) {
+      try {
+        // 使用相對路徑加上後端代理的 VITE_API_URL 邏輯，避免跨域和環境變數問題
+        const apiUrl = (import.meta.env.VITE_API_URL || '/api').replace(/\/mvs$/, '') + '/mvs/twitter-resolve';
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
+          },
+          body: JSON.stringify({ url }),
+        });
+        if (!response.ok) throw new Error('推文解析請求失敗');
+        const json = await response.json();
+        
+        if (json.success && json.data && json.data.length > 0) {
+          resolvedMediaList = json.data;
+          toast.success(`成功解析推文，取得 ${json.data.length} 個媒體`);
+        } else {
+          throw new Error('推文中找不到媒體');
+        }
+      } catch (err: any) {
+        toast.error('推文解析失敗: ' + err.message);
+        return;
+      }
+    }
+
+    // 如果有解析出推文媒體，先更新當前圖片列表
+    if (resolvedMediaList.length > 0) {
+      const firstMedia = resolvedMediaList[0];
+      const newImages = [...(currentMV.images || [])];
+      
+      // 更新當前索引的圖片為第一個解析出的媒體
+      newImages[imgIdx] = { 
+        ...newImages[imgIdx], 
+        url: firstMedia.url,
+        thumbnail: firstMedia.thumbnail || '', // 如果是影片會有縮圖
+        tweetUrl: url // 儲存原始推文 URL
+      };
+      
+      // 如果推文有多張圖片/影片，將後續的媒體插入到當前圖片後面
+      if (resolvedMediaList.length > 1) {
+        for (let i = 1; i < resolvedMediaList.length; i++) {
+          newImages.splice(imgIdx + i, 0, {
+            url: resolvedMediaList[i].url,
+            thumbnail: resolvedMediaList[i].thumbnail || '',
+            caption: newImages[imgIdx].caption || '',
+            alt: newImages[imgIdx].alt || '',
+            richText: newImages[imgIdx].richText || '',
+            tweetUrl: url,
+            width: 0,
+            height: 0
+          });
+        }
+      }
+      
+      markFieldChanged(targetId, 'images');
+      setData(prevData => prevData.map(mv => {
+        if (mv.id !== targetId) return mv;
+        return { ...mv, images: newImages };
+      }));
+
+      // 對第一個媒體進行尺寸探測 (如果是影片，探測其縮圖)
+      urlToProbe = firstMedia.thumbnail || firstMedia.url;
+    }
+
     try {
-      const result = await probeImageSize(url);
+      const result = await probeImageSize(urlToProbe);
       
       // 標記寬高字段變動
       markFieldChanged(targetId, `images.${imgIdx}.width`);
@@ -1708,6 +1778,15 @@ const currentMV = data[activeIndex];
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <div className="h-8 border-t-4 border-black bg-card flex items-center justify-between px-8 text-[10px] font-bold opacity-70 shrink-0 z-40 absolute bottom-0 left-0 right-0 w-full">
+          <span>ZTMY.ADMIN.PANEL</span>
+          <span>
+            FE: {VERSION_CONFIG.app}
+            {systemStatus?.version && ` | BE: ${systemStatus.version}`}
+            {systemStatus?.buildTime && ` | 🕒 ${new Date(systemStatus.buildTime).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(/\//g, '')}`}
+          </span>
+        </div>
       </div>
     );
   }
@@ -1734,11 +1813,15 @@ const currentMV = data[activeIndex];
           </Button>
           <h1 className="font-black uppercase tracking-tighter text-xl border-l-4 border-black pl-4">
             數據管理後台 V{VERSION_CONFIG.app}
+            <span className="text-[10px] font-mono opacity-50 ml-2 normal-case tracking-normal align-middle">
+              (🕒 {VERSION_CONFIG.buildDate.replace(/-/g, '')})
+            </span>
           </h1>
-          {systemStatus?.buildTime && (
+          {systemStatus?.version && (
             <span className="hidden md:inline-flex items-center gap-1.5 text-xs font-mono px-2 py-1 bg-muted border-2 border-black/10 rounded-sm ml-2">
               <i className="hn hn-server" />
-              Build: {new Date(systemStatus.buildTime).toLocaleString()}
+              BE: {systemStatus.version}
+              {systemStatus?.buildTime && ` | 🕒 ${new Date(systemStatus.buildTime).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(/\//g, '')}`}
             </span>
           )}
         </div>
@@ -1805,7 +1888,7 @@ const currentMV = data[activeIndex];
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         {/* 左側列表 */}
         <div className="w-80 border-r-4 border-black bg-card h-full flex flex-col">
           <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -2144,14 +2227,20 @@ const currentMV = data[activeIndex];
                       <div className="md:col-span-2 space-y-2">
                         <div className="flex gap-2">
                           <Input 
-                            placeholder="圖片 URL" 
+                            placeholder="圖片 URL 或 推文連結" 
                             value={img.url} 
                             onChange={(e) => updateImage(imgIdx, 'url', e.target.value)} 
                             className={`flex-1 ${!img.url?.trim() ? 'border-red-500/50 bg-red-500/5' : ''}`} />
-                          <Button variant="neutral" size="icon" onClick={() => handleProbe(imgIdx, img.url)} title="自動偵測尺寸">
+                          <Button variant="neutral" size="icon" onClick={() => handleProbe(imgIdx, img.url)} title="自動偵測尺寸與解析推文">
                             <i className="hn hn-expand text-base" />
                           </Button>
                         </div>
+                        {img.tweetUrl && (
+                          <div className="text-xs text-blue-500 flex items-center gap-1">
+                            <span>已解析自:</span>
+                            <a href={img.tweetUrl} target="_blank" rel="noreferrer" className="underline truncate max-w-[200px]">{img.tweetUrl}</a>
+                          </div>
+                        )}
                         <div className="grid grid-cols-2 gap-2">
                            <div className="flex items-center gap-2 bg-black/5 px-2 rounded">
                               <span className="text-[10px] font-bold opacity-40">W</span>
@@ -2181,7 +2270,7 @@ const currentMV = data[activeIndex];
                       </div>
                       <div className="bg-black/5 border-2 border-dashed border-black/10 flex items-center justify-center overflow-hidden">
                         {img.url ? (
-                          <img src={getProxyImgUrl(img.url, 'thumb')} className="max-h-40 object-contain" alt="預覽 (preview)" />
+                          <img src={getProxyImgUrl(img.thumbnail || img.url, 'thumb')} className="max-h-40 object-contain" alt="預覽 (preview)" />
                         ) : (
                           <span className="text-[10px] flex flex-col items-center leading-tight">
                             <span className="opacity-50">無預覽</span>
@@ -2214,6 +2303,20 @@ const currentMV = data[activeIndex];
                     </div>
                   </div>
                 )}
+                
+                {/* 底部的新增圖片按鈕 */}
+                <div className="pt-4 border-t-4 border-black/10">
+                  <Button 
+                    variant="default" 
+                    className="w-full h-16 bg-black text-white hover:bg-ztmy-green hover:text-black font-black uppercase tracking-widest text-lg shadow-neo transition-all"
+                    onClick={addImage}
+                  >
+                    <i className="hn hn-image text-2xl mr-3" /> 新增圖片 / 貼上推文
+                  </Button>
+                  <p className="text-center text-xs font-bold opacity-50 mt-2">
+                    Tip: 貼上 Twitter 網址並點擊自動偵測，可一次載入多張圖片與影片
+                  </p>
+                </div>
               </div>
             </section>
                         {/* 數據架構維護工具 (Schema Maintenance) */}
@@ -2813,6 +2916,14 @@ const currentMV = data[activeIndex];
         </AlertDialogContent>
       </AlertDialog>
 
+      <div className="h-8 border-t-4 border-black bg-card flex items-center justify-between px-8 text-[10px] font-bold opacity-70 shrink-0 z-40 absolute bottom-0 left-0 right-0 w-full">
+        <span>ZTMY.ADMIN.PANEL</span>
+        <span>
+          FE: {VERSION_CONFIG.app} (🕒 {VERSION_CONFIG.buildDate.replace(/-/g, '')})
+          {systemStatus?.version && ` | BE: ${systemStatus.version}`}
+          {systemStatus?.buildTime && ` (🕒 ${new Date(systemStatus.buildTime).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(/\//g, '')})`}
+        </span>
+      </div>
     </div>
     
     

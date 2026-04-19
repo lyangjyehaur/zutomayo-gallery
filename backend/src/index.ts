@@ -113,8 +113,8 @@ const apiLimiter = rateLimit({
 
 // 更嚴格的限流 - 寫入操作
 const writeLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 小時
-  max: 30, // 每個 IP 30 次寫入
+  windowMs: 15 * 60 * 1000, // 15 分鐘 (原為 1 小時)
+  max: 200, // 每個 IP 200 次寫入 (原為 30 次)
   message: {
     success: false,
     error: '寫入操作過於頻繁，請稍後再試',
@@ -124,8 +124,13 @@ const writeLimiter = rateLimit({
 // 應用限流中間件
 app.use('/api/', apiLimiter);
 
-// 針對寫入路由套用 writeLimiter
+// 針對寫入路由套用 writeLimiter，但排除需要頻繁操作的 admin 路由
 app.use('/api/', (req, res, next) => {
+  // 放行驗證與探測相關的路由，避免卡住正常管理操作
+  if (req.path.includes('/verify-admin') || req.path.includes('/probe') || req.path.includes('/twitter-resolve')) {
+    return next();
+  }
+  
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
     writeLimiter(req, res, next);
   } else {

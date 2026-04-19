@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getMVs, getMVById, updateMVs, probeImage, getMetadata, updateMetadata } from '../controllers/mv.controller.js';
+import { getMVs, getMVById, updateMVs, probeImage, getMetadata, updateMetadata, resolveTwitterMedia } from '../controllers/mv.controller.js';
 import { requireAdmin } from '../middleware/auth.middleware.js';
 import { authService } from '../services/auth.service.js';
 import { getDB } from '../services/db.service.js';
@@ -56,5 +56,6 @@ router.get('/', getMVs);
 router.get('/:id', getMVById);
 router.post('/update', requireAdmin, updateMVs);
 router.post('/probe', requireAdmin, probeImage);
+router.post('/twitter-resolve', requireAdmin, resolveTwitterMedia);
 
 export default router;

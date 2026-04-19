@@ -3,8 +3,10 @@ import { getDB } from '../services/db.service.js';
 import fs from 'fs';
 import path from 'path';
 
-// 取得編譯時間的變數 (只在伺服器啟動時讀取一次)
+// 取得編譯時間與版本號的變數 (只在伺服器啟動時讀取一次)
 let buildTime: string | null = null;
+let appVersion: string | null = process.env.APP_VERSION || null;
+
 try {
   // index.js 位於 dist/ 目錄下，所以取它的修改時間作為編譯時間
   const indexFilePath = path.join(process.cwd(), 'dist', 'index.js');
@@ -12,8 +14,17 @@ try {
     const stats = fs.statSync(indexFilePath);
     buildTime = stats.mtime.toISOString();
   }
+  
+  // 取得 package.json 中的版本號 (若環境變數未設定)
+  if (!appVersion) {
+    const pkgPath = path.join(process.cwd(), 'package.json');
+    if (fs.existsSync(pkgPath)) {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+      appVersion = pkg.version;
+    }
+  }
 } catch (err) {
-  console.warn('Unable to determine backend build time', err);
+  console.warn('Unable to determine backend build time or version', err);
 }
 
 export const getSystemStatus = async (req: Request, res: Response, next: NextFunction) => {
@@ -30,7 +41,7 @@ export const getSystemStatus = async (req: Request, res: Response, next: NextFun
     const etaRow = db.prepare('SELECT value FROM meta_settings WHERE key = ?').get('maintenance_eta') as any;
     const eta = etaRow ? etaRow.value : null;
 
-    res.json({ success: true, data: { maintenance, type, eta, buildTime } });
+    res.json({ success: true, data: { maintenance, type, eta, buildTime, version: appVersion } });
   } catch (error) {
     next(error);
   }

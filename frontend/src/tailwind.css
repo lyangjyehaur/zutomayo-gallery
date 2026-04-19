@@ -353,7 +353,7 @@
     }
   }
   .animate-card-title-marquee {
-    animation: card-title-marquee var(--marquee-duration, 8s) linear infinite;
+    animation: card-title-marquee var(--marquee-duration, 8s) linear infinite !important;
   }
   
   /* 滾動標題容器遮罩（可選） */

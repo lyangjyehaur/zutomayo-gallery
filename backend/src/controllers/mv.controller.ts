@@ -11,6 +11,8 @@ import {
 import { ZodError } from 'zod';
 import { getMetadata as getMeta, updateMetadata as updateMeta } from '../services/metadata.service.js';
 
+import { TwitterService } from '../services/twitter.service.js';
+
 const mvService = new MVService();
 
 // 統一錯誤處理輔助函數
@@ -173,5 +175,27 @@ export const updateMetadata = async (req: Request, res: Response) => {
     res.json({ success: true, metadata: newMeta });
   } catch (error: any) {
     res.status(500).json({ error: error.message || '無法更新 Metadata' });
+  }
+};
+
+/**
+ * 解析推文連結，提取真實媒體資源
+ * POST /twitter-resolve
+ */
+export const resolveTwitterMedia = async (req: Request, res: Response) => {
+  try {
+    const { url } = req.body;
+    if (!url || typeof url !== 'string') {
+      return res.status(400).json({ success: false, error: '請提供有效的推文連結' });
+    }
+
+    const mediaList = await TwitterService.extractMediaFromTweet(url);
+    
+    res.json({
+      success: true,
+      data: mediaList
+    });
+  } catch (error: any) {
+    handleError(res, error, 'Controller Error - resolveTwitterMedia');
   }
 };

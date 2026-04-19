@@ -330,7 +330,9 @@ export default function LightGalleryViewer({
     // 並行預加載所有圖片獲取尺寸
     const photosWithDimensions = await Promise.all(
       filteredImages.map(async (img, index) => {
-        const thumbUrl = getProxyImgUrl(img.url, 'thumb');
+        const thumbUrl = img.thumbnail ? getProxyImgUrl(img.thumbnail, 'thumb') : getProxyImgUrl(img.url, 'thumb');
+        const isVideo = img.url.match(/\.(mp4|webm)$/i) || img.url.includes('video.twimg.com');
+        const fullUrl = isVideo ? img.url : getProxyImgUrl(img.url, 'full');
         
         // 如果後端沒有提供尺寸，預加載獲取
         let width = img.width;
@@ -345,8 +347,8 @@ export default function LightGalleryViewer({
         
         return {
           src: thumbUrl,
-          full: getProxyImgUrl(img.url, 'full'),
-          raw: getProxyImgUrl(img.url, 'raw', `${mvTitle}_${img.caption || index}`),
+          full: fullUrl,
+          raw: isVideo ? img.url : getProxyImgUrl(img.url, 'raw', `${mvTitle}_${img.caption || index}`),
           caption: img.caption || `${mvTitle}_${index}`,
           richText: img.richText || '',
           width,

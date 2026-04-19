@@ -422,7 +422,9 @@ export default function FancyboxViewer({
 
       const photosWithDimensions = await Promise.all(
         filteredImages.map(async (img, index) => {
-          const thumbUrl = getProxyImgUrl(img.url, 'thumb');
+          const thumbUrl = img.thumbnail ? getProxyImgUrl(img.thumbnail, 'thumb') : getProxyImgUrl(img.url, 'thumb');
+          const isVideo = img.url.match(/\.(mp4|webm)$/i) || img.url.includes('video.twimg.com');
+          const fullUrl = isVideo ? img.url : getProxyImgUrl(img.url, 'full');
 
           let width = img.width;
           let height = img.height;
@@ -442,8 +444,8 @@ export default function FancyboxViewer({
 
           return {
             src: thumbUrl,
-            full: getProxyImgUrl(img.url, 'full'),
-            raw: getProxyImgUrl(img.url, 'raw', fullFilename),
+            full: fullUrl,
+            raw: isVideo ? img.url : getProxyImgUrl(img.url, 'raw', fullFilename),
             caption,
             richText: img.richText || '',
             width,
