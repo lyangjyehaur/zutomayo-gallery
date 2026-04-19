@@ -1239,8 +1239,8 @@ const currentMV = data[activeIndex];
     const targetId = currentMV.id;
     const originalMv = originalDataRef.current.find(mv => mv.id === targetId);
     
-    // 檢查值是否真的變動
-    if (originalMv && JSON.stringify(originalMv[field]) !== JSON.stringify(value)) {
+    // 檢查值是否真的變動 (如果是新增的 MV，originalMv 會是 undefined，此時必然標記變動)
+    if (!originalMv || JSON.stringify(originalMv[field]) !== JSON.stringify(value)) {
       markFieldChanged(targetId, field as string);
     }
     
@@ -1255,7 +1255,7 @@ const currentMV = data[activeIndex];
     const originalMv = originalDataRef.current.find(mv => mv.id === targetId);
     const originalImage = originalMv?.images?.[imgIdx];
     
-    // 檢查值是否真的變動
+    // 檢查值是否真的變動 (新增的圖片會是 undefined)
     if (!originalImage || JSON.stringify(originalImage[field as keyof typeof originalImage]) !== JSON.stringify(value)) {
       markFieldChanged(targetId, `images.${imgIdx}.${field}`);
     }
