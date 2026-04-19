@@ -719,7 +719,9 @@
   align-items: center !important;
   position: relative !important;
   overflow: visible !important; /* Allow pseudo-elements to show */
-  background-color: var(--secondary-background) !important; /* 預設背景 */
+  background-color: color-mix(in srgb, var(--secondary-background) 85%, transparent) !important; /* 提高不透明度，讓顏色更深更實 */
+  backdrop-filter: blur(12px) !important; /* 加強毛玻璃效果 */
+  -webkit-backdrop-filter: blur(12px) !important;
   color: #FFFFFF !important; /* 預設圖標：白色 */
 }
 
@@ -727,7 +729,7 @@
 .fancybox__container .f-button:hover {
   transform: translate(4px, 4px) !important;
   box-shadow: 0px 0px 0px #000000 !important; /* 按下時陰影完全消失 */
-  background-color: var(--main) !important; /* Hover 背景：main */
+  background-color: color-mix(in srgb, var(--main) 80%, transparent) !important; /* Hover 半透明主色 */
   color: #000000 !important; /* Hover 圖標：黑色 */
 }
 
@@ -745,7 +747,9 @@
   font-weight: bold;
   font-size: 16px;
   color: #FFFFFF; /* 計數器文字預設白色 */
-  background-color: var(--secondary-background) !important;
+  background-color: color-mix(in srgb, var(--secondary-background) 85%, transparent) !important; /* 提高不透明度，讓顏色更深更實 */
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
   margin-right: -3px !important; /* 補償更粗的邊框重疊 */
 }
 
@@ -864,7 +868,7 @@
 .fancybox__container .f-button[data-carousel-go-next]:hover {
   transform: translateY(-50%) translate(4px, 4px) !important;
   box-shadow: 0px 0px 0px #000000 !important; /* 陰影完全消失 */
-  background-color: var(--main) !important; /* Hover 背景：main */
+  background-color: color-mix(in srgb, var(--main) 80%, transparent) !important; /* Hover 半透明主色 */
   color: #000000 !important; /* Hover 圖標：黑色 */
 }
 
@@ -875,6 +879,11 @@
 .fancybox__container .f-button[data-carousel-go-next]:active {
   transform: translateY(-50%) translate(4px, 4px) !important;
   box-shadow: 0px 0px 0px #000000 !important;
+}
+
+/* 為了消除工具列相鄰按鈕邊框重疊，讓相鄰的按鈕往左移 */
+.fancybox__container .f-carousel__toolbar__column > * + * {
+  margin-left: -3px !important; /* 配合 3px 邊框修正 */
 }
 
 /* Navigation Arrows */
