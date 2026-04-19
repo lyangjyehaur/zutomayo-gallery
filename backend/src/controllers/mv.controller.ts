@@ -104,7 +104,7 @@ export const getMVById = async (req: Request, res: Response) => {
  */
 export const updateMVs = async (req: Request, res: Response) => {
   try {
-    const { data: updateData, partial } = req.body;
+    const { data: updateData, partial, deletedIds: reqDeletedIds } = req.body;
     
     if (!Array.isArray(updateData)) {
       return res.status(400).json({
@@ -114,7 +114,7 @@ export const updateMVs = async (req: Request, res: Response) => {
     }
     
     // 提取刪除標記
-    const deletedIds = (updateData as any)._deleted || [];
+    const deletedIds = reqDeletedIds || (updateData as any)._deleted || [];
     const actualData = updateData.filter(item => !deletedIds.includes(item.id));
     
     // 驗證輸入數據

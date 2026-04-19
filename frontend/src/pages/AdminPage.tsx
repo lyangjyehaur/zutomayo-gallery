@@ -1900,6 +1900,7 @@ const currentMV = data[activeIndex];
         },
         body: JSON.stringify({
           data: changedData,
+          deletedIds: changedData._deleted || [],
           partial: true // 標記為部分更新
         }),
       }).then(async response => {
