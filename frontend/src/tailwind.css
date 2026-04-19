@@ -685,3 +685,232 @@
     animation: pixelate-in var(--animation-duration, 600ms) steps(5) forwards;
   }
 }
+
+/* Fancybox Neobrutalism Overrides */
+.fancybox__container {
+  /* Override default Toolbar styles */
+  --f-toolbar-padding: 16px;
+  --f-toolbar-gap: 0px; /* 取消按鈕間距 */
+  --f-button-width: 48px;
+  --f-button-height: 48px;
+  --f-button-border-radius: 0px;
+  --f-button-bg: var(--secondary-background); /* 預設背景：secondary-background */
+  --f-button-hover-bg: var(--main); /* Hover 背景：main */
+  --f-button-active-bg: var(--main);
+  --f-button-color: #FFFFFF; /* 預設圖標：白色 */
+  --f-button-hover-color: #000000; /* Hover 圖標：黑色 */
+  --f-button-svg-width: 0; /* Hide default SVGs */
+  --f-button-svg-height: 0;
+  
+  /* Counter styles */
+  --f-counter-bg: var(--secondary-background);
+  --f-counter-padding: 8px 16px;
+  --f-counter-margin: 0 0 0 0; /* 取消 counter 間距 */
+  --f-counter-border-radius: 0px;
+}
+
+/* Neobrutalism Button Base */
+.fancybox__container .f-button {
+  border: 3px solid #000000 !important; /* 邊框：黑色 */
+  box-shadow: 4px 4px 0px #000000 !important; /* 陰影：黑色 */
+  transition: all 0.15s ease-in-out !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  position: relative !important;
+  overflow: visible !important; /* Allow pseudo-elements to show */
+  background-color: var(--secondary-background) !important; /* 預設背景 */
+  color: #FFFFFF !important; /* 預設圖標：白色 */
+}
+
+/* Hover: 按下的效果 (取消浮起，改為向右下壓，縮小陰影) */
+.fancybox__container .f-button:hover {
+  transform: translate(4px, 4px) !important;
+  box-shadow: 0px 0px 0px #000000 !important; /* 按下時陰影完全消失 */
+  background-color: var(--main) !important; /* Hover 背景：main */
+  color: #000000 !important; /* Hover 圖標：黑色 */
+}
+
+/* Active: 完全按到底 (無陰影) */
+.fancybox__container .f-button:active {
+  transform: translate(4px, 4px) !important; /* 推到底 */
+  box-shadow: 0px 0px 0px #000000 !important;
+}
+
+/* Neobrutalism Counter */
+.fancybox__container .f-counter {
+  border: 3px solid #000000 !important; /* 計數器邊框同步黑色 */
+  box-shadow: 4px 4px 0px #000000 !important; /* 計數器陰影同步黑色 */
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 16px;
+  color: #FFFFFF; /* 計數器文字預設白色 */
+  background-color: var(--secondary-background) !important;
+  margin-right: -3px !important; /* 補償更粗的邊框重疊 */
+}
+
+/* Hide default SVGs completely */
+.fancybox__container .f-button svg {
+  display: none !important;
+}
+
+/* Base style for custom SVG backgrounds */
+.fancybox__container .f-button::before {
+  content: "";
+  display: block;
+  width: 24px;
+  height: 24px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: currentColor; /* Inherit text color (white/black) */
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+/* Map specific buttons to Custom SVGs via CSS Masks */
+.fancybox__container .f-button[data-fancybox-close]::before,
+.fancybox__container .f-button[title="Close"]::before {
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="15 13 16 13 16 14 17 14 17 15 18 15 18 16 19 16 19 17 20 17 20 18 21 18 21 19 22 19 22 20 21 20 21 21 20 21 20 22 19 22 19 21 18 21 18 20 17 20 17 19 16 19 16 18 15 18 15 17 14 17 14 16 13 16 13 15 11 15 11 16 10 16 10 17 9 17 9 18 8 18 8 19 7 19 7 20 6 20 6 21 5 21 5 22 4 22 4 21 3 21 3 20 2 20 2 19 3 19 3 18 4 18 4 17 5 17 5 16 6 16 6 15 7 15 7 14 8 14 8 13 9 13 9 11 8 11 8 10 7 10 7 9 6 9 6 8 5 8 5 7 4 7 4 6 3 6 3 5 2 5 2 4 3 4 3 3 4 3 4 2 5 2 5 3 6 3 6 4 7 4 7 5 8 5 8 6 9 6 9 7 10 7 10 8 11 8 11 9 13 9 13 8 14 8 14 7 15 7 15 6 16 6 16 5 17 5 17 4 18 4 18 3 19 3 19 2 20 2 20 3 21 3 21 4 22 4 22 5 21 5 21 6 20 6 20 7 19 7 19 8 18 8 18 9 17 9 17 10 16 10 16 11 15 11 15 13"/></svg>');
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="15 13 16 13 16 14 17 14 17 15 18 15 18 16 19 16 19 17 20 17 20 18 21 18 21 19 22 19 22 20 21 20 21 21 20 21 20 22 19 22 19 21 18 21 18 20 17 20 17 19 16 19 16 18 15 18 15 17 14 17 14 16 13 16 13 15 11 15 11 16 10 16 10 17 9 17 9 18 8 18 8 19 7 19 7 20 6 20 6 21 5 21 5 22 4 22 4 21 3 21 3 20 2 20 2 19 3 19 3 18 4 18 4 17 5 17 5 16 6 16 6 15 7 15 7 14 8 14 8 13 9 13 9 11 8 11 8 10 7 10 7 9 6 9 6 8 5 8 5 7 4 7 4 6 3 6 3 5 2 5 2 4 3 4 3 3 4 3 4 2 5 2 5 3 6 3 6 4 7 4 7 5 8 5 8 6 9 6 9 7 10 7 10 8 11 8 11 9 13 9 13 8 14 8 14 7 15 7 15 6 16 6 16 5 17 5 17 4 18 4 18 3 19 3 19 2 20 2 20 3 21 3 21 4 22 4 22 5 21 5 21 6 20 6 20 7 19 7 19 8 18 8 18 9 17 9 17 10 16 10 16 11 15 11 15 13"/></svg>');
+}
+
+.fancybox__container .f-button[data-fancybox-download]::before,
+.fancybox__container .f-button[title="Download"]::before {
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="2" y="20" width="20" height="3"/><polygon points="20 8 20 10 19 10 19 11 18 11 18 12 17 12 17 13 16 13 16 14 15 14 15 15 14 15 14 16 13 16 13 17 11 17 11 16 10 16 10 15 9 15 9 14 8 14 8 13 7 13 7 12 6 12 6 11 5 11 5 10 4 10 4 8 5 8 5 7 7 7 7 8 8 8 8 9 9 9 9 10 10 10 10 1 14 1 14 10 15 10 15 9 16 9 16 8 17 8 17 7 19 7 19 8 20 8"/></svg>');
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="2" y="20" width="20" height="3"/><polygon points="20 8 20 10 19 10 19 11 18 11 18 12 17 12 17 13 16 13 16 14 15 14 15 15 14 15 14 16 13 16 13 17 11 17 11 16 10 16 10 15 9 15 9 14 8 14 8 13 7 13 7 12 6 12 6 11 5 11 5 10 4 10 4 8 5 8 5 7 7 7 7 8 8 8 8 9 9 9 9 10 10 10 10 1 14 1 14 10 15 10 15 9 16 9 16 8 17 8 17 7 19 7 19 8 20 8"/></svg>');
+}
+
+.fancybox__container .f-button[data-fancybox-zoomIn]::before,
+.fancybox__container .f-button[title="Zoom in"]::before {
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="23 11 23 13 22 13 22 14 14 14 14 22 13 22 13 23 11 23 11 22 10 22 10 14 2 14 2 13 1 13 1 11 2 11 2 10 10 10 10 2 11 2 11 1 13 1 13 2 14 2 14 10 22 10 22 11 23 11"/></svg>');
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="23 11 23 13 22 13 22 14 14 14 14 22 13 22 13 23 11 23 11 22 10 22 10 14 2 14 2 13 1 13 1 11 2 11 2 10 10 10 10 2 11 2 11 1 13 1 13 2 14 2 14 10 22 10 22 11 23 11"/></svg>');
+}
+
+.fancybox__container .f-button[data-fancybox-zoomOut]::before,
+.fancybox__container .f-button[title="Zoom out"]::before {
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="23 11 23 13 22 13 22 14 2 14 2 13 1 13 1 11 2 11 2 10 22 10 22 11 23 11"/></svg>');
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="23 11 23 13 22 13 22 14 2 14 2 13 1 13 1 11 2 11 2 10 22 10 22 11 23 11"/></svg>');
+}
+
+.fancybox__container .f-button[data-fancybox-toggle1to1]::before,
+.fancybox__container .f-button[title="Toggle zoom"]::before,
+.fancybox__container .f-button[title="Toggle zoom level"]::before,
+.fancybox__container .f-button[title="Zoom"]::before,
+.fancybox__container .f-button[data-panzoom-action="toggleZoom"]::before,
+.fancybox__container .f-button[data-panzoom-action="toggleFull"]::before,
+.fancybox__container .f-button[data-fancybox-zoom]::before,
+.fancybox__container .f-button[data-action="toggleZoom"]::before {
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="9 20 9 23 2 23 2 22 1 22 1 15 4 15 4 20 9 20"/><polygon points="9 1 9 4 4 4 4 9 1 9 1 2 2 2 2 1 9 1"/><polygon points="23 15 23 22 22 22 22 23 15 23 15 20 20 20 20 15 23 15"/><polygon points="23 2 23 9 20 9 20 4 15 4 15 1 22 1 22 2 23 2"/></svg>');
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="9 20 9 23 2 23 2 22 1 22 1 15 4 15 4 20 9 20"/><polygon points="9 1 9 4 4 4 4 9 1 9 1 2 2 2 2 1 9 1"/><polygon points="23 15 23 22 22 22 22 23 15 23 15 20 20 20 20 15 23 15"/><polygon points="23 2 23 9 20 9 20 4 15 4 15 1 22 1 22 2 23 2"/></svg>');
+}
+
+.fancybox__container .f-button[data-fancybox-thumbs]::before,
+.fancybox__container .f-button[title="Thumbnails"]::before,
+.fancybox__container .f-button[title="Toggle thumbnails"]::before,
+.fancybox__container .f-button[data-carousel-go-thumbs]::before,
+.fancybox__container .f-button[data-fancybox-toggle-thumbs]::before,
+.fancybox__container .f-button[data-fancybox-thumbs-toggle]::before,
+.fancybox__container .f-button[data-action="toggleThumbs"]::before,
+.fancybox__container .f-button[data-thumbs-action="toggle"]::before {
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m10,13H2v1h-1v8h1v1h8v-1h1v-8h-1v-1Zm-1,8H3v-6h6v6Z"/><path d="m10,2v-1H2v1h-1v8h1v1h8v-1h1V2h-1Zm-7,7V3h6v6H3Z"/><path d="m22,13h-8v1h-1v8h1v1h8v-1h1v-8h-1v-1Zm-1,8h-6v-6h6v6Z"/><path d="m22,2v-1h-8v1h-1v8h1v1h8v-1h1V2h-1Zm-1,7h-6V3h6v6Z"/></svg>');
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m10,13H2v1h-1v8h1v1h8v-1h1v-8h-1v-1Zm-1,8H3v-6h6v6Z"/><path d="m10,2v-1H2v1h-1v8h1v1h8v-1h1V2h-1Zm-7,7V3h6v6H3Z"/><path d="m22,13h-8v1h-1v8h1v1h8v-1h1v-8h-1v-1Zm-1,8h-6v-6h6v6Z"/><path d="m22,2v-1h-8v1h-1v8h1v1h8v-1h1V2h-1Zm-1,7h-6V3h6v6Z"/></svg>');
+}
+
+.fancybox__container .f-button[data-autoplay-action="toggle"]::before,
+.fancybox__container .f-button[title="Start slideshow"]::before {
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="22 11 22 13 21 13 21 14 20 14 20 15 18 15 18 16 16 16 16 17 15 17 15 18 13 18 13 19 11 19 11 20 10 20 10 21 8 21 8 22 6 22 6 23 3 23 3 22 2 22 2 2 3 2 3 1 6 1 6 2 8 2 8 3 10 3 10 4 11 4 11 5 13 5 13 6 15 6 15 7 16 7 16 8 18 8 18 9 20 9 20 10 21 10 21 11 22 11"/></svg>');
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="22 11 22 13 21 13 21 14 20 14 20 15 18 15 18 16 16 16 16 17 15 17 15 18 13 18 13 19 11 19 11 20 10 20 10 21 8 21 8 22 6 22 6 23 3 23 3 22 2 22 2 2 3 2 3 1 6 1 6 2 8 2 8 3 10 3 10 4 11 4 11 5 13 5 13 6 15 6 15 7 16 7 16 8 18 8 18 9 20 9 20 10 21 10 21 11 22 11"/></svg>');
+}
+
+/* Handle Autoplay Toggle States (Pause icon when playing) */
+.fancybox__container.has-autoplay .f-button[data-autoplay-action="toggle"]::before,
+.fancybox__container.has-autoplay .f-button[title="Pause slideshow"]::before {
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg>');
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg>');
+}
+
+/* Navigation Arrows Override */
+.fancybox__container .f-button.is-prev,
+.fancybox__container .f-button.is-next,
+.fancybox__container .f-button[data-carousel-go-prev],
+.fancybox__container .f-button[data-carousel-go-next] {
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  margin: 0 !important;
+  position: absolute !important;
+  border-radius: 0px !important; /* 強制移除圓角 */
+}
+
+.fancybox__container .f-button.is-prev,
+.fancybox__container .f-button[data-carousel-go-prev] {
+  left: 16px !important;
+}
+
+.fancybox__container .f-button.is-next,
+.fancybox__container .f-button[data-carousel-go-next] {
+  right: 16px !important;
+}
+
+/* 箭頭按鈕 Hover: 向右下壓 */
+.fancybox__container .f-button.is-prev:hover,
+.fancybox__container .f-button.is-next:hover,
+.fancybox__container .f-button[data-carousel-go-prev]:hover,
+.fancybox__container .f-button[data-carousel-go-next]:hover {
+  transform: translateY(-50%) translate(4px, 4px) !important;
+  box-shadow: 0px 0px 0px #000000 !important; /* 陰影完全消失 */
+  background-color: var(--main) !important; /* Hover 背景：main */
+  color: #000000 !important; /* Hover 圖標：黑色 */
+}
+
+/* 箭頭按鈕 Active: 壓到底 */
+.fancybox__container .f-button.is-prev:active,
+.fancybox__container .f-button.is-next:active,
+.fancybox__container .f-button[data-carousel-go-prev]:active,
+.fancybox__container .f-button[data-carousel-go-next]:active {
+  transform: translateY(-50%) translate(4px, 4px) !important;
+  box-shadow: 0px 0px 0px #000000 !important;
+}
+
+/* Navigation Arrows */
+.fancybox__container .f-button.is-prev::before,
+.fancybox__container .f-button[data-carousel-go-prev]::before {
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="17 5 17 7 16 7 16 8 15 8 15 9 14 9 14 10 13 10 13 11 12 11 12 13 13 13 13 14 14 14 14 15 15 15 15 16 16 16 16 17 17 17 17 19 16 19 16 20 14 20 14 19 13 19 13 18 12 18 12 17 11 17 11 16 10 16 10 15 9 15 9 14 8 14 8 13 7 13 7 11 8 11 8 10 9 10 9 9 10 9 10 8 11 8 11 7 12 7 12 6 13 6 13 5 14 5 14 4 16 4 16 5 17 5"/></svg>');
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="17 5 17 7 16 7 16 8 15 8 15 9 14 9 14 10 13 10 13 11 12 11 12 13 13 13 13 14 14 14 14 15 15 15 15 16 16 16 16 17 17 17 17 19 16 19 16 20 14 20 14 19 13 19 13 18 12 18 12 17 11 17 11 16 10 16 10 15 9 15 9 14 8 14 8 13 7 13 7 11 8 11 8 10 9 10 9 9 10 9 10 8 11 8 11 7 12 7 12 6 13 6 13 5 14 5 14 4 16 4 16 5 17 5"/></svg>');
+  transform: translate(-50%, -50%) !important; /* 取消其他位移 */
+}
+
+.fancybox__container .f-button.is-next::before,
+.fancybox__container .f-button[data-carousel-go-next]::before {
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="7 19 7 17 8 17 8 16 9 16 9 15 10 15 10 14 11 14 11 13 12 13 12 11 11 11 11 10 10 10 10 9 9 9 9 8 8 8 8 7 7 7 7 5 8 5 8 4 10 4 10 5 11 5 11 6 12 6 12 7 13 7 13 8 14 8 14 9 15 9 15 10 16 10 16 11 17 11 17 13 16 13 16 14 15 14 15 15 14 15 14 16 13 16 13 17 12 17 12 18 11 18 11 19 10 19 10 20 8 20 8 19 7 19"/></svg>');
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="7 19 7 17 8 17 8 16 9 16 9 15 10 15 10 14 11 14 11 13 12 13 12 11 11 11 11 10 10 10 10 9 9 9 9 8 8 8 8 7 7 7 7 5 8 5 8 4 10 4 10 5 11 5 11 6 12 6 12 7 13 7 13 8 14 8 14 9 15 9 15 10 16 10 16 11 17 11 17 13 16 13 16 14 15 14 15 15 14 15 14 16 13 16 13 17 12 17 12 18 11 18 11 19 10 19 10 20 8 20 8 19 7 19"/></svg>');
+  transform: translate(-50%, -50%) !important; /* 取消其他位移 */
+}
+
+/* 針對左右箭頭按鈕單獨設定 top 偏移 */
+.fancybox__container .f-button.is-prev::before,
+.fancybox__container .f-button.is-next::before,
+.fancybox__container .f-button[data-carousel-go-prev]::before,
+.fancybox__container .f-button[data-carousel-go-next]::before {
+  top: 50% !important; /* 強制覆寫之前殘留的 73% */
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+/* 強制移除所有 Fancybox 縮圖 (Thumbs) 相關的圓角，以符合 Neobrutalism */
+:root {
+  --f-thumb-border-radius: 0px !important;
+}
+
+.fancybox__container .f-thumbs__slide__button,
+.fancybox__container .f-thumbs__slide__img,
+.fancybox__container .f-thumbs__slide button,
+.fancybox__container .f-thumbs__slide button::after,
+.fancybox__container .f-thumbs img {
+  border-radius: 0px !important;
+}
