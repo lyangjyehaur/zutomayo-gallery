@@ -13,8 +13,12 @@ const getRuntimeData = async (): Promise<MVItem[]> => {
       runtimeData = rows.map(row => {
         const mv: any = { ...row };
         // 將 JSON 字串轉回陣列
-        if (mv.album) mv.album = JSON.parse(mv.album);
-        if (mv.coverImages) mv.coverImages = JSON.parse(mv.coverImages);
+        if (mv.album) {
+          try { mv.album = JSON.parse(mv.album); } catch (e) { mv.album = []; }
+        }
+        if (mv.coverImages) {
+          try { mv.coverImages = JSON.parse(mv.coverImages); } catch (e) { mv.coverImages = []; }
+        }
         if (mv.keywords) {
           try {
             const parsed = JSON.parse(mv.keywords);
@@ -27,7 +31,10 @@ const getRuntimeData = async (): Promise<MVItem[]> => {
         } else {
           mv.keywords = [];
         }
-        if (mv.images) mv.images = JSON.parse(mv.images);
+        
+        if (mv.images) {
+          try { mv.images = JSON.parse(mv.images); } catch (e) { mv.images = []; }
+        }
         
         // 兼容舊版字串格式的 artist
         if (mv.artist) {

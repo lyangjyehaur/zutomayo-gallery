@@ -38,14 +38,24 @@ export class AuthService {
   async getPasskeys(): Promise<Passkey[]> {
     const db = getDB();
     const rows = db.prepare('SELECT * FROM auth_passkeys').all() as any[];
-    return rows.map(r => ({
-      id: r.id,
-      publicKey: r.publicKey,
-      counter: r.counter,
-      transports: r.transports ? JSON.parse(r.transports) : undefined,
-      name: r.name,
-      createdAt: r.createdAt
-    }));
+    return rows.map(r => {
+      let transports;
+      if (r.transports) {
+        try {
+          transports = JSON.parse(r.transports);
+        } catch (e) {
+          transports = [];
+        }
+      }
+      return {
+        id: r.id,
+        publicKey: r.publicKey,
+        counter: r.counter,
+        transports,
+        name: r.name,
+        createdAt: r.createdAt
+      };
+    });
   }
 
   async savePasskey(passkey: Passkey) {

@@ -1864,6 +1864,19 @@ const currentMV = data[activeIndex];
       return;
     }
 
+    setChangedFields(prev => {
+      const newMap = new Map(prev);
+      data.forEach(item => {
+        // 如果值真的被變更（被賦予預設值），才標記為變更
+        if ((item as any)[field] === undefined) {
+          const fields = newMap.get(item.id) || new Set();
+          fields.add(field);
+          newMap.set(item.id, fields);
+        }
+      });
+      return newMap;
+    });
+
     setData(prevData => prevData.map(item => ({
       ...item,
       [field]: (item as any)[field] !== undefined ? (item as any)[field] : newFieldDefaultValue
