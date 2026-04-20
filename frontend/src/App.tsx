@@ -1244,14 +1244,10 @@ function App({
                 </div>
               </TooltipContent>
 
-              <DialogContent className="max-w-2xl w-[90vw] md:w-full h-auto max-h-[85vh] overflow-y-auto">
-                {/* 頂部裝飾條 */}
-                <div className="h-2 w-full bg-main border-b-4 border-black relative overflow-hidden shrink-0">
-                  <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xNSIvPjwvc3ZnPg==')] opacity-50"></div>
-                </div>
-
-                <div className="p-4 md:p-8 relative">
-                  <DialogHeader className="relative z-10 mb-6 md:mb-8">
+              <DialogContent className="max-w-2xl w-[90vw] md:w-full h-auto max-h-[85vh] overflow-hidden flex flex-col p-0">
+                {/* 內容區塊 - 這裡設定 flex=1 並讓內部滾動 */}
+                <div className="p-4 md:p-8 relative flex-1 flex flex-col overflow-hidden min-h-0">
+                  <DialogHeader className="relative z-10 mb-6 md:mb-8 shrink-0">
                     <DialogTitle className="text-2xl md:text-4xl font-black uppercase tracking-tighter flex flex-wrap items-center gap-2 md:gap-3">
                       <span className="bg-black text-main px-2 md:px-3 py-1">ZUTOMAYO</span>
                       <span className="opacity-90">Gallery</span>
@@ -1261,24 +1257,101 @@ function App({
                     </DialogDescription>
                   </DialogHeader>
 
-                  <div className="space-y-4 md:space-y-6 relative z-10">
-                    {/* 自述內容 */}
-                    <div className="border-l-4 border-main pl-3 md:pl-4 py-1 space-y-3 md:space-y-4">
-                      <p className="text-sm md:text-lg font-bold leading-relaxed">
-                        這是一個由粉絲為 <span className="underline decoration-main decoration-2 md:decoration-4 underline-offset-4">永遠是深夜有多好。(ZUTOMAYO)</span> 製作的非官方 MV 畫廊。
+                  <div className="relative z-10 flex-1 flex flex-col overflow-hidden min-h-0">
+                    {/* 自述內容區塊 - 佔滿剩餘空間並滾動 */}
+                    <div className="pl-3 md:pl-4 py-1 space-y-4 text-sm md:text-base font-medium opacity-90 leading-relaxed text-justify overflow-y-auto pr-4 custom-scrollbar flex-1">
+                      <p>哈囉！這裡是飯糰，歡迎造訪這個資料庫。</p>
+                      
+                      <p>
+                        其實很早就有做這個資料庫的打算了。本來我也是社團成員之一，社團擺攤團建的時候，常遇到老師出 COS 需要找人設圖、或者畫師老師想找參考資料的情況；尤其是官方宣告 intense II 之後，想著大家有這麼多產糧和做無料的需求，到處翻找人設圖實在不方便，還得克服網絡環境的困境。再加上官方的資料量大且散，找起來真的很心累，當時就在想，如果自己能做一個資料庫，應該會比 QQ 群相冊好用很多吧？ 於是就有了這個站。
                       </p>
-                      <p className="text-xs md:text-base font-medium opacity-80 leading-relaxed">
-                        收錄了歷年來的音樂錄影帶縮圖、資訊與相關連結。所有的美術素材、角色設計與音樂版權均歸屬原創作者與官方所有。
+
+                      <p>
+                        從最開始整理推文，到後來手搓 HTML 的簡單框架上線，一直收到老師們的高度評價，打心底真的超開心，畢竟初衷就是想幫到更多人。
                       </p>
+
+                      <p>
+                        後來慢慢發現純靜態網頁已經跟不上需求了，於是在各路 AI 的「物理外掛」下開始 React 工程化。雖然現在流行 vibe coding，但畢竟自帶一點代碼功底，我對 UI/UX 還是有些執念的。於是自己兼任 PM，在保證基本瀏覽體驗的同時瘋狂打磨細節——雖然我不是專業的網頁設計師，但在風格挑選上真的糾結了很久，最終才確定使用與 <span className="font-bold underline decoration-main decoration-2 underline-offset-4">ZUTOMAYO</span> 風格很搭的 Neobrutalism（新野獸派）；大到整體的實現、畫廊佈局到 Lightbox 燈箱的細節，小到每個按鈕偏移的像素，光是為了調試電腦和手機的顯示寬度，佈局就反反複覆改了好幾版。
+                      </p>
+
+                      <p>
+                        雖然聽起來有點囉嗦，但我一定要分享一下這裡面的小巧思：包括但不限於做了完整的<strong className="bg-main text-black px-1 mx-1">「泛中日韓語言特定字形」</strong>支持（這塊我鑽研了很久，選字體選到一度想放棄這個 feature，直到後來遇到現在這個偉大的開源項目）；還有針對大陸用戶、海外用戶甚至爬牆用戶做了不同的訪問處理。另外也加入了 PWA 支持，可以像應用一樣安裝到手機上，還提供了一定程度的離線瀏覽，連原推和翻譯的對照也都做進去了。
+                      </p>
+
+                      <p className="bg-secondary-background p-3 border-l-4 border-foreground">
+                        除此之外，為了解決大家找圖最大的痛點，在檢索系統上我也下了不少苦功。為了保證搜尋的命中率，我幾乎把所有能與歌曲關聯上的關鍵字、角色特徵、羅馬音乃至中日文別名都一併建了進去。同時實裝了跨組件連動的「本地收藏夾」，方便大家隨手囤積參考資料；還有那套為了讓畫師們能放大看清細節，而被我反覆魔改、像素級重構的燈箱（Lightbox）預覽系統。
+                      </p>
+
+                      <p>
+                        除了目前 MV 畫廊的完善，後續還打算做畫師專題頁，甚至更後期還想搬運官方轉推的優秀作品。奈何量實在太大，還在研究能不能靠 AI 幫忙，畢竟好多神仙 FanArt 被埋沒了真的很可惜。
+                      </p>
+
+                      <p>
+                        廢話了這麼多，感謝你能看到這裡！如果你用起來覺得哪裡不爽，或者對資料庫有什麼想法建議，真的非常希望你能抽空給我個反饋。我們集思廣益，把這個站做得更好，去幫助更多的老師。
+                      </p>
+
+                      <p className="font-bold text-base md:text-lg italic text-right mt-6 pr-4 pb-8">
+                        最後，祝「永遠深夜」。
+                      </p>
+
+                      {/* 感謝名單區塊 */}
+                      <div className="mt-8 pt-8 border-t-4 border-black pr-4">
+                        <h3 className="text-xl md:text-2xl font-black uppercase tracking-widest mb-6 inline-block bg-black text-white px-3 py-1">
+                          Special Thanks
+                        </h3>
+                        <div className="space-y-4 text-sm md:text-base font-medium">
+                          <p>
+                            感謝以下老師與開源專案的支持與貢獻，沒有你們就沒有這個資料庫的誕生：
+                          </p>
+                          <ul className="list-none space-y-3 mt-4">
+                            <li className="flex items-start gap-2 group">
+                              <span className="text-main font-black">►</span>
+                              <div>
+                                <a href="https://github.com/chiron-fonts/chiron-hei-hk" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">
+                                  Chiron Fonts
+                                </a>
+                                <span className="opacity-70 ml-2 text-sm">提供完美的泛中日韓開源字型支援</span>
+                              </div>
+                            </li>
+                            <li className="flex items-start gap-2 group">
+                              <span className="text-main font-black">►</span>
+                              <div>
+                                <a href="https://fancyapps.com/fancybox/" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">
+                                  Fancybox
+                                </a>
+                                <span className="opacity-70 ml-2 text-sm">無可挑剔的圖片燈箱解決方案</span>
+                              </div>
+                            </li>
+                            <li className="flex items-start gap-2 group">
+                              <span className="text-main font-black">►</span>
+                              <div>
+                                <a href="https://gemini.google.com/" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">
+                                  Google Gemini
+                                </a>
+                                <span className="opacity-70 ml-2 text-sm">負責大量的數據整理與邏輯推演</span>
+                              </div>
+                            </li>
+                            <li className="flex items-start gap-2 group">
+                              <span className="text-main font-black">►</span>
+                              <div>
+                                <span className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1 cursor-default">
+                                  Trae AI
+                                </span>
+                                <span className="opacity-70 ml-2 text-sm">與飯糰一起打磨這些瘋狂 UI 細節的物理外掛</span>
+                              </div>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
                     </div>
 
                     {/* 連結區塊 */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mt-6 md:mt-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mt-4 md:mt-6 shrink-0 pb-2 px-1">
                       <a
                         href="https://zutomayo.net/"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-between p-3 md:p-4 border-2 border-black hover:bg-main hover:text-black transition-colors group"
+                        className="flex items-center justify-between p-3 md:p-4 border-2 border-black bg-background hover:bg-main hover:text-black transition-colors group shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none"
                       >
                         <div className="flex flex-col">
                           <span className="font-black text-sm uppercase">Official Site</span>
@@ -1291,7 +1364,7 @@ function App({
                         href="https://github.com/lyangjyehaur/zutomayo-gallery"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-between p-3 md:p-4 border-2 border-black hover:bg-main hover:text-black transition-colors group bg-black/5"
+                        className="flex items-center justify-between p-3 md:p-4 border-2 border-black bg-background hover:bg-main hover:text-black transition-colors group shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none"
                       >
                         <div className="flex flex-col">
                           <span className="font-black text-sm uppercase">Source Code</span>

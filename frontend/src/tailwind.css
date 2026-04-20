@@ -2,6 +2,22 @@
 @plugin "tailwindcss-animate";
 @custom-variant dark (&:is(.dark *));
 
+/* 自定義滾動條樣式 */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--background);
+  border-left: 1px solid var(--border);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--main);
+  border: 1px solid var(--border);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--border);
+}
+
 /* Light mode (default) */
 :root, .light {
   --background: oklch(93.88% 0.033 300.19);
