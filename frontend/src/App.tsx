@@ -1231,26 +1231,26 @@ function App({
                     className="z-30 w-10 h-10 md:w-12 md:h-12 rounded-none transition-colors hover:bg-main hover:text-black"
                     data-umami-event="Z_Click_About"
                   >
-                    <i className="hn hn-question text-xl md:text-2xl"></i>
+                    <i className="hn hn-info-circle text-xl md:text-2xl"></i>
                   </Button>
                 </DialogTrigger>
               </TooltipTrigger>
               <TooltipContent side="left" align="center" sideOffset={10}>
                 <div className="flex flex-col gap-0.5">
-                  <p className="text-xs font-black tracking-widest">關於</p>
+                  <p className="text-xs font-black tracking-widest">碎碎念</p>
                   <p className="text-[10px] font-mono opacity-60 normal-case">
                     ABOUT
                   </p>
                 </div>
               </TooltipContent>
 
-              <DialogContent className="max-w-2xl w-[90vw] md:w-full h-auto max-h-[85vh] overflow-hidden flex flex-col p-0">
+              <DialogContent className="w-screen h-[100dvh] max-w-none md:max-w-2xl md:w-full md:h-auto md:max-h-[85vh] overflow-hidden flex flex-col p-0 border-0 md:border-4 border-black bg-background sm:rounded-none rounded-none shadow-none md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] fixed top-0 left-0 md:top-[50%] md:left-[50%] !translate-x-0 !translate-y-0 md:!translate-x-[-50%] md:!translate-y-[-50%] z-[100]">
                 {/* 內容區塊 - 這裡設定 flex=1 並讓內部滾動 */}
                 <div className="p-4 md:p-8 relative flex-1 flex flex-col overflow-hidden min-h-0">
                   <DialogHeader className="relative z-10 mb-6 md:mb-8 shrink-0">
                     <DialogTitle className="text-2xl md:text-4xl font-black uppercase tracking-tighter flex flex-wrap items-center gap-2 md:gap-3">
                       <span className="bg-black text-main px-2 md:px-3 py-1">ZUTOMAYO</span>
-                      <span className="opacity-90">Gallery</span>
+                      <span className="opacity-90">MV Gallery</span>
                     </DialogTitle>
                     <DialogDescription className="text-sm md:text-lg font-bold opacity-70 mt-2">
                       A fan-made gallery for ZUTOMAYO Music Videos.
@@ -1263,54 +1263,60 @@ function App({
                       <p>哈囉！這裡是飯糰，歡迎造訪這個資料庫。</p>
                       
                       <p>
-                        其實很早就有做這個資料庫的打算了。本來我也是社團成員之一，社團擺攤團建的時候，常遇到老師出 COS 需要找人設圖、或者畫師老師想找參考資料的情況；尤其是官方宣告 intense II 之後，想著大家有這麼多產糧和做無料的需求，到處翻找人設圖實在不方便，還得克服網絡環境的困境。再加上官方的資料量大且散，找起來真的很心累，當時就在想，如果自己能做一個資料庫，應該會比 QQ 群相冊好用很多吧？ 於是就有了這個站。
+                        其實很早就有做這個資料庫的打算了。身為社團成員之一，經常看到社團擺攤團建的時候有老師出 COS 需要找人設圖、或者畫師老師想找參考資料的情況，尤其是官宣 Intense II 之後，想著大家肯定有產糧和做無料的需求，到處翻找設定圖實在不方便，而且大多數老師還得克服網絡環境的難題。再加上官方的資料量大且散，找起來真的很累，當時就在想，如果自己能做一個資料庫，應該會比 QQ 群相冊好用很多吧？ 於是就有了這個資料庫。
                       </p>
 
                       <p>
-                        從最開始整理推文，到後來手搓 HTML 的簡單框架上線，一直收到老師們的高度評價，打心底真的超開心，畢竟初衷就是想幫到更多人。
+                        從最開始整理推文，到後來手搓 HTML 的簡單框架上線之後，就一直收到老師們的高度評價，打心底真的超開心，畢竟初衷就是想幫到更多人。
                       </p>
 
                       <p>
-                        後來慢慢發現純靜態網頁已經跟不上需求了，於是在各路 AI 的「物理外掛」下開始 React 工程化。雖然現在流行 vibe coding，但畢竟自帶一點代碼功底，我對 UI/UX 還是有些執念的。於是自己兼任 PM，在保證基本瀏覽體驗的同時瘋狂打磨細節——雖然我不是專業的網頁設計師，但在風格挑選上真的糾結了很久，最終才確定使用與 <span className="font-bold underline decoration-main decoration-2 underline-offset-4">ZUTOMAYO</span> 風格很搭的 Neobrutalism（新野獸派）；大到整體的實現、畫廊佈局到 Lightbox 燈箱的細節，小到每個按鈕偏移的像素，光是為了調試電腦和手機的顯示寬度，佈局就反反複覆改了好幾版。
+                        後來慢慢發現純靜態網頁已經跟不上需求了，於是在各路 AI 的「物理外掛」下開始 React 工程化。雖然現在流行 vibe coding，但畢竟自帶一點代碼功底，而且本身對 UI/UX 還是有些執念的。於是自己兼任 PM，在保證基本瀏覽體驗的同時瘋狂打磨細節。畢竟我不是專業的網頁設計師，在風格挑選上真的糾結了很久，最終才確定使用與 ZUTOMAYO 視覺風格很搭的 Neobrutalism；大到整體的實現、畫廊佈局到 Lightbox 燈箱的細節，小到每個按鈕偏移的像素，光是為了適配調試電腦和手機的不同顯示寬度，佈局就反反複覆改了好幾版。
                       </p>
 
                       <p>
-                        雖然聽起來有點囉嗦，但我一定要分享一下這裡面的小巧思：包括但不限於做了完整的<strong className="bg-main text-black px-1 mx-1">「泛中日韓語言特定字形」</strong>支持（這塊我鑽研了很久，選字體選到一度想放棄這個 feature，直到後來遇到現在這個偉大的開源項目）；還有針對大陸用戶、海外用戶甚至爬牆用戶做了不同的訪問處理。另外也加入了 PWA 支持，可以像應用一樣安裝到手機上，還提供了一定程度的離線瀏覽，連原推和翻譯的對照也都做進去了。
-                      </p>
-
-                      <p className="bg-secondary-background p-3 border-l-4 border-foreground">
-                        除此之外，為了解決大家找圖最大的痛點，在檢索系統上我也下了不少苦功。為了保證搜尋的命中率，我幾乎把所有能與歌曲關聯上的關鍵字、角色特徵、羅馬音乃至中日文別名都一併建了進去。同時實裝了跨組件連動的「本地收藏夾」，方便大家隨手囤積參考資料；還有那套為了讓畫師們能放大看清細節，而被我反覆魔改、像素級重構的燈箱（Lightbox）預覽系統。
+                        雖然聽起來可能有點囉嗦，但我一定要分享一下這裡面的小巧思。比如為了幫大家解決找圖最大的痛點，我在搜尋功能上真的下了不少苦功，除了可以篩選專輯和畫師，為了保證搜尋的命中率，我幾乎把所有能跟歌曲關聯上的關鍵字別名全都手動維護上去了，就是想隨便搜個關鍵詞都能精確對上。還有那種肉眼不容易發現的細節，像是做了完整的「泛中日韓語言特定字形」支持，這塊我鑽研了很久，選字體選到一度想放棄這個 feature，直到後來遇到「縫合像素字體 / Fusion Pixel Font」這個字體開源項目，真的很偉大；還有我也針對大陸用戶、海外用戶甚至爬牆用戶做了不同的訪問處理，甚至還加入了 PWA 支持，可以像應用一樣安裝到手機上，還提供了一定程度的離線瀏覽，連原推和翻譯的對照也都做進去了（雖然還在施工中）。
                       </p>
 
                       <p>
-                        除了目前 MV 畫廊的完善，後續還打算做畫師專題頁，甚至更後期還想搬運官方轉推的優秀作品。奈何量實在太大，還在研究能不能靠 AI 幫忙，畢竟好多神仙 FanArt 被埋沒了真的很可惜。
+                        除了目前 MV 畫廊的完善，後續還打算做畫師專題頁，甚至更後期還想把官方轉推的優秀作品也展示出來。奈何量實在太大，還在研究能不能靠 AI 幫忙，畢竟好多神仙 FanArt 被埋沒了真的很可惜。（開始畫餅了）
                       </p>
 
                       <p>
-                        廢話了這麼多，感謝你能看到這裡！如果你用起來覺得哪裡不爽，或者對資料庫有什麼想法建議，真的非常希望你能抽空給我個反饋。我們集思廣益，把這個站做得更好，去幫助更多的老師。
+                        廢話了這麼多，感謝你能看到這裡！如果你用起來覺得哪裡不爽，或者對資料庫有什麼想法建議，真的非常希望你能抽空給我個反饋。我們集思廣益，把這個資料庫做得更好，去幫助更多的老師。
                       </p>
 
                       <p className="font-bold text-base md:text-lg italic text-right mt-6 pr-4 pb-8">
-                        最後，祝「永遠深夜」。
+                        —— 祝「永遠深夜」
                       </p>
 
                       {/* 感謝名單區塊 */}
-                      <div className="mt-8 pt-8 border-t-4 border-black pr-4">
-                        <h3 className="text-xl md:text-2xl font-black uppercase tracking-widest mb-6 inline-block bg-black text-white px-3 py-1">
-                          Special Thanks
-                        </h3>
+                      <div className="mt-8 pt-8 pr-4">
+                        <div className="flex flex-col mb-6 items-start">
+                          <h3 className="text-xl md:text-2xl font-black tracking-widest bg-black text-white px-3 py-1 inline-block">
+                            特別感謝
+                          </h3>
+                          <p className="text-[10px] md:text-xs font-mono opacity-50 uppercase tracking-widest mt-2 pl-1">Special Thanks</p>
+                        </div>
                         <div className="space-y-4 text-sm md:text-base font-medium">
                           <p>
-                            感謝以下老師與開源專案的支持與貢獻，沒有你們就沒有這個資料庫的誕生：
+                            感謝以下老師與開源專案的支持與貢獻：
                           </p>
                           <ul className="list-none space-y-3 mt-4">
                             <li className="flex items-start gap-2 group">
                               <span className="text-main font-black">►</span>
                               <div>
-                                <a href="https://github.com/chiron-fonts/chiron-hei-hk" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">
-                                  Chiron Fonts
-                                </a>
-                                <span className="opacity-70 ml-2 text-sm">提供完美的泛中日韓開源字型支援</span>
+                                <a href="https://space.bilibili.com/531797444" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">
+                                  wake_03
+                                </a><br /><span className="opacity-70 ml-2 text-sm">感謝對Wake姐對 ZUTOMAYO 粉絲群體的巨大貢獻，以及提供評論區像素 Nira 醬表情的授權</span>
+                              </div>
+                            </li>
+                            <li className="flex items-start gap-2 group">
+                              <span className="text-main font-black">►</span>
+                              <div>
+                                <a href="https://github.com/TakWolf/fusion-pixel-font" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">
+                                縫合像素字體 / Fusion Pixel Font
+                                </a><br /><span className="opacity-70 ml-2 text-sm">提供完整「泛中日韓語言特定字形」開源字型支援</span>
                               </div>
                             </li>
                             <li className="flex items-start gap-2 group">
@@ -1318,8 +1324,7 @@ function App({
                               <div>
                                 <a href="https://fancyapps.com/fancybox/" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">
                                   Fancybox
-                                </a>
-                                <span className="opacity-70 ml-2 text-sm">無可挑剔的圖片燈箱解決方案</span>
+                                </a><br /><span className="opacity-70 ml-2 text-sm">無可挑剔的圖片燈箱解決方案（雖然覆寫官方的樣式真的超累）</span>
                               </div>
                             </li>
                             <li className="flex items-start gap-2 group">
@@ -1327,8 +1332,7 @@ function App({
                               <div>
                                 <a href="https://gemini.google.com/" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">
                                   Google Gemini
-                                </a>
-                                <span className="opacity-70 ml-2 text-sm">負責大量的數據整理與邏輯推演</span>
+                                </a><br /><span className="opacity-70 ml-2 text-sm">幫助實現專案從靜態網頁到 React 工程化的轉型</span>
                               </div>
                             </li>
                             <li className="flex items-start gap-2 group">
@@ -1336,8 +1340,7 @@ function App({
                               <div>
                                 <span className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1 cursor-default">
                                   Trae AI
-                                </span>
-                                <span className="opacity-70 ml-2 text-sm">與飯糰一起打磨這些瘋狂 UI 細節的物理外掛</span>
+                                </span><br /><span className="opacity-70 ml-2 text-sm">與飯糰一起打磨這些瘋狂 UI 細節的物理外掛（好像是用的 GPT 5.4 的模型）</span>
                               </div>
                             </li>
                           </ul>

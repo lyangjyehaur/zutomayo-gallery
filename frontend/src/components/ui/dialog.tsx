@@ -37,13 +37,13 @@ const DialogContent = React.forwardRef<
         ref={ref}
         
         className={cn(
-"fixed left-[50%] top-[50%] z-[100] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border-4 border-black bg-background p-0 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-bottom-[52%] sm:rounded-none outline-none",          className,
+"fixed left-0 top-0 md:left-[50%] md:top-[50%] z-[100] grid w-screen h-[100dvh] md:w-full md:h-auto md:max-w-lg !translate-x-0 !translate-y-0 md:!translate-x-[-50%] md:!translate-y-[-50%] gap-4 border-0 md:border-4 border-black bg-background p-0 shadow-none md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-bottom-full md:data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-bottom-full md:data-[state=open]:slide-in-from-bottom-[52%] sm:rounded-none outline-none",          className,
         )}
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground z-50">
-          <i className="hn hn-times text-base" />
+        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground z-[110]">
+          <i className="hn hn-times text-base md:text-xl" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>
@@ -54,7 +54,7 @@ const DialogContent = React.forwardRef<
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
     return (
     <div
-className={cn("flex flex-col gap-2 p-6 border-b-4 border-border", className)}
+className={cn("flex flex-col gap-2 p-4 border-b-4 border-border", className)}
       {...props}
     />
   )
