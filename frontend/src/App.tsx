@@ -53,6 +53,7 @@ import {
   DialogTrigger,
   DialogTitle,
   DialogDescription,
+  DialogHeader,
   DialogClose,
 } from "@/components/ui/dialog";
 import { WalineComments } from "@/components/WalineComments";
@@ -1221,9 +1222,94 @@ function App({
         </Tooltip>
 
         <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              onClick={() => setIsFeedbackOpen(!isFeedbackOpen)}
+            <Dialog>
+              <TooltipTrigger asChild>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="neutral"
+                    size="icon"
+                    className="z-30 w-10 h-10 md:w-12 md:h-12 rounded-none transition-colors hover:bg-main hover:text-black"
+                    data-umami-event="Z_Click_About"
+                  >
+                    <i className="hn hn-question text-xl md:text-2xl"></i>
+                  </Button>
+                </DialogTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="left" align="center" sideOffset={10}>
+                <div className="flex flex-col gap-0.5">
+                  <p className="text-xs font-black tracking-widest">關於</p>
+                  <p className="text-[10px] font-mono opacity-60 normal-case">
+                    ABOUT
+                  </p>
+                </div>
+              </TooltipContent>
+
+              <DialogContent className="max-w-2xl w-[90vw] md:w-full h-auto max-h-[85vh] overflow-y-auto">
+                {/* 頂部裝飾條 */}
+                <div className="h-2 w-full bg-main border-b-4 border-black relative overflow-hidden shrink-0">
+                  <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xNSIvPjwvc3ZnPg==')] opacity-50"></div>
+                </div>
+
+                <div className="p-4 md:p-8 relative">
+                  <DialogHeader className="relative z-10 mb-6 md:mb-8">
+                    <DialogTitle className="text-2xl md:text-4xl font-black uppercase tracking-tighter flex flex-wrap items-center gap-2 md:gap-3">
+                      <span className="bg-black text-main px-2 md:px-3 py-1">ZUTOMAYO</span>
+                      <span className="opacity-90">Gallery</span>
+                    </DialogTitle>
+                    <DialogDescription className="text-sm md:text-lg font-bold opacity-70 mt-2">
+                      A fan-made gallery for ZUTOMAYO Music Videos.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-4 md:space-y-6 relative z-10">
+                    {/* 自述內容 */}
+                    <div className="border-l-4 border-main pl-3 md:pl-4 py-1 space-y-3 md:space-y-4">
+                      <p className="text-sm md:text-lg font-bold leading-relaxed">
+                        這是一個由粉絲為 <span className="underline decoration-main decoration-2 md:decoration-4 underline-offset-4">永遠是深夜有多好。(ZUTOMAYO)</span> 製作的非官方 MV 畫廊。
+                      </p>
+                      <p className="text-xs md:text-base font-medium opacity-80 leading-relaxed">
+                        收錄了歷年來的音樂錄影帶縮圖、資訊與相關連結。所有的美術素材、角色設計與音樂版權均歸屬原創作者與官方所有。
+                      </p>
+                    </div>
+
+                    {/* 連結區塊 */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mt-6 md:mt-8">
+                      <a
+                        href="https://zutomayo.net/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between p-3 md:p-4 border-2 border-black hover:bg-main hover:text-black transition-colors group"
+                      >
+                        <div className="flex flex-col">
+                          <span className="font-black text-sm uppercase">Official Site</span>
+                          <span className="font-mono text-[10px] opacity-60">zutomayo.net</span>
+                        </div>
+                        <i className="hn hn-arrow-right transform group-hover:translate-x-1 transition-transform"></i>
+                      </a>
+                      
+                      <a
+                        href="https://github.com/lyangjyehaur/zutomayo-gallery"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between p-3 md:p-4 border-2 border-black hover:bg-main hover:text-black transition-colors group bg-black/5"
+                      >
+                        <div className="flex flex-col">
+                          <span className="font-black text-sm uppercase">Source Code</span>
+                          <span className="font-mono text-[10px] opacity-60">GitHub</span>
+                        </div>
+                        <i className="hn hn-github text-xl"></i>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={() => setIsFeedbackOpen(!isFeedbackOpen)}
               variant="neutral"
               size="icon"
               data-active={isFeedbackOpen}
