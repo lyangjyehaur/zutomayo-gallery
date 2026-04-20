@@ -527,7 +527,9 @@ function App({
     [selectedMvId, mvData],
   );
 
-  const isGlobalPaused = !!selectedMvId || (isFeedbackOpen && isMobile);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
+
+  const isGlobalPaused = !!selectedMvId || (isFeedbackOpen && isMobile) || (isAboutOpen && isMobile);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -1223,7 +1225,7 @@ function App({
         </Tooltip>
 
         <Tooltip>
-            <Dialog>
+            <Dialog open={isAboutOpen} onOpenChange={setIsAboutOpen}>
               <TooltipTrigger asChild>
                 <DialogTrigger asChild>
                   <Button
