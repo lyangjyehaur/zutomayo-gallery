@@ -227,7 +227,7 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
       }
     }}>
       <DialogContent
-        className="max-w-none border-none [&>button]:hidden"
+        className="max-w-none w-screen h-[100dvh] left-0 top-0 !translate-x-0 !translate-y-0 border-0 shadow-none rounded-none p-0 md:max-w-none md:w-screen md:h-[100dvh] md:left-0 md:top-0 md:!translate-x-0 md:!translate-y-0 md:border-0 md:shadow-none !flex !flex-col !gap-0 [&>button]:hidden"
         onPointerDownOutside={handlePointerDownOutside}
         onInteractOutside={handleInteractOutside}
       >

@@ -56,6 +56,7 @@ import {
   DialogHeader,
   DialogClose,
 } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { WalineComments } from "@/components/WalineComments";
 import { SpeedRatingSurvey } from "@/components/SpeedRatingSurvey";
 
@@ -1244,7 +1245,7 @@ function App({
                 </div>
               </TooltipContent>
 
-              <DialogContent className="w-screen h-[100dvh] max-w-none md:max-w-2xl md:w-full md:h-auto md:max-h-[85vh] overflow-hidden flex flex-col p-0 border-0 md:border-4 border-black bg-background sm:rounded-none rounded-none shadow-none md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] fixed top-0 left-0 md:top-[50%] md:left-[50%] !translate-x-0 !translate-y-0 md:!translate-x-[-50%] md:!translate-y-[-50%] z-[100]">
+              <DialogContent className="w-screen h-[100dvh] max-w-none md:max-w-2xl md:w-full md:h-[85vh] md:max-h-[85vh] overflow-hidden flex flex-col p-0 border-0 md:border-4 border-black bg-background sm:rounded-none rounded-none shadow-none md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] fixed top-0 left-0 md:top-[50%] md:left-[50%] !translate-x-0 !translate-y-0 md:!translate-x-[-50%] md:!translate-y-[-50%] z-[100]">
                 {/* 內容區塊 - 這裡設定 flex=1 並讓內部滾動 */}
                 <div className="p-4 md:p-8 relative flex-1 flex flex-col overflow-hidden min-h-0">
                   <DialogHeader className="relative z-10 mb-6 md:mb-8 shrink-0">
@@ -1259,7 +1260,8 @@ function App({
 
                   <div className="relative z-10 flex-1 flex flex-col overflow-hidden min-h-0">
                     {/* 自述內容區塊 - 佔滿剩餘空間並滾動 */}
-                    <div className="pl-3 md:pl-4 py-1 space-y-4 text-sm md:text-base font-medium opacity-90 leading-relaxed text-justify overflow-y-auto pr-4 custom-scrollbar flex-1">
+                    <ScrollArea className="flex-1 min-h-0 w-full">
+                      <div className="pl-3 md:pl-4 py-1 space-y-4 text-sm md:text-base font-medium opacity-90 leading-relaxed text-justify pr-4">
                       <p>哈囉！這裡是飯糰，歡迎造訪這個資料庫。</p>
                       
                       <p>
@@ -1293,10 +1295,10 @@ function App({
                       {/* 感謝名單區塊 */}
                       <div className="mt-8 pt-8 pr-4">
                         <div className="flex flex-col mb-6 items-start">
-                          <h3 className="text-xl md:text-2xl font-black tracking-widest bg-black text-white px-3 py-1 inline-block">
+                          <h3 className="text-xl md:text-2xl font-black tracking-widest bg-black text-main px-3 py-1 inline-block">
                             特別感謝
                           </h3>
-                          <p className="text-[10px] md:text-xs font-mono opacity-50 uppercase tracking-widest mt-2 pl-1">Special Thanks</p>
+                          <p className="text-[10px] md:text-xs font-mono opacity-50 uppercase tracking-widest mt-2 pl-1 whitespace-nowrap">Special Thanks</p>
                         </div>
                         <div className="space-y-4 text-sm md:text-base font-medium">
                           <p>
@@ -1307,8 +1309,8 @@ function App({
                               <span className="text-main font-black">►</span>
                               <div>
                                 <a href="https://space.bilibili.com/531797444" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">
-                                  wake_03
-                                </a><br /><span className="opacity-70 ml-2 text-sm">感謝對Wake姐對 ZUTOMAYO 粉絲群體的巨大貢獻，以及提供評論區像素 Nira 醬表情的授權</span>
+                                深夜大活躍_WAKE_03
+                                </a><br /><span className="opacity-70 ml-2 text-sm">感謝對 ZUTOMAYO 粉絲社群的巨大貢獻，以及提供評論區像素 Nira 醬表情的授權</span>
                               </div>
                             </li>
                             <li className="flex items-start gap-2 group">
@@ -1346,7 +1348,8 @@ function App({
                           </ul>
                         </div>
                       </div>
-                    </div>
+                      </div>
+                    </ScrollArea>
 
                     {/* 連結區塊 */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mt-4 md:mt-6 shrink-0 pb-2 px-1">
@@ -1354,7 +1357,7 @@ function App({
                         href="https://zutomayo.net/"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-between p-3 md:p-4 border-2 border-black bg-background hover:bg-main hover:text-black transition-colors group shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none"
+                        className="flex items-center justify-between p-3 md:p-4 border-2 border-black bg-background hover:bg-main hover:text-black active:bg-main active:text-black transition-all duration-150 group shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none active:translate-x-boxShadowX active:translate-y-boxShadowY active:shadow-none"
                       >
                         <div className="flex flex-col">
                           <span className="font-black text-sm uppercase">Official Site</span>
@@ -1367,7 +1370,7 @@ function App({
                         href="https://github.com/lyangjyehaur/zutomayo-gallery"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-between p-3 md:p-4 border-2 border-black bg-background hover:bg-main hover:text-black transition-colors group shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none"
+                        className="flex items-center justify-between p-3 md:p-4 border-2 border-black bg-background hover:bg-main hover:text-black active:bg-main active:text-black transition-all duration-150 group shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none active:translate-x-boxShadowX active:translate-y-boxShadowY active:shadow-none"
                       >
                         <div className="flex flex-col">
                           <span className="font-black text-sm uppercase">Source Code</span>
