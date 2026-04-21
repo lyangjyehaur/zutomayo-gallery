@@ -1,17 +1,14 @@
-import * as TabsPrimitive from "@radix-ui/react-tabs"
-
 import * as React from "react"
+import * as TabsPrimitive from "@radix-ui/react-tabs"
 
 import { cn } from "@/lib/utils"
 
 function Tabs({
-  className,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.Root>) {
   return (
     <TabsPrimitive.Root
       data-slot="tabs"
-      className={cn("w-full", className)}
       {...props}
     />
   )
@@ -25,8 +22,8 @@ function TabsList({
     <TabsPrimitive.List
       data-slot="tabs-list"
       className={cn(
-        "inline-flex h-12 items-center justify-center rounded-base border-2 border-border bg-background p-1 text-foreground",
-        className,
+        "inline-flex h-12 items-center justify-center rounded-none border-4 border-black bg-card p-1 text-foreground shadow-shadow",
+        className
       )}
       {...props}
     />
@@ -41,8 +38,8 @@ function TabsTrigger({
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap rounded-base border-2 border-transparent px-2 py-1 gap-1.5 text-sm font-heading transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-main data-[state=active]:text-main-foreground data-[state=active]:border-border",
-        className,
+        "inline-flex items-center justify-center whitespace-nowrap rounded-none border-4 border-transparent px-3 py-1.5 text-sm font-black uppercase tracking-widest ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-0 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-black data-[state=active]:bg-main data-[state=active]:text-black hover:bg-main/20 data-[state=active]:hover:bg-main",
+        className
       )}
       {...props}
     />
@@ -57,8 +54,8 @@ function TabsContent({
     <TabsPrimitive.Content
       data-slot="tabs-content"
       className={cn(
-        "mt-2 focus-visible:outline-none",
-        className,
+        "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-0",
+        className
       )}
       {...props}
     />

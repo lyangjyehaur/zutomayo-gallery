@@ -7,6 +7,7 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { MVItem } from '@/lib/types';
 import { getProxyImgUrl } from '@/lib/image';
@@ -372,6 +373,14 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
             <div className="space-y-4 lg:sticky lg:top-0 flex flex-col min-h-0 lg:h-full" ref={leftColumnRef}>
               {/* 影片播放區 (Monitor) */}
               <div className="w-full flex flex-col border-4 border-black shadow-shadow bg-card" ref={playerRef}>
+                <Tabs 
+                  value={videoPlatform} 
+                  onValueChange={(val) => {
+                    setVideoPlatform(val as 'youtube' | 'bilibili');
+                    setIsVideoActivated(false);
+                  }}
+                  className="w-full flex flex-col"
+                >
                 {/* Monitor Header / Signal Switcher */}
                 <div className="flex items-center justify-between px-2 min-[430px]:px-4 py-2 border-b-4 border-black bg-black/5">
                   <div className="flex items-center gap-1.5 min-[430px]:gap-3">
@@ -396,26 +405,26 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                   </div>
                   
                   {mv?.bilibili && mv?.youtube && (
-                    <div className="flex gap-1.5 min-[430px]:gap-3">
-                      <button 
-                        onClick={() => { setVideoPlatform('youtube'); setIsVideoActivated(false); }}
-                        className={`px-1.5 min-[430px]:px-3 py-1 min-[430px]:py-1.5 text-[8px] min-[430px]:text-[10px] font-black uppercase transition-all border-2 border-black flex items-center gap-1 min-[430px]:gap-1.5 ${videoPlatform === 'youtube' ? 'bg-[#ff0000] text-white translate-y-[2px] translate-x-[2px] shadow-none' : 'bg-card text-foreground shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:bg-[#ff0000]/20 hover:-translate-y-[1px] hover:-translate-x-[1px] hover:shadow-[3px_3px_0_0_rgba(0,0,0,1)]'}`}
+                    <TabsList className="!bg-transparent !border-0 !p-0 h-auto !shadow-none flex gap-1.5 min-[430px]:gap-3">
+                      <TabsTrigger 
+                        value="youtube"
+                        className="px-1.5 min-[430px]:px-3 py-1 min-[430px]:py-1.5 text-[8px] min-[430px]:text-[10px] font-black uppercase transition-all border-2 border-black flex items-center gap-1 min-[430px]:gap-1.5 bg-card text-foreground shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:-translate-y-[1px] hover:-translate-x-[1px] hover:shadow-[3px_3px_0_0_rgba(0,0,0,1)] data-[state=active]:bg-[#ff0000] data-[state=active]:text-white data-[state=active]:translate-y-[2px] data-[state=active]:translate-x-[2px] data-[state=active]:shadow-none data-[state=active]:hover:bg-[#ff0000] data-[state=active]:border-black"
                         data-umami-event="Z_Switch_Video_Platform"
                         data-umami-event-platform="youtube"
                         data-umami-event-title={mv?.title}
                       >
                         <i className="hn hn-youtube text-[10px] min-[430px]:text-sm"></i> YouTube
-                      </button>
-                      <button 
-                        onClick={() => { setVideoPlatform('bilibili'); setIsVideoActivated(false); }}
-                        className={`px-1.5 min-[430px]:px-3 py-1 min-[430px]:py-1.5 text-[8px] min-[430px]:text-[10px] font-black uppercase transition-all border-2 border-black flex items-center gap-1 min-[430px]:gap-1.5 ${videoPlatform === 'bilibili' ? 'bg-[#FB7299] text-white translate-y-[2px] translate-x-[2px] shadow-none' : 'bg-card text-foreground shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:bg-[#FB7299]/20 hover:-translate-y-[1px] hover:-translate-x-[1px] hover:shadow-[3px_3px_0_0_rgba(0,0,0,1)]'}`}
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="bilibili"
+                        className="px-1.5 min-[430px]:px-3 py-1 min-[430px]:py-1.5 text-[8px] min-[430px]:text-[10px] font-black uppercase transition-all border-2 border-black flex items-center gap-1 min-[430px]:gap-1.5 bg-card text-foreground shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:-translate-y-[1px] hover:-translate-x-[1px] hover:shadow-[3px_3px_0_0_rgba(0,0,0,1)] data-[state=active]:bg-[#FB7299] data-[state=active]:text-white data-[state=active]:translate-y-[2px] data-[state=active]:translate-x-[2px] data-[state=active]:shadow-none data-[state=active]:hover:bg-[#FB7299] data-[state=active]:border-black"
                         data-umami-event="Z_Switch_Video_Platform"
                         data-umami-event-platform="bilibili"
                         data-umami-event-title={mv?.title}
                       >
                         <i className="hn hn-retro-pc text-[10px] min-[430px]:text-sm"></i> Bilibili
-                      </button>
-                    </div>
+                      </TabsTrigger>
+                    </TabsList>
                   )}
                   {(!mv?.bilibili || !mv?.youtube) && (
                     <div className="px-1.5 min-[430px]:px-3 py-1 min-[430px]:py-1.5 text-[8px] min-[430px]:text-[10px] font-black uppercase border-2 border-black flex items-center gap-1 min-[430px]:gap-1.5 bg-card shadow-[2px_2px_0_0_rgba(0,0,0,1)] opacity-70">
@@ -477,30 +486,38 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                       </div>
                     </div>
                   ) : (
-                      videoPlatform === 'youtube' && mv?.youtube ? (
-                        <iframe
-                          src={`https://www.youtube.com/embed/${mv.youtube}?autoplay=1&rel=0`}
-                          className="w-full h-full"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                          title={mv.title}
-                          lang="ja"
-                          referrerPolicy="strict-origin-when-cross-origin"
-                        />
-                      ) : mv?.bilibili ? (
-                        <iframe 
-                          src={`//player.bilibili.com/player.html?bvid=${mv.bilibili}&page=1&high_quality=1&autoplay=1`}
-                          className="w-full h-full"
-                          scrolling="no"
-                          frameBorder="0"
-                          allowFullScreen
-                          title={mv.title}
-                          lang="ja"
-                          referrerPolicy="strict-origin-when-cross-origin"
-                        />
-                      ) : null
+                    <>
+                      {mv?.youtube && (
+                        <TabsContent value="youtube" className="w-full h-full m-0 border-0 p-0 shadow-none outline-none">
+                          <iframe
+                            src={`https://www.youtube.com/embed/${mv.youtube}?autoplay=1&rel=0`}
+                            className="w-full h-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            title={mv.title}
+                            lang="ja"
+                            referrerPolicy="strict-origin-when-cross-origin"
+                          />
+                        </TabsContent>
+                      )}
+                      {mv?.bilibili && (
+                        <TabsContent value="bilibili" className="w-full h-full m-0 border-0 p-0 shadow-none outline-none">
+                          <iframe 
+                            src={`//player.bilibili.com/player.html?bvid=${mv.bilibili}&page=1&high_quality=1&autoplay=1`}
+                            className="w-full h-full"
+                            scrolling="no"
+                            frameBorder="0"
+                            allowFullScreen
+                            title={mv.title}
+                            lang="ja"
+                            referrerPolicy="strict-origin-when-cross-origin"
+                          />
+                        </TabsContent>
+                      )}
+                    </>
                   )}
                 </div>
+                </Tabs>
               </div>
 
               {/* 描述區域 */}

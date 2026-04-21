@@ -9,8 +9,10 @@ import React, {
 import {
   Routes,
   Route,
+  Navigate,
   useNavigate,
   useLocation,
+  useParams,
 } from "react-router-dom";
 import { MVItem } from "@/lib/types";
 import { initAnalytics } from "@/lib/analytics";
@@ -83,6 +85,9 @@ import useSWR from "swr";
 import { MODAL_THEME } from "@/lib/theme";
 import { MaintenancePage } from "@/pages/MaintenancePage";
 import { useTranslation } from 'react-i18next';
+import { isSupportedLang, normalizeLang } from "@/i18n";
+
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const AnimatedMVCardItem = memo(function AnimatedMVCardItem({
   mv,
@@ -274,9 +279,27 @@ function App({
   }, [isFeedbackOpen]);
 
   // 從路由派生狀態
-  const showFavOnly = location.pathname === "/favorites" || location.state?.fromFav;
+  const { activeLang, pathnameWithoutLang } = useMemo(() => {
+    const parts = location.pathname.split("/");
+    const maybeLng = parts[1];
+    if (isSupportedLang(maybeLng)) {
+      const rest = "/" + parts.slice(2).join("/");
+      return {
+        activeLang: maybeLng,
+        pathnameWithoutLang: rest === "/" ? "/" : rest,
+      };
+    }
+    return {
+      activeLang: normalizeLang(i18n.language),
+      pathnameWithoutLang: location.pathname || "/",
+    };
+  }, [i18n.language, location.pathname]);
+
+  const basePath = `/${activeLang}`;
+
+  const showFavOnly = pathnameWithoutLang === "/favorites" || location.state?.fromFav;
   // 從路由中解析 id，避免依賴 useParams() 以支援 layout 模式不卸載元件
-  const mvIdMatch = location.pathname.match(/^\/mv\/([^/]+)/);
+  const mvIdMatch = pathnameWithoutLang.match(/^\/mv\/([^/]+)/);
   const selectedMvId = mvIdMatch ? mvIdMatch[1] : null;
 
   // 動態獲取唯一的年份、專輯與藝術家清單，並處理分組
@@ -1064,7 +1087,7 @@ function App({
                   mv={mv}
                   isFav={favorites.includes(mv.id)}
                   onToggleFav={() => toggleFav(mv.id)}
-                  onClick={() => navigate(`/mv/${mv.id}`, { state: { fromFav: showFavOnly } })}
+                  onClick={() => navigate(`${basePath}/mv/${mv.id}`, { state: { fromFav: showFavOnly } })}
                   delayMs={Math.min(batchIdx, 24) * 20}
                   isPaused={isGlobalPaused}
                 />
@@ -1089,7 +1112,7 @@ function App({
                   setYearFilter([]);
                   setAlbumFilter([]);
                   setArtistFilter([]);
-                  if (showFavOnly) navigate("/");
+                  if (showFavOnly) navigate(basePath);
                 }}
                 variant="neutral"
                 data-umami-event="Z_Reset_Filters"
@@ -1167,85 +1190,86 @@ function App({
         </div>
 
         <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              onClick={() =>
-                setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))
-              }
-              variant="neutral"
-              size="icon"
-              data-active={sortOrder === "asc"}
-              className={`z-10 w-10 h-10 md:w-12 md:h-12 rounded-none transition-colors ${sortOrder === "asc" ? "bg-main text-black hover:bg-main/80" : "hover:bg-main hover:text-black"}`}
-              data-umami-event="Z_Toggle_Sort_Order"
-              data-umami-event-order={sortOrder === "desc" ? "asc" : "desc"}
-            >
-              <i className={`hn hn-sort text-xl md:text-2xl`}></i>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="left" align="center" sideOffset={10}>
-            <div className="flex flex-col gap-0.5">
-              <p className="text-xs font-black tracking-widest">{t("app.sort", "排序")}</p>
-              <p className="text-[10px] font-mono opacity-60 normal-case">
-                SORT
-              </p>
-              <p className="text-xs font-bold">
-                {sortOrder === "desc" ? t("app.newest_to_oldest", "最新 → 最舊") : t("app.oldest_to_newest", "最舊 → 最新")}
-              </p>
-            </div>
-          </TooltipContent>
-        </Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={() =>
+                  setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))
+                }
+                variant="neutral"
+                size="icon"
+                data-active={sortOrder === "asc"}
+                className={`z-10 w-10 h-10 md:w-12 md:h-12 rounded-none transition-colors ${sortOrder === "asc" ? "bg-main text-black hover:bg-main/80" : "hover:bg-main hover:text-black"}`}
+                data-umami-event="Z_Toggle_Sort_Order"
+                data-umami-event-order={sortOrder === "desc" ? "asc" : "desc"}
+              >
+                <i className={`hn hn-sort text-xl md:text-2xl`}></i>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left" align="center" sideOffset={10}>
+              <div className="flex flex-col gap-0.5">
+                <p className="text-xs font-black tracking-widest">{t("app.sort", "排序")}</p>
+                <p className="text-[10px] font-mono opacity-60 normal-case">
+                  SORT
+                </p>
+                <p className="text-xs font-bold">
+                  {sortOrder === "desc" ? t("app.newest_to_oldest", "最新 → 最舊") : t("app.oldest_to_newest", "最舊 → 最新")}
+                </p>
+              </div>
+            </TooltipContent>
+          </Tooltip>
 
         <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              onClick={() => navigate(showFavOnly ? "/" : "/favorites")}
-              variant="neutral"
-              size="icon"
-              data-active={showFavOnly}
-              className={`z-20 w-10 h-10 md:w-12 md:h-12 rounded-none transition-colors ${showFavOnly ? "bg-main text-black hover:bg-main/80" : "hover:bg-main hover:text-black"}`}
-              data-umami-event="Z_Toggle_Favorites_View"
-              data-umami-event-view={showFavOnly ? "all" : "favorites"}
-            >
-              <i
-                className={`hn hn-star-solid text-xl md:text-2xl leading-none ${showFavOnly ? "animate-pulse" : ""}`}
-              ></i>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="left" align="center" sideOffset={10}>
-            <div className="flex flex-col gap-0.5">
-              <p className="text-xs font-black tracking-widest">{t("app.favorite", "收藏")}</p>
-              <p className="text-[10px] font-mono opacity-60 normal-case">
-                FAVORITES
-              </p>
-              <p className="text-xs font-bold">
-                {showFavOnly ? t("app.back_to_all", "返回所有作品") : t("app.show_fav_only", "只看收藏")}
-              </p>
-            </div>
-          </TooltipContent>
-        </Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={() => navigate(showFavOnly ? basePath : `${basePath}/favorites`)}
+                variant="neutral"
+                size="icon"
+                data-active={showFavOnly}
+                className={`z-20 w-10 h-10 md:w-12 md:h-12 rounded-none transition-colors ${showFavOnly ? "bg-main text-black hover:bg-main/80" : "hover:bg-main hover:text-black"}`}
+                data-umami-event="Z_Toggle_Favorites_View"
+                data-umami-event-view={showFavOnly ? "all" : "favorites"}
+              >
+                <i
+                  className={`hn hn-star-solid text-xl md:text-2xl leading-none ${showFavOnly ? "animate-pulse" : ""}`}
+                ></i>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left" align="center" sideOffset={10}>
+              <div className="flex flex-col gap-0.5">
+                <p className="text-xs font-black tracking-widest">{t("app.favorite", "收藏")}</p>
+                <p className="text-[10px] font-mono opacity-60 normal-case">
+                  FAVORITES
+                </p>
+                <p className="text-xs font-bold">
+                  {showFavOnly ? t("app.back_to_all", "返回所有作品") : t("app.show_fav_only", "只看收藏")}
+                </p>
+              </div>
+            </TooltipContent>
+          </Tooltip>
 
-        <Tooltip>
-            <Dialog open={isAboutOpen} onOpenChange={setIsAboutOpen}>
-              <TooltipTrigger asChild>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="neutral"
-                    size="icon"
-                    className="z-30 w-10 h-10 md:w-12 md:h-12 rounded-none transition-colors hover:bg-main hover:text-black"
-                    data-umami-event="Z_Click_About"
-                  >
-                    <i className="hn hn-info-circle text-xl md:text-2xl"></i>
-                  </Button>
-                </DialogTrigger>
-              </TooltipTrigger>
-              <TooltipContent side="left" align="center" sideOffset={10}>
-                <div className="flex flex-col gap-0.5">
-                  <p className="text-xs font-black tracking-widest">{t("app.about_author", "碎碎念")}</p>
-                  <p className="text-[10px] font-mono opacity-60 normal-case">
-                    ABOUT
-                  </p>
-                </div>
-              </TooltipContent>
+        <Dialog open={isAboutOpen} onOpenChange={setIsAboutOpen}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DialogTrigger asChild>
+                <Button
+                  variant="neutral"
+                  size="icon"
+                  className="z-30 w-10 h-10 md:w-12 md:h-12 rounded-none transition-colors hover:bg-main hover:text-black"
+                  data-umami-event="Z_Click_About"
+                >
+                  <i className="hn hn-info-circle text-xl md:text-2xl"></i>
+                </Button>
+              </DialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="left" align="center" sideOffset={10}>
+              <div className="flex flex-col gap-0.5">
+                <p className="text-xs font-black tracking-widest">{t("app.about_author", "碎碎念")}</p>
+                <p className="text-[10px] font-mono opacity-60 normal-case">
+                  ABOUT
+                </p>
+              </div>
+            </TooltipContent>
+          </Tooltip>
 
               <DialogContent 
                 overlayClassName={MODAL_THEME.overlay.dialog}
@@ -1386,32 +1410,31 @@ function App({
                   </div>
                 </div>
               </DialogContent>
-            </Dialog>
-          </Tooltip>
+          </Dialog>
 
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 onClick={() => setIsFeedbackOpen(!isFeedbackOpen)}
-              variant="neutral"
-              size="icon"
-              data-active={isFeedbackOpen}
-              className={`z-30 w-10 h-10 md:w-12 md:h-12 rounded-none transition-colors ${isFeedbackOpen ? "bg-main text-black hover:bg-main/80" : "hover:bg-main hover:text-black"}`}
-              data-umami-event="Z_Toggle_Feedback_Drawer"
-              data-umami-event-state={isFeedbackOpen ? "close" : "open"}
-            >
-              <i className="hn hn-message text-xl md:text-2xl"></i>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="left" align="center" sideOffset={10}>
-            <div className="flex flex-col gap-0.5">
-              <p className="text-xs font-black tracking-widest">{t("app.feedback", "意見回饋")}</p>
-              <p className="text-[10px] font-mono opacity-60 normal-case">
-                FEEDBACK
-              </p>
-            </div>
-          </TooltipContent>
-        </Tooltip>
+                variant="neutral"
+                size="icon"
+                data-active={isFeedbackOpen}
+                className={`z-30 w-10 h-10 md:w-12 md:h-12 rounded-none transition-colors ${isFeedbackOpen ? "bg-main text-black hover:bg-main/80" : "hover:bg-main hover:text-black"}`}
+                data-umami-event="Z_Toggle_Feedback_Drawer"
+                data-umami-event-state={isFeedbackOpen ? "close" : "open"}
+              >
+                <i className="hn hn-message text-xl md:text-2xl"></i>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left" align="center" sideOffset={10}>
+              <div className="flex flex-col gap-0.5">
+                <p className="text-xs font-black tracking-widest">{t("app.feedback", "意見回饋")}</p>
+                <p className="text-[10px] font-mono opacity-60 normal-case">
+                  FEEDBACK
+                </p>
+              </div>
+            </TooltipContent>
+          </Tooltip>
 
         {isAdminAuthenticated && false && (
           <Tooltip delayDuration={0}>
@@ -1669,7 +1692,7 @@ function App({
                 <Tooltip delayDuration={0} open={isGeoTooltipOpen} onOpenChange={setIsGeoTooltipOpen}>
                   <TooltipTrigger asChild>
                     <span 
-                      className="cursor-help border-b border-dashed border-current hover:text-main transition-colors select-none opacity-30 hover:opacity-100"
+                      className="cursor-help border-b border-dashed border-current hover:text-main transition-colors select-none opacity-30 hover:opacity-100 block"
                       onClick={(e) => {
                         e.preventDefault();
                       }}
@@ -1850,7 +1873,7 @@ function App({
           if (window.history.state && window.history.state.idx > 0) {
             navigate(-1);
           } else {
-            navigate(showFavOnly ? "/favorites" : "/", { replace: true });
+            navigate(showFavOnly ? `${basePath}/favorites` : basePath, { replace: true });
           }
         }}
       />
@@ -1863,6 +1886,80 @@ const fetcher = (url: string) =>
     if (!res.ok) throw new Error("API 伺服器無回應 (404/500)");
     return res.json().then((result) => result.data || result);
   });
+
+type AppCommonProps = Parameters<typeof App>[0];
+
+function RootLocaleRedirect() {
+  const { i18n } = useTranslation();
+  const location = useLocation();
+
+  const params = new URLSearchParams(location.search);
+  const queryLng = params.get("lang") ?? params.get("lng");
+  const targetLng = normalizeLang(queryLng || i18n.resolvedLanguage || i18n.language);
+  params.delete("lang");
+  params.delete("lng");
+  const search = params.toString();
+
+  return <Navigate replace to={`/${targetLng}${search ? `?${search}` : ""}`} />;
+}
+
+function FallbackRedirect() {
+  const { i18n } = useTranslation();
+  const location = useLocation();
+
+  const rawParams = new URLSearchParams(location.search);
+  const queryLng = rawParams.get("lang") ?? rawParams.get("lng");
+  rawParams.delete("lang");
+  rawParams.delete("lng");
+  const search = rawParams.toString();
+  const cleanSearch = search ? `?${search}` : "";
+
+  const targetLng = normalizeLang(queryLng || i18n.resolvedLanguage || i18n.language);
+
+  return <Navigate replace to={`/${targetLng}${location.pathname}${cleanSearch}`} />;
+}
+
+function LocalizedAppLayout({ commonProps }: { commonProps: AppCommonProps }) {
+  const { lng } = useParams();
+  const { i18n } = useTranslation();
+  const location = useLocation();
+
+  const rawParams = new URLSearchParams(location.search);
+  const queryLng = rawParams.get("lang") ?? rawParams.get("lng");
+  const hasQueryLng = rawParams.has("lang") || rawParams.has("lng");
+  rawParams.delete("lang");
+  rawParams.delete("lng");
+  const search = rawParams.toString();
+  const cleanSearch = search ? `?${search}` : "";
+
+  if (isSupportedLang(queryLng)) {
+    const targetPath = isSupportedLang(lng)
+      ? `/${queryLng}${location.pathname.slice(`/${lng}`.length)}${cleanSearch}`
+      : `/${queryLng}${location.pathname}${cleanSearch}`;
+
+    if (queryLng !== lng) {
+      return <Navigate replace to={targetPath} />;
+    }
+    if (hasQueryLng) {
+      return <Navigate replace to={`${location.pathname}${cleanSearch}`} />;
+    }
+  }
+
+  if (hasQueryLng && isSupportedLang(lng)) {
+    return <Navigate replace to={`${location.pathname}${cleanSearch}`} />;
+  }
+
+  if (!isSupportedLang(lng)) {
+    const targetLng = normalizeLang(queryLng || i18n.resolvedLanguage || i18n.language);
+    return <Navigate replace to={`/${targetLng}${location.pathname}${cleanSearch}`} />;
+  }
+
+  useEffect(() => {
+    if (i18n.language !== lng) i18n.changeLanguage(lng);
+  }, [i18n, lng]);
+
+  return <App {...commonProps} />;
+}
 
 // 為了支援 useParams，我們需要導出一個包裹了路由環境的組件
 export default function RootApp() {
@@ -1962,7 +2059,7 @@ export default function RootApp() {
   }, []);
 
   const error = swrError ? swrError.message : null;
-  const commonProps = {
+  const commonProps: AppCommonProps = {
     mvData: mvData || [],
     isLoading,
     error,
@@ -1977,32 +2074,37 @@ export default function RootApp() {
   return (
     <>
       <CustomCursor />
-      <Routes>
-        <Route path="/" element={<App {...commonProps} />}>
-          <Route index element={null} />
-          <Route path="favorites" element={null} />
-          <Route path="mv/:id" element={null} />
-        </Route>
-        <Route
-          path="/admin"
-          element={
-            <AdminPage
-              mvData={mvData || []}
-              metadata={metadataData || defaultMetadata}
-              systemStatus={systemStatus}
-              onRefresh={() => {
-                mutate();
-                mutateMetadata();
-                mutateSystemStatus();
-              }}
-            />
-          }
-        />
-        <Route path="/admin/db" element={<AdminDBPage />} />
-        <Route path="/debug/lg/:mvid?" element={<DebugLightGallery />} />
-        <Route path="/debug/fb/:mvid?" element={<DebugFancyboxMasonry />} />
-        <Route path="/debug/modal" element={<DebugMVModalLightbox />} />
-      </Routes>
+      <TooltipProvider delayDuration={200} skipDelayDuration={0} disableHoverableContent>
+        <Routes>
+          <Route path="/" element={<RootLocaleRedirect />} />
+          <Route path="/:lng" element={<LocalizedAppLayout commonProps={commonProps} />}>
+            <Route index element={null} />
+            <Route path="favorites" element={null} />
+            <Route path="mv/:id" element={null} />
+            <Route path="*" element={null} />
+          </Route>
+          <Route
+            path="/admin"
+            element={
+              <AdminPage
+                mvData={mvData || []}
+                metadata={metadataData || defaultMetadata}
+                systemStatus={systemStatus}
+                onRefresh={() => {
+                  mutate();
+                  mutateMetadata();
+                  mutateSystemStatus();
+                }}
+              />
+            }
+          />
+          <Route path="/admin/db" element={<AdminDBPage />} />
+          <Route path="/debug/lg/:mvid?" element={<DebugLightGallery />} />
+          <Route path="/debug/fb/:mvid?" element={<DebugFancyboxMasonry />} />
+          <Route path="/debug/modal" element={<DebugMVModalLightbox />} />
+          <Route path="*" element={<FallbackRedirect />} />
+        </Routes>
+      </TooltipProvider>
       <Toaster position="top-center" />
     </>
   );

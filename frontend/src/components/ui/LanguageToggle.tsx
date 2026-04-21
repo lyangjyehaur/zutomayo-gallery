@@ -1,5 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "./button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 import {
@@ -11,6 +12,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "./dropdown-menu";
+import { isSupportedLang } from "@/i18n";
 
 interface LanguageToggleProps {
   isIconOnly?: boolean;
@@ -28,11 +30,29 @@ const languages = [
 
 export const LanguageToggle: React.FC<LanguageToggleProps> = ({ isIconOnly = false }) => {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [isOpen, setIsOpen] = React.useState(false);
 
+  const getPathRest = React.useCallback((pathname: string) => {
+    const parts = pathname.split("/");
+    const maybeLng = parts[1];
+    if (isSupportedLang(maybeLng)) {
+      const rest = "/" + parts.slice(2).join("/");
+      return rest === "/" ? "" : rest;
+    }
+    return pathname === "/" ? "" : pathname;
+  }, []);
+
   const handleLanguageChange = (code: string) => {
     i18n.changeLanguage(code);
+    const params = new URLSearchParams(location.search);
+    params.delete("lang");
+    params.delete("lng");
+    const search = params.toString();
+    const to = `/${code}${getPathRest(location.pathname)}${search ? `?${search}` : ""}`;
+    navigate(to);
     setIsOpen(false);
   };
 
@@ -58,29 +78,31 @@ export const LanguageToggle: React.FC<LanguageToggleProps> = ({ isIconOnly = fal
   const dropdownMenu = (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       {isIconOnly ? (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="w-full h-full relative group/tooltip-trigger">
-              <DropdownMenuTrigger asChild>
-                <Button {...buttonProps}>{buttonContent}</Button>
-              </DropdownMenuTrigger>
+        <div className="w-full h-full relative group/tooltip-trigger">
+          <Tooltip>
+            <div className="w-full h-full inline-block">
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button {...buttonProps}>{buttonContent}</Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
             </div>
-          </TooltipTrigger>
-          <TooltipContent 
-            side="left" 
-            align="center" 
-            sideOffset={6}
-            className={isOpen ? "hidden" : ""}
-          >
-            <div className="flex flex-col gap-0.5">
-              <p className="text-xs font-black tracking-widest">{t("app.language", "語言")}</p>
-              {i18n.language !== 'en' && (
-<p className="text-[10px] font-mono opacity-60 normal-case">LANGUAGE</p>
-)}
-              <p className="text-xs font-bold">{t("app.change_language", "切換顯示語言")}</p>
-            </div>
-          </TooltipContent>
-        </Tooltip>
+            <TooltipContent 
+              side="left" 
+              align="center" 
+              sideOffset={6}
+              className={isOpen ? "hidden" : ""}
+            >
+              <div className="flex flex-col gap-0.5">
+                <p className="text-xs font-black tracking-widest">{t("app.language", "語言")}</p>
+                {i18n.language !== 'en' && (
+                  <p className="text-[10px] font-mono opacity-60 normal-case">LANGUAGE</p>
+                )}
+                <p className="text-xs font-bold">{t("app.change_language", "切換顯示語言")}</p>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </div>
       ) : (
         <DropdownMenuTrigger asChild>
           <Button {...buttonProps}>{buttonContent}</Button>

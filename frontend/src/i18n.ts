@@ -10,6 +10,18 @@ import ko from './locales/ko.json';
 import en from './locales/en.json';
 import es from './locales/es.json';
 
+export const SUPPORTED_LANGS = ['zh-TW', 'zh-CN', 'zh-HK', 'ja', 'ko', 'en', 'es'] as const;
+export type SupportedLang = (typeof SUPPORTED_LANGS)[number];
+
+export function isSupportedLang(lng: string | null | undefined): lng is SupportedLang {
+  return !!lng && (SUPPORTED_LANGS as readonly string[]).includes(lng);
+}
+
+export function normalizeLang(lng: string | null | undefined): SupportedLang {
+  if (isSupportedLang(lng)) return lng;
+  return 'zh-TW';
+}
+
 i18n
   // 偵測用戶語言
   .use(LanguageDetector)
@@ -29,10 +41,12 @@ i18n
     fallbackLng: 'zh-TW', // 預設使用台灣繁體
     
     // 語言匹配策略
-    supportedLngs: ['zh-TW', 'zh-CN', 'zh-HK', 'ja', 'ko', 'en', 'es'],
+    supportedLngs: [...SUPPORTED_LANGS],
     
     detection: {
-      order: ['localStorage', 'navigator'],
+      order: ['path', 'querystring', 'localStorage', 'navigator'],
+      lookupFromPathIndex: 0,
+      lookupQuerystring: 'lang',
       caches: ['localStorage'],
     },
 
@@ -42,7 +56,7 @@ i18n
   });
 
 // 初始化時立刻設置一次
-document.documentElement.lang = i18n.language || 'zh-TW';
+document.documentElement.lang = i18n.resolvedLanguage || i18n.language || 'zh-TW';
 
 i18n.on('languageChanged', (lng) => {
   document.documentElement.lang = lng;
