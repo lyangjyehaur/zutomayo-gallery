@@ -1,44 +1,44 @@
 :lang(zh-Hans), :lang(zh-CN) {
-    font-family: fusion-pixel-12px-proportional-zh_hans, sans-serif;
+    font-family: "fusion-pixel-12px-proportional-zh_hans", sans-serif;
 }
 
 :lang(zh-Hant), :lang(zh-TW), :lang(zh-HK) {
-    font-family: fusion-pixel-12px-proportional-zh_hant, sans-serif;
+    font-family: "fusion-pixel-12px-proportional-zh_hant", sans-serif;
 }
 
 :lang(ja) {
-    font-family: fusion-pixel-12px-proportional-ja, sans-serif;
+    font-family: "fusion-pixel-12px-proportional-ja", sans-serif;
 }
 
 :lang(ko) {
-    font-family: fusion-pixel-12px-proportional-ko, sans-serif;
+    font-family: "fusion-pixel-12px-proportional-ko", sans-serif;
 }
 
 :lang(en), :lang(es) {
-    font-family: fusion-pixel-12px-proportional-latin, sans-serif;
+    font-family: "fusion-pixel-12px-proportional-latin", sans-serif;
 }
 
 @font-face {
-    font-family: fusion-pixel-12px-proportional-latin;
-    src: url("../fonts/fusion-pixel-12px-proportional-latin.otf.woff2");
+    font-family: "fusion-pixel-12px-proportional-latin";
+    src: url("../fonts/fusion-pixel-12px-proportional-latin.otf.woff2") format("woff2");
 }
 
 @font-face {
-    font-family: fusion-pixel-12px-proportional-zh_hans;
-    src: url("../fonts/fusion-pixel-12px-proportional-zh_hans.otf.woff2");
+    font-family: "fusion-pixel-12px-proportional-zh_hans";
+    src: url("../fonts/fusion-pixel-12px-proportional-zh_hans.otf.woff2") format("woff2");
 }
 
 @font-face {
-    font-family: fusion-pixel-12px-proportional-zh_hant;
-    src: url("../fonts/fusion-pixel-12px-proportional-zh_hant.otf.woff2");
+    font-family: "fusion-pixel-12px-proportional-zh_hant";
+    src: url("../fonts/fusion-pixel-12px-proportional-zh_hant.otf.woff2") format("woff2");
 }
 
 @font-face {
-    font-family: fusion-pixel-12px-proportional-ja;
-    src: url("../fonts/fusion-pixel-12px-proportional-ja.otf.woff2");
+    font-family: "fusion-pixel-12px-proportional-ja";
+    src: url("../fonts/fusion-pixel-12px-proportional-ja.otf.woff2") format("woff2");
 }
 
 @font-face {
-    font-family: fusion-pixel-12px-proportional-ko;
-    src: url("../fonts/fusion-pixel-12px-proportional-ko.otf.woff2");
+    font-family: "fusion-pixel-12px-proportional-ko";
+    src: url("../fonts/fusion-pixel-12px-proportional-ko.otf.woff2") format("woff2");
 }
