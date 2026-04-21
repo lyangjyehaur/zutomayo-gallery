@@ -7,6 +7,23 @@ export interface GeoInfo {
 
 let geoCache: GeoInfo | null = null;
 
+const getIsChinaTimezone = () => {
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const chinaTimezones = [
+    'Asia/Shanghai',
+    'Asia/Urumqi',
+    'Asia/Chongqing',
+    'Asia/Harbin',
+    'Asia/Kashgar',
+  ];
+  return chinaTimezones.includes(timeZone);
+};
+
+const shouldUseIpLookup = () => {
+  if (typeof window === 'undefined') return false;
+  return window.localStorage.getItem('enable_ip_geo') === 'true';
+};
+
 /**
  * 清除目前的地理位置快取 (用於讓用戶主動重新偵測，或處理網路環境切換)
  */
@@ -88,21 +105,25 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
       }
     }
 
-    // 透過多重 API 競速獲取國家代碼
+    const isChinaTimezone = getIsChinaTimezone();
+
+    if (shouldUseIpLookup() === false) {
+      geoCache = {
+        ipCountry: 'UNKNOWN',
+        isChinaTimezone,
+        isChinaIP: isChinaTimezone,
+        isVPN: false,
+      };
+
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('geo_info', JSON.stringify(geoCache));
+      }
+
+      return geoCache;
+    }
+
     const ipCountry = await fetchIpCountry();
-    
-    // 獲取使用者本地時區
-    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    // 定義中國大陸標準時區 (不含港澳台，避免將港澳台用戶誤判為翻牆)
-    const chinaTimezones = [
-      'Asia/Shanghai', 'Asia/Urumqi', 'Asia/Chongqing', 
-      'Asia/Harbin', 'Asia/Kashgar'
-    ];
-    const isChinaTimezone = chinaTimezones.includes(timeZone);
-    
     const isChinaIP = ipCountry === 'CN';
-    
-    // 判斷是否為翻牆的 VPN 用戶 (IP 顯示在海外，但本地時區是中國大陸標準時間)
     const isVPN = !isChinaIP && isChinaTimezone;
 
     geoCache = { ipCountry, isChinaTimezone, isChinaIP, isVPN };
@@ -113,10 +134,7 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
     
     return geoCache;
   } catch (e) {
-    console.warn('Geo detection failed, falling back to timezone:', e);
-    // 降級方案：如果 API 呼叫失敗，純粹依賴時區猜測
-    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const isChinaTimezone = ['Asia/Shanghai', 'Asia/Urumqi', 'Asia/Chongqing', 'Asia/Harbin', 'Asia/Kashgar'].includes(timeZone);
+    const isChinaTimezone = getIsChinaTimezone();
     
     geoCache = {
       ipCountry: 'UNKNOWN',
@@ -143,9 +161,7 @@ export const getGeoInfo = (): GeoInfo => {
     }
   }
   
-  // 預設降級猜測
-  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const isChinaTimezone = ['Asia/Shanghai', 'Asia/Urumqi', 'Asia/Chongqing', 'Asia/Harbin', 'Asia/Kashgar'].includes(timeZone);
+  const isChinaTimezone = getIsChinaTimezone();
   
   return {
     ipCountry: 'UNKNOWN',
