@@ -4,7 +4,8 @@
     "error": "發生錯誤",
     "save": "儲存",
     "cancel": "取消",
-    "confirm": "確認"
+    "confirm": "確認",
+    "load_more": "載入更多"
   },
   "app": {
     "search_placeholder": "關鍵字搜尋...",
@@ -103,19 +104,35 @@
     "image": "圖片 (image)",
     "no_desc": "暫無描述 (NO_METADATA_FOUND)",
     "load_more": "載入更多",
-    "reached_bottom": "已經到最底啦",
-    "license": "授權：{{type}}",
+    "reached_bottom": "已到最底",
+    "license": "授權：",
     "lightbox_ui": "燈箱元件",
     "album_category_full": "完整專輯",
     "album_category_mini": "迷你專輯",
-    "album_category_single": "單曲 / 其他"
+    "album_category_single": "單曲 / 其他",
+    "page_not_found": "搵唔到頁面",
+    "page_not_found_desc": "你搵緊嘅訊號好似已經消失喺午夜之中",
+    "back_to_home": "返去首頁",
+    "back": "返去上一頁"
   },
   "waline": {
     "mailPlaceholder": "留低 Email 就可以免登入顯示頭像",
     "reactionTitleMV": "呢支 MV 畀你嘅印象係？",
     "reactionTitleSite": "鍾意呢個網站嗎？",
     "placeholder": "歡迎留言傾下偈！(支援 Markdown 語法同圖片上傳)",
-    "login": "登入 (可選)"
+    "login": "登入 (可選)",
+    "nick": "暱稱",
+    "mail": "電郵",
+    "word": "字",
+    "search": "搵表情",
+    "preview": "預覽",
+    "submit": "送出",
+    "comment": "留言",
+    "sofa": "嚟留個言啦～",
+    "latest": "最新",
+    "oldest": "最舊",
+    "hottest": "熱門",
+    "optional": "可選"
   },
   "geo": {
     "detecting": "判斷緊...",

@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AdminPage } from "@/pages/AdminPage";
 import { AdminDBPage } from "@/pages/AdminDBPage";
+import { NotFoundPage } from "@/pages/NotFoundPage";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import {
@@ -48,7 +49,6 @@ import { VERSION_CONFIG } from "@/config/version";
 import { ALBUM_CATEGORIES } from "@/config/albums";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import LanguageToggle from "@/components/ui/LanguageToggle";
-import CustomCursor from "@/components/ui/CustomCursor";
 import { useLazyImage } from "@/hooks/useLazyImage";
 import Marquee from "@/components/ui/marquee";
 import {
@@ -87,7 +87,7 @@ import { MaintenancePage } from "@/pages/MaintenancePage";
 import { useTranslation } from 'react-i18next';
 import { isSupportedLang, normalizeLang } from "@/i18n";
 
-import { TooltipProvider } from "@/components/ui/tooltip";
+
 
 const AnimatedMVCardItem = memo(function AnimatedMVCardItem({
   mv,
@@ -301,6 +301,9 @@ function App({
   // 從路由中解析 id，避免依賴 useParams() 以支援 layout 模式不卸載元件
   const mvIdMatch = pathnameWithoutLang.match(/^\/mv\/([^/]+)/);
   const selectedMvId = mvIdMatch ? mvIdMatch[1] : null;
+
+  const is404Route = pathnameWithoutLang === "/404";
+  const isNotFound = pathnameWithoutLang !== "/" && pathnameWithoutLang !== "/favorites" && !is404Route && !mvIdMatch;
 
   // 動態獲取唯一的年份、專輯與藝術家清單，並處理分組
   const {
@@ -559,6 +562,19 @@ function App({
 
   const isGlobalPaused = !!selectedMvId || (isFeedbackOpen && isMobile) || (isAboutOpen && isMobile);
 
+  // 控制背景滾動
+  useEffect(() => {
+    if (isFeedbackOpen || !!selectedMvId || isAboutOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
+    
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, [isFeedbackOpen, selectedMvId, isAboutOpen]);
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -717,15 +733,21 @@ function App({
       </header>
 
       {/* 跑馬燈 */}
-      {metadata?.settings?.announcements &&
+      {!is404Route && metadata?.settings?.announcements &&
         metadata.settings.announcements.length > 0 && (
           <div className="w-full relative z-20 bg-main border-y-2 border-transparent">
             <Marquee items={metadata.settings.announcements} />
           </div>
         )}
 
-      <main className="mx-auto px-4 w-full max-w-7xl pt-4 pb-8 border-t-2 border-border relative flex-1 max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-[80%]">
-        {/* 過濾控制列與活躍標籤 */}
+      <main className={`mx-auto px-4 w-full pt-4 relative flex-1 ${is404Route ? 'flex items-center justify-center border-t-0' : 'max-w-7xl pb-8 border-t-2 border-border max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-[80%]'}`}>
+        {isNotFound ? (
+          <Navigate to={`${basePath}/404?from=${encodeURIComponent(location.pathname + location.search)}`} replace />
+        ) : is404Route ? (
+          <NotFoundPage />
+        ) : (
+          <>
+            {/* 過濾控制列與活躍標籤 */}
         <div className="flex flex-col gap-2 mt-4 mb-8 max-[768px]:w-[90vw] max-[768px]:relative max-[768px]:left-1/2 max-[768px]:-translate-x-1/2 max-[768px]:px-0">
           <div className="flex flex-col md:flex-row gap-4 w-full">
             <div className="relative w-full md:flex-[1] min-[1120px]:flex-[1]">
@@ -1155,9 +1177,12 @@ function App({
             </div>
           </div>
         )}
+          </>
+        )}
       </main>
 
       {/* 右下角懸浮控制面板 (Control Hub) */}
+      {!is404Route && (
       <div className="fixed inset-x-0 bottom-0 pointer-events-none z-[60] flex justify-center">
         <div className="w-full max-w-7xl max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-[80%] relative px-4">
           <div className="absolute bottom-0 right-4 translate-x-full pb-[calc(1.5rem+env(safe-area-inset-bottom))] max-[768px]:pb-[calc(4.5rem+env(safe-area-inset-bottom))] pointer-events-none flex flex-col justify-end items-start pl-2 md:pl-4">
@@ -1172,10 +1197,10 @@ function App({
                 onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
                 variant="neutral"
                 size="icon"
-                className="z-[50] w-10 h-10 md:w-12 md:h-12 rounded-none transition-colors hover:bg-main hover:text-black"
+                className="z-[50] w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:bg-main hover:text-black group hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none"
                 data-umami-event="Z_Scroll_To_Top"
               >
-                <i className="hn hn-arrow-up text-xl md:text-2xl"></i>
+                <i className="hn hn-arrow-up text-xl md:text-2xl group-hover:-translate-y-1 transition-transform"></i>
               </Button>
             </TooltipTrigger>
             <TooltipContent side="left" align="center" sideOffset={10}>
@@ -1198,7 +1223,7 @@ function App({
                 variant="neutral"
                 size="icon"
                 data-active={sortOrder === "asc"}
-                className={`z-10 w-10 h-10 md:w-12 md:h-12 rounded-none transition-colors ${sortOrder === "asc" ? "bg-main text-black hover:bg-main/80" : "hover:bg-main hover:text-black"}`}
+                className={`z-10 w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none ${sortOrder === "asc" ? "bg-main text-black hover:bg-main/80 translate-x-[4px] translate-y-[4px] shadow-none" : "hover:bg-main hover:text-black"}`}
                 data-umami-event="Z_Toggle_Sort_Order"
                 data-umami-event-order={sortOrder === "desc" ? "asc" : "desc"}
               >
@@ -1225,7 +1250,7 @@ function App({
                 variant="neutral"
                 size="icon"
                 data-active={showFavOnly}
-                className={`z-20 w-10 h-10 md:w-12 md:h-12 rounded-none transition-colors ${showFavOnly ? "bg-main text-black hover:bg-main/80" : "hover:bg-main hover:text-black"}`}
+                className={`z-20 w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none ${showFavOnly ? "bg-main text-black hover:bg-main/80 translate-x-[4px] translate-y-[4px] shadow-none" : "hover:bg-main hover:text-black"}`}
                 data-umami-event="Z_Toggle_Favorites_View"
                 data-umami-event-view={showFavOnly ? "all" : "favorites"}
               >
@@ -1254,10 +1279,10 @@ function App({
                 <Button
                   variant="neutral"
                   size="icon"
-                  className="z-30 w-10 h-10 md:w-12 md:h-12 rounded-none transition-colors hover:bg-main hover:text-black"
+                  className={`z-30 w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:bg-main hover:text-black group hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none ${isAboutOpen ? 'bg-main text-black translate-x-[4px] translate-y-[4px] shadow-none' : ''}`}
                   data-umami-event="Z_Click_About"
                 >
-                  <i className="hn hn-info-circle text-xl md:text-2xl"></i>
+                  <i className="hn hn-info-circle text-xl md:text-2xl group-hover:rotate-12 transition-transform"></i>
                 </Button>
               </DialogTrigger>
             </TooltipTrigger>
@@ -1419,11 +1444,11 @@ function App({
                 variant="neutral"
                 size="icon"
                 data-active={isFeedbackOpen}
-                className={`z-30 w-10 h-10 md:w-12 md:h-12 rounded-none transition-colors ${isFeedbackOpen ? "bg-main text-black hover:bg-main/80" : "hover:bg-main hover:text-black"}`}
+                className={`z-30 w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none group ${isFeedbackOpen ? "bg-main text-black hover:bg-main/80 translate-x-[4px] translate-y-[4px] shadow-none" : "hover:bg-main hover:text-black"}`}
                 data-umami-event="Z_Toggle_Feedback_Drawer"
                 data-umami-event-state={isFeedbackOpen ? "close" : "open"}
               >
-                <i className="hn hn-message text-xl md:text-2xl"></i>
+                <i className="hn hn-message text-xl md:text-2xl group-hover:rotate-12 transition-transform"></i>
               </Button>
             </TooltipTrigger>
             <TooltipContent side="left" align="center" sideOffset={10}>
@@ -1470,28 +1495,30 @@ function App({
             </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* 頁尾 Footer */}
       <footer className="bg-card relative overflow-hidden">
         <div className="absolute inset-0 opacity-5 pointer-events-none crt-lines"></div>
         <div className="mx-auto px-4 pb-16 pt-8 w-full max-w-7xl relative max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-full">
-          {/* 三語版權聲明區塊 & 導航 */}
-          <div className="p-6 md:p-8 border-4 border-black bg-black/5 relative group">
-            <div className="absolute -top-4 left-4 md:left-6 bg-black text-main px-3 py-1 text-[10px] font-black border-2 border-main">
-              <div className="flex flex-col leading-tight">
-                  <span className="opacity-90">
-                    {t("app.footer_legal", "版權/法律聲明")}
-                  </span>
-                  <span className="font-mono opacity-60">
-                    Legal_Signal_Broadcast
-                  </span>
+          <div className={`${!is404Route ? "p-6 md:p-8 border-4 border-black bg-black/5" : ""} relative group`}>
+            {!is404Route && (
+              <>
+                <div className="absolute -top-4 left-4 md:left-6 bg-black text-main px-3 py-1 text-[10px] font-black border-2 border-main">
+                  <div className="flex flex-col leading-tight">
+                    <span className="opacity-90">
+                      {t("app.footer_legal", "版權/法律聲明")}
+                    </span>
+                    <span className="font-mono opacity-60">
+                      Legal_Signal_Broadcast
+                    </span>
+                  </div>
                 </div>
-            </div>
 
-            <div className="grid grid-cols-1 min-[520px]:grid-cols-2 min-[900px]:grid-cols-3 min-[1120px]:grid-cols-4 gap-8 md:gap-10 items-center">
-              {/* 中文 & 多語言 */}
-              <div className="space-y-6 min-[520px]:col-span-1 min-[900px]:col-span-2 min-[1120px]:col-span-3">
+                <div className="grid grid-cols-1 min-[520px]:grid-cols-2 min-[900px]:grid-cols-3 min-[1120px]:grid-cols-4 gap-8 md:gap-10 items-center">
+                  {/* 中文 & 多語言 */}
+                  <div className="space-y-6 min-[520px]:col-span-1 min-[900px]:col-span-2 min-[1120px]:col-span-3">
                 <div className="space-y-3">
                   <p className="text-[10px] leading-relaxed opacity-60">
                       {t("app.disclaimer_1").split("「")[0] || t("app.disclaimer_1")}
@@ -1583,7 +1610,7 @@ function App({
                         className="opacity-50 hover:opacity-100 hover:text-main transition-all ml-7 flex items-baseline gap-1.5"
                         title="授權：CC BY 4.0 (CC BY 4.0 License)"
                       >
-                        <span>{t("app.license", "授權：")}CC BY 4.0</span>
+                        <span>{t("app.license", "授權：")} CC BY 4.0</span>
                         <span className="text-[8px] font-mono opacity-60">
                           License
                         </span>
@@ -1613,7 +1640,7 @@ function App({
                         className="opacity-50 hover:opacity-100 hover:text-main transition-all ml-7 flex items-baseline gap-1.5"
                         title="授權：OFL 1.1 (SIL OFL 1.1)"
                       >
-                        <span>{t("app.license", "授權：")}OFL 1.1</span>
+                        <span>{t("app.license", "授權：")} OFL 1.1</span>
                         <span className="text-[8px] font-mono opacity-60">
                           License
                         </span>
@@ -1640,7 +1667,7 @@ function App({
                         className="opacity-50 ml-7 flex items-baseline gap-1.5"
                         title="授權：MIT (MIT License)"
                       >
-                        <span>{t("app.license", "授權：")}MIT</span>
+                        <span>{t("app.license", "授權：")} MIT</span>
                         <span className="text-[8px] font-mono opacity-60">
                           License
                         </span>
@@ -1667,7 +1694,7 @@ function App({
                         className="opacity-50 ml-7 flex items-baseline gap-1.5"
                         title="授權：GPLv3 (GPLv3 License)"
                       >
-                        <span>{t("app.license", "授權：")}GPLv3</span>
+                        <span>{t("app.license", "授權：")} GPLv3</span>
                         <span className="text-[8px] font-mono opacity-60">
                           License
                         </span>
@@ -1677,7 +1704,8 @@ function App({
                 </div>
               </div>
             </div>
-          </div>
+          </>
+        )}
 
           <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-8 md:gap-4 text-[10px]">
             <div className="text-center md:text-left flex flex-col leading-tight items-center md:items-start md:flex-1 md:basis-0">
@@ -1797,9 +1825,11 @@ function App({
             </div>
           </div>
         </div>
+        </div>
       </footer>
 
       {/* 反饋側邊欄 遮罩 (Overlay) */}
+      {!is404Route && (
       <div
         className={`fixed inset-0 z-[90] ${MODAL_THEME.overlay.drawer} ${
           isFeedbackOpen
@@ -1812,8 +1842,10 @@ function App({
           transition: isFeedbackOpen ? "visibility 0s 0s" : "visibility 0s linear 700ms"
         }}
       />
+      )}
 
       {/* 反饋側邊欄 (Drawer) */}
+      {!is404Route && (
       <div
         className={`fixed left-0 top-0 bottom-0 h-screen w-full lg:w-[768px] xl:w-[800px] border-r-0 lg:border-r-4 border-black ${MODAL_THEME.content.drawer} shadow-none lg:shadow-neo z-[100] flex flex-col origin-center ${
           isFeedbackOpen
@@ -1861,6 +1893,7 @@ function App({
           )}
         </div>
       </div>
+      )}
 
       {/* 暫時隱藏加載速度評價彈窗
       <SpeedRatingSurvey forceOpen={isSurveyForceOpen} onCloseForce={() => setIsSurveyForceOpen(false)} />
@@ -1889,7 +1922,7 @@ const fetcher = (url: string) =>
 
 type AppCommonProps = Parameters<typeof App>[0];
 
-function RootLocaleRedirect() {
+function RootLocaleRedirect({ commonProps }: { commonProps: AppCommonProps }) {
   const { i18n } = useTranslation();
   const location = useLocation();
 
@@ -1900,10 +1933,15 @@ function RootLocaleRedirect() {
   params.delete("lng");
   const search = params.toString();
 
-  return <Navigate replace to={`/${targetLng}${search ? `?${search}` : ""}`} />;
+  return (
+    <>
+      <Navigate replace to={`/${targetLng}${search ? `?${search}` : ""}`} />
+      <App {...commonProps} />
+    </>
+  );
 }
 
-function FallbackRedirect() {
+function FallbackRedirect({ commonProps }: { commonProps: AppCommonProps }) {
   const { i18n } = useTranslation();
   const location = useLocation();
 
@@ -1916,13 +1954,24 @@ function FallbackRedirect() {
 
   const targetLng = normalizeLang(queryLng || i18n.resolvedLanguage || i18n.language);
 
-  return <Navigate replace to={`/${targetLng}${location.pathname}${cleanSearch}`} />;
+  return (
+    <>
+      <Navigate replace to={`/${targetLng}${location.pathname}${cleanSearch}`} />
+      <App {...commonProps} />
+    </>
+  );
 }
 
 function LocalizedAppLayout({ commonProps }: { commonProps: AppCommonProps }) {
   const { lng } = useParams();
   const { i18n } = useTranslation();
   const location = useLocation();
+
+  useEffect(() => {
+    if (isSupportedLang(lng) && i18n.language !== lng) {
+      i18n.changeLanguage(lng);
+    }
+  }, [i18n, lng]);
 
   const rawParams = new URLSearchParams(location.search);
   const queryLng = rawParams.get("lang") ?? rawParams.get("lng");
@@ -1938,25 +1987,41 @@ function LocalizedAppLayout({ commonProps }: { commonProps: AppCommonProps }) {
       : `/${queryLng}${location.pathname}${cleanSearch}`;
 
     if (queryLng !== lng) {
-      return <Navigate replace to={targetPath} />;
+      return (
+        <>
+          <Navigate replace to={targetPath} />
+          <App {...commonProps} />
+        </>
+      );
     }
     if (hasQueryLng) {
-      return <Navigate replace to={`${location.pathname}${cleanSearch}`} />;
+      return (
+        <>
+          <Navigate replace to={`${location.pathname}${cleanSearch}`} />
+          <App {...commonProps} />
+        </>
+      );
     }
   }
 
   if (hasQueryLng && isSupportedLang(lng)) {
-    return <Navigate replace to={`${location.pathname}${cleanSearch}`} />;
+    return (
+      <>
+        <Navigate replace to={`${location.pathname}${cleanSearch}`} />
+        <App {...commonProps} />
+      </>
+    );
   }
 
   if (!isSupportedLang(lng)) {
     const targetLng = normalizeLang(queryLng || i18n.resolvedLanguage || i18n.language);
-    return <Navigate replace to={`/${targetLng}${location.pathname}${cleanSearch}`} />;
+    return (
+      <>
+        <Navigate replace to={`/${targetLng}${location.pathname}${cleanSearch}`} />
+        <App {...commonProps} />
+      </>
+    );
   }
-
-  useEffect(() => {
-    if (i18n.language !== lng) i18n.changeLanguage(lng);
-  }, [i18n, lng]);
 
   return <App {...commonProps} />;
 }
@@ -2073,14 +2138,13 @@ export default function RootApp() {
 
   return (
     <>
-      <CustomCursor />
-      <TooltipProvider delayDuration={200} skipDelayDuration={0} disableHoverableContent>
-        <Routes>
-          <Route path="/" element={<RootLocaleRedirect />} />
+      <Routes>
+          <Route path="/" element={<RootLocaleRedirect commonProps={commonProps} />} />
           <Route path="/:lng" element={<LocalizedAppLayout commonProps={commonProps} />}>
             <Route index element={null} />
             <Route path="favorites" element={null} />
             <Route path="mv/:id" element={null} />
+            <Route path="404" element={null} />
             <Route path="*" element={null} />
           </Route>
           <Route
@@ -2102,9 +2166,8 @@ export default function RootApp() {
           <Route path="/debug/lg/:mvid?" element={<DebugLightGallery />} />
           <Route path="/debug/fb/:mvid?" element={<DebugFancyboxMasonry />} />
           <Route path="/debug/modal" element={<DebugMVModalLightbox />} />
-          <Route path="*" element={<FallbackRedirect />} />
+          <Route path="*" element={<FallbackRedirect commonProps={commonProps} />} />
         </Routes>
-      </TooltipProvider>
       <Toaster position="top-center" />
     </>
   );

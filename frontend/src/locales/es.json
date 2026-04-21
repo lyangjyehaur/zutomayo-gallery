@@ -4,7 +4,8 @@
     "error": "Se produjo un error",
     "save": "Guardar",
     "cancel": "Cancelar",
-    "confirm": "Confirmar"
+    "confirm": "Confirmar",
+    "load_more": "Cargar más"
   },
   "app": {
     "search_placeholder": "Buscar palabras clave...",
@@ -104,18 +105,34 @@
     "no_desc": "Sin descripción (NO_METADATA_FOUND)",
     "load_more": "Cargar más",
     "reached_bottom": "Fin del archivo",
-    "license": "Licencia: {{type}}",
+    "license": "Licencia: ",
     "lightbox_ui": "Componente Lightbox",
     "album_category_full": "Álbum Completo",
     "album_category_mini": "Mini Álbum",
-    "album_category_single": "Sencillo / Otros"
+    "album_category_single": "Sencillo / Otros",
+    "page_not_found": "Página No Encontrada",
+    "page_not_found_desc": "La señal que buscas parece haber desaparecido en la medianoche.",
+    "back_to_home": "Volver al inicio",
+    "back": "Volver"
   },
   "waline": {
     "mailPlaceholder": "Deja tu correo para el avatar (no requiere inicio de sesión)",
     "reactionTitleMV": "¿Cuál es tu impresión de este MV?",
     "reactionTitleSite": "¿Te gusta este sitio?",
     "placeholder": "¡Bienvenido a dejar un comentario! (Se admiten Markdown e imágenes)",
-    "login": "Iniciar sesión (Opcional)"
+    "login": "Iniciar sesión (Opcional)",
+    "nick": "Apodo",
+    "mail": "Correo",
+    "word": "Palabras",
+    "search": "Buscar GIF",
+    "preview": "Vista previa",
+    "submit": "Enviar",
+    "comment": "Comentarios",
+    "sofa": "Sé el primero en comentar~",
+    "latest": "Reciente",
+    "oldest": "Antiguo",
+    "hottest": "Popular",
+    "optional": "Opcional"
   },
   "geo": {
     "detecting": "Detectando...",

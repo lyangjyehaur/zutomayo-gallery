@@ -4,7 +4,8 @@
     "error": "Error occurred",
     "save": "Save",
     "cancel": "Cancel",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "load_more": "Load More"
   },
   "app": {
     "search_placeholder": "Search keywords...",
@@ -104,18 +105,34 @@
     "no_desc": "No description (NO_METADATA_FOUND)",
     "load_more": "Load More",
     "reached_bottom": "End of Archive",
-    "license": "License: {{type}}",
+    "license": "License: ",
     "lightbox_ui": "Lightbox UI",
     "album_category_full": "Full Album",
     "album_category_mini": "Mini Album",
-    "album_category_single": "Single / Others"
+    "album_category_single": "Single / Others",
+    "page_not_found": "Page Not Found",
+    "page_not_found_desc": "The signal you are looking for seems to have disappeared in the midnight.",
+    "back_to_home": "Back to Home",
+    "back": "Back"
   },
   "waline": {
     "mailPlaceholder": "Leave email for avatar (no login required)",
     "reactionTitleMV": "What is your impression of this MV?",
     "reactionTitleSite": "Do you like this site?",
     "placeholder": "Welcome to leave a comment! (Markdown and images are supported)",
-    "login": "Login (Optional)"
+    "login": "Login (Optional)",
+    "nick": "Nickname",
+    "mail": "Email",
+    "word": "Words",
+    "search": "Search GIF",
+    "preview": "Preview",
+    "submit": "Submit",
+    "comment": "Comments",
+    "sofa": "Be the first to comment~",
+    "latest": "Latest",
+    "oldest": "Oldest",
+    "hottest": "Popular",
+    "optional": "Optional"
   },
   "geo": {
     "detecting": "Detecting...",

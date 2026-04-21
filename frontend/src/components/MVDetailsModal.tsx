@@ -78,19 +78,8 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
     }
   }, [mv?.id, isChinaIP]);
 
-  // 網頁標題管理
-  useEffect(() => {
-    if (mv) {
-      document.title = `${mv.title} - ZUTOMAYO MV Gallery`;
-    } else {
-      document.title = 'ZUTOMAYO MV Gallery';
-    }
-    
-    // 清理函數：當元件卸載時恢復預設標題
-    return () => {
-      document.title = 'ZUTOMAYO MV Gallery';
-    };
-  }, [mv]);
+  // 網頁標題管理交由 Helmet 處理，移除直接操作 document.title 以避免 React DOM 衝突
+  // 參考: react-helmet-async 會在 head 內進行 Portal 掛載，手動修改會導致 removeChild 崩潰
 
   const lightboxProvider = getLightboxProvider();
 
@@ -217,16 +206,11 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
 
   return (
     <>
-      <Helmet>
-        <title>{mv ? `${mv.title} - ZUTOMAYO MV Gallery` : 'ZUTOMAYO MV Gallery'}</title>
-        {mv && (
-          <>
-            <meta property="og:title" content={`${mv.title} - ZUTOMAYO MV Gallery`} />
-            <meta property="og:description" content={mv.description?.substring(0, 100) || ''} />
-            {mv.coverImages?.[0] && <meta property="og:image" content={getProxyImgUrl(mv.coverImages[0], 'small')} />}
-          </>
-        )}
-      </Helmet>
+      {mv && (
+        <Helmet>
+          <title>{`${mv.title} | ZUTOMAYO MV Gallery`}</title>
+        </Helmet>
+      )}
     <Dialog open={!!mv} onOpenChange={(open) => {
       if (!open && !isLightboxOpenRef.current && !isClosingRef.current) {
         isClosingRef.current = true;

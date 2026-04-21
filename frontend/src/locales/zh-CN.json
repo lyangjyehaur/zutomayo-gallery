@@ -4,7 +4,8 @@
     "error": "发生错误",
     "save": "保存",
     "cancel": "取消",
-    "confirm": "确认"
+    "confirm": "确认",
+    "load_more": "加载更多"
   },
   "app": {
     "search_placeholder": "关键字检索...",
@@ -104,18 +105,34 @@
     "no_desc": "暂无描述 (NO_METADATA_FOUND)",
     "load_more": "加载更多",
     "reached_bottom": "已到最底",
-    "license": "授权：{{type}}",
+    "license": "授权：",
     "lightbox_ui": "灯箱组件",
     "album_category_full": "完整专辑",
     "album_category_mini": "迷你专辑",
-    "album_category_single": "单曲 / 其他"
+    "album_category_single": "单曲 / 其他",
+    "page_not_found": "找不到页面",
+    "page_not_found_desc": "您寻找的信号似乎已经消失在午夜之中",
+    "back_to_home": "返回首页",
+    "back": "返回上一页"
   },
   "waline": {
     "mailPlaceholder": "留邮箱可免登录显示头像",
     "reactionTitleMV": "这支 MV 给你的印象是？",
     "reactionTitleSite": "喜欢这个网站吗？",
     "placeholder": "欢迎留言讨论！(支持 Markdown 语法与图片上传)",
-    "login": "登录 (可选)"
+    "login": "登录 (可选)",
+    "nick": "昵称",
+    "mail": "邮箱",
+    "word": "字",
+    "search": "搜索表情",
+    "preview": "预览",
+    "submit": "发送",
+    "comment": "评论",
+    "sofa": "来发评论吧～",
+    "latest": "按正序",
+    "oldest": "按倒序",
+    "hottest": "按热度",
+    "optional": "可选"
   },
   "geo": {
     "detecting": "判断中...",

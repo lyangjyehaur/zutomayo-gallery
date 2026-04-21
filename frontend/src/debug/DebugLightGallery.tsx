@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import LightGallery from 'lightgallery/react';
 import Masonry from 'react-masonry-css';
 
@@ -128,6 +129,7 @@ const PhotoItem = ({ photo }: PhotoItemProps) => {
 };
 
 export default function DebugLightGallery({ mvid: propMvid }: DebugLightGalleryProps) {
+  const { t } = useTranslation();
   const { mvid: urlMvid } = useParams<{ mvid?: string }>();
   const mvid = propMvid || urlMvid;
 
@@ -293,7 +295,7 @@ export default function DebugLightGallery({ mvid: propMvid }: DebugLightGalleryP
           >
             <span className="flex flex-col items-center leading-tight">
               <span className="tracking-normal">
-                {loadingMore ? '載入中...' : '載入更多'} ({displayedPhotos.length} / {totalPhotoCount})
+                {loadingMore ? t("common.loading", "載入中...") : t("common.load_more", "載入更多")} ({displayedPhotos.length} / {totalPhotoCount})
               </span>
               <span className="text-[10px] font-mono opacity-60 normal-case">
                 {loadingMore ? 'Loading...' : 'Load_More_Assets'}
@@ -305,7 +307,7 @@ export default function DebugLightGallery({ mvid: propMvid }: DebugLightGalleryP
 
       {!hasMore && displayedPhotos.length > 0 && (
         <div className="mt-8 lg:mt-12 text-center font-bold opacity-50 uppercase text-sm sm:text-base flex flex-col items-center leading-tight">
-          <span className="tracking-normal">已到最底</span>
+          <span className="tracking-normal">{t("app.reached_bottom", "已到最底")}</span>
           <span className="text-[10px] font-mono opacity-60 normal-case">End of Archive</span>
         </div>
       )}

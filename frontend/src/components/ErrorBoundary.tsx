@@ -71,7 +71,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 {/* 標題 */}
                 <div className="flex flex-col items-center leading-tight mb-4">
                   <h1 className="text-3xl font-black text-center uppercase tracking-tighter text-red-500">
-                    {t('app.error_critical', '系統發生嚴重錯誤')}
+                    {t('error.critical_error', '系統發生嚴重錯誤')}
                   </h1>
                   <span className="text-[10px] font-mono opacity-50 normal-case text-red-400">System_Critical_Error</span>
                 </div>
@@ -79,11 +79,11 @@ export class ErrorBoundary extends Component<Props, State> {
                 {/* 錯誤信息 */}
                 <div className="bg-black/30 border-2 border-red-500/30 p-4 mb-6 font-mono text-sm">
                   <div className="text-red-400 mb-2 flex flex-col leading-tight">
-                    <span>{t('app.error_details', '錯誤資訊')}</span>
+                    <span>{t('error.error_info', '錯誤資訊')}</span>
                     <span className="text-[10px] font-mono opacity-60 normal-case">Error_Details:</span>
                   </div>
                   <p className="text-red-300/80 break-all">
-                    {this.state.error?.message || t('app.error_unknown', '未知錯誤 (Unknown error occurred)')}
+                    {this.state.error?.message || t('error.unknown_error', '未知錯誤 (Unknown error occurred)')}
                   </p>
                   
                   {/* 開發環境顯示堆棧 */}
@@ -91,7 +91,7 @@ export class ErrorBoundary extends Component<Props, State> {
                     <details className="mt-4">
                       <summary className="cursor-pointer text-red-400 hover:text-red-300">
                         <span className="flex flex-col leading-tight">
-                          <span>{t('app.error_stack', '堆疊追蹤（開發模式）')}</span>
+                          <span>{t('error.stack_trace', '堆疊追蹤 (Dev_Mode)')}</span>
                           <span className="text-[10px] font-mono opacity-60 normal-case">Stack_Trace (Dev_Mode)</span>
                         </span>
                       </summary>
@@ -111,7 +111,7 @@ export class ErrorBoundary extends Component<Props, State> {
                     data-umami-event="Z_Error_Recovery"
                     data-umami-event-action="retry"
                   >
-                    {t('app.error_retry', '重試')}
+                    {t('error.retry', '重試')}
                   </Button>
                   <Button 
                     onClick={this.handleReload}
@@ -120,7 +120,7 @@ export class ErrorBoundary extends Component<Props, State> {
                     data-umami-event="Z_Error_Recovery"
                     data-umami-event-action="reload"
                   >
-                    {t('app.error_reload', '重新加載頁面')}
+                    {t('error.reload', '重新加載頁面')}
                   </Button>
                   <Button 
                     onClick={() => window.location.href = '/'}
@@ -129,7 +129,7 @@ export class ErrorBoundary extends Component<Props, State> {
                     data-umami-event="Z_Error_Recovery"
                     data-umami-event-action="home"
                   >
-                    {t('app.error_home', '返回首頁')}
+                    {t('error.back_home', '返回首頁')}
                   </Button>
                 </div>
 
@@ -137,7 +137,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <div className="mt-6 text-center">
                   <span className="inline-block bg-red-500/20 text-red-400 px-3 py-1 text-xs font-mono border border-red-500/30">
                     <span className="flex flex-col items-center leading-tight">
-                      <span className="tracking-normal">{t('app.error_status', '狀態碼：500（內部錯誤）')}</span>
+                      <span className="tracking-normal">{t('error.status_500', '狀態碼：500（內部錯誤）')}</span>
                       <span className="text-[10px] font-mono opacity-60 normal-case">STATUS_CODE: 500_INTERNAL_ERROR</span>
                     </span>
                   </span>
@@ -146,7 +146,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
               {/* 底部信息 */}
               <p className="mt-8 text-xs opacity-50 font-mono flex flex-col items-center leading-tight">
-                <span className="tracking-normal">{t('app.error_contact', '若此錯誤持續發生，請聯絡管理者')}</span>
+                <span className="tracking-normal">{t('error.contact_support', '若此錯誤持續發生，請聯絡管理者')}</span>
                 <span className="text-[10px] font-mono opacity-60 normal-case">If this error persists, please contact support.</span>
               </p>
             </div>

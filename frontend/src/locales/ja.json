@@ -4,7 +4,8 @@
     "error": "エラーが発生しました",
     "save": "保存",
     "cancel": "キャンセル",
-    "confirm": "確認"
+    "confirm": "確認",
+    "load_more": "さらに読み込む"
   },
   "app": {
     "search_placeholder": "キーワードで検索...",
@@ -103,19 +104,35 @@
     "image": "画像 (image)",
     "no_desc": "説明がありません (NO_METADATA_FOUND)",
     "load_more": "さらに読み込む",
-    "reached_bottom": "一番下まで到達しました",
-    "license": "ライセンス：{{type}}",
+    "reached_bottom": "最後まで読み込みました",
+    "license": "ライセンス：",
     "lightbox_ui": "Lightboxコンポーネント",
     "album_category_full": "フルアルバム",
     "album_category_mini": "ミニアルバム",
-    "album_category_single": "シングル / その他"
+    "album_category_single": "シングル / その他",
+    "page_not_found": "ページが見つかりません",
+    "page_not_found_desc": "お探しのシグナルは真夜中に消えてしまったようです",
+    "back_to_home": "ホームに戻る",
+    "back": "戻る"
   },
   "waline": {
     "mailPlaceholder": "メールアドレスを入力するとアバターが表示されます（ログイン不要）",
     "reactionTitleMV": "このMVの印象はどうですか？",
     "reactionTitleSite": "このサイトは気に入りましたか？",
     "placeholder": "コメントをどうぞ！ (Markdownと画像アップロードに対応しています)",
-    "login": "ログイン (任意)"
+    "login": "ログイン (任意)",
+    "nick": "ニックネーム",
+    "mail": "メール",
+    "word": "文字",
+    "search": "GIF検索",
+    "preview": "プレビュー",
+    "submit": "送信",
+    "comment": "コメント",
+    "sofa": "コメントを書き込んでみよう～",
+    "latest": "最新",
+    "oldest": "古い順",
+    "hottest": "人気",
+    "optional": "任意"
   },
   "geo": {
     "detecting": "判定中...",

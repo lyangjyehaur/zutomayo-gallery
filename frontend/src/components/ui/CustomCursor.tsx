@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 
 export default function CustomCursor() {
   const cursorRef = useRef<HTMLImageElement>(null);
@@ -12,11 +13,6 @@ export default function CustomCursor() {
     // Check if the device supports hover (ignore touch devices)
     if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches || isAdminRoute) {
       return;
-    }
-
-    // Move the cursor element to body to avoid clipping or stacking context issues
-    if (cursorRef.current && cursorRef.current.parentElement !== document.body) {
-      document.body.appendChild(cursorRef.current);
     }
     
     if (cursorRef.current) {
@@ -84,17 +80,6 @@ export default function CustomCursor() {
       // 特別是在有複雜層級、絕對定位、或者被遮罩蓋住的情況下，如果我們強制使用 target === lastTarget 進行攔截，
       // 就會導致在跨越元素邊界時（例如從 input 移出到被 position: relative 蓋住的 div 上），事件被異常吃掉。
       // 因此，我們完全放棄使用 lastTarget 進行提前 return，而是依賴後續的 setTypeIfDifferent 來進行 React 狀態的防抖。
-
-      // Dynamic re-parenting if fancybox is open
-      // 把這段從高頻的 mousemove 移到滑鼠 hover 或點擊等改變目標時檢查，大幅降低 DOM 查詢消耗
-      if (cursorRef.current) {
-        const fancyboxContainer = document.querySelector('.fancybox__container');
-        if (fancyboxContainer && cursorRef.current.parentElement !== fancyboxContainer) {
-          fancyboxContainer.appendChild(cursorRef.current);
-        } else if (!fancyboxContainer && cursorRef.current.parentElement !== document.body) {
-          document.body.appendChild(cursorRef.current);
-        }
-      }
 
       // 取得瀏覽器原生賦予這個元素的樣式
       const computedStyle = window.getComputedStyle(target);
@@ -237,16 +222,12 @@ export default function CustomCursor() {
       window.removeEventListener('keydown', handleKeyDown, { capture: true });
       window.removeEventListener('keyup', handleKeyUp, { capture: true });
       
-      // Cleanup DOM
-      if (cursorRef.current && cursorRef.current.parentElement) {
-        cursorRef.current.parentElement.removeChild(cursorRef.current);
-      }
     };
   }, [isAdminRoute]);
 
   if (isAdminRoute) return null;
 
-  return (
+  return createPortal(
     <img
       ref={cursorRef}
       src={`/assets/cursor-png/${cursorType}.apng`}
@@ -275,6 +256,7 @@ export default function CustomCursor() {
           }
         }
       }}
-    />
+    />,
+    document.body
   );
 }

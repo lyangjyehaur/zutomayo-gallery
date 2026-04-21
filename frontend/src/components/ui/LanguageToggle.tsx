@@ -69,8 +69,8 @@ export const LanguageToggle: React.FC<LanguageToggleProps> = ({ isIconOnly = fal
     variant: "neutral" as const,
     size: (isIconOnly ? "icon" : "default") as "icon" | "default",
     className: isIconOnly
-      ? "z-10 relative h-10 w-10 md:h-12 md:w-12 rounded-none transition-all duration-150 hover:bg-main hover:text-black data-[state=open]:bg-main data-[state=open]:text-black data-[state=open]:translate-x-[4px] data-[state=open]:translate-y-[4px] data-[state=open]:shadow-none group"
-      : "gap-2 border-2 border-border shadow-neo-sm bg-card hover:bg-card/80",
+      ? "z-10 relative h-10 w-10 md:h-12 md:w-12 rounded-none transition-all duration-150 hover:bg-main hover:text-black data-[state=open]:bg-main data-[state=open]:text-black data-[state=open]:translate-x-[4px] data-[state=open]:translate-y-[4px] data-[state=open]:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none group"
+      : "gap-2 border-2 border-border shadow-neo-sm bg-card hover:bg-card/80 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all duration-150",
     "aria-label": "Change Language",
     "data-umami-event": "Z_Change_Language",
   };
@@ -90,7 +90,7 @@ export const LanguageToggle: React.FC<LanguageToggleProps> = ({ isIconOnly = fal
             <TooltipContent 
               side="left" 
               align="center" 
-              sideOffset={6}
+              sideOffset={10}
               className={isOpen ? "hidden" : ""}
             >
               <div className="flex flex-col gap-0.5">

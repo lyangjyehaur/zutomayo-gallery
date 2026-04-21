@@ -704,7 +704,7 @@ export default function LightGalleryViewer({
           >
             <span className="flex flex-col items-center leading-tight">
               <span className="tracking-normal">
-                {(loadingMore ? t("common.loading", "載入中...") : t("common.load_more", "載入更多"))} ({displayedPhotos.length} / {images.length})
+                {loadingMore ? t("common.loading", "載入中...") : t("common.load_more", "載入更多")} ({displayedPhotos.length} / {images.length})
               </span>
               <span className="text-[10px] font-mono opacity-60 normal-case">
                 {loadingMore ? 'Loading...' : 'Load_More_Assets'}

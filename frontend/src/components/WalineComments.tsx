@@ -120,7 +120,20 @@ export function WalineComments({
           locale: { 
             reactionTitle: finalReactionTitle,
             placeholder: t("waline.placeholder", "歡迎留言討論！(支援 Markdown 語法與圖片上傳)"),
-            login: t("waline.login", "登入 (可選)")
+            login: t("waline.login", "登入 (可選)"),
+            nick: t("waline.nick", "暱稱"),
+            mail: t("waline.mail", "信箱"),
+            word: t("waline.word", "字數"),
+            search: t("waline.search", "搜尋表情"),
+            gif: t("waline.search", "搜尋表情"),
+            preview: t("waline.preview", "預覽"),
+            submit: t("waline.submit", "提交"),
+            comment: t("waline.comment", "評論"),
+            sofa: t("waline.sofa", "還沒有評論"),
+            latest: t("waline.latest", "最新"),
+            oldest: t("waline.oldest", "最久"),
+            hottest: t("waline.hottest", "最熱"),
+            optional: t("waline.optional", "可選")
           },
           lang: currentLang
         });
