@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "./button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
+import { useTranslation } from "react-i18next";
 
 type Theme = "light" | "dark";
 
@@ -9,6 +10,7 @@ interface ThemeToggleProps {
 }
 
 const ThemeToggle: React.FC<ThemeToggleProps> = ({ isIconOnly = false }) => {
+  const { t } = useTranslation();
   const [theme, setTheme] = useState<Theme>(() => {
     // 從localStorage或系統偏好獲取主題
     if (typeof window !== "undefined") {
@@ -41,12 +43,12 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ isIconOnly = false }) => {
   const buttonContent = theme === "light" ? (
     <>
       <i className={`hn hn-lightbulb ${isIconOnly ? 'text-xl md:text-2xl' : 'text-lg'}`}></i>
-      {!isIconOnly && <span className="text-xs font-bold">關燈模式</span>}
+      {!isIconOnly && <span className="text-xs font-bold">{t("app.dark_mode", "關燈模式")}</span>}
     </>
   ) : (
     <>
       <i className={`hn hn-lightbulb-solid ${isIconOnly ? 'text-xl md:text-2xl' : 'text-lg'}`}></i>
-      {!isIconOnly && <span className="text-xs font-bold">開燈模式</span>}
+      {!isIconOnly && <span className="text-xs font-bold">{t("app.light_mode", "開燈模式")}</span>}
     </>
   );
 
@@ -58,8 +60,8 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ isIconOnly = false }) => {
     className: isIconOnly
       ? `h-10 w-10 md:h-12 md:w-12 rounded-none transition-colors ${theme === "light" ? "bg-main text-black hover:bg-main/80" : "hover:bg-main hover:text-black"}`
       : "gap-2 border-2 border-border shadow-neo-sm bg-card hover:bg-card/80",
-    title: theme === "light" ? "關燈" : "開燈",
-    "aria-label": theme === "light" ? "關燈" : "開燈",
+    title: theme === "light" ? t("app.turn_off_lights", "關燈") : t("app.turn_on_lights", "開燈"),
+    "aria-label": theme === "light" ? t("app.turn_off_lights", "關燈") : t("app.turn_on_lights", "開燈"),
     "data-umami-event": "Z_Toggle_Theme",
     "data-umami-event-to": theme === 'dark' ? 'light' : 'dark',
   };
@@ -75,10 +77,10 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ isIconOnly = false }) => {
       </TooltipTrigger>
       <TooltipContent side="left" align="center" sideOffset={10}>
         <div className="flex flex-col gap-0.5">
-          <p className="text-xs font-black tracking-widest">照明</p>
+          <p className="text-xs font-black tracking-widest">{t("app.lighting", "照明")}</p>
           <p className="text-[10px] font-mono opacity-60 normal-case">ILLUMINATION</p>
           <p className="text-xs font-bold">
-            {theme === "light" ? "關閉光源，回歸「永遠深夜」" : "確認開燈嗎？「永遠深夜」才是最佳體驗"}
+            {theme === "light" ? t("app.turn_off_desc", "關閉光源，回歸「永遠深夜」") : t("app.turn_on_desc", "確認開燈嗎？「永遠深夜」才是最佳體驗")}
           </p>
         </div>
       </TooltipContent>

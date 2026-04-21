@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export function useActiveTimer(thresholdSeconds = 60, onTrigger: () => void) {
+  const { t } = useTranslation();
+
   const activeTimeRef = useRef(0);
   const lastActiveTimeRef = useRef(Date.now());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -109,7 +112,7 @@ export function SpeedRatingSurvey({ forceOpen = false, onCloseForce }: { forceOp
   };
 
   const handleRate = async (rating: number) => {
-    toast.success(`感謝您的 ${rating} 星評價！`, {
+    toast.success(t("survey.toast_success", "感謝您的 {{rating}} 星評價！", { rating }), {
       description: '您的反饋已記錄，這將幫助我們優化加載速度。'
     });
     setSubmitted(true);
@@ -124,8 +127,7 @@ export function SpeedRatingSurvey({ forceOpen = false, onCloseForce }: { forceOp
       <DialogContent className="sm:max-w-[425px] crt-lines border-4 border-foreground bg-card shadow-neo p-0">
         <DialogHeader>
           <DialogTitle className="text-xl font-black uppercase flex items-center gap-2">
-            <i className="hn hn-clock text-2xl"></i> 加載速度調查
-          </DialogTitle>
+            <i className="hn hn-clock text-2xl"></i>{t("survey.title", "加載速度調查")}</DialogTitle>
           <DialogDescription className="font-mono text-[10px] opacity-70 absolute right-6 top-8">
             LOAD_SPEED_SURVEY
           </DialogDescription>
@@ -134,14 +136,14 @@ export function SpeedRatingSurvey({ forceOpen = false, onCloseForce }: { forceOp
           {submitted ? (
             <div className="flex flex-col items-center text-center animate-in fade-in zoom-in duration-300 py-4">
               <i className="hn hn-check text-4xl text-main mb-2"></i>
-              <h3 className="font-black text-lg">反饋已接收</h3>
-              <p className="text-xs opacity-70 mt-1 font-bold">謝謝您協助我們變得更好！</p>
+              <h3 className="font-black text-lg">{t("survey.received", "反饋已接收")}</h3>
+              <p className="text-xs opacity-70 mt-1 font-bold">{t("survey.thanks", "謝謝您協助我們變得更好！")}</p>
             </div>
           ) : (
             <>
               <div className="text-center space-y-2">
-                <p className="text-sm font-bold">您覺得目前的網頁加載速度如何？</p>
-                <p className="text-xs opacity-60 font-bold bg-foreground/5 inline-block px-2 py-1">支援半星評分，滑動預覽</p>
+                <p className="text-sm font-bold">{t("survey.question", "您覺得目前的網頁加載速度如何？")}</p>
+                <p className="text-xs opacity-60 font-bold bg-foreground/5 inline-block px-2 py-1">{t("survey.hint", "支援半星評分，滑動預覽")}</p>
               </div>
               <div className="py-2">
                 <StarRating onRate={handleRate} />

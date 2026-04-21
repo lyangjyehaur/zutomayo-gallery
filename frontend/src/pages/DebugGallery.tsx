@@ -116,3 +116,4 @@ export default function DebugGallery({ mvData = [] }: DebugGalleryProps) {
             </div>
         </div>
     );
+}

@@ -18,6 +18,7 @@ import lgFullscreen from 'lightgallery/plugins/fullscreen';
 import { MVImage } from '@/lib/types';
 import { getProxyImgUrl } from '@/lib/image';
 import { GALLERY_BREAKPOINTS } from '@/components/galleryBreakpoints';
+import { useTranslation } from 'react-i18next';
 
 export { GALLERY_BREAKPOINTS } from '@/components/galleryBreakpoints';
 
@@ -153,7 +154,7 @@ const SkeletonItem = ({ width, height }: SkeletonItemProps) => {
           <div className="absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2">
             <div className="size-5 border-2 border-black/10 border-t-black animate-spin rounded-full" />
             <span className="text-[8px] font-black uppercase tracking-tighter flex flex-col items-center leading-tight">
-              <span className="opacity-40 tracking-normal">同步視覺中...</span>
+              <span className="opacity-40 tracking-normal">{t("app.syncing_visual", "同步視覺中...")}</span>
               <span className="font-mono opacity-20 normal-case">Syncing_Visual...</span>
             </span>
           </div>
@@ -237,7 +238,7 @@ const PhotoItem = ({ photo, index, onPhotoClick, delayMs }: PhotoItemProps) => {
             >
               <div className="size-5 border-2 border-black/10 border-t-black animate-spin rounded-full" />
               <span className="text-[8px] font-black uppercase tracking-tighter flex flex-col items-center leading-tight">
-                <span className="opacity-40 tracking-normal">同步視覺中...</span>
+                <span className="opacity-40 tracking-normal">{t("app.syncing_visual", "同步視覺中...")}</span>
                 <span className="font-mono opacity-20 normal-case">Syncing_Visual...</span>
               </span>
             </div>
@@ -460,7 +461,7 @@ export default function LightGalleryViewer({
     return (
       <div className={`p-4 sm:p-6 lg:p-10 min-h-screen font-mono ${className}`}>
         <p className="text-sm opacity-50 italic text-center py-10 border-2 border-dashed border-white/5">
-          暫無設定圖資料
+          {t("app.no_reference_art", "暫無設定圖資料")}
         </p>
       </div>
     );
@@ -648,7 +649,7 @@ export default function LightGalleryViewer({
           dynamicEl={displayedPhotos.map(photo => ({
             src: photo.full,
             thumb: photo.src,
-            subHtml: `<div class="lg-neo-caption"><h4>${photo.caption}</h4><div class="rich-text">${photo.richText || '暫無描述 (NO_METADATA_FOUND)'}</div></div>`,
+            subHtml: `<div class="lg-neo-caption"><h4>${photo.caption}</h4><div class="rich-text">${photo.richText || '{t("app.no_desc", "暫無描述 (NO_METADATA_FOUND)")}'}</div></div>`,
             downloadUrl: photo.raw,
           }))}
           appendSubHtmlTo=".lg-item"
@@ -700,7 +701,7 @@ export default function LightGalleryViewer({
           >
             <span className="flex flex-col items-center leading-tight">
               <span className="tracking-normal">
-                {loadingMore ? '載入中...' : '載入更多'} ({displayedPhotos.length} / {images.length})
+                {loadingMore ? '{t("common.loading", "載入中...")}' : '載入更多'} ({displayedPhotos.length} / {images.length})
               </span>
               <span className="text-[10px] font-mono opacity-60 normal-case">
                 {loadingMore ? 'Loading...' : 'Load_More_Assets'}
@@ -712,7 +713,7 @@ export default function LightGalleryViewer({
 
       {enablePagination && !hasMore && displayedPhotos.length > 0 && (
         <div className="mt-8 lg:mt-12 text-center font-bold opacity-50 uppercase text-sm sm:text-base flex flex-col items-center leading-tight">
-          <span className="tracking-normal">已到最底</span>
+          <span className="tracking-normal">{t("app.end_of_list", "已到最底")}</span>
           <span className="text-[10px] font-mono opacity-60 normal-case">End of Archive</span>
         </div>
       )}

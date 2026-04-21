@@ -614,7 +614,7 @@ function App({
       window.umami.track((props: any) => ({
         ...props,
         url: '/virtual/feedback-drawer',
-        title: '意見回饋'
+        title: t("app.feedback", "意見回饋")
       }));
     }
   }, [isFeedbackOpen]);
@@ -651,9 +651,7 @@ function App({
           </span>
         </div>
         <p className="text-sm opacity-70 mb-8">{error}</p>
-        <Button onClick={() => window.location.reload()} variant="default" className="hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none" data-umami-event="Z_Retry_Connection">
-          重試連線
-        </Button>
+        <Button onClick={() => window.location.reload()} variant="default" className="hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none" data-umami-event="Z_Retry_Connection">{t("app.retry_connection", "重試連線")}</Button>
       </div>
     );
   }
@@ -1028,9 +1026,7 @@ function App({
                   setArtistFilter([]);
                 }}
                 className="text-[10px] sm:text-xs h-6 sm:h-7 px-1.5 sm:px-2 hover:bg-red-500/10 hover:text-red-500 opacity-60 hover:opacity-100 ml-1 border border-transparent hover:border-red-500/20"
-              >
-                清除全部
-              </Button>
+              >{t("app.clear_all", "清除全部")}</Button>
             </div>
           )}
         </div>
@@ -1042,11 +1038,11 @@ function App({
               <i className="hn hn-exclamation-triangle text-yellow-500 text-xl md:text-2xl shrink-0 mt-1 md:mt-0"></i>
               <div className="flex flex-col gap-1 md:gap-1.5">
                 <span className="text-xs md:text-sm font-black text-yellow-600 dark:text-yellow-400 flex flex-col md:flex-row md:items-center gap-1 md:gap-2 leading-tight">
-                  <span>請注意：收藏功能基於瀏覽器本地存儲實現</span>
+                  <span>{t("app.fav_notice_1", "請注意：收藏功能基於瀏覽器本地存儲實現")}</span>
                   <span className="text-[10px] font-mono opacity-70 normal-case md:border-l-2 md:border-yellow-500/30 md:pl-2">LOCAL_STORAGE_WARNING</span>
                 </span>
                 <span className="text-[10px] md:text-xs opacity-80 text-yellow-600 dark:text-yellow-400/80 leading-relaxed">
-                  若清除瀏覽器數據或更換設備，您的收藏項目將會丟失。
+                  {t("app.fav_notice_2", "若清除瀏覽器數據或更換設備，您的收藏項目將會丟失。")}
                 </span>
               </div>
             </div>
@@ -1077,16 +1073,12 @@ function App({
               <i className="hn hn-robot text-5xl"></i>
             </div>
             <div className="flex flex-col items-center leading-tight mb-2">
-              <h3 className="text-xl font-black">
-                找不到訊號
-              </h3>
+              <h3 className="text-xl font-black">{t("app.no_signal_found", "找不到訊號")}</h3>
               <span className="text-[10px] font-mono opacity-40">
                 NO_SIGNAL_FOUND
               </span>
             </div>
-            <p className="text-sm opacity-60 mb-8 font-mono">
-              找不到符合檢索條件的 MV
-            </p>
+            <p className="text-sm opacity-60 mb-8 font-mono">{t("app.no_mv_found", "找不到符合檢索條件的 MV")}</p>
             <Button
               onClick={() => {
                 setSearch("");
@@ -1098,8 +1090,7 @@ function App({
               variant="neutral"
               data-umami-event="Z_Reset_Filters"
             >
-              <i className="hn hn-refresh text-sm mr-2"></i> 重置所有檢索條件
-            </Button>
+              <i className="hn hn-refresh text-sm mr-2"></i> {t("app.reset_filters", "重置所有檢索條件")} </Button>
           </div>
         )}
 
@@ -1193,7 +1184,7 @@ function App({
                 SORT
               </p>
               <p className="text-xs font-bold">
-                {sortOrder === "desc" ? "最新 → 最舊" : "最舊 → 最新"}
+                {sortOrder === "desc" ? t("app.newest_to_oldest", "最新 → 最舊") : t("app.oldest_to_newest", "最舊 → 最新")}
               </p>
             </div>
           </TooltipContent>
@@ -1222,7 +1213,7 @@ function App({
                 FAVORITES
               </p>
               <p className="text-xs font-bold">
-                {showFavOnly ? "返回所有作品" : "只看收藏"}
+                {showFavOnly ? t("app.back_to_all", "返回所有作品") : t("app.show_fav_only", "只看收藏")}
               </p>
             </div>
           </TooltipContent>
@@ -1314,17 +1305,13 @@ function App({
                             <li className="flex items-start gap-2 group">
                               <span className="text-main font-black">►</span>
                               <div>
-                                <a href="https://space.bilibili.com/531797444" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">
-                                深夜大活躍_WAKE_03
-                                </a><br /><span className="opacity-70 ml-2 text-sm">感謝對 ZUTOMAYO 粉絲社群的巨大貢獻，以及提供評論區像素 Nira 醬表情的授權</span>
+                                <a href="https://space.bilibili.com/531797444" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">{t("app.thanks_wake_03_title", "深夜大活躍_WAKE_03")}</a><br /><span className="opacity-70 ml-2 text-sm">{t("app.thanks_wake_03", "感謝對 ZUTOMAYO 粉絲社群的巨大貢獻，以及提供評論區像素 Nira 醬表情的授權")}</span>
                               </div>
                             </li>
                             <li className="flex items-start gap-2 group">
                               <span className="text-main font-black">►</span>
                               <div>
-                                <a href="https://github.com/TakWolf/fusion-pixel-font" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">
-                                縫合像素字體 / Fusion Pixel Font
-                                </a><br /><span className="opacity-70 ml-2 text-sm">{t("app.thanks_fusion_pixel", "提供完整「泛中日韓語言特定字形」開源字型支援")}</span>
+                                <a href="https://github.com/TakWolf/fusion-pixel-font" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">{t("app.thanks_fusion_pixel_title", "縫合像素字體 / Fusion Pixel Font")}</a><br /><span className="opacity-70 ml-2 text-sm">{t("app.thanks_fusion_pixel", "提供完整「泛中日韓語言特定字形」開源字型支援")}</span>
                               </div>
                             </li>
                             <li className="flex items-start gap-2 group">
@@ -1524,7 +1511,7 @@ function App({
                         target="_blank"
                         rel="noopener noreferrer"
                         className="hover:text-main transition-colors flex items-center gap-2 group"
-                        title="像素圖示庫 (HackerNoon Pixel Icons)"
+                        title={t("app.pixel_icons", "像素圖示庫") + " (HackerNoon Pixel Icons)"}
                       >
                         <i className="hn hn-external-link text-[10px] opacity-50 shrink-0" />
                         <span className="flex items-center flex-wrap gap-x-1.5 leading-tight">
@@ -1554,7 +1541,7 @@ function App({
                         target="_blank"
                         rel="noopener noreferrer"
                         className="hover:text-main transition-colors flex items-center gap-2 group"
-                        title="像素字型 (Fusion Pixel Font)"
+                        title={t("app.pixel_font", "像素字型") + " (Fusion Pixel Font)"}
                       >
                         <i className="hn hn-external-link text-[10px] opacity-50 shrink-0" />
                         <span className="flex items-center flex-wrap gap-x-1.5 leading-tight">
@@ -1584,7 +1571,7 @@ function App({
                         target="_blank"
                         rel="noopener noreferrer"
                         className="hover:text-main transition-colors flex items-center gap-2 group"
-                        title="UI 設計系統 (Neobrutalism UI)"
+                        title={t("app.ui_design_system", "UI 設計系統") + " (Neobrutalism UI)"}
                       >
                         <i className="hn hn-external-link text-[10px] opacity-50 shrink-0" />
                         <span className="flex items-center flex-wrap gap-x-1.5 leading-tight">
@@ -1695,7 +1682,7 @@ function App({
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-3 font-black border-2 border-main px-4 py-2 bg-black text-main group transition-all hover:bg-main hover:text-black ztmy-avatar-trigger"
-                  title="前往開發者個人網站"
+                  title={t("app.visit_developer", "前往開發者個人網站")}
                   onMouseLeave={(e) => {
                     const img = e.currentTarget.querySelector('img');
                     if (img) {
@@ -1718,7 +1705,7 @@ function App({
                   />
                   <div className="flex flex-col items-start leading-tight">
                     <div className="flex gap-2 items-center">
-                      <span className="opacity-90">由 飯糰 製作</span>
+                      <span className="opacity-90">{t("app.made_by_fantuan", "由 飯糰 製作")}</span>
                       <i className="hn hn-heart-solid text-red-500 group-hover:animate-pulse text-[12px] leading-none"></i>
                     </div>
                     <span className="text-[8px] font-mono">
@@ -1733,7 +1720,7 @@ function App({
                         target="_blank"
                         rel="noopener noreferrer"
                         className="hover:text-main transition-colors flex items-center gap-2 group opacity-50 hover:opacity-100"
-                        title="GitHub 儲存庫 (GitHub Repository)"
+                        title={t("app.github_repo", "GitHub 儲存庫") + " (GitHub Repository)"}
                       >
                 <i className="hn hn-github text-sm" />
                 <span className="flex flex-col leading-tight">
@@ -1787,7 +1774,7 @@ function App({
             </span>
           </div>
           <p className="text-xs font-bold text-foreground/70 mt-1">
-            有任何建議或發現 Bug，歡迎在這裡留言告訴我！
+            {t("app.feedback_desc", "有任何建議或發現 Bug，歡迎在這裡留言告訴我！")}
           </p>
 
           <Button
@@ -1804,13 +1791,10 @@ function App({
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 relative z-10">
           {shouldRenderFeedback && (
             <WalineComments 
-              path="/site-feedback" 
-              className="waline-wrapper" 
-              reactionTitle={navigator.language.includes('zh-CN') || navigator.language.includes('zh-SG') ? '喜欢这个网站吗？' : 
-                             navigator.language.includes('zh') ? '喜歡這個網站嗎？' : 
-                             navigator.language.includes('ja') ? 'このサイトは気に入りましたか？' : 
-                             'Do you like this site?'}
-            />
+                path="/site-feedback" 
+                className="waline-wrapper" 
+                reactionTitle={t("waline.reactionTitleSite", "喜歡這個網站嗎？")} 
+              />
           )}
         </div>
       </div>

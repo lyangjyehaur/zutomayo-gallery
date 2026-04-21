@@ -3,6 +3,7 @@ import { initGeo } from '@/lib/geo';
 // Import Waline styles and our overrides
 import '@waline/client/style';
 import './WalineComments.css';
+import { useTranslation } from 'react-i18next';
 
 interface WalineCommentsProps {
   path: string;
@@ -25,6 +26,7 @@ export function WalineComments({
 }: WalineCommentsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef(false);
+  const { t } = useTranslation();
 
   // 取得使用者語言偏好
   const getLanguage = () => {
@@ -40,37 +42,11 @@ export function WalineComments({
 
   // 根據語言返回對應文案
   const getLocaleText = (key: 'reactionTitleMV' | 'reactionTitleSite' | 'placeholder' | 'login') => {
-    const locales = {
-      'zh-TW': {
-        reactionTitleMV: '這支 MV 給你的印象是？',
-        reactionTitleSite: '喜歡這個網站嗎？',
-        placeholder: '歡迎留言討論！(支援 Markdown 語法與圖片上傳)',
-        login: '登入 (可選)'
-      },
-      'zh-CN': {
-        reactionTitleMV: '这支 MV 给你的印象是？',
-        reactionTitleSite: '喜欢这个网站吗？',
-        placeholder: '欢迎留言讨论！(支持 Markdown 语法与图片上传)',
-        login: '登录 (可选)'
-      },
-      'ja': {
-        reactionTitleMV: 'このMVの印象はどうですか？',
-        reactionTitleSite: 'このサイトは気に入りましたか？',
-        placeholder: 'コメントをどうぞ！ (Markdownと画像アップロードに対応しています)',
-        login: 'ログイン (任意)'
-      },
-      'en': {
-        reactionTitleMV: 'What is your impression of this MV?',
-        reactionTitleSite: 'Do you like this site?',
-        placeholder: 'Welcome to leave a comment! (Markdown and images are supported)',
-        login: 'Login (Optional)'
-      }
-    };
-    return locales[currentLang][key];
+    return t(`waline.${key}`);
   };
 
   // 如果外部沒有傳入 reactionTitle，則使用預設的 MV 文案
-  const finalReactionTitle = reactionTitle || getLocaleText('reactionTitleMV');
+  const finalReactionTitle = reactionTitle || t("waline.reactionTitleMV", "這支 MV 給你的印象是？");
 
   useEffect(() => {
     let observer: MutationObserver | null = null;
@@ -143,8 +119,8 @@ export function WalineComments({
           // 優化：自訂登入提示，增加互動性
           locale: { 
             reactionTitle: finalReactionTitle,
-            placeholder: getLocaleText('placeholder'),
-            login: getLocaleText('login')
+            placeholder: t("waline.placeholder", "歡迎留言討論！(支援 Markdown 語法與圖片上傳)"),
+            login: t("waline.login", "登入 (可選)")
           },
           lang: currentLang
         });
