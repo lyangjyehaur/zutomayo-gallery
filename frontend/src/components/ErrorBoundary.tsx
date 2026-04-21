@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
+import { Translation } from 'react-i18next';
 
 interface Props {
   children: ReactNode;
@@ -58,95 +59,99 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 font-mono text-foreground crt-lines">
-          <div className="max-w-2xl w-full border-4 border-red-500 bg-card p-8 shadow-[8px_8px_0px_0px_rgba(239,68,68,1)]">
-            {/* 錯誤圖標 */}
-            <div className="flex justify-center mb-6">
-              <i className="hn hn-exclamation-triangle text-7xl text-red-500 animate-pulse"></i>
-            </div>
+        <Translation>
+          {(t) => (
+            <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 font-mono text-foreground crt-lines">
+              <div className="max-w-2xl w-full border-4 border-red-500 bg-card p-8 shadow-[8px_8px_0px_0px_rgba(239,68,68,1)]">
+                {/* 錯誤圖標 */}
+                <div className="flex justify-center mb-6">
+                  <i className="hn hn-exclamation-triangle text-7xl text-red-500 animate-pulse"></i>
+                </div>
 
-            {/* 標題 */}
-            <div className="flex flex-col items-center leading-tight mb-4">
-              <h1 className="text-3xl font-black text-center uppercase tracking-tighter text-red-500">
-                系統發生嚴重錯誤
-              </h1>
-              <span className="text-[10px] font-mono opacity-50 normal-case text-red-400">System_Critical_Error</span>
-            </div>
+                {/* 標題 */}
+                <div className="flex flex-col items-center leading-tight mb-4">
+                  <h1 className="text-3xl font-black text-center uppercase tracking-tighter text-red-500">
+                    {t('app.error_critical', '系統發生嚴重錯誤')}
+                  </h1>
+                  <span className="text-[10px] font-mono opacity-50 normal-case text-red-400">System_Critical_Error</span>
+                </div>
 
-            {/* 錯誤信息 */}
-            <div className="bg-black/30 border-2 border-red-500/30 p-4 mb-6 font-mono text-sm">
-              <div className="text-red-400 mb-2 flex flex-col leading-tight">
-                <span>錯誤資訊</span>
-                <span className="text-[10px] font-mono opacity-60 normal-case">Error_Details:</span>
-              </div>
-              <p className="text-red-300/80 break-all">
-                {this.state.error?.message || '未知錯誤 (Unknown error occurred)'}
-              </p>
-              
-              {/* 開發環境顯示堆棧 */}
-              {import.meta.env.DEV && this.state.errorInfo && (
-                <details className="mt-4">
-                  <summary className="cursor-pointer text-red-400 hover:text-red-300">
-                    <span className="flex flex-col leading-tight">
-                      <span>堆疊追蹤（開發模式）</span>
-                      <span className="text-[10px] font-mono opacity-60 normal-case">Stack_Trace (Dev_Mode)</span>
+                {/* 錯誤信息 */}
+                <div className="bg-black/30 border-2 border-red-500/30 p-4 mb-6 font-mono text-sm">
+                  <div className="text-red-400 mb-2 flex flex-col leading-tight">
+                    <span>{t('app.error_details', '錯誤資訊')}</span>
+                    <span className="text-[10px] font-mono opacity-60 normal-case">Error_Details:</span>
+                  </div>
+                  <p className="text-red-300/80 break-all">
+                    {this.state.error?.message || t('app.error_unknown', '未知錯誤 (Unknown error occurred)')}
+                  </p>
+                  
+                  {/* 開發環境顯示堆棧 */}
+                  {import.meta.env.DEV && this.state.errorInfo && (
+                    <details className="mt-4">
+                      <summary className="cursor-pointer text-red-400 hover:text-red-300">
+                        <span className="flex flex-col leading-tight">
+                          <span>{t('app.error_stack', '堆疊追蹤（開發模式）')}</span>
+                          <span className="text-[10px] font-mono opacity-60 normal-case">Stack_Trace (Dev_Mode)</span>
+                        </span>
+                      </summary>
+                      <pre className="mt-2 text-xs text-red-300/60 overflow-auto max-h-40 whitespace-pre-wrap">
+                        {this.state.errorInfo.componentStack}
+                      </pre>
+                    </details>
+                  )}
+                </div>
+
+                {/* 操作按鈕 */}
+                <div className="flex flex-wrap gap-4 justify-center">
+                  <Button 
+                    onClick={this.handleReset}
+                    variant="default"
+                    className="border-2 border-black hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none"
+                    data-umami-event="Z_Error_Recovery"
+                    data-umami-event-action="retry"
+                  >
+                    {t('app.error_retry', '重試')}
+                  </Button>
+                  <Button 
+                    onClick={this.handleReload}
+                    variant="neutral"
+                    className="border-2 border-black hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none"
+                    data-umami-event="Z_Error_Recovery"
+                    data-umami-event-action="reload"
+                  >
+                    {t('app.error_reload', '重新加載頁面')}
+                  </Button>
+                  <Button 
+                    onClick={() => window.location.href = '/'}
+                    variant="default"
+                    className="border-2 border-black hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none"
+                    data-umami-event="Z_Error_Recovery"
+                    data-umami-event-action="home"
+                  >
+                    {t('app.error_home', '返回首頁')}
+                  </Button>
+                </div>
+
+                {/* 狀態碼 */}
+                <div className="mt-6 text-center">
+                  <span className="inline-block bg-red-500/20 text-red-400 px-3 py-1 text-xs font-mono border border-red-500/30">
+                    <span className="flex flex-col items-center leading-tight">
+                      <span className="tracking-normal">{t('app.error_status', '狀態碼：500（內部錯誤）')}</span>
+                      <span className="text-[10px] font-mono opacity-60 normal-case">STATUS_CODE: 500_INTERNAL_ERROR</span>
                     </span>
-                  </summary>
-                  <pre className="mt-2 text-xs text-red-300/60 overflow-auto max-h-40 whitespace-pre-wrap">
-                    {this.state.errorInfo.componentStack}
-                  </pre>
-                </details>
-              )}
-            </div>
+                  </span>
+                </div>
+              </div>
 
-            {/* 操作按鈕 */}
-            <div className="flex flex-wrap gap-4 justify-center">
-              <Button 
-                onClick={this.handleReset}
-                variant="default"
-                className="border-2 border-black hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none"
-                data-umami-event="Z_Error_Recovery"
-                data-umami-event-action="retry"
-              >
-                重試
-              </Button>
-              <Button 
-                onClick={this.handleReload}
-                variant="neutral"
-                className="border-2 border-black hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none"
-                data-umami-event="Z_Error_Recovery"
-                data-umami-event-action="reload"
-              >
-                重新加載頁面
-              </Button>
-              <Button 
-                onClick={() => window.location.href = '/'}
-                variant="default"
-                className="border-2 border-black hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none"
-                data-umami-event="Z_Error_Recovery"
-                data-umami-event-action="home"
-              >
-                返回首頁
-              </Button>
+              {/* 底部信息 */}
+              <p className="mt-8 text-xs opacity-50 font-mono flex flex-col items-center leading-tight">
+                <span className="tracking-normal">{t('app.error_contact', '若此錯誤持續發生，請聯絡管理者')}</span>
+                <span className="text-[10px] font-mono opacity-60 normal-case">If this error persists, please contact support.</span>
+              </p>
             </div>
-
-            {/* 狀態碼 */}
-            <div className="mt-6 text-center">
-              <span className="inline-block bg-red-500/20 text-red-400 px-3 py-1 text-xs font-mono border border-red-500/30">
-                <span className="flex flex-col items-center leading-tight">
-                  <span className="tracking-normal">狀態碼：500（內部錯誤）</span>
-                  <span className="text-[10px] font-mono opacity-60 normal-case">STATUS_CODE: 500_INTERNAL_ERROR</span>
-                </span>
-              </span>
-            </div>
-          </div>
-
-          {/* 底部信息 */}
-          <p className="mt-8 text-xs opacity-50 font-mono flex flex-col items-center leading-tight">
-            <span className="tracking-normal">若此錯誤持續發生，請聯絡管理者</span>
-            <span className="text-[10px] font-mono opacity-60 normal-case">If this error persists, please contact support.</span>
-          </p>
-        </div>
+          )}
+        </Translation>
       );
     }
 

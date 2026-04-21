@@ -1502,6 +1502,18 @@ function App({
                         for content removal, please contact us.
                       </p>
                     )}
+                    {(i18n.language === 'en' || i18n.language === 'ja') && (
+                      <p
+                        lang="zh-Hant"
+                        className="text-[10px] leading-relaxed opacity-60"
+                      >
+                        本站為「永遠是深夜有多好。」（ZUTOMAYO）粉絲建立之非官方資料庫，旨在整理歷年 MV 設定圖與視覺資源，並方便同好交流。本站無任何商業營利目的。
+                        <br />
+                        本站伺服器不存儲任何原始圖片檔案，所有收錄之影片、影像、設定畫、插圖及相關視覺素材的版權均歸原創作者及權利機構所有。
+                        <br />
+                        若您是版權所有者，對內容的展示有任何疑慮或要求移除，請與我們聯繫。
+                      </p>
+                    )}
                 </div>
               </div>
 
@@ -1539,7 +1551,7 @@ function App({
                         className="opacity-50 hover:opacity-100 hover:text-main transition-all ml-7 flex items-baseline gap-1.5"
                         title="授權：CC BY 4.0 (CC BY 4.0 License)"
                       >
-                        <span>授權：CC BY 4.0</span>
+                        <span>{t("app.license", "授權：")}CC BY 4.0</span>
                         <span className="text-[8px] font-mono opacity-60">
                           License
                         </span>
@@ -1569,7 +1581,7 @@ function App({
                         className="opacity-50 hover:opacity-100 hover:text-main transition-all ml-7 flex items-baseline gap-1.5"
                         title="授權：OFL 1.1 (SIL OFL 1.1)"
                       >
-                        <span>授權：OFL 1.1</span>
+                        <span>{t("app.license", "授權：")}OFL 1.1</span>
                         <span className="text-[8px] font-mono opacity-60">
                           License
                         </span>
@@ -1596,7 +1608,7 @@ function App({
                         className="opacity-50 ml-7 flex items-baseline gap-1.5"
                         title="授權：MIT (MIT License)"
                       >
-                        <span>授權：MIT</span>
+                        <span>{t("app.license", "授權：")}MIT</span>
                         <span className="text-[8px] font-mono opacity-60">
                           License
                         </span>
@@ -1609,11 +1621,11 @@ function App({
                         target="_blank"
                         rel="noopener noreferrer"
                         className="hover:text-main transition-colors flex items-center gap-2 group"
-                        title="燈箱元件 (Fancybox UI)"
+                        title={t("app.lightbox_ui", "燈箱元件") + " (Fancybox UI)"}
                       >
                         <i className="hn hn-external-link text-[10px] opacity-50 shrink-0" />
                         <span className="flex items-center flex-wrap gap-x-1.5 leading-tight">
-                          <span className="whitespace-nowrap">燈箱元件</span>
+                          <span className="whitespace-nowrap">{t("app.lightbox_ui", "燈箱元件")}</span>
                           <span className="text-[10px] font-mono opacity-60 break-words">
                             Fancybox UI
                           </span>
@@ -1623,7 +1635,7 @@ function App({
                         className="opacity-50 ml-7 flex items-baseline gap-1.5"
                         title="授權：GPLv3 (GPLv3 License)"
                       >
-                        <span>授權：GPLv3</span>
+                        <span>{t("app.license", "授權：")}GPLv3</span>
                         <span className="text-[8px] font-mono opacity-60">
                           License
                         </span>
@@ -1640,7 +1652,7 @@ function App({
 
               <span className="flex items-center gap-1 flex-wrap justify-center md:justify-start">
                 <span className="opacity-30">
-                  © {new Date().getFullYear()} ZTMY MV 資料庫 
+                  © {new Date().getFullYear()} ZTMY MV {t("app.gallery", "資料庫")} 
                   | FE: {VERSION_CONFIG.app} (🕒 {VERSION_CONFIG.buildDate.replace(/-/g, '')})
                   {systemStatus?.version && ` | BE: ${systemStatus.version}`}
                   {systemStatus?.buildTime && ` (🕒 ${new Date(systemStatus.buildTime).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(/\//g, '')})`}
@@ -1745,7 +1757,7 @@ function App({
 
             <div className="opacity-30 text-center md:text-right flex flex-col leading-tight items-center md:items-end md:flex-1 md:basis-0">
               <span>
-                本專案為粉絲自製 所有媒體資源版權歸屬 <a href="https://zutomayo.net" target="_blank" rel="noopener noreferrer" className="hover:text-main underline decoration-dashed underline-offset-2 transition-colors">ZUTOMAYO</a>
+                {t("app.fan_made", "本專案為粉絲自製 所有媒體資源版權歸屬")} <a href="https://zutomayo.net" target="_blank" rel="noopener noreferrer" className="hover:text-main underline decoration-dashed underline-offset-2 transition-colors">ZUTOMAYO</a>
               </span>
               <span className="text-[8px] mt-1 opacity-60 normal-case">
                 FAN_MADE_PROJECT MEDIA_COPYRIGHT_BELONGS_TO_ZUTOMAYO
@@ -1778,7 +1790,7 @@ function App({
         <div className="pt-10 px-8 pb-6 border-b-4 border-border text-foreground flex flex-col justify-center shrink-0 pr-24 relative z-10">
           <div className="flex flex-col gap-1">
             <h2 className="text-xl font-black uppercase tracking-widest flex items-center gap-2">
-              <i className="hn hn-message text-2xl"></i> 意見回饋
+              <i className="hn hn-message text-2xl"></i> {t("app.feedback", "意見回饋")}
             </h2>
             <span className="text-[10px] font-bold opacity-50 font-mono normal-case">
               Feedback

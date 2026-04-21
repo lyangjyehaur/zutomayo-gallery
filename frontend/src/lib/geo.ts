@@ -21,7 +21,8 @@ const getIsChinaTimezone = () => {
 
 const shouldUseIpLookup = () => {
   if (typeof window === 'undefined') return false;
-  return window.localStorage.getItem('enable_ip_geo') === 'true';
+  // 預設開啟 IP 偵測，除非明確設定為 false
+  return window.localStorage.getItem('enable_ip_geo') !== 'false';
 };
 
 /**

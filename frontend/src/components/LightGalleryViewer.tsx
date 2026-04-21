@@ -142,6 +142,7 @@ interface SkeletonItemProps {
 }
 
 const SkeletonItem = ({ width, height }: SkeletonItemProps) => {
+  const { t } = useTranslation();
   const aspectRatio = width && height ? `${width} / ${height}` : '16 / 9';
 
   return (
@@ -182,6 +183,7 @@ interface PhotoItemProps {
 }
 
 const PhotoItem = ({ photo, index, onPhotoClick, delayMs }: PhotoItemProps) => {
+  const { t } = useTranslation();
   const [isLoaded, setIsLoaded] = useState(false);
   const [actualDimensions, setActualDimensions] = useState<{width: number, height: number} | null>(
     photo.width && photo.height ? { width: photo.width, height: photo.height } : null
@@ -294,6 +296,7 @@ export default function LightGalleryViewer({
   onLightboxOpen,
   onLightboxClose,
 }: LightGalleryViewerProps) {
+  const { t } = useTranslation();
   const [displayedPhotos, setDisplayedPhotos] = useState<PhotoData[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -649,7 +652,7 @@ export default function LightGalleryViewer({
           dynamicEl={displayedPhotos.map(photo => ({
             src: photo.full,
             thumb: photo.src,
-            subHtml: `<div class="lg-neo-caption"><h4>${photo.caption}</h4><div class="rich-text">${photo.richText || '{t("app.no_desc", "暫無描述 (NO_METADATA_FOUND)")}'}</div></div>`,
+            subHtml: `<div class="lg-neo-caption"><h4>${photo.caption}</h4><div class="rich-text">${photo.richText || t("app.no_desc", "暫無描述 (NO_METADATA_FOUND)")}</div></div>`,
             downloadUrl: photo.raw,
           }))}
           appendSubHtmlTo=".lg-item"
@@ -701,7 +704,7 @@ export default function LightGalleryViewer({
           >
             <span className="flex flex-col items-center leading-tight">
               <span className="tracking-normal">
-                {loadingMore ? '{t("common.loading", "載入中...")}' : '載入更多'} ({displayedPhotos.length} / {images.length})
+                {(loadingMore ? t("common.loading", "載入中...") : t("common.load_more", "載入更多"))} ({displayedPhotos.length} / {images.length})
               </span>
               <span className="text-[10px] font-mono opacity-60 normal-case">
                 {loadingMore ? 'Loading...' : 'Load_More_Assets'}

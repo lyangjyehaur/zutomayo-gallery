@@ -26,13 +26,13 @@ export function WalineComments({
 }: WalineCommentsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef(false);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   // 取得使用者語言偏好
   const getLanguage = () => {
     if (typeof window === 'undefined') return 'zh-TW';
-    const lang = navigator.language.toLowerCase();
-    if (lang.includes('zh-cn') || lang.includes('zh-sg')) return 'zh-CN';
+    const lang = i18n.language.toLowerCase();
+    if (lang.includes('zh-cn') || lang.includes('zh-hans') || lang.includes('zh-sg')) return 'zh-CN';
     if (lang.includes('zh')) return 'zh-TW';
     if (lang.includes('ja')) return 'ja';
     return 'en';
@@ -147,7 +147,7 @@ export function WalineComments({
               // 替 wl-mail 增加 placeholder 說明
               const mailInput = containerRef.current?.querySelector('.wl-mail') as HTMLInputElement;
               if (mailInput && !mailInput.getAttribute('data-custom-placeholder')) {
-                mailInput.placeholder = '留信箱可免登入顯示頭像';
+                mailInput.placeholder = t('waline.mail_placeholder', '留信箱可免登入顯示頭像');
                 mailInput.setAttribute('data-custom-placeholder', 'true');
               }
             }
@@ -179,7 +179,7 @@ export function WalineComments({
       }
       initializedRef.current = false;
     };
-  }, [path]);
+  }, [path, i18n.language, finalReactionTitle, t]);
 
   return <div ref={containerRef} className={className} />;
 }
