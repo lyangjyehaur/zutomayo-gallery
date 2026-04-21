@@ -94,6 +94,8 @@ export const LanguageToggle: React.FC<LanguageToggleProps> = ({ isIconOnly = fal
                 key={lang.code}
                 value={lang.code}
                 lang={lang.code}
+                data-umami-event="Z_Select_Language"
+                data-umami-event-language={lang.code}
               >
                 {lang.name}
               </DropdownMenuRadioItem>

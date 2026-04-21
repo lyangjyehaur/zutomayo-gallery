@@ -1028,6 +1028,7 @@ function App({
                   setArtistFilter([]);
                 }}
                 className="text-[10px] sm:text-xs h-6 sm:h-7 px-1.5 sm:px-2 hover:bg-red-500/10 hover:text-red-500 opacity-60 hover:opacity-100 ml-1 border border-transparent hover:border-red-500/20"
+                data-umami-event="Z_Clear_All_Filters"
               >{t("app.clear_all", "清除全部")}</Button>
             </div>
           )}
@@ -1071,29 +1072,30 @@ function App({
           </div>
         ) : (
           <div className="w-full py-24 flex flex-col items-center justify-center border-4 border-dashed border-border bg-card/30 mt-8">
-            <div className="text-5xl mb-6 opacity-20">
-              <i className="hn hn-robot text-5xl"></i>
+              <div className="text-5xl mb-6 opacity-20">
+                <i className="hn hn-robot text-5xl"></i>
+              </div>
+              <div className="flex flex-col items-center leading-tight mb-2">
+                <h3 className="text-xl font-black">{t("app.no_signal_found", "找不到訊號")}</h3>
+                <span className="text-[10px] font-mono opacity-40">
+                  NO_SIGNAL_FOUND
+                </span>
+              </div>
+              <p className="text-sm opacity-60 mb-8 font-mono">{t("app.no_mv_found", "找不到符合檢索條件的 MV")}</p>
+              <Button
+                onClick={() => {
+                  setSearch("");
+                  setYearFilter([]);
+                  setAlbumFilter([]);
+                  setArtistFilter([]);
+                  if (showFavOnly) navigate("/");
+                }}
+                variant="neutral"
+                data-umami-event="Z_Reset_Filters"
+              >
+                <i className="hn hn-refresh text-sm mr-2"></i> {t("app.reset_filters", "重置所有檢索條件")}
+              </Button>
             </div>
-            <div className="flex flex-col items-center leading-tight mb-2">
-              <h3 className="text-xl font-black">{t("app.no_signal_found", "找不到訊號")}</h3>
-              <span className="text-[10px] font-mono opacity-40">
-                NO_SIGNAL_FOUND
-              </span>
-            </div>
-            <p className="text-sm opacity-60 mb-8 font-mono">{t("app.no_mv_found", "找不到符合檢索條件的 MV")}</p>
-            <Button
-              onClick={() => {
-                setSearch("");
-                setYearFilter([]);
-                setAlbumFilter([]);
-                setArtistFilter([]);
-                if (showFavOnly) navigate("/");
-              }}
-              variant="neutral"
-              data-umami-event="Z_Reset_Filters"
-            >
-              <i className="hn hn-refresh text-sm mr-2"></i> {t("app.reset_filters", "重置所有檢索條件")} </Button>
-          </div>
         )}
 
         {/* 加載更多觸發器 */}

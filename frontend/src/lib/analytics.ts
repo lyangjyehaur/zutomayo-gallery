@@ -104,7 +104,7 @@ export const initAnalytics = () => {
     if (!target || typeof target.closest !== 'function') return;
 
     // 尋找被點擊的元素，並向上層尋找是否為可交互元素 (擴充了 option, combobox 等選單角色，以及 Fancybox 燈箱內的圖片和按鈕，還有 Waline 評論系統的互動元素)
-    const interactable = target.closest('a, button, input[type="button"], input[type="submit"], [role="button"], [role="link"], [role="menuitem"], [role="tab"], [role="switch"], [role="option"], [role="combobox"], [role="checkbox"], [role="radio"], .gallery-item, .f-button, .fancybox__button, .wl-btn, .wl-action, .wl-reaction-item, .wl-emoji-popup button, .wl-tab, .wl-like, .wl-reply');
+    const interactable = target.closest('a, button, input[type="button"], input[type="submit"], [role="button"], [role="link"], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="tab"], [role="switch"], [role="option"], [role="combobox"], [role="checkbox"], [role="radio"], .gallery-item, .f-button, .fancybox__button, .wl-btn, .wl-action, .wl-reaction-item, .wl-emoji-popup button, .wl-tab, .wl-like, .wl-reply');
 
     if (interactable) {
       // 如果元素本身或其父元素已經有 data-umami-event 屬性，交給 umami 原生的追蹤機制，避免重複發送

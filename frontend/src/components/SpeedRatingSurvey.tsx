@@ -62,12 +62,16 @@ const StarRating = ({ onRate }: { onRate: (rating: number) => void }) => {
         return (
           <div
             key={index}
+            role="button"
+            aria-label={`給予 ${index} 顆星評價`}
             className="relative cursor-pointer w-10 h-10 transition-transform hover:scale-110 active:scale-95"
             onMouseMove={(e) => handleMouseMove(e, index)}
             onClick={() => {
               setRating(hoverRating);
               onRate(hoverRating);
             }}
+            data-umami-event="Z_Submit_Speed_Rating"
+            data-umami-event-rating={hoverRating || index}
           >
             <svg viewBox="0 0 24 24" className="w-10 h-10 text-foreground fill-current stroke-current opacity-20" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
