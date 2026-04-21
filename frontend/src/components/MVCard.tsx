@@ -309,7 +309,7 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
         {glitch.active && glitch.mode === 'scan' && <div className="absolute inset-0 z-30 ztmy-scanline-pop" />}
 
         {/* 5. 常駐偶發效果：水平錯位橫紋 (Rolling Slice) - 只有在視野內才渲染以節省效能 */}
-        {shouldLoad && (
+        {shouldLoad && !isPaused && (
           <img
             src={currentSrc}
             alt="切片效果 (slice)"

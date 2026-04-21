@@ -9,7 +9,7 @@ import { defineConfig } from "vite"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-const pkg = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8'))
+const pkg = JSON.parse(readFileSync(path.resolve(__dirname, '..', 'package.json'), 'utf-8'))
 
 // 注入版本號到環境變數，可以在程式碼中透過 import.meta.env.VITE_APP_VERSION 取得
 process.env.VITE_APP_VERSION = pkg.version
@@ -26,6 +26,7 @@ try {
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: process.env.VITE_BASE || '/',
   plugins: [
     react(),
     tailwindcss(),
@@ -34,7 +35,7 @@ export default defineConfig({
       injectRegister: 'auto',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,ttf}'],
-        navigateFallback: '/index.html',
+        navigateFallback: 'index.html',
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\.ztmr\.club\/.*/i,

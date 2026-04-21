@@ -69,7 +69,7 @@ export const LanguageToggle: React.FC<LanguageToggleProps> = ({ isIconOnly = fal
           <TooltipContent 
             side="left" 
             align="center" 
-            sideOffset={10}
+            sideOffset={6}
             className={isOpen ? "hidden" : ""}
           >
             <div className="flex flex-col gap-0.5">

@@ -17,10 +17,18 @@ try {
   
   // 取得 package.json 中的版本號 (若環境變數未設定)
   if (!appVersion) {
-    const pkgPath = path.join(process.cwd(), 'package.json');
-    if (fs.existsSync(pkgPath)) {
+    const pkgPaths = [
+      path.resolve(process.cwd(), '..', 'package.json'),
+      path.resolve(process.cwd(), 'package.json'),
+    ];
+
+    for (const pkgPath of pkgPaths) {
+      if (!fs.existsSync(pkgPath)) continue;
       const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-      appVersion = pkg.version;
+      if (pkg?.version) {
+        appVersion = pkg.version;
+        break;
+      }
     }
   }
 } catch (err) {

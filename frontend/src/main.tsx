@@ -24,7 +24,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <HelmetProvider>
       <ErrorBoundary>
         <TooltipProvider delayDuration={200}>
-          <BrowserRouter>
+          <BrowserRouter basename={import.meta.env.BASE_URL}>
             <App />
           </BrowserRouter>
         </TooltipProvider>

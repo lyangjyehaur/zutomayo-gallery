@@ -19,6 +19,7 @@ import { getLightboxProvider } from '@/config';
 import { Helmet } from 'react-helmet-async';
 import { CoverCarousel } from './MVCard';
 import './MVDetailsModal.css';
+import { MODAL_THEME } from '@/lib/theme';
 import { useTranslation } from 'react-i18next';
 
 
@@ -44,6 +45,7 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
   const [videoPlatform, setVideoPlatform] = useState<'youtube' | 'bilibili'>('bilibili');
   const [isVideoActivated, setIsVideoActivated] = useState(false);
   const [isChinaIP, setIsChinaIP] = useState(false);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   useEffect(() => {
     initGeo().then(info => {
@@ -63,6 +65,7 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
   // 當切換影片或獲取到 IP 狀態時重置平台選擇
   useEffect(() => {
     isLightboxOpenRef.current = false;
+    setIsLightboxOpen(false);
     
     // 根據是否為牆內 IP 決定優先順序
     if (isChinaIP) {
@@ -230,7 +233,8 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
       }
     }}>
       <DialogContent
-        className="max-w-none w-screen h-[100dvh] left-0 top-0 !translate-x-0 !translate-y-0 border-0 shadow-none rounded-none p-0 md:max-w-none md:w-screen md:h-[100dvh] md:left-0 md:top-0 md:!translate-x-0 md:!translate-y-0 md:border-0 md:shadow-none !flex !flex-col !gap-0 [&>button]:hidden"
+        overlayClassName={MODAL_THEME.overlay.dialog}
+        className={`max-w-none w-screen h-[100dvh] left-0 top-0 !translate-x-0 !translate-y-0 border-0 shadow-none rounded-none p-0 md:max-w-none md:w-screen md:h-[100dvh] md:left-0 md:top-0 md:!translate-x-0 md:!translate-y-0 md:border-0 md:shadow-none !flex !flex-col !gap-0 [&>button]:hidden ${MODAL_THEME.content.dialog}`}
         onPointerDownOutside={handlePointerDownOutside}
         onInteractOutside={handleInteractOutside}
         onOpenAutoFocus={(e) => e.preventDefault()}
@@ -242,7 +246,7 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
         }}
       >
         {/* CRT 背景層 */}
-        <div className="absolute inset-0 pointer-events-none crt-lines z-0 opacity-100"></div>
+        <div className={MODAL_THEME.crt}></div>
 
         <DialogHeader className="relative z-30 pt-10 py-6 border-b-4 border-border shadow-md transition-all duration-200">
           <DialogClose 
@@ -434,7 +438,7 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                       data-umami-event-title={mv?.title}
                     >
                       <div className="absolute inset-0 z-0">
-                        <CoverCarousel coverImages={mv?.coverImages ?? []} title={mv?.title || ''} isPaused={false} forceLoad={true} hideCrt={true} />
+                        <CoverCarousel coverImages={mv?.coverImages ?? []} title={mv?.title || ''} isPaused={isLightboxOpen} forceLoad={true} hideCrt={true} />
                       </div>
                       <div className={`absolute inset-0 transition-colors z-10 ${videoPlatform === 'youtube' && isChinaIP ? 'bg-black/60' : 'bg-black/40 group-hover:bg-black/20'}`} />
                       <div className="absolute inset-0 opacity-20 pointer-events-none crt-lines z-15"></div>
@@ -538,11 +542,23 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                     enablePagination={true}
                     breakpointColumns={GALLERY_BREAKPOINTS}
                     className="!p-0 !min-h-0"
-                    onLightboxOpen={() => { isLightboxOpenRef.current = true; }}
-                    onLightboxClose={() => { isLightboxOpenRef.current = false; }}
+                      onLightboxOpen={() => { isLightboxOpenRef.current = true; setIsLightboxOpen(true); }}
+                      onLightboxClose={() => { isLightboxOpenRef.current = false; setIsLightboxOpen(false); }}
                   />
                 ) : (
-                  <p className="text-sm opacity-50 italic text-center py-10 border-2 border-dashed border-white/5">{t("app.no_reference_art", "暫無設定圖資料")}</p>
+                  <div className="w-full py-16 flex flex-col items-center justify-center border-4 border-dashed border-border mt-2 select-none">
+                    <div className="text-5xl mb-4 opacity-20">
+                      <i className="hn hn-image text-5xl"></i>
+                    </div>
+                    <div className="flex flex-col items-center leading-tight">
+                      <h3 className="text-lg font-black uppercase tracking-widest opacity-80">
+                        {t("app.no_reference_art", "暫無設定圖資料")}
+                      </h3>
+                      <span className="text-[10px] font-mono opacity-40 mt-1">
+                        NO_REFERENCE_ASSETS
+                      </span>
+                    </div>
+                  </div>
                 )}
               </div>
 

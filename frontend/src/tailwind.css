@@ -78,6 +78,38 @@
     60% { transform: translateY(-4px) rotate(0) scale(0.95, 1.05); }
     100% { transform: translateY(0) rotate(0) scale(1, 1); }
   }
+
+  --animate-dialog-fade-in: dialog-fade-in 700ms cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  @keyframes dialog-fade-in {
+    from { opacity: 0; transform: translate(0, 12px); }
+    to { opacity: 1; transform: translate(0, 0); }
+  }
+
+  --animate-dialog-fade-out: dialog-fade-out 700ms cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  @keyframes dialog-fade-out {
+    from { opacity: 1; transform: translate(0, 0); }
+    to { opacity: 0; transform: translate(0, -12px); }
+  }
+
+  @keyframes drawer-mobile-fade-in {
+    from { opacity: 0; transform: translate(0, 12px); }
+    to { opacity: 1; transform: translate(0, 0); }
+  }
+
+  @keyframes drawer-mobile-fade-out {
+    from { opacity: 1; transform: translate(0, 0); }
+    to { opacity: 0; transform: translate(0, -12px); }
+  }
+
+  @keyframes drawer-desktop-fade-in {
+    from { opacity: 0; transform: translate(-48px, 0); }
+    to { opacity: 1; transform: translate(0, 0); }
+  }
+
+  @keyframes drawer-desktop-fade-out {
+    from { opacity: 1; transform: translate(0, 0); }
+    to { opacity: 0; transform: translate(-48px, 0); }
+  }
   
   --color-main: var(--main);
   --color-background: var(--background);
@@ -271,6 +303,11 @@ body:not(.is-admin) .fancybox__container .is-grabbing * {
 body:not(.is-admin) .fancybox__container .f-button,
 body:not(.is-admin) .fancybox__container .f-button * {
   cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), pointer !important;
+}
+
+body.cursor-native,
+body.cursor-native * {
+  cursor: auto !important;
 }
 
 @layer utilities {
@@ -1051,6 +1088,8 @@ body:not(.is-admin) .fancybox__container .f-button * {
   /* Override default Toolbar styles */
   --f-toolbar-padding: 16px;
   --f-toolbar-gap: 0px; /* 取消按鈕間距 */
+  
+  /* Desktop defaults */
   --f-button-width: 48px;
   --f-button-height: 48px;
   --f-button-border-radius: 0px;
@@ -1067,6 +1106,16 @@ body:not(.is-admin) .fancybox__container .f-button * {
   --f-counter-padding: 8px 16px;
   --f-counter-margin: 0 0 0 0; /* 取消 counter 間距 */
   --f-counter-border-radius: 0px;
+}
+
+/* Mobile adjustments for Fancybox buttons */
+@media (max-width: 768px) {
+  .fancybox__container {
+    --f-toolbar-padding: 8px;
+    --f-button-width: 36px;
+    --f-button-height: 36px;
+    --f-counter-padding: 4px 12px;
+  }
 }
 
 /* Neobrutalism Button Base */
@@ -1141,6 +1190,13 @@ body:not(.is-admin) .fancybox__container .f-button * {
   mask-repeat: no-repeat;
   -webkit-mask-position: center;
   mask-position: center;
+}
+
+@media (max-width: 768px) {
+  .fancybox__container .f-button::before {
+    width: 18px;
+    height: 18px;
+  }
 }
 
 /* Map specific buttons to Custom SVGs via CSS Masks */

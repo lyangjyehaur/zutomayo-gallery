@@ -243,6 +243,9 @@ deploy_frontend() {
 
     echo "正在將新編譯的檔案複製到部署目錄 $FRONTEND_DEPLOY_PATH ..."
     cp -a frontend/dist/. "$FRONTEND_DEPLOY_PATH/"
+
+    find "$FRONTEND_DEPLOY_PATH" -type d -exec chmod 755 {} \;
+    find "$FRONTEND_DEPLOY_PATH" -type f -exec chmod 644 {} \;
     
     echo -e "${GREEN}[Frontend] 前端部署與備份完成！${NC}"
 }

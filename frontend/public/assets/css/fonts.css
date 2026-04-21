@@ -1,21 +1,28 @@
-:lang(zh-Hans), :lang(zh-CN) {
-    font-family: "fusion-pixel-12px-proportional-zh_hans", sans-serif;
-}
+@layer base {
+    :lang(zh-Hans), :lang(zh-CN) {
+        font-family: "fusion-pixel-12px-proportional-zh_hans", sans-serif;
+        --font-mono: "fusion-pixel-12px-monospaced-zh_hans", monospace;
+    }
 
-:lang(zh-Hant), :lang(zh-TW), :lang(zh-HK) {
-    font-family: "fusion-pixel-12px-proportional-zh_hant", sans-serif;
-}
+    :lang(zh-Hant), :lang(zh-TW), :lang(zh-HK) {
+        font-family: "fusion-pixel-12px-proportional-zh_hant", sans-serif;
+        --font-mono: "fusion-pixel-12px-monospaced-zh_hant", monospace;
+    }
 
-:lang(ja) {
-    font-family: "fusion-pixel-12px-proportional-ja", sans-serif;
-}
+    :lang(ja) {
+        font-family: "fusion-pixel-12px-proportional-ja", sans-serif;
+        --font-mono: "fusion-pixel-12px-monospaced-ja", monospace;
+    }
 
-:lang(ko) {
-    font-family: "fusion-pixel-12px-proportional-ko", sans-serif;
-}
+    :lang(ko) {
+        font-family: "fusion-pixel-12px-proportional-ko", sans-serif;
+        --font-mono: "fusion-pixel-12px-monospaced-ko", monospace;
+    }
 
-:lang(en), :lang(es) {
-    font-family: "fusion-pixel-12px-proportional-latin", sans-serif;
+    :lang(en), :lang(es) {
+        font-family: "fusion-pixel-12px-proportional-latin", sans-serif;
+        --font-mono: "fusion-pixel-12px-monospaced-latin", monospace;
+    }
 }
 
 @font-face {
@@ -41,4 +48,29 @@
 @font-face {
     font-family: "fusion-pixel-12px-proportional-ko";
     src: url("../fonts/fusion-pixel-12px-proportional-ko.otf.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "fusion-pixel-12px-monospaced-latin";
+    src: url("../fonts/fusion-pixel-12px-monospaced-latin.otf.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "fusion-pixel-12px-monospaced-zh_hans";
+    src: url("../fonts/fusion-pixel-12px-monospaced-zh_hans.otf.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "fusion-pixel-12px-monospaced-zh_hant";
+    src: url("../fonts/fusion-pixel-12px-monospaced-zh_hant.otf.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "fusion-pixel-12px-monospaced-ja";
+    src: url("../fonts/fusion-pixel-12px-monospaced-ja.otf.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "fusion-pixel-12px-monospaced-ko";
+    src: url("../fonts/fusion-pixel-12px-monospaced-ko.otf.woff2") format("woff2");
 }

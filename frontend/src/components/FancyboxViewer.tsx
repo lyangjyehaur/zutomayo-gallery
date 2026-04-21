@@ -1075,9 +1075,15 @@ export default function FancyboxViewer({
       )}
 
       {enablePagination && !hasMore && displayedPhotos.length > 0 && (
-        <div className="mt-8 lg:mt-12 text-center font-bold opacity-50 uppercase text-sm sm:text-base flex flex-col items-center leading-tight">
-          <span className="tracking-normal">{t("app.end_of_list", "已到最底")}</span>
-          <span className="text-[10px] font-mono opacity-60 normal-case">End of Archive</span>
+        <div className="w-full py-18 mt-10 flex flex-col items-center justify-center opacity-30 select-none">
+          <div className="flex items-center gap-4 text-xs font-mono font-black">
+            <span className="w-12 h-0.5 bg-current"></span>
+            <span className="flex flex-col items-center leading-tight">
+              <span className="opacity-70">{t("app.archive_boundary", "歸檔邊界")}</span>
+              <span className="text-[10px] font-mono opacity-40">END_OF_ARCHIVE</span>
+            </span>
+            <span className="w-12 h-0.5 bg-current"></span>
+          </div>
         </div>
       )}
     </div>

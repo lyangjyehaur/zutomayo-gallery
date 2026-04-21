@@ -80,6 +80,7 @@ import {
 
 import useSWR from "swr";
 
+import { MODAL_THEME } from "@/lib/theme";
 import { MaintenancePage } from "@/pages/MaintenancePage";
 import { useTranslation } from 'react-i18next';
 
@@ -670,13 +671,13 @@ function App({
           <span
             className="ztmy-cyber-title whitespace-nowrap"
             data-text="ZUTOMAYO MV Gallery"
-            style={{ animationPlayState: selectedMvId ? "paused" : "running" }}
+            style={{ animationPlayState: isGlobalPaused ? "paused" : "running" }}
           >
             <span
               className="ztmy-cyber-text"
               data-text="ZUTOMAYO MV Gallery"
               style={{
-                animationPlayState: selectedMvId ? "paused" : "running",
+                animationPlayState: isGlobalPaused ? "paused" : "running",
               }}
             >
               ZUTOMAYO MV Gallery
@@ -684,7 +685,7 @@ function App({
           </span>
           <span
             className="text-[10px] sm:text-xs md:text-sm bg-main/20 text-main border-2 md:border-3 border-main px-1.5 md:px-2 py-0.5 md:py-1 animate-pulse relative z-10"
-            style={{ animationPlayState: selectedMvId ? "paused" : "running" }}
+            style={{ animationPlayState: isGlobalPaused ? "paused" : "running" }}
           >
             V{VERSION_CONFIG.app}
           </span>
@@ -700,9 +701,9 @@ function App({
           </div>
         )}
 
-      <main className="mx-auto px-4 w-full max-w-7xl pt-8 pb-8 border-t-2 border-border relative flex-1 max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-[80%]">
-        {/* 過濾控制列 */}
-        <div className="flex flex-col gap-2 mt-8 mb-8 max-[768px]:w-[90vw] max-[768px]:relative max-[768px]:left-1/2 max-[768px]:-translate-x-1/2 max-[768px]:px-4">
+      <main className="mx-auto px-4 w-full max-w-7xl pt-4 pb-8 border-t-2 border-border relative flex-1 max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-[80%]">
+        {/* 過濾控制列與活躍標籤 */}
+        <div className="flex flex-col gap-2 mt-4 mb-8 max-[768px]:w-[90vw] max-[768px]:relative max-[768px]:left-1/2 max-[768px]:-translate-x-1/2 max-[768px]:px-0">
           <div className="flex flex-col md:flex-row gap-4 w-full">
             <div className="relative w-full md:flex-[1] min-[1120px]:flex-[1]">
               <i className="hn hn-search text-xl absolute left-3 top-1/2 -translate-y-1/2 opacity-50"></i>
@@ -809,7 +810,7 @@ function App({
                 >
                   <div className="flex-1 min-w-0 flex justify-start text-left">
                     {albumFilter.length > 0 ? (
-                      <span className="truncate w-full block">
+                      <span lang="ja" className="truncate w-full block">
                         {albumFilter.join(", ")}
                       </span>
                     ) : (
@@ -881,7 +882,7 @@ function App({
                                 >
                                   <i className="hn hn-check text-[14px] leading-none text-current" />
                                 </div>
-                                <span className="whitespace-normal break-words">
+                                <span lang="ja" className="whitespace-normal break-words">
                                   {album}
                                 </span>
                                 {albumDateMap[album] && (
@@ -912,7 +913,7 @@ function App({
                 >
                   <div className="flex-1 min-w-0 flex justify-start text-left">
                     {artistFilter.length > 0 ? (
-                      <span className="truncate w-full block">
+                      <span lang="ja" className="truncate w-full block">
                         {artistFilter.join(", ")}
                       </span>
                     ) : (
@@ -956,7 +957,7 @@ function App({
                             >
                               <i className="hn hn-check text-[14px] leading-none text-current" />
                             </div>
-                            <span className="whitespace-normal break-words">
+                            <span lang="ja" className="whitespace-normal break-words">
                               {artist}
                             </span>
                             {snsId && (
@@ -975,9 +976,9 @@ function App({
           </div>
         </div>
 
-        {/* 活躍篩選項標籤顯示區塊 */}
+        {/* 活躍篩選項標籤顯示區塊（移入同一個父容器中） */}
           {(yearFilter.length > 0 || albumFilter.length > 0 || artistFilter.length > 0) && (
-            <div className="flex flex-wrap gap-2 items-center mt-3 mb-4 max-[768px]:w-[90vw] max-[768px]:relative max-[768px]:left-1/2 max-[768px]:-translate-x-1/2 max-[768px]:px-0">
+            <div className="flex flex-wrap gap-2 items-center mt-2 max-[768px]:px-0">
               <span className="text-xs font-bold opacity-50 mr-1 hidden sm:inline-block">{t("app.current_filters", "目前篩選：")}</span>
               
               {yearFilter.map(year => (
@@ -996,7 +997,7 @@ function App({
               {albumFilter.map(album => (
                 <div key={`album-${album}`} className="flex items-center bg-card border-2 border-border text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-neo-sm group">
                   <span className="opacity-50 mr-1 sm:mr-1.5 hidden min-[430px]:inline-block">{t("app.album", "專輯")}</span>
-                  <span className="font-bold mr-1 truncate max-w-[100px] sm:max-w-[200px]" title={album}>{album}</span>
+                  <span lang="ja" className="font-bold mr-1 truncate max-w-[100px] sm:max-w-[200px]" title={album}>{album}</span>
                   <button 
                     onClick={() => setAlbumFilter(albumFilter.filter(a => a !== album))}
                     className="opacity-50 hover:opacity-100 transition-opacity ml-1 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 rounded-sm w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center"
@@ -1009,7 +1010,7 @@ function App({
               {artistFilter.map(artist => (
                 <div key={`artist-${artist}`} className="flex items-center bg-card border-2 border-border text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-neo-sm group">
                   <span className="opacity-50 mr-1 sm:mr-1.5 hidden min-[430px]:inline-block">{t("app.creator", "製作")}</span>
-                  <span className="font-bold mr-1 truncate max-w-[80px] sm:max-w-[150px]" title={artist}>{artist}</span>
+                  <span lang="ja" className="font-bold mr-1 truncate max-w-[80px] sm:max-w-[150px]" title={artist}>{artist}</span>
                   <button 
                     onClick={() => setArtistFilter(artistFilter.filter(a => a !== artist))}
                     className="opacity-50 hover:opacity-100 transition-opacity ml-1 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 rounded-sm w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center"
@@ -1036,7 +1037,7 @@ function App({
 
         {/* 收藏模式常駐提示 */}
         {showFavOnly && (
-          <div className="mb-8 -mt-6 max-[768px]:w-[100vw] max-[768px]:relative max-[768px]:left-1/2 max-[768px]:-translate-x-1/2 max-[768px]:px-4">
+          <div className="mb-8 mt-4 max-[768px]:w-[90vw] max-[768px]:relative max-[768px]:left-1/2 max-[768px]:-translate-x-1/2 max-[768px]:px-0">
             <div className="p-4 bg-yellow-400/10 border-2 border-yellow-500/50 flex items-start gap-3 md:gap-4 rounded-none">
               <i className="hn hn-exclamation-triangle text-yellow-500 text-xl md:text-2xl shrink-0 mt-1 md:mt-0"></i>
               <div className="flex flex-col gap-1 md:gap-1.5">
@@ -1071,12 +1072,12 @@ function App({
             })}
           </div>
         ) : (
-          <div className="w-full py-24 flex flex-col items-center justify-center border-4 border-dashed border-border bg-card/30 mt-8">
+          <div className="w-full py-24 flex flex-col items-center justify-center border-4 border-dashed border-border mt-8">
               <div className="text-5xl mb-6 opacity-20">
-                <i className="hn hn-robot text-5xl"></i>
+                <i className="hn hn-cassette-tape text-5xl"></i>
               </div>
               <div className="flex flex-col items-center leading-tight mb-2">
-                <h3 className="text-xl font-black">{t("app.no_signal_found", "找不到訊號")}</h3>
+                <h3 className="text-xl font-black">{t("app.no_signal", "找不到訊號")}</h3>
                 <span className="text-[10px] font-mono opacity-40">
                   NO_SIGNAL_FOUND
                 </span>
@@ -1246,9 +1247,15 @@ function App({
                 </div>
               </TooltipContent>
 
-              <DialogContent className="w-screen h-[100dvh] max-w-none md:max-w-2xl md:w-full md:h-[85vh] md:max-h-[85vh] overflow-hidden flex flex-col p-0 border-0 md:border-4 border-black bg-background sm:rounded-none rounded-none shadow-none md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] fixed top-0 left-0 md:top-[50%] md:left-[50%] !translate-x-0 !translate-y-0 md:!translate-x-[-50%] md:!translate-y-[-50%] z-[100]">
+              <DialogContent 
+                overlayClassName={MODAL_THEME.overlay.dialog}
+                className={`w-screen h-[100dvh] max-w-none md:max-w-2xl md:w-full md:h-[85vh] md:max-h-[85vh] overflow-hidden flex flex-col p-0 border-0 md:border-4 border-black ${MODAL_THEME.content.dialog} sm:rounded-none rounded-none shadow-none md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] fixed top-0 left-0 md:top-[50%] md:left-[50%] !translate-x-0 !translate-y-0 md:!translate-x-[-50%] md:!translate-y-[-50%] z-[100]`}
+              >
+                {/* CRT 背景層 */}
+                <div className={MODAL_THEME.crt}></div>
+
                 {/* 內容區塊 - 這裡設定 flex=1 並讓內部滾動 */}
-                <div className="p-4 md:p-8 relative flex-1 flex flex-col overflow-hidden min-h-0">
+                <div className="p-4 md:p-8 relative flex-1 flex flex-col overflow-hidden min-h-0 z-10">
                   <DialogHeader className="relative z-10 mb-6 md:mb-8 shrink-0">
                     <DialogTitle className="text-2xl md:text-4xl font-black uppercase tracking-tighter flex flex-wrap items-center gap-2 md:gap-3">
                       <span className="bg-black text-main px-2 md:px-3 py-1">ZUTOMAYO</span>
@@ -1771,24 +1778,32 @@ function App({
 
       {/* 反饋側邊欄 遮罩 (Overlay) */}
       <div
-        className={`fixed inset-0 z-[90] bg-black/60 backdrop-blur-[2px] transition-all duration-300 lg:duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+        className={`fixed inset-0 z-[90] ${MODAL_THEME.overlay.drawer} ${
           isFeedbackOpen
-            ? "opacity-100 pointer-events-auto visible"
-            : "opacity-0 pointer-events-none invisible"
+            ? "animate-[dialog-fade-in_700ms_cubic-bezier(0.32,0.72,0,1)_forwards] pointer-events-auto"
+            : "animate-[dialog-fade-out_700ms_cubic-bezier(0.32,0.72,0,1)_forwards] pointer-events-none"
         }`}
         onClick={() => setIsFeedbackOpen(false)}
+        style={{
+          visibility: isFeedbackOpen ? "visible" : "hidden",
+          transition: isFeedbackOpen ? "visibility 0s 0s" : "visibility 0s linear 700ms"
+        }}
       />
 
       {/* 反饋側邊欄 (Drawer) */}
       <div
-        className={`fixed left-0 top-0 bottom-0 h-screen w-full lg:w-[768px] xl:w-[800px] border-r-0 lg:border-r-4 border-black bg-background/95 backdrop-blur-md shadow-none lg:shadow-neo z-[100] flex flex-col transition-all duration-300 lg:duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] origin-center ${
+        className={`fixed left-0 top-0 bottom-0 h-screen w-full lg:w-[768px] xl:w-[800px] border-r-0 lg:border-r-4 border-black ${MODAL_THEME.content.drawer} shadow-none lg:shadow-neo z-[100] flex flex-col origin-center ${
           isFeedbackOpen
-            ? "opacity-100 scale-100 translate-x-0 pointer-events-auto visible"
-            : "opacity-0 scale-95 lg:scale-100 lg:opacity-100 lg:-translate-x-full pointer-events-none invisible"
+            ? "animate-[drawer-mobile-fade-in_700ms_cubic-bezier(0.32,0.72,0,1)_forwards] lg:animate-[drawer-desktop-fade-in_700ms_cubic-bezier(0.32,0.72,0,1)_forwards] pointer-events-auto"
+            : "animate-[drawer-mobile-fade-out_700ms_cubic-bezier(0.32,0.72,0,1)_forwards] lg:animate-[drawer-desktop-fade-out_700ms_cubic-bezier(0.32,0.72,0,1)_forwards] pointer-events-none"
         }`}
+        style={{
+          visibility: isFeedbackOpen ? "visible" : "hidden",
+          transition: isFeedbackOpen ? "visibility 0s 0s" : "visibility 0s linear 700ms"
+        }}
       >
         {/* CRT 背景層 */}
-        <div className="absolute inset-0 pointer-events-none crt-lines z-0 opacity-100"></div>
+        <div className={MODAL_THEME.crt}></div>
         <div className="pt-10 px-8 pb-6 border-b-4 border-border text-foreground flex flex-col justify-center shrink-0 pr-24 relative z-10">
           <div className="flex flex-col gap-1">
             <h2 className="text-xl font-black uppercase tracking-widest flex items-center gap-2">
