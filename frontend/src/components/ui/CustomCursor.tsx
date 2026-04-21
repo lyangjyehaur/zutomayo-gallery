@@ -9,9 +9,14 @@ export default function CustomCursor() {
 
   const isAdminRoute = location.pathname.startsWith('/admin');
 
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+
   useEffect(() => {
     // Check if the device supports hover (ignore touch devices)
-    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches || isAdminRoute) {
+    const isTouch = !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    setIsTouchDevice(isTouch);
+    
+    if (isTouch || isAdminRoute) {
       return;
     }
     
@@ -238,7 +243,7 @@ export default function CustomCursor() {
     };
   }, [isAdminRoute]);
 
-  if (isAdminRoute) return null;
+  if (isAdminRoute || isTouchDevice) return null;
 
   return (
     <img

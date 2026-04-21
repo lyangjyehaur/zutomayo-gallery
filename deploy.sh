@@ -305,11 +305,7 @@ deploy_backend() {
         pm2 restart ztmy-gallery-api
     else
         echo "建立新的 PM2 服務..."
-        if [ "$PKG_MANAGER" = "pnpm" ]; then
-            pm2 start pnpm --name "ztmy-gallery-api" -- start
-        else
-            pm2 start npm --name "ztmy-gallery-api" -- start
-        fi
+        pm2 start dist/index.js --name "ztmy-gallery-api"
         echo "儲存 PM2 設定..."
         pm2 save
     fi
