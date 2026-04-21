@@ -4,6 +4,8 @@ export interface GeoInfo {
   isChinaIP: boolean;
   isVPN: boolean;
   ip?: string;
+  rawCountry?: string; // 原始的中文國家名稱
+  rawString?: string;  // 完整的 ip2region 原始字串
   details?: {
     country: string;
     region: string;
@@ -53,13 +55,12 @@ export const clearGeoCache = () => {
  * 獲取 IP 所在的國家代碼
  * 使用 Promise.any 實現競速機制 (Race)，哪個 API 先回應就用哪個
  */
-const fetchIpCountry = async (): Promise<{ countryCode: string, ip?: string, details?: GeoInfo['details'] }> => {
+const fetchIpCountry = async (): Promise<{ countryCode: string, ip?: string, rawCountry?: string, rawString?: string, details?: GeoInfo['details'] }> => {
   const apiUrl = (import.meta.env.VITE_API_URL || '/api/mvs').replace(/\/mvs$/, '/system/geo');
 
   try {
     // 由於我們已經實作了高效且 100% 準確的本地 ip2region 服務
-    // 且該服務位於後端，不存在前端跨域、廣告攔截或第三方 API 被牆的問題
-    // 因此直接調用我們自己的 API，不再依賴第三方服務
+    // 直接調用我們自己的 API，不再依賴第三方服務
     const res = await fetch(apiUrl);
     if (!res.ok) throw new Error('Backend Geo API failed');
     
@@ -68,6 +69,8 @@ const fetchIpCountry = async (): Promise<{ countryCode: string, ip?: string, det
       return {
         countryCode: json.data.country === 'LOCAL' ? 'CN' : json.data.country,
         ip: json.data.ip,
+        rawCountry: json.data.rawCountry, // 後端傳來的原始名稱
+        rawString: json.data.rawString,   // 後端傳來的完整原始字串
         details: json.data.details
       };
     }
@@ -131,12 +134,12 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
       return geoCache;
     }
 
-    const { countryCode, ip, details } = await fetchIpCountry();
+    const { countryCode, ip, rawCountry, rawString, details } = await fetchIpCountry();
     const ipCountry = countryCode;
     const isChinaIP = ipCountry === 'CN';
     const isVPN = !isChinaIP && isChinaTimezone;
 
-    geoCache = { ipCountry, isChinaTimezone, isChinaIP, isVPN, ip, details };
+    geoCache = { ipCountry, isChinaTimezone, isChinaIP, isVPN, ip, rawCountry, rawString, details };
     
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('geo_info', JSON.stringify(geoCache));
@@ -145,6 +148,8 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
       if ((window as any).umami && typeof (window as any).umami.track === 'function') {
         const payload: any = {
           country: ipCountry,
+          rawCountry: rawCountry || ipCountry, // 同時上報原始的中文國家名稱
+          rawString: rawString || '',          // 上報完整的 ip2region 字串
           isVPN: isVPN ? 'Yes' : 'No',
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           language: navigator.language || navigator.languages?.[0] || 'unknown'

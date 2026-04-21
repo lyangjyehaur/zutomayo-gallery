@@ -1377,6 +1377,14 @@ const currentMV = data[activeIndex];
     const urls = urlsToProcess || batchTweetUrls.split('\n').map(u => u.trim()).filter(u => u);
     
     if (urls.length === 0) return;
+
+    if ((window as any).umami && typeof (window as any).umami.track === 'function') {
+      (window as any).umami.track('Z_Admin_Action', {
+        action_type: 'batch_add_tweets',
+        mv_id: targetId,
+        url_count: urls.length
+      });
+    }
     
     setBatchAddStatus({ total: urls.length, current: 0, failedUrls: [], isProcessing: true });
     
@@ -1817,6 +1825,16 @@ const currentMV = data[activeIndex];
     if (!pendingDeleteMV) return;
     const mv = pendingDeleteMV;
     const isNewItem = !originalDataRef.current.find(item => item.id === mv.id);
+
+    if ((window as any).umami && typeof (window as any).umami.track === 'function') {
+      (window as any).umami.track('Z_Admin_Action', {
+        action_type: 'delete_mv',
+        mv_id: mv.id,
+        mv_title: mv.title,
+        is_new_item: isNewItem
+      });
+    }
+
     if (isNewItem) {
       // 如果是新項目，直接從變動追蹤中移除
       setChangedFields(prev => {
@@ -1922,6 +1940,15 @@ const currentMV = data[activeIndex];
     }
     
     const apiUrl = (import.meta.env.VITE_API_URL || '/api/mvs').replace(/(\/mvs)?$/, '/mvs/update');
+    
+    // 將管理員的實質寫入操作上報至 Umami
+    if ((window as any).umami && typeof (window as any).umami.track === 'function') {
+      (window as any).umami.track('Z_Admin_Action', {
+        action_type: 'save_db',
+        updated_count: changedData.length || 0,
+        deleted_count: changedData._deleted?.length || 0
+      });
+    }
     
     // 使用 Promise toast 處理非同步狀態
     toast.promise(

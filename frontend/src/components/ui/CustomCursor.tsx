@@ -26,7 +26,7 @@ export default function CustomCursor() {
     // let lastTarget: HTMLElement | null = null;
 
     const renderPosition = () => {
-      if (cursorRef.current) {
+      if (cursorRef.current && !document.body.classList.contains('cursor-native')) {
         cursorRef.current.style.transform = `translate(calc(${lastX}px - 2px), calc(${lastY}px - 2px))`;
         cursorRef.current.style.opacity = '1';
       }
@@ -70,23 +70,35 @@ export default function CustomCursor() {
     };
 
     const updateCursorType = (e: MouseEvent | Event) => {
-      // 這裡非常重要！
-      // 滑鼠移動時，事件的 e.target 會是滑鼠底下的「最深層元素」。
-      // 例如：當滑鼠從 input 移出到 body，e.target 就會從 input 變成 body。
       const target = e.target as HTMLElement;
       if (!target) return;
-      
-      // 由於某些瀏覽器（如 Safari）在 mousemove 事件中，e.target 有時並不會即時更新到滑鼠底下的元素，
-      // 特別是在有複雜層級、絕對定位、或者被遮罩蓋住的情況下，如果我們強制使用 target === lastTarget 進行攔截，
-      // 就會導致在跨越元素邊界時（例如從 input 移出到被 position: relative 蓋住的 div 上），事件被異常吃掉。
-      // 因此，我們完全放棄使用 lastTarget 進行提前 return，而是依賴後續的 setTypeIfDifferent 來進行 React 狀態的防抖。
+
+      // 如果 body 已經加上 cursor-native（按下 Alt），則停止判定
+      if (document.body.classList.contains('cursor-native')) return;
+
+      // Dynamic re-parenting if fancybox is open
+      // 由於 Fancybox 5 使用了特殊的容器層級或 transform，有時單純的 z-index 無法突破。
+      // 我們恢復手動將游標 appendChild 到 Fancybox 容器內的作法，以確保它永遠在最上層。
+      // 注意：這一步必須使用 requestAnimationFrame 或放在 setState 之外，避免與 React 渲染衝突
+      if (cursorRef.current && e.type !== 'interval') {
+        const fancyboxContainer = document.querySelector('.fancybox__container');
+        if (fancyboxContainer && cursorRef.current.parentElement !== fancyboxContainer) {
+          fancyboxContainer.appendChild(cursorRef.current);
+        } else if (!fancyboxContainer && cursorRef.current.parentElement !== document.body) {
+          document.body.appendChild(cursorRef.current);
+        }
+      }
 
       // 取得瀏覽器原生賦予這個元素的樣式
       const computedStyle = window.getComputedStyle(target);
       const cursorValue = computedStyle.cursor;
 
       const isFancyboxTarget = target.classList.contains('f-button') || 
-                               target.closest('.f-button') !== null;
+                               target.closest('.f-button') !== null ||
+                               target.classList.contains('carousel__button') ||
+                               target.closest('.carousel__button') !== null ||
+                               target.tagName.toLowerCase() === 'svg' && target.closest('.f-button') !== null ||
+                               target.tagName.toLowerCase() === 'path' && target.closest('.f-button') !== null;
 
       // cursorValue 通常會像是: "url(data:image/gif;...), pointer" 或 "text"
       // 我們需要解析出最後面的那個關鍵字（例如 pointer, text, help）
@@ -107,13 +119,14 @@ export default function CustomCursor() {
 
       // 檢查 Fancybox 的抓取狀態
       const isFancyboxGrab = target.classList.contains('is-grab') || 
-                             target.closest('.is-grab') || 
+                             target.closest('.is-grab') !== null || 
                              target.classList.contains('is-grabbing') || 
-                             target.closest('.is-grabbing') ||
+                             target.closest('.is-grabbing') !== null ||
                              target.classList.contains('has-panzoom') ||
-                             target.closest('.has-panzoom') ||
-                             target.classList.contains('fancybox__slide') ||
-                             target.closest('.fancybox__slide');
+                             target.closest('.has-panzoom') !== null ||
+                             target.classList.contains('fancybox__content') ||
+                             target.closest('.fancybox__content') !== null ||
+                             target.tagName.toLowerCase() === 'img' && target.closest('.fancybox__slide') !== null;
 
       // 檢查是否是一般的互動元素 (即使它們沒有顯式設置 cursor: pointer)
       const isInteractiveElement = 
@@ -138,7 +151,7 @@ export default function CustomCursor() {
         return;
       }
 
-      // 優先處理 Move (抓取)
+      // 優先處理 Move (抓取) 及 Resize
       if (actualCursor === 'nwse-resize' || actualCursor === 'nw-resize' || actualCursor === 'se-resize') {
         setTypeIfDifferent('Diagonal1');
       } else if (actualCursor === 'nesw-resize' || actualCursor === 'ne-resize' || actualCursor === 'sw-resize') {
@@ -147,7 +160,7 @@ export default function CustomCursor() {
         setTypeIfDifferent('Vertical');
       } else if (actualCursor === 'ew-resize' || actualCursor === 'col-resize' || actualCursor === 'e-resize' || actualCursor === 'w-resize') {
         setTypeIfDifferent('Horizontal');
-      } else if (isFancyboxGrab && !isFancyboxTarget) {
+      } else if (isFancyboxGrab && !isFancyboxTarget && !isInteractiveElement) {
         setTypeIfDifferent('Move');
       } else if (actualCursor === 'move' || actualCursor === 'grab' || actualCursor === 'grabbing' || actualCursor === 'zoom-in' || actualCursor === 'zoom-out' || target.classList.contains('is-zoomable')) {
         setTypeIfDifferent('Move');
@@ -187,7 +200,7 @@ export default function CustomCursor() {
       }
     };
 
-    // 增加一個低頻定時器，用於捕捉某些不會觸發 mouseover/mousemove 但 DOM 發生變化的情況（例如 Modal 彈出時游標停在原地）
+    // 增加一個低頻定時器，用於補捉某些不會觸發 mouseover/mousemove 但 DOM 發生變化的情況（例如 Modal 彈出時游標停在原地）
     const intervalId = setInterval(() => {
       // 如果滑鼠還沒動過（剛載入頁面），不進行檢測，避免效能浪費
       if (lastX === 0 && lastY === 0) return;
@@ -195,7 +208,7 @@ export default function CustomCursor() {
       const elUnderCursor = document.elementFromPoint(lastX, lastY) as HTMLElement;
       // 在定時器中，只要元素存在就強制更新一次游標狀態，不依賴 lastTarget 判斷
       if (elUnderCursor) {
-        updateCursorType({ target: elUnderCursor } as unknown as Event);
+        updateCursorType({ target: elUnderCursor, type: 'interval' } as unknown as Event);
       }
     }, 200);
 
@@ -227,7 +240,7 @@ export default function CustomCursor() {
 
   if (isAdminRoute) return null;
 
-  return createPortal(
+  return (
     <img
       ref={cursorRef}
       src={`/assets/cursor-png/${cursorType}.apng`}
@@ -256,7 +269,7 @@ export default function CustomCursor() {
           }
         }
       }}
-    />,
-    document.body
+    />
   );
 }
+

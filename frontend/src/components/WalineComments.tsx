@@ -48,10 +48,70 @@ export function WalineComments({
   // 如果外部沒有傳入 reactionTitle，則使用預設的 MV 文案
   const finalReactionTitle = reactionTitle || t("waline.reactionTitleMV", "這支 MV 給你的印象是？");
 
+  const handleWalineInteraction = (e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const umami = (window as any).umami;
+    if (!umami || typeof umami.track !== 'function') return;
+
+    // 1. 攔截文章表態 (Reaction)
+    const reactionItem = target.closest('.wl-reaction-item');
+    if (reactionItem) {
+      const title = reactionItem.getAttribute('title') || 'unknown';
+      const action = reactionItem.classList.contains('active') ? 'remove' : 'add';
+      umami.track('Z_Waline_Reaction', {
+        path,
+        reaction: title,
+        action: action
+      });
+      return;
+    }
+
+    // 2. 攔截留言排序切換 (最新/最熱/最舊)
+    const sortItem = target.closest('.wl-sort button, .wl-sort span');
+    if (sortItem && !sortItem.classList.contains('active')) {
+      umami.track('Z_Waline_Sort', {
+        path,
+        sort_type: sortItem.textContent?.trim() || 'unknown'
+      });
+      return;
+    }
+
+    // 3. 攔截單條留言的互動 (按讚與回覆)
+    if (target.closest('.wl-like')) {
+      umami.track('Z_Waline_Like', { path });
+      return;
+    }
+    if (target.closest('.wl-reply')) {
+      umami.track('Z_Waline_Reply_Click', { path });
+      return;
+    }
+
+    // 4. 攔截編輯器工具列 (展開表情、上傳圖片、預覽)
+    const actionBtn = target.closest('.wl-action');
+    if (actionBtn) {
+      const actionTitle = actionBtn.getAttribute('title') || 'unknown';
+      umami.track('Z_Waline_Editor_Action', { 
+        path, 
+        action: actionTitle 
+      });
+      return;
+    }
+
+    // 5. 攔截登入/登出
+    if (target.closest('.wl-login')) {
+      umami.track('Z_Waline_Login_Click', { path });
+      return;
+    }
+  };
+
   useEffect(() => {
     let observer: MutationObserver | null = null;
     let walineInstance: any = null;
     if (!containerRef.current || initializedRef.current) return;
+    
+    const currentContainer = containerRef.current;
+    // 綁定事件以攔截表態點擊
+    currentContainer.addEventListener('click', handleWalineInteraction as unknown as EventListener);
 
     const initWaline = async () => {
       try {
@@ -184,8 +244,9 @@ export function WalineComments({
       if (walineInstance && typeof walineInstance.destroy === 'function') {
         walineInstance.destroy();
       }
-      if (containerRef.current) {
-        containerRef.current.innerHTML = '';
+      if (currentContainer) {
+        currentContainer.removeEventListener('click', handleWalineInteraction as unknown as EventListener);
+        currentContainer.innerHTML = '';
       }
       if (observer) {
         observer.disconnect();

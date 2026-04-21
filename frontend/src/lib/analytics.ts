@@ -237,6 +237,13 @@ export const initAnalytics = () => {
         if (label.startsWith('Download')) {
           eventName = 'Z_Image_Download'; // 下載圖片
         }
+      } else if (componentType === 'Waline_Interaction') {
+        // 大多數 Waline 行為由 WalineComments.tsx 自行處理以取得更精確的 Context
+        if (classes.includes('wl-reaction-item') || classes.includes('wl-sort') || classes.includes('wl-action') || classes.includes('wl-like') || classes.includes('wl-reply') || classes.includes('wl-login')) {
+          return; 
+        } else if (classes.includes('wl-btn')) {
+          eventName = 'Z_Waline_Comment_Submit'; // 送出留言
+        }
       }
 
       // 發送自定義事件 (加入 Z_ 前綴)

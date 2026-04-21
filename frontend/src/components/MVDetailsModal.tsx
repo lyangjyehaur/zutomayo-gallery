@@ -185,6 +185,17 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
     };
   }, [mv?.id, isVideoActivated, videoPlatform]);
 
+  const handleLightboxOpen = () => {
+    if (window.umami && typeof window.umami.track === 'function') {
+      window.umami.track('Z_Open_Reference_Art', {
+        title: mv?.title,
+        id: mv?.id
+      });
+    }
+    isLightboxOpenRef.current = true;
+    setIsLightboxOpen(true);
+  };
+
   useEffect(() => {
     // 建立提取參數的工具函式
     const getUtmSource = () => {
@@ -543,7 +554,7 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                     enablePagination={true}
                     breakpointColumns={GALLERY_BREAKPOINTS}
                     className="!p-0 !min-h-0"
-                      onLightboxOpen={() => { isLightboxOpenRef.current = true; setIsLightboxOpen(true); }}
+                      onLightboxOpen={handleLightboxOpen}
                       onLightboxClose={() => { isLightboxOpenRef.current = false; setIsLightboxOpen(false); }}
                   />
                 ) : (

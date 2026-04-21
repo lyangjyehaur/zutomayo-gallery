@@ -103,6 +103,8 @@ export const getClientGeo = async (req: Request, res: Response, next: NextFuncti
       success: true, 
       data: { 
         country: countryCode, 
+        rawCountry: geoInfo ? geoInfo.country : 'UNKNOWN', // 單獨回傳原始的中文國家名稱給前端
+        rawString: geoInfo ? geoInfo.raw : '', // 新增：回傳 ip2region 完整的原始字串
         source: 'ip2region-local',
         ip: clientIp, // 將真實 IP 傳給前端，讓前端可以上報給 Umami
         details: geoInfo // 把詳細資訊也傳給前端備用

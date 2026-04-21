@@ -32,7 +32,7 @@ export const initGeoService = () => {
 /**
  * 查詢 IP 的完整地理資訊
  */
-export const getFullGeoInfo = async (ip: string): Promise<{ country: string, region: string, province: string, city: string, isp: string } | null> => {
+export const getFullGeoInfo = async (ip: string): Promise<{ country: string, region: string, province: string, city: string, isp: string, raw: string } | null> => {
   if (!searcher) {
     initGeoService();
   }
@@ -51,12 +51,25 @@ export const getFullGeoInfo = async (ip: string): Promise<{ country: string, reg
         region: parts[1] === '0' ? '' : parts[1],
         province: parts[2] === '0' ? '' : parts[2],
         city: parts[3] === '0' ? '' : parts[3],
-        isp: parts[4] === '0' ? '' : parts[4]
+        isp: parts[4] === '0' ? '' : parts[4],
+        raw: result // 新增：保存最原始的 ip2region 查詢結果字串
       };
     }
   }
   
   return null;
+};
+
+// 常見國家中文名到 ISO 3166-1 alpha-2 代碼的映射表
+// 用於將 ip2region 返回的中文國家名稱轉換為標準代碼
+const countryToIsoMap: Record<string, string> = {
+  '中国': 'CN', '台湾': 'TW', '香港': 'HK', '澳门': 'MO',
+  '日本': 'JP', '韩国': 'KR', '美国': 'US', '英国': 'GB',
+  '法国': 'FR', '德国': 'DE', '意大利': 'IT', '加拿大': 'CA',
+  '澳大利亚': 'AU', '新西兰': 'NZ', '新加坡': 'SG', '马来西亚': 'MY',
+  '泰国': 'TH', '印度尼西亚': 'ID', '越南': 'VN', '菲律宾': 'PH',
+  '俄罗斯': 'RU', '印度': 'IN', '巴西': 'RU', '南非': 'ZA',
+  '荷兰': 'NL', '瑞士': 'NL', '瑞典': 'CH', '西班牙': 'ES'
 };
 
 /**
@@ -66,12 +79,17 @@ export const getCountryCode = async (ip: string): Promise<string> => {
   const geo = await getFullGeoInfo(ip);
   
   if (geo && geo.country !== 'UNKNOWN') {
-    if (geo.country === '中国') return 'CN';
-    if (geo.country === '台湾' || geo.province === '台湾') return 'TW';
-    if (geo.country === '香港' || geo.province === '香港') return 'HK';
-    if (geo.country === '澳门' || geo.province === '澳门') return 'MO';
-    if (geo.country === '日本') return 'JP';
-    if (geo.country === '美国') return 'US';
+    // 特殊處理：ip2region 有時會把台港澳歸在 country="中国", province="台湾"
+    if (geo.province === '台湾') return 'TW';
+    if (geo.province === '香港') return 'HK';
+    if (geo.province === '澳门') return 'MO';
+    
+    // 從映射表中尋找標準代碼
+    if (countryToIsoMap[geo.country]) {
+      return countryToIsoMap[geo.country];
+    }
+    
+    // 如果不在常見映射表中，回傳 OTHERS
     return 'OTHERS';
   }
   

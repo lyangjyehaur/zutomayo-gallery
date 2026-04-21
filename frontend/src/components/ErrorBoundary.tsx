@@ -37,6 +37,16 @@ export class ErrorBoundary extends Component<Props, State> {
     // 記錄到控制台
     console.error('ErrorBoundary caught error:', error, errorInfo);
     
+    // 將系統崩潰錯誤上報到 Umami
+    if (typeof window !== 'undefined' && (window as any).umami && typeof (window as any).umami.track === 'function') {
+      (window as any).umami.track('Z_System_Crash', {
+        error_name: error.name,
+        error_message: error.message.substring(0, 100),
+        component_stack: errorInfo.componentStack?.substring(0, 200) || 'unknown',
+        current_url: window.location.pathname + window.location.search
+      });
+    }
+
     // 這裡可以發送到錯誤監控服務（如 Sentry）
     // if (typeof window !== 'undefined' && window.Sentry) {
     //   window.Sentry.captureException(error, { extra: errorInfo });

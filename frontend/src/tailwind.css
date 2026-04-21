@@ -210,98 +210,123 @@
    正確的做法是在我們的 React 元件 (CustomCursor.tsx) 中注入一個全域 style 標籤來覆蓋外觀，
    或者更簡單的作法是：使用一個全透明的 1x1 像素圖片作為所有元素的預設光標！ */
 @layer base {
-  body:not(.is-admin) {
+  body.cursor-native, body.cursor-native * {
+    cursor: auto !important;
+  }
+
+  body:not(.is-admin):not(.cursor-native) {
     /* 使用 1x1 全透明 GIF 替換所有指標，這樣能保留原始的 cursor 語義給 JS 讀取，但在視覺上是隱藏的 */
     cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), auto !important;
   }
   
   /* 讓所有會改變游標的元素也都套用這個透明圖片，但「同時」保留它們原本的 CSS cursor 屬性作為 fallback。
      這樣 JS 的 getComputedStyle().cursor 還是能讀到 pointer, text, not-allowed 等狀態。 */
-  body:not(.is-admin) a, body:not(.is-admin) button, body:not(.is-admin) [role="button"], body:not(.is-admin) .cursor-pointer, 
-  body:not(.is-admin) .wl-btn, body:not(.is-admin) .wl-action, body:not(.is-admin) .wl-item, body:not(.is-admin) .wl-reaction-item, body:not(.is-admin) .wl-reaction-img, body:not(.is-admin) .wl-reaction-text, body:not(.is-admin) .wl-like, body:not(.is-admin) .wl-reply, body:not(.is-admin) .wl-edit, body:not(.is-admin) .wl-sort li, body:not(.is-admin) .wl-emoji, body:not(.is-admin) .wl-logout, body:not(.is-admin) .wl-tab {
+  body:not(.is-admin):not(.cursor-native) a, body:not(.is-admin):not(.cursor-native) button, body:not(.is-admin):not(.cursor-native) [role="button"], body:not(.is-admin):not(.cursor-native) .cursor-pointer, 
+  body:not(.is-admin):not(.cursor-native) .wl-btn, body:not(.is-admin):not(.cursor-native) .wl-action, body:not(.is-admin):not(.cursor-native) .wl-item, body:not(.is-admin):not(.cursor-native) .wl-reaction-item, body:not(.is-admin):not(.cursor-native) .wl-reaction-img, body:not(.is-admin):not(.cursor-native) .wl-reaction-text, body:not(.is-admin):not(.cursor-native) .wl-like, body:not(.is-admin):not(.cursor-native) .wl-reply, body:not(.is-admin):not(.cursor-native) .wl-edit, body:not(.is-admin):not(.cursor-native) .wl-sort li, body:not(.is-admin):not(.cursor-native) .wl-emoji, body:not(.is-admin):not(.cursor-native) .wl-logout, body:not(.is-admin):not(.cursor-native) .wl-tab {
     cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), pointer !important;
   }
   
-  body:not(.is-admin) [disabled], body:not(.is-admin) .cursor-not-allowed {
+  body:not(.is-admin):not(.cursor-native) [disabled], body:not(.is-admin):not(.cursor-native) .cursor-not-allowed {
     cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), not-allowed !important;
   }
   
-  body:not(.is-admin) .cursor-text, body:not(.is-admin) .wl-editor, body:not(.is-admin) input, body:not(.is-admin) textarea, body:not(.is-admin) [contenteditable="true"] {
+  body:not(.is-admin):not(.cursor-native) .cursor-text, body:not(.is-admin):not(.cursor-native) .wl-editor, body:not(.is-admin):not(.cursor-native) input, body:not(.is-admin):not(.cursor-native) textarea, body:not(.is-admin):not(.cursor-native) [contenteditable="true"] {
     cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), text !important;
   }
   
   /* 由於 WebKit 內核 (Chrome, Safari, Edge) 強制鎖定 textarea 右下角 resizer 的原生系統游標，
      任何 CSS 都無法覆蓋它。為了保證全站客製化游標的沉浸感，我們直接禁用原生的 resize 功能。
      (現代的評論框如 Waline 通常會自動撐開高度，不需要手動拉伸) */
-  body:not(.is-admin) textarea, body:not(.is-admin) .wl-editor, body:not(.is-admin) [contenteditable="true"] {
+  body:not(.is-admin):not(.cursor-native) textarea, body:not(.is-admin):not(.cursor-native) .wl-editor, body:not(.is-admin):not(.cursor-native) [contenteditable="true"] {
     resize: none !important;
   }
   
   /* 強制覆蓋所有會觸發 resize 的原生游標，全部替換為透明圖 + 原生狀態 fallback 
      這招是為了解決瀏覽器會在 resize 邊緣強行渲染系統游標的 Bug */
-  body:not(.is-admin) [style*="resize"] {
+  body:not(.is-admin):not(.cursor-native) [style*="resize"] {
     cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), auto !important;
   }
   
-  body:not(.is-admin) .cursor-help {
+  body:not(.is-admin):not(.cursor-native) .cursor-help {
     cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), help !important;
   }
 
-  body:not(.is-admin) .cursor-wait, body:not(.is-admin) [aria-busy="true"] {
+  body:not(.is-admin):not(.cursor-native) .cursor-wait, body:not(.is-admin):not(.cursor-native) [aria-busy="true"] {
     cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), wait !important;
   }
   
-  body:not(.is-admin) .cursor-progress, body:not(.is-admin) .is-loading {
+  body:not(.is-admin):not(.cursor-native) .cursor-progress, body:not(.is-admin):not(.cursor-native) .is-loading {
     cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), progress !important;
   }
 
-  body:not(.is-admin) .cursor-crosshair {
+  body:not(.is-admin):not(.cursor-native) .cursor-crosshair {
     cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), crosshair !important;
   }
 
   /* 針對那些沒有標準對應的，我們保留自定義類名以供 JS 識別 */
-  body:not(.is-admin) .pin-cursor, body:not(.is-admin) .handwriting-cursor {
+  body:not(.is-admin):not(.cursor-native) .pin-cursor, body:not(.is-admin):not(.cursor-native) .handwriting-cursor {
     cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), auto !important;
   }
 
   /* 強制覆蓋 Fancybox 在圖片上的放大鏡和抓取手勢，改為透明 */
-  body:not(.is-admin) .is-zoomable, body:not(.is-admin) .is-zoomable *, body:not(.is-admin) .fancybox__content, body:not(.is-admin) .fancybox__content *, body:not(.is-admin) [data-fancybox] *, body:not(.is-admin) .f-button *, body:not(.is-admin) .is-grab, body:not(.is-admin) .is-grab *,
-  body:not(.is-admin) .fancybox__viewport, body:not(.is-admin) .fancybox__viewport *, body:not(.is-admin) .fancybox__container, body:not(.is-admin) .fancybox__container * {
-    /* 這裡不能直接設定為 pointer，否則會讓所有子元素繼承 pointer，導致 JS 判斷為 Link */
+  body:not(.is-admin):not(.cursor-native) .is-zoomable, body:not(.is-admin):not(.cursor-native) .is-zoomable *, body:not(.is-admin):not(.cursor-native) .fancybox__content, body:not(.is-admin):not(.cursor-native) .fancybox__content *, body:not(.is-admin):not(.cursor-native) [data-fancybox] *, body:not(.is-admin):not(.cursor-native) .f-button *, body:not(.is-admin):not(.cursor-native) .is-grab, body:not(.is-admin):not(.cursor-native) .is-grab *,
+  body:not(.is-admin):not(.cursor-native) .fancybox__viewport, body:not(.is-admin):not(.cursor-native) .fancybox__viewport *, body:not(.is-admin):not(.cursor-native) .fancybox__container, body:not(.is-admin):not(.cursor-native) .fancybox__container * {
+    cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), auto !important;
   }
   
-  body:not(.is-admin) .is-grab, body:not(.is-admin) .is-grab *, body:not(.is-admin) .is-grabbing, body:not(.is-admin) .is-grabbing *, 
-  body:not(.is-admin) .fancybox__slide--image.is-grab *, body:not(.is-admin) .fancybox__slide--image.is-grabbing * {
-    /* 這裡不能直接設定為 move，否則會讓所有子元素繼承 move，導致 JS 判斷為 Move */
+  body:not(.is-admin):not(.cursor-native) .is-grab, body:not(.is-admin):not(.cursor-native) .is-grab *, body:not(.is-admin):not(.cursor-native) .is-grabbing, body:not(.is-admin):not(.cursor-native) .is-grabbing *, 
+  body:not(.is-admin):not(.cursor-native) .fancybox__slide--image.is-grab *, body:not(.is-admin):not(.cursor-native) .fancybox__slide--image.is-grabbing * {
+    cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), auto !important;
   }
 }
 
 /* 由於 Fancybox 可能會使用內聯樣式 (inline style) 強制改變指標 (例如 style="cursor: zoom-in;")，
    所以我們需要確保 .fancybox__container 下的所有元素都被覆蓋 */
-body:not(.is-admin) .fancybox__container * {
+body:not(.is-admin):not(.cursor-native) .fancybox__container * {
   cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), auto !important;
 }
 
-body:not(.is-admin) .fancybox__container [data-fancybox],
-body:not(.is-admin) .fancybox__container .is-zoomable, 
-body:not(.is-admin) .fancybox__container .is-zoomable *,
-body:not(.is-admin) .fancybox__slide--image {
+/* 額外確保 Fancybox 背景與整體容器的指標覆蓋 */
+body:not(.is-admin):not(.cursor-native) .fancybox__container {
+  cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), auto !important;
+}
+
+body:not(.is-admin):not(.cursor-native) .fancybox__slide {
+  cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), auto !important;
+}
+
+body:not(.is-admin):not(.cursor-native) .fancybox__backdrop {
+  cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), auto !important;
+}
+
+body:not(.is-admin):not(.cursor-native) .fancybox__carousel {
+  cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), auto !important;
+}
+
+body:not(.is-admin):not(.cursor-native) .fancybox__content {
+  cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), auto !important;
+}
+
+body:not(.is-admin):not(.cursor-native) .fancybox__container [data-fancybox],
+body:not(.is-admin):not(.cursor-native) .fancybox__container .is-zoomable, 
+body:not(.is-admin):not(.cursor-native) .fancybox__container .is-zoomable *,
+body:not(.is-admin):not(.cursor-native) .fancybox__slide--image {
   cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), move !important;
 }
 
-body:not(.is-admin) .fancybox__container .is-grab, 
-body:not(.is-admin) .fancybox__container .is-grab *,
-body:not(.is-admin) .fancybox__container .has-panzoom.is-zoomable {
+body:not(.is-admin):not(.cursor-native) .fancybox__container .is-grab, 
+body:not(.is-admin):not(.cursor-native) .fancybox__container .is-grab *,
+body:not(.is-admin):not(.cursor-native) .fancybox__container .has-panzoom.is-zoomable {
   cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), move !important;
 }
 
-body:not(.is-admin) .fancybox__container .is-grabbing, 
-body:not(.is-admin) .fancybox__container .is-grabbing * {
+body:not(.is-admin):not(.cursor-native) .fancybox__container .is-grabbing, 
+body:not(.is-admin):not(.cursor-native) .fancybox__container .is-grabbing * {
   cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), grabbing !important;
 }
 
-body:not(.is-admin) .fancybox__container .f-button,
-body:not(.is-admin) .fancybox__container .f-button * {
+body:not(.is-admin):not(.cursor-native) .fancybox__container .f-button,
+body:not(.is-admin):not(.cursor-native) .fancybox__container .f-button * {
   cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), pointer !important;
 }
 

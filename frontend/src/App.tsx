@@ -659,6 +659,25 @@ function App({
     }
   }, [isFeedbackOpen]);
 
+  // 當過濾結果為空時，發送追蹤事件 (使用 useRef 避免重複發送)
+  const hasLoggedEmptySearch = useRef(false);
+  useEffect(() => {
+    if (filteredData.length === 0 && !isLoading && !error) {
+      if (!hasLoggedEmptySearch.current && window.umami && typeof window.umami.track === 'function') {
+        window.umami.track('Z_Search_No_Results', {
+          search_term: search || 'none',
+          year_filter: yearFilter.join(',') || 'none',
+          album_filter: albumFilter.join(',') || 'none',
+          artist_filter: artistFilter.join(',') || 'none',
+          is_favorites_view: showFavOnly ? 'true' : 'false'
+        });
+        hasLoggedEmptySearch.current = true;
+      }
+    } else {
+      hasLoggedEmptySearch.current = false;
+    }
+  }, [filteredData.length, search, yearFilter, albumFilter, artistFilter, showFavOnly, isLoading, error]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center font-base text-foreground crt-lines">
@@ -1751,9 +1770,11 @@ function App({
                       <p className="text-xs leading-relaxed font-bold opacity-100">{geoInfo.desc}</p>
                       {geoInfo.details && (
                         <div className="mt-1 pt-1 border-t border-black/20 text-[10px] font-mono opacity-80 leading-tight">
-                          {geoInfo.details.province && geoInfo.details.city && (
+                          {geoInfo.details.province && geoInfo.details.city ? (
                             <p>LOC: {geoInfo.details.province} {geoInfo.details.city}</p>
-                          )}
+                          ) : geoInfo.details.province ? (
+                            <p>LOC: {geoInfo.details.province}</p>
+                          ) : null}
                           {geoInfo.details.isp && (
                             <p>ISP: {geoInfo.details.isp}</p>
                           )}
