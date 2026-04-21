@@ -12,7 +12,7 @@ export interface ArtistMeta {
 
 export interface MetadataSettings {
   showAutoAlbumDate: boolean;
-  announcements?: string[];
+  announcements?: string[] | Record<string, string[]>;
 }
 
 export interface Metadata {
@@ -47,6 +47,14 @@ const normalizeMetadata = (raw: unknown): Metadata => {
     }
     if (Array.isArray(r.settings.announcements)) {
       base.settings.announcements = r.settings.announcements.filter((a: any) => typeof a === 'string');
+    } else if (r.settings.announcements && typeof r.settings.announcements === 'object') {
+      const obj: Record<string, string[]> = {};
+      for (const [lang, arr] of Object.entries(r.settings.announcements)) {
+        if (Array.isArray(arr)) {
+          obj[lang] = arr.filter((a: any) => typeof a === 'string');
+        }
+      }
+      base.settings.announcements = obj;
     }
   }
 

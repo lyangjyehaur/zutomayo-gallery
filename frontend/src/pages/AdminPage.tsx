@@ -948,13 +948,14 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
   const [localMetadata, setLocalMetadata] = useState<{
     albumMeta: Record<string, { date?: string; hideDate?: boolean }>;
     artistMeta: Record<string, { id?: string; hideId?: boolean }>;
-    settings: { showAutoAlbumDate: boolean; announcements?: string[] };
+    settings: { showAutoAlbumDate: boolean; announcements?: string[] | Record<string, string[]> };
   }>({ albumMeta: {}, artistMeta: {}, settings: { showAutoAlbumDate: false, announcements: [] } });
   const [localMaintenance, setLocalMaintenance] = useState(false);
   const [localMaintenanceType, setLocalMaintenanceType] = useState<'data' | 'ui'>('ui');
   const [localMaintenanceEta, setLocalMaintenanceEta] = useState<string>('');
   const [isMetadataDialogOpen, setIsMetadataDialogOpen] = useState(false);
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
+  const [announcementLang, setAnnouncementLang] = useState<string>('zh-TW');
 
   useEffect(() => {
     setLocalMetadata(JSON.parse(JSON.stringify(metadata)));
@@ -3313,24 +3314,51 @@ const currentMV = data[activeIndex];
                     <h3 className="text-sm font-black uppercase bg-main text-main-foreground px-2 py-1">00 公告</h3>
                     <span className="text-[10px] font-bold opacity-50 font-mono normal-case ml-2">00_Announcements</span>
                   </div>
-                  <span className="text-[10px] font-bold opacity-50">首頁跑馬燈公告維護</span>
+                  <span className="text-[10px] font-bold opacity-50">首頁跑馬燈公告維護 (多語言支援)</span>
                 </div>
               </div>
               <div className="flex flex-col gap-2 border-2 border-black p-4 bg-card">
+                <div className="flex gap-2 border-b-2 border-black/10 pb-2 mb-2 overflow-x-auto">
+                  {['zh-TW', 'zh-CN', 'zh-HK', 'ja', 'ko', 'en', 'es'].map(lang => (
+                    <button
+                      key={lang}
+                      className={`px-3 py-1 text-xs font-bold border-2 transition-colors ${announcementLang === lang ? 'border-black bg-main text-black' : 'border-transparent opacity-50 hover:opacity-100'}`}
+                      onClick={() => setAnnouncementLang(lang)}
+                    >
+                      {lang}
+                    </button>
+                  ))}
+                </div>
                 <div className="text-xs font-bold opacity-60">
-                  請輸入跑馬燈公告內容，每行一則公告。若為空則不顯示跑馬燈。
+                  請輸入跑馬燈公告內容 ({announcementLang})，每行一則公告。若為空則不顯示跑馬燈。
                 </div>
                 <Textarea 
-                  value={(localMetadata.settings?.announcements || []).join('\n')}
+                  value={(() => {
+                    const ann = localMetadata.settings?.announcements;
+                    if (!ann) return "";
+                    if (Array.isArray(ann)) {
+                      return announcementLang === 'zh-TW' ? ann.join('\n') : "";
+                    }
+                    return (ann[announcementLang] || []).join('\n');
+                  })()}
                   onChange={(e) => {
                     const lines = e.target.value.split('\n');
-                    setLocalMetadata(prev => ({
-                      ...prev,
-                      settings: { 
-                        ...(prev.settings || { showAutoAlbumDate: false }), 
-                        announcements: lines 
+                    setLocalMetadata(prev => {
+                      let currentAnn = prev.settings?.announcements || {};
+                      if (Array.isArray(currentAnn)) {
+                        currentAnn = { 'zh-TW': currentAnn };
                       }
-                    }));
+                      return {
+                        ...prev,
+                        settings: { 
+                          ...(prev.settings || { showAutoAlbumDate: false }), 
+                          announcements: {
+                            ...currentAnn,
+                            [announcementLang]: lines
+                          }
+                        }
+                      };
+                    });
                   }}
                   placeholder="例如：
 【最新】ZUTOMAYO 新專輯發布！

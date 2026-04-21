@@ -352,7 +352,7 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
             )}
           </DialogTitle>
           <DialogDescription className="sr-only">
-            {mv?.title} 詳細資訊
+            {mv?.title} {t('app.details', '詳細資訊')}
           </DialogDescription>
         </DialogHeader>
         
@@ -508,8 +508,7 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                   <div className="flex items-center gap-2 min-[430px]:gap-3">
                     <div className="w-2 h-2 min-[430px]:w-2.5 min-[430px]:h-2.5 bg-blue-500 animate-pulse shadow-[2px_2px_0_0_rgba(59,130,246,0.4)]"></div>
                     <span className="text-[10px] font-black uppercase tracking-widest flex flex-col leading-tight">
-                      <span className="tracking-normal flex items-baseline gap-1 min-[430px]:gap-1.5 opacity-60">
-                        影像資訊 <span className="text-[6px] min-[430px]:text-[8px] font-mono normal-case">Video_Description_v{VERSION_CONFIG.app}</span>
+                      <span className="tracking-normal flex items-baseline gap-1 min-[430px]:gap-1.5 opacity-60">{t("app.video_info", "影像資訊")}<span className="text-[6px] min-[430px]:text-[8px] font-mono normal-case">Video_Description_v{VERSION_CONFIG.app}</span>
                       </span>
                     </span>
                   </div>
@@ -527,8 +526,7 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
               <div className="space-y-8 lg:space-y-4 lg:pr-4 lg:pb-8">
                 <div className="space-y-4">
                 <h4 className="font-bold border-b-3 border-black pb-2 flex items-center gap-2 uppercase tracking-widest">
-                  <i className="hn hn-image text-xl text-ztmy-green"></i> 設定資料圖
-                </h4>
+                  <i className="hn hn-image text-xl text-ztmy-green"></i>{t("app.reference_art", "設定資料圖")}</h4>
                 {mv?.images && mv.images.length > 0 ? (
                   <GalleryViewer
                     images={mv.images}
@@ -544,9 +542,7 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                     onLightboxClose={() => { isLightboxOpenRef.current = false; }}
                   />
                 ) : (
-                  <p className="text-sm opacity-50 italic text-center py-10 border-2 border-dashed border-white/5">
-                    暫無設定圖資料
-                  </p>
+                  <p className="text-sm opacity-50 italic text-center py-10 border-2 border-dashed border-white/5">{t("app.no_reference_art", "暫無設定圖資料")}</p>
                 )}
               </div>
 
@@ -556,7 +552,7 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                   <h4 className="font-bold border-b-3 border-black pb-2 flex items-center justify-between gap-2 uppercase tracking-widest mb-4">
                     <div className="flex items-center gap-2">
                       <i className="hn hn-message text-xl text-ztmy-blue"></i>
-                      評論
+                      {t("app.comments", "留言")}
                     </div>
                     <div className="text-xs font-mono font-normal opacity-50 tracking-normal flex items-center gap-1.5">
                       <i className="hn hn-eye"></i>

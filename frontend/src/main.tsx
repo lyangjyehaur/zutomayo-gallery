@@ -7,6 +7,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { TooltipProvider } from './components/ui/tooltip'
 import '@hackernoon/pixel-icon-library/fonts/iconfont.css'
 import './tailwind.css'
+import './i18n'
 
 if ('serviceWorker' in navigator) {
   let refreshing = false;
