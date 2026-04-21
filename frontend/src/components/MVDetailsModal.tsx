@@ -19,6 +19,7 @@ import { getLightboxProvider } from '@/config';
 import { Helmet } from 'react-helmet-async';
 import { CoverCarousel } from './MVCard';
 import './MVDetailsModal.css';
+import { useTranslation } from 'react-i18next';
 
 
 // 圖標組件改為 pixelarticons 類名使用
@@ -37,6 +38,8 @@ interface MVDetailsModalProps {
  * 3. 通過 CSS 和事件管理確保兩者正確協作
  */
 export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
+  const { t } = useTranslation();
+
   // 影片播放狀態
   const [videoPlatform, setVideoPlatform] = useState<'youtube' | 'bilibili'>('bilibili');
   const [isVideoActivated, setIsVideoActivated] = useState(false);
@@ -230,7 +233,17 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
         className="max-w-none w-screen h-[100dvh] left-0 top-0 !translate-x-0 !translate-y-0 border-0 shadow-none rounded-none p-0 md:max-w-none md:w-screen md:h-[100dvh] md:left-0 md:top-0 md:!translate-x-0 md:!translate-y-0 md:border-0 md:shadow-none !flex !flex-col !gap-0 [&>button]:hidden"
         onPointerDownOutside={handlePointerDownOutside}
         onInteractOutside={handleInteractOutside}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => {
+          if (isLightboxOpenRef.current) {
+            e.preventDefault();
+            return;
+          }
+        }}
       >
+        {/* CRT 背景層 */}
+        <div className="absolute inset-0 pointer-events-none crt-lines z-0 opacity-100"></div>
+
         <DialogHeader className="relative z-30 pt-10 py-6 border-b-4 border-border shadow-md transition-all duration-200">
           <DialogClose 
               className="absolute top-4 right-4 md:top-6 md:right-8 z-50 bg-background text-foreground border-3 border-foreground shadow-neo-sm hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all w-10 h-10 flex items-center justify-center rounded-none"
@@ -361,17 +374,17 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                     <div className={`w-2.5 h-2.5 animate-pulse ${videoPlatform === 'youtube' && isChinaIP ? 'bg-red-500 shadow-[2px_2px_0_0_rgba(239,68,68,0.4)]' : 'bg-green-500 shadow-[2px_2px_0_0_rgba(34,197,94,0.4)]'}`}></div>
                     <span className="text-[10px] font-black uppercase tracking-widest flex flex-col leading-tight min-w-0">
                       <span className="tracking-normal flex items-baseline gap-1 min-[430px]:gap-1.5 opacity-60 min-w-0">
-                        <span className="whitespace-nowrap">訊號源</span>
+                        <span className="whitespace-nowrap">{t('app.signal_source', '訊號源')}</span>
                         <span className="text-[8px] font-mono normal-case truncate">Signal_Source</span>
                       </span>
                       {videoPlatform === 'youtube' && isChinaIP ? (
                         <span className="tracking-normal text-red-500 flex items-baseline gap-1 min-[430px]:gap-1.5 min-w-0">
-                          <span className="whitespace-nowrap">已斷開</span>
+                          <span className="whitespace-nowrap">{t('app.disconnected', '已斷開')}</span>
                           <span className="text-[8px] font-mono normal-case truncate">Disconnected</span>
                         </span>
                       ) : (
                         <span className="tracking-normal text-green-500 flex items-baseline gap-1 min-[430px]:gap-1.5 min-w-0">
-                          <span className="whitespace-nowrap">已連線</span>
+                          <span className="whitespace-nowrap">{t('app.connected', '已連線')}</span>
                           <span className="text-[8px] font-mono normal-case truncate">Connected</span>
                         </span>
                       )}
@@ -436,13 +449,13 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                                 <span className="font-black tracking-widest text-red-500 text-lg min-[430px]:text-2xl">OFFLINE</span>
                               </div>
                               <span className="glitch-text text-red-400 font-black tracking-widest text-[8px] min-[430px]:text-[10px] uppercase flex flex-col items-center leading-tight opacity-70">
-                                <span className="tracking-normal">信號源斷開</span>
+                                <span className="tracking-normal">{t('app.signal_disconnected', '訊號源斷開')}</span>
                                 <span className="text-[6px] min-[430px]:text-[8px] font-mono opacity-80 normal-case mt-0.5">Signal_Disconnected</span>
                               </span>
                             </div>
                             <div className="bg-black/60 backdrop-blur-sm px-4 py-2 border-2 border-red-500/50 text-red-400 text-xs min-[430px]:text-sm font-bold flex items-center gap-2">
                                 <span className="text-base animate-bounce">👻</span>
-                                <span>訊號被神秘力量攔截啦！去隔壁頻道看看吧？</span>
+                                <span>{t('app.signal_intercepted', '訊號被神秘力量攔截啦！去隔壁頻道看看吧？')}</span>
                               </div>
                           </div>
                         ) : (
@@ -452,7 +465,7 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                               <span className="font-black tracking-widest text-black text-lg min-[430px]:text-2xl">PLAY</span>
                             </div>
                             <span className="glitch-text text-black font-black tracking-widest text-[8px] min-[430px]:text-[10px] uppercase flex flex-col items-center leading-tight opacity-70">
-                              <span className="tracking-normal">初始化訊號串流</span>
+                              <span className="tracking-normal">{t('app.init_signal', '初始化訊號串流')}</span>
                               <span className="text-[6px] min-[430px]:text-[8px] font-mono opacity-80 normal-case mt-0.5">Initialize_Signal_Stream</span>
                             </span>
                           </div>
@@ -461,7 +474,7 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                     </div>
                   ) : (
                       videoPlatform === 'youtube' && mv?.youtube ? (
-                        <iframe 
+                        <iframe
                           src={`https://www.youtube.com/embed/${mv.youtube}?autoplay=1&rel=0`}
                           className="w-full h-full"
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -474,7 +487,9 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                         <iframe 
                           src={`//player.bilibili.com/player.html?bvid=${mv.bilibili}&page=1&high_quality=1&autoplay=1`}
                           className="w-full h-full"
-                          scrolling="no" frameBorder="0" allowFullScreen
+                          scrolling="no"
+                          frameBorder="0"
+                          allowFullScreen
                           title={mv.title}
                           lang="ja"
                           referrerPolicy="strict-origin-when-cross-origin"

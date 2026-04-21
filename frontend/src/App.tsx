@@ -45,6 +45,8 @@ import { STORAGE_KEYS, storage } from "@/config/storage";
 import { VERSION_CONFIG } from "@/config/version";
 import { ALBUM_CATEGORIES } from "@/config/albums";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import LanguageToggle from "@/components/ui/LanguageToggle";
+import CustomCursor from "@/components/ui/CustomCursor";
 import { useLazyImage } from "@/hooks/useLazyImage";
 import Marquee from "@/components/ui/marquee";
 import {
@@ -79,6 +81,7 @@ import {
 import useSWR from "swr";
 
 import { MaintenancePage } from "@/pages/MaintenancePage";
+import { useTranslation } from 'react-i18next';
 
 const AnimatedMVCardItem = memo(function AnimatedMVCardItem({
   mv,
@@ -177,6 +180,7 @@ function App({
   };
   systemStatus?: { maintenance: boolean; type?: 'data' | 'ui'; eta?: string | null; buildTime?: string | null };
 }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -619,7 +623,7 @@ function App({
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center font-base text-foreground crt-lines">
         <div className="text-4xl font-black animate-glitch mb-4 uppercase tracking-tighter flex flex-col items-center leading-tight">
-          <span className="tracking-normal">連線資料庫中...</span>
+          <span className="tracking-normal">{t("app.connecting_db", "連線資料庫中...")}</span>
           <span className="text-[14px] sm:text-[16px] font-mono opacity-60 normal-case mt-2">
             Connecting_Database...
           </span>
@@ -628,7 +632,7 @@ function App({
           <div className="h-full bg-main animate-pulse w-1/3"></div>
         </div>
         <div className="mt-6 text-xs opacity-50 font-mono flex flex-col items-center leading-tight">
-          <span className="tracking-normal mb-1">訊號微弱... 請稍候</span>
+          <span className="tracking-normal mb-1">{t("app.weak_signal", "訊號微弱... 請稍候")}</span>
           <span className="text-[10px] font-mono opacity-60 normal-case">
             SIGNAL_STRENGTH: WEAK... PLEASE_WAIT
           </span>
@@ -641,7 +645,7 @@ function App({
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center font-base text-foreground crt-lines">
         <div className="text-2xl font-black mb-4 text-red-500 uppercase tracking-tighter flex flex-col items-center leading-tight">
-          <span className="tracking-normal">資料庫同步失敗</span>
+          <span className="tracking-normal">{t("app.db_sync_failed", "資料庫同步失敗")}</span>
           <span className="text-[10px] sm:text-xs font-mono opacity-60 normal-case mt-1">
             Database_Sync_Failed
           </span>
@@ -687,7 +691,7 @@ function App({
             V{VERSION_CONFIG.app}
           </span>
         </h1>
-        <p className="mt-2 text-sm opacity-70">日々研磨爆裂中！</p>
+        <p className="mt-2 text-sm opacity-70">{t("app.slogan", "日々研磨爆裂中！")}</p>
       </header>
 
       {/* 跑馬燈 */}
@@ -706,7 +710,7 @@ function App({
               <i className="hn hn-search text-xl absolute left-3 top-1/2 -translate-y-1/2 opacity-50"></i>
               <Input
                 type="text"
-                placeholder="關鍵字檢索..."
+                placeholder={t("app.search_placeholder", "關鍵字檢索...")}
                 className="w-full pl-10"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -714,7 +718,7 @@ function App({
                   if (e.target.value.trim() !== '' && window.umami && typeof window.umami.track === 'function') {
                     window.umami.track('Z_Input_Change', {
                       type: 'input[type="text"]',
-                      label: '關鍵字檢索',
+                      label: t("app.search_keyword", "關鍵字檢索"),
                       value: e.target.value.substring(0, 100)
                     });
                   }
@@ -723,7 +727,7 @@ function App({
                   if (e.key === 'Enter' && search.trim() !== '' && window.umami && typeof window.umami.track === 'function') {
                     window.umami.track('Z_Input_Change', {
                       type: 'input[type="text"]',
-                      label: '關鍵字檢索',
+                      label: t("app.search_keyword", "關鍵字檢索"),
                       value: search.substring(0, 100)
                     });
                   }
@@ -749,7 +753,7 @@ function App({
                         {yearFilter.join(", ")}
                       </span>
                     ) : (
-                      <span className="truncate w-full block">所有年份</span>
+                      <span className="truncate w-full block">{t("app.all_years", "所有年份")}</span>
                     )}
                   </div>
                   <i className="hn hn-chevron-down-solid ml-1 size-3 shrink-0 opacity-50 hidden sm:flex items-center justify-center text-[10px]" />
@@ -761,7 +765,7 @@ function App({
               >
                 <Command className="border-0">
                   <CommandList>
-                    <CommandEmpty>找不到年份</CommandEmpty>
+                    <CommandEmpty>{t("app.no_year_found", "找不到年份")}</CommandEmpty>
                     <CommandGroup className="p-2 [&_[cmdk-group-items]]:flex [&_[cmdk-group-items]]:flex-col [&_[cmdk-group-items]]:gap-1">
                       {uniqueYears.map((year) => (
                         <CommandItem
@@ -811,7 +815,7 @@ function App({
                         {albumFilter.join(", ")}
                       </span>
                     ) : (
-                      <span className="truncate w-full block">所有專輯</span>
+                      <span className="truncate w-full block">{t("app.all_albums", "所有專輯")}</span>
                     )}
                   </div>
                   <i className="hn hn-chevron-down-solid ml-1 size-3 shrink-0 opacity-50 hidden sm:flex items-center justify-center text-[10px]" />
@@ -823,7 +827,7 @@ function App({
               >
                 <Command className="border-0">
                   <CommandList>
-                    <CommandEmpty>找不到專輯</CommandEmpty>
+                    <CommandEmpty>{t("app.no_album_found", "找不到專輯")}</CommandEmpty>
 
                     {[
                       {
@@ -912,7 +916,7 @@ function App({
                         {artistFilter.join(", ")}
                       </span>
                     ) : (
-                      <span className="truncate w-full block">所有製作</span>
+                      <span className="truncate w-full block">{t("app.all_creators", "所有製作")}</span>
                     )}
                   </div>
                   <i className="hn hn-chevron-down-solid ml-1 size-3 shrink-0 opacity-50 hidden sm:flex items-center justify-center text-[10px]" />
@@ -924,7 +928,7 @@ function App({
               >
                 <Command className="border-0">
                   <CommandList>
-                    <CommandEmpty>找不到畫師</CommandEmpty>
+                    <CommandEmpty>{t("app.no_creator_found", "找不到畫師")}</CommandEmpty>
                     <CommandGroup className="p-2 [&_[cmdk-group-items]]:flex [&_[cmdk-group-items]]:flex-col [&_[cmdk-group-items]]:gap-1">
                       {uniqueArtists.map((artist) => {
                         const snsId = metadata?.artistMeta?.[artist]?.hideId
@@ -974,11 +978,11 @@ function App({
         {/* 活躍篩選項標籤顯示區塊 */}
           {(yearFilter.length > 0 || albumFilter.length > 0 || artistFilter.length > 0) && (
             <div className="flex flex-wrap gap-2 items-center mt-3 mb-4 max-[768px]:w-[90vw] max-[768px]:relative max-[768px]:left-1/2 max-[768px]:-translate-x-1/2 max-[768px]:px-0">
-              <span className="text-xs font-bold opacity-50 mr-1 hidden sm:inline-block">目前篩選：</span>
+              <span className="text-xs font-bold opacity-50 mr-1 hidden sm:inline-block">{t("app.current_filters", "目前篩選：")}</span>
               
               {yearFilter.map(year => (
                 <div key={`year-${year}`} className="flex items-center bg-card border-2 border-border text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-neo-sm group">
-                  <span className="opacity-50 mr-1 sm:mr-1.5 hidden min-[430px]:inline-block">年份</span>
+                  <span className="opacity-50 mr-1 sm:mr-1.5 hidden min-[430px]:inline-block">{t("app.year", "年份")}</span>
                   <span className="font-bold mr-1">{year}</span>
                   <button 
                     onClick={() => setYearFilter(yearFilter.filter(y => y !== year))}
@@ -991,7 +995,7 @@ function App({
 
               {albumFilter.map(album => (
                 <div key={`album-${album}`} className="flex items-center bg-card border-2 border-border text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-neo-sm group">
-                  <span className="opacity-50 mr-1 sm:mr-1.5 hidden min-[430px]:inline-block">專輯</span>
+                  <span className="opacity-50 mr-1 sm:mr-1.5 hidden min-[430px]:inline-block">{t("app.album", "專輯")}</span>
                   <span className="font-bold mr-1 truncate max-w-[100px] sm:max-w-[200px]" title={album}>{album}</span>
                   <button 
                     onClick={() => setAlbumFilter(albumFilter.filter(a => a !== album))}
@@ -1004,7 +1008,7 @@ function App({
 
               {artistFilter.map(artist => (
                 <div key={`artist-${artist}`} className="flex items-center bg-card border-2 border-border text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-neo-sm group">
-                  <span className="opacity-50 mr-1 sm:mr-1.5 hidden min-[430px]:inline-block">製作</span>
+                  <span className="opacity-50 mr-1 sm:mr-1.5 hidden min-[430px]:inline-block">{t("app.creator", "製作")}</span>
                   <span className="font-bold mr-1 truncate max-w-[80px] sm:max-w-[150px]" title={artist}>{artist}</span>
                   <button 
                     onClick={() => setArtistFilter(artistFilter.filter(a => a !== artist))}
@@ -1108,7 +1112,7 @@ function App({
             <div className="animate-pulse flex items-center gap-2 text-main text-xs font-black tracking-widest uppercase">
               <i className="hn hn-spinner text-sm animate-spin"></i>
               <span className="flex flex-col leading-tight">
-                <span className="opacity-70">載入中...</span>
+                <span className="opacity-70">{t("common.loading", "載入中...")}</span>
                 <span className="text-[10px] font-mono opacity-40 normal-case">
                   Loading Signal...
                 </span>
@@ -1123,7 +1127,7 @@ function App({
             <div className="flex items-center gap-4 text-xs font-mono font-black">
               <span className="w-12 h-0.5 bg-current"></span>
               <span className="flex flex-col items-center leading-tight">
-                <span className="opacity-70">歸檔邊界</span>
+                <span className="opacity-70">{t("app.archive_boundary", "歸檔邊界")}</span>
                 <span className="text-[10px] font-mono opacity-40">
                   END_OF_ARCHIVE
                 </span>
@@ -1135,7 +1139,7 @@ function App({
       </main>
 
       {/* 右下角懸浮控制面板 (Control Hub) */}
-      <div className="fixed inset-x-0 bottom-0 pointer-events-none z-50 flex justify-center">
+      <div className="fixed inset-x-0 bottom-0 pointer-events-none z-[60] flex justify-center">
         <div className="w-full max-w-7xl max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-[80%] relative px-4">
           <div className="absolute bottom-0 right-4 translate-x-full pb-[calc(1.5rem+env(safe-area-inset-bottom))] max-[768px]:pb-[calc(4.5rem+env(safe-area-inset-bottom))] pointer-events-none flex flex-col justify-end items-start pl-2 md:pl-4">
             <div className="flex flex-col items-center -space-y-[2px] pointer-events-auto">
@@ -1157,7 +1161,7 @@ function App({
             </TooltipTrigger>
             <TooltipContent side="left" align="center" sideOffset={10}>
               <div className="flex flex-col gap-0.5">
-                <p className="text-xs font-black tracking-widest">返回頂部</p>
+                <p className="text-xs font-black tracking-widest">{t("app.back_to_top", "返回頂部")}</p>
                 <p className="text-[10px] font-mono opacity-60 normal-case">
                   TOP
                 </p>
@@ -1184,7 +1188,7 @@ function App({
           </TooltipTrigger>
           <TooltipContent side="left" align="center" sideOffset={10}>
             <div className="flex flex-col gap-0.5">
-              <p className="text-xs font-black tracking-widest">排序</p>
+              <p className="text-xs font-black tracking-widest">{t("app.sort", "排序")}</p>
               <p className="text-[10px] font-mono opacity-60 normal-case">
                 SORT
               </p>
@@ -1213,7 +1217,7 @@ function App({
           </TooltipTrigger>
           <TooltipContent side="left" align="center" sideOffset={10}>
             <div className="flex flex-col gap-0.5">
-              <p className="text-xs font-black tracking-widest">收藏</p>
+              <p className="text-xs font-black tracking-widest">{t("app.favorite", "收藏")}</p>
               <p className="text-[10px] font-mono opacity-60 normal-case">
                 FAVORITES
               </p>
@@ -1240,7 +1244,7 @@ function App({
               </TooltipTrigger>
               <TooltipContent side="left" align="center" sideOffset={10}>
                 <div className="flex flex-col gap-0.5">
-                  <p className="text-xs font-black tracking-widest">碎碎念</p>
+                  <p className="text-xs font-black tracking-widest">{t("app.about_author", "碎碎念")}</p>
                   <p className="text-[10px] font-mono opacity-60 normal-case">
                     ABOUT
                   </p>
@@ -1264,7 +1268,7 @@ function App({
                     {/* 自述內容區塊 - 佔滿剩餘空間並滾動 */}
                     <ScrollArea className="flex-1 min-h-0 w-full">
                       <div className="pl-3 md:pl-4 py-1 space-y-4 text-sm md:text-base font-medium opacity-90 leading-relaxed text-justify pr-4">
-                      <p>哈囉！這裡是飯糰，歡迎造訪這個資料庫。</p>
+                      <p>{t("app.about_p1", "哈囉！這裡是飯糰，歡迎造訪這個資料庫。")}</p>
                       
                       <p>
                         其實很早就有做這個資料庫的打算了。身為社團成員之一，經常看到社團擺攤團建的時候有老師出 COS 需要找人設圖、或者畫師老師想找參考資料的情況，尤其是官宣 Intense II 之後，想著大家肯定有產糧和做無料的需求，到處翻找設定圖實在不方便，而且大多數老師還得克服網絡環境的難題。再加上官方的資料量大且散，找起來真的很累，當時就在想，如果自己能做一個資料庫，應該會比 QQ 群相冊好用很多吧？ 於是就有了這個資料庫。
@@ -1320,7 +1324,7 @@ function App({
                               <div>
                                 <a href="https://github.com/TakWolf/fusion-pixel-font" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">
                                 縫合像素字體 / Fusion Pixel Font
-                                </a><br /><span className="opacity-70 ml-2 text-sm">提供完整「泛中日韓語言特定字形」開源字型支援</span>
+                                </a><br /><span className="opacity-70 ml-2 text-sm">{t("app.thanks_fusion_pixel", "提供完整「泛中日韓語言特定字形」開源字型支援")}</span>
                               </div>
                             </li>
                             <li className="flex items-start gap-2 group">
@@ -1328,7 +1332,7 @@ function App({
                               <div>
                                 <a href="https://fancyapps.com/fancybox/" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">
                                   Fancybox
-                                </a><br /><span className="opacity-70 ml-2 text-sm">無可挑剔的圖片燈箱解決方案（雖然覆寫官方的樣式真的超累）</span>
+                                </a><br /><span className="opacity-70 ml-2 text-sm">{t("app.thanks_fancybox", "無可挑剔的圖片燈箱解決方案（雖然覆寫官方的樣式真的超累）")}</span>
                               </div>
                             </li>
                             <li className="flex items-start gap-2 group">
@@ -1336,7 +1340,7 @@ function App({
                               <div>
                                 <a href="https://gemini.google.com/" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">
                                   Google Gemini
-                                </a><br /><span className="opacity-70 ml-2 text-sm">幫助實現專案從靜態網頁到 React 工程化的轉型</span>
+                                </a><br /><span className="opacity-70 ml-2 text-sm">{t("app.thanks_react", "幫助實現專案從靜態網頁到 React 工程化的轉型")}</span>
                               </div>
                             </li>
                             <li className="flex items-start gap-2 group">
@@ -1344,7 +1348,7 @@ function App({
                               <div>
                                 <span className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1 cursor-default">
                                   Trae AI
-                                </span><br /><span className="opacity-70 ml-2 text-sm">與飯糰一起打磨這些瘋狂 UI 細節的物理外掛（好像是用的 GPT 5.4 的模型）</span>
+                                </span><br /><span className="opacity-70 ml-2 text-sm">{t("app.thanks_cursor", "與飯糰一起打磨這些瘋狂 UI 細節的物理外掛（好像是用的 GPT 5.4 的模型）")}</span>
                               </div>
                             </li>
                           </ul>
@@ -1403,7 +1407,7 @@ function App({
           </TooltipTrigger>
           <TooltipContent side="left" align="center" sideOffset={10}>
             <div className="flex flex-col gap-0.5">
-              <p className="text-xs font-black tracking-widest">意見回饋</p>
+              <p className="text-xs font-black tracking-widest">{t("app.feedback", "意見回饋")}</p>
               <p className="text-[10px] font-mono opacity-60 normal-case">
                 FEEDBACK
               </p>
@@ -1426,7 +1430,7 @@ function App({
             </TooltipTrigger>
             <TooltipContent side="left" align="center" sideOffset={10}>
               <div className="flex flex-col gap-0.5">
-                <p className="text-xs font-black tracking-widest">加載速度調查 (Demo)</p>
+                <p className="text-xs font-black tracking-widest">{t("app.speed_survey", "加載速度調查 (Demo)")}</p>
                 <p className="text-[10px] font-mono opacity-60 normal-case">
                   SPEED_SURVEY
                 </p>
@@ -1435,6 +1439,9 @@ function App({
           </Tooltip>
         )}
 
+        <div className="z-40 relative">
+          <LanguageToggle isIconOnly={true} />
+        </div>
         <div className="z-40 relative">
           <ThemeToggle isIconOnly={true} />
         </div>
@@ -1505,7 +1512,7 @@ function App({
                 {/* 外部依賴與資源聲明 */}
                 <div className="flex flex-col gap-2">
                   <span className="text-xs font-black mb-2 opacity-30 flex flex-col leading-tight">
-                    <span>外部資源</span>
+                    <span>{t("app.external_resources", "外部資源")}</span>
                     <span className="text-[10px] font-mono opacity-60">
                       External_Resources
                     </span>
@@ -1521,7 +1528,7 @@ function App({
                       >
                         <i className="hn hn-external-link text-[10px] opacity-50 shrink-0" />
                         <span className="flex items-center flex-wrap gap-x-1.5 leading-tight">
-                          <span className="whitespace-nowrap">像素圖示庫</span>
+                          <span className="whitespace-nowrap">{t("app.pixel_icons", "像素圖示庫")}</span>
                           <span className="text-[10px] font-mono opacity-60 normal-case break-words">
                             HackerNoon Pixel Icons
                           </span>
@@ -1551,7 +1558,7 @@ function App({
                       >
                         <i className="hn hn-external-link text-[10px] opacity-50 shrink-0" />
                         <span className="flex items-center flex-wrap gap-x-1.5 leading-tight">
-                          <span className="whitespace-nowrap">像素字型</span>
+                          <span className="whitespace-nowrap">{t("app.pixel_font", "像素字型")}</span>
                           <span className="text-[10px] font-mono opacity-60 break-words">
                             Fusion Pixel Font
                           </span>
@@ -1581,7 +1588,7 @@ function App({
                       >
                         <i className="hn hn-external-link text-[10px] opacity-50 shrink-0" />
                         <span className="flex items-center flex-wrap gap-x-1.5 leading-tight">
-                          <span className="whitespace-nowrap">UI 設計系統</span>
+                          <span className="whitespace-nowrap">{t("app.ui_design_system", "UI 設計系統")}</span>
                           <span className="text-[10px] font-mono opacity-60 break-words">
                             Neobrutalism UI
                           </span>
@@ -1730,7 +1737,7 @@ function App({
                       >
                 <i className="hn hn-github text-sm" />
                 <span className="flex flex-col leading-tight">
-                  <span>開源專案</span>
+                  <span>{t("app.open_source", "開源專案")}</span>
                   <span className="text-[8px] opacity-60 normal-case">
                     Open Source Repository
                   </span>
@@ -1835,6 +1842,8 @@ const fetcher = (url: string) =>
 
 // 為了支援 useParams，我們需要導出一個包裹了路由環境的組件
 export default function RootApp() {
+  const { t } = useTranslation();
+
   const apiUrl = import.meta.env.VITE_API_URL || "/api/mvs";
   const defaultMetadata = {
     albumMeta: {},
@@ -1943,6 +1952,7 @@ export default function RootApp() {
 
   return (
     <>
+      <CustomCursor />
       <Routes>
         <Route path="/" element={<App {...commonProps} />}>
           <Route index element={null} />
