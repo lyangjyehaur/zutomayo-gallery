@@ -1,6 +1,6 @@
 {
   "name": "zutomayo-gallery",
-  "version": "3.3.1",
+  "version": "3.3.2",
   "type": "module",
   "scripts": {
     "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
@@ -17,6 +17,7 @@
     "concurrently": "^8.2.2"
   },
   "dependencies": {
-    "@monaco-editor/react": "^4.7.0"
+    "@monaco-editor/react": "^4.7.0",
+    "ani-cursor": "^0.0.5"
   }
 }
