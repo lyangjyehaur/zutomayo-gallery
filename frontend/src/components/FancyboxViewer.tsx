@@ -149,6 +149,7 @@ const getExtensionFromUrl = (urlStr: string): string => {
 };
 
 const FancyboxCaptionOverlay = ({ api, photos }: { api: any; photos: PhotoData[] }) => {
+  const { t } = useTranslation();
   const [activeIndex, setActiveIndex] = useState(api?.getCarousel?.()?.getPage()?.index || 0);
   const [isZooming, setIsZooming] = useState(false);
   const [isThumbsHidden, setIsThumbsHidden] = useState(false);
@@ -250,7 +251,7 @@ const FancyboxCaptionOverlay = ({ api, photos }: { api: any; photos: PhotoData[]
             <h4>{title}</h4>
           </div>
           <div className="ztmy-fb-caption-rich">
-            <div className="rich-text" dangerouslySetInnerHTML={{ __html: richText || '{t("app.no_desc", "暫無描述 (NO_METADATA_FOUND)")}' }} />
+            <div className="rich-text" dangerouslySetInnerHTML={{ __html: richText || t("app.no_desc", "暫無描述 (NO_METADATA_FOUND)") }} />
           </div>
         </div>
       </div>
@@ -265,6 +266,7 @@ interface SkeletonItemProps {
 }
 
 const SkeletonItem = ({ width, height }: SkeletonItemProps) => {
+  const { t } = useTranslation();
   const aspectRatio = width && height ? `${width} / ${height}` : '16 / 9';
 
   return (
@@ -300,6 +302,7 @@ interface PhotoItemProps {
 }
 
 const PhotoItem = ({ photo, index, onPhotoClick, delayMs }: PhotoItemProps) => {
+  const { t } = useTranslation();
   const [isLoaded, setIsLoaded] = useState(false);
   const [actualDimensions, setActualDimensions] = useState<{ width: number; height: number } | null>(
     photo.width && photo.height ? { width: photo.width, height: photo.height } : null,
@@ -417,6 +420,7 @@ export default function FancyboxViewer({
   onLightboxOpen,
   onLightboxClose,
 }: FancyboxViewerProps) {
+  const { t } = useTranslation();
   // 將 images 陣列過濾出有效圖片 (移除強制時間排序，尊重後台儲存的陣列順序)
   const processedImages = useMemo(() => {
     return images.filter((img) => img.url && img.url.trim() !== '');
@@ -1059,7 +1063,7 @@ export default function FancyboxViewer({
             >
               <span className="flex flex-col items-center leading-tight">
                 <span className="tracking-normal">
-                  {loadingMore ? '{t("common.loading", "載入中...")}' : '載入更多'} ({displayedPhotos.length} / {processedImages.length})
+                  {(loadingMore ? t("common.loading", "載入中...") : t("common.load_more", "載入更多"))} ({displayedPhotos.length} / {processedImages.length})
                 </span>
                 <span className="text-[10px] font-mono opacity-60 normal-case">
                   {loadingMore ? 'Loading...' : 'Load_More_Assets'}
