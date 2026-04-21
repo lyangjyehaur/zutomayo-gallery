@@ -98,6 +98,8 @@
     "syncing_visual": "正在同步視覺...",
     "release": "發佈",
     "unknown_artist": "未知 (Unknown)",
+    "feedback_subtitle": "Feedback",
+    "feedback_desc": "有任何建議或發現 Bug，歡迎喺度留言話畀我知！",
     "image": "圖片 (image)",
     "no_desc": "暫無描述 (NO_METADATA_FOUND)",
     "load_more": "載入更多",

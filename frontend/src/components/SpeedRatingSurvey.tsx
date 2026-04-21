@@ -117,7 +117,7 @@ export function SpeedRatingSurvey({ forceOpen = false, onCloseForce }: { forceOp
 
   const handleRate = async (rating: number) => {
     toast.success(t("survey.toast_success", "感謝您的 {{rating}} 星評價！", { rating }), {
-      description: '您的反饋已記錄，這將幫助我們優化加載速度。'
+      description: t("survey.toast_desc", "您的反饋已記錄，這將幫助我們優化加載速度。")
     });
     setSubmitted(true);
     setTimeout(() => {

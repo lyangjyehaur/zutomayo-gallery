@@ -147,7 +147,7 @@ export function WalineComments({
               // 替 wl-mail 增加 placeholder 說明
               const mailInput = containerRef.current?.querySelector('.wl-mail') as HTMLInputElement;
               if (mailInput && !mailInput.getAttribute('data-custom-placeholder')) {
-                mailInput.placeholder = t('waline.mail_placeholder', '留信箱可免登入顯示頭像');
+                mailInput.placeholder = t('waline.mailPlaceholder', '留信箱可免登入顯示頭像');
                 mailInput.setAttribute('data-custom-placeholder', 'true');
               }
             }

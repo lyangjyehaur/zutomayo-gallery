@@ -1297,25 +1297,25 @@ function App({
                       <div className="mt-8 pt-8 pr-4">
                         <div className="flex flex-col mb-6 items-start">
                           <h3 className="text-xl md:text-2xl font-black tracking-widest bg-black text-main px-3 py-1 inline-block">
-                            特別感謝
+                            {t("app.special_thanks", "特別感謝")}
                           </h3>
                           <p className="text-[10px] md:text-xs font-mono opacity-50 uppercase tracking-widest mt-2 pl-1 whitespace-nowrap">Special Thanks</p>
                         </div>
                         <div className="space-y-4 text-sm md:text-base font-medium">
                           <p>
-                            {t("app.thanks_intro", "感謝以下老師與開源專案的支持與貢獻：")}
+                            {t("app.thanks_desc", "感謝以下老師與開源專案的支持與貢獻：")}
                           </p>
                           <ul className="list-none space-y-3 mt-4">
                             <li className="flex items-start gap-2 group">
                               <span className="text-main font-black">►</span>
                               <div>
-                                <a href="https://space.bilibili.com/531797444" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">{t("app.thanks_wake_03_title", "深夜大活躍_WAKE_03")}</a><br /><span className="opacity-70 ml-2 text-sm">{t("app.thanks_wake_03", "感謝對 ZUTOMAYO 粉絲社群的巨大貢獻，以及提供評論區像素 Nira 醬表情的授權")}</span>
+                                <a href="https://space.bilibili.com/531797444" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">深夜大活躍_WAKE_03</a><br /><span className="opacity-70 ml-2 text-sm">{t("app.thanks_wake_03", "感謝對 ZUTOMAYO 粉絲社群的巨大貢獻，以及提供評論區像素 Nira 醬表情的授權")}</span>
                               </div>
                             </li>
                             <li className="flex items-start gap-2 group">
                               <span className="text-main font-black">►</span>
                               <div>
-                                <a href="https://github.com/TakWolf/fusion-pixel-font" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">{t("app.thanks_fusion_pixel_title", "縫合像素字體 / Fusion Pixel Font")}</a><br /><span className="opacity-70 ml-2 text-sm">{t("app.thanks_fusion_pixel", "提供完整「泛中日韓語言特定字形」開源字型支援")}</span>
+                                <a href="https://github.com/TakWolf/fusion-pixel-font" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">縫合像素字體 / Fusion Pixel Font</a><br /><span className="opacity-70 ml-2 text-sm">{t("app.thanks_fusion_pixel", "提供完整「泛中日韓語言特定字形」開源字型支援")}</span>
                               </div>
                             </li>
                             <li className="flex items-start gap-2 group">
@@ -1795,7 +1795,7 @@ function App({
               <i className="hn hn-message text-2xl"></i> {t("app.feedback", "意見回饋")}
             </h2>
             <span className="text-[10px] font-bold opacity-50 font-mono normal-case">
-              Feedback
+              {t("app.feedback_subtitle", "Feedback")}
             </span>
           </div>
           <p className="text-xs font-bold text-foreground/70 mt-1">
@@ -1912,31 +1912,31 @@ export default function RootApp() {
       const deferredPrompt = e;
       
       // 延遲一點時間再顯示 toast，避免跟載入動畫衝突
-      setTimeout(() => {
-        toast("安裝 ZTMY Gallery", {
-          description: "將網站加入主畫面，享受全螢幕與離線瀏覽體驗！",
-          duration: 10000,
-          position: "bottom-center",
-          action: {
-            label: "安裝",
-            onClick: async () => {
-              // 顯示安裝提示
-              deferredPrompt.prompt();
-              // 等待使用者回應
-              const { outcome } = await deferredPrompt.userChoice;
-              if (outcome === 'accepted') {
-                if (window.umami) window.umami.track('Z_PWA_Install_Accepted');
-              } else {
-                if (window.umami) window.umami.track('Z_PWA_Install_Dismissed');
-              }
-            },
-          },
-          cancel: {
-            label: "稍後再說",
-            onClick: () => console.log('User dismissed PWA install'),
-          },
-        });
-      }, 3000);
+          setTimeout(() => {
+            toast(t("app.install_pwa_title", "安裝 ZTMY Gallery"), {
+              description: t("app.install_pwa_desc", "將網站加入主畫面，享受全螢幕與離線瀏覽體驗！"),
+              duration: 10000,
+              position: "bottom-center",
+              action: {
+                label: t("app.install", "安裝"),
+                onClick: async () => {
+                  // 顯示安裝提示
+                  deferredPrompt.prompt();
+                  // 等待使用者回應
+                  const { outcome } = await deferredPrompt.userChoice;
+                  if (outcome === 'accepted') {
+                    if (window.umami) window.umami.track('Z_PWA_Install_Accepted');
+                  } else {
+                    if (window.umami) window.umami.track('Z_PWA_Install_Dismissed');
+                  }
+                },
+              },
+              cancel: {
+                label: t("app.later", "稍後再說"),
+                onClick: () => console.log('User dismissed PWA install'),
+              },
+            });
+          }, 3000);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);

@@ -17,7 +17,7 @@ interface LanguageToggleProps {
 }
 
 const languages = [
-  { code: "zh-TW", name: "繁體中文 (台灣)", short: "TW" },
+  { code: "zh-TW", name: "正體中文 (台灣)", short: "TW" },
   { code: "zh-HK", name: "繁體中文 (香港)", short: "HK" },
   { code: "zh-CN", name: "简体中文", short: "CN" },
   { code: "ja", name: "日本語", short: "JA" },

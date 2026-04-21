@@ -979,7 +979,7 @@ export default function FancyboxViewer({
         }
 
         .ztmy-fb-caption-rich .rich-text:empty::before {
-          content: '暫無詳細信息';
+          content: '${t("app.no_desc", "暫無詳細信息")}';
           color: rgba(255, 255, 255, 0.4);
           font-style: italic;
           grid-column: 1 / -1;
@@ -999,7 +999,7 @@ export default function FancyboxViewer({
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black uppercase italic tracking-tighter text-foreground">
             {headerTitle || (
               <span className="flex flex-col leading-tight">
-                <span className="tracking-normal">Fancybox 除錯終端</span>
+                <span className="tracking-normal">Fancybox {t("app.debug_terminal", "除錯終端")}</span>
                 <span className="text-[10px] font-mono opacity-50 normal-case">Fancybox_Debug_Terminal</span>
               </span>
             )}
@@ -1008,7 +1008,7 @@ export default function FancyboxViewer({
             {headerSubtitle || (
               <span className="flex flex-col leading-tight">
                 <span className="tracking-normal">
-                  來源：{mvId ? `指定 MV：${mvId}` : '全站資料'} ｜ 素材數：{displayedPhotos.length}
+                  {t("app.source", "來源：")}{mvId ? `${t("app.specific_mv", "指定 MV：")}${mvId}` : t("app.site_wide", "全站資料")} ｜ {t("app.material_count", "素材數：")}{displayedPhotos.length}
                 </span>
                 <span className="text-[10px] font-mono opacity-50 normal-case">
                   Source: {mvId ? `Target_MV: ${mvId}` : 'Full_Archive'} | Assets_Count: {displayedPhotos.length}

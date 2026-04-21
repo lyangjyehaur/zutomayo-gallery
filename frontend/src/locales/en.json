@@ -98,6 +98,8 @@
     "syncing_visual": "Syncing Visual...",
     "release": "Release",
     "unknown_artist": "Unknown",
+    "feedback_subtitle": "Feedback",
+    "feedback_desc": "If you have any suggestions or found a bug, please leave a comment here!",
     "image": "Image",
     "no_desc": "No description (NO_METADATA_FOUND)",
     "load_more": "Load More",

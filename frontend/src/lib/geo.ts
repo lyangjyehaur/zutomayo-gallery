@@ -21,7 +21,13 @@ const getIsChinaTimezone = () => {
 
 const shouldUseIpLookup = () => {
   if (typeof window === 'undefined') return false;
-  // 預設開啟 IP 偵測，除非明確設定為 false
+  
+  // 本地開發環境預設不調用 API，除非明確開啟 enable_ip_geo=true
+  if (import.meta.env.DEV) {
+    return window.localStorage.getItem('enable_ip_geo') === 'true';
+  }
+
+  // 線上環境預設開啟 IP 偵測，除非明確設定為 false
   return window.localStorage.getItem('enable_ip_geo') !== 'false';
 };
 
@@ -97,8 +103,27 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
   if (geoCache) return geoCache;
 
   try {
-    // 檢查 sessionStorage 快取，避免每次重整都發送請求
     if (typeof window !== 'undefined') {
+      // 手動 Debug 模式 (最高優先級)
+      // 可以透過在控制台輸入 localStorage.setItem('mock_geo_mode', 'CN' | 'VPN' | 'GLOBAL') 來模擬
+      const mockMode = window.localStorage.getItem('mock_geo_mode');
+      if (mockMode) {
+        console.log(`[Geo Debug] Using mock mode: ${mockMode}`);
+        if (mockMode === 'CN') {
+          geoCache = { ipCountry: 'CN', isChinaTimezone: true, isChinaIP: true, isVPN: false };
+        } else if (mockMode === 'VPN') {
+          geoCache = { ipCountry: 'JP', isChinaTimezone: true, isChinaIP: false, isVPN: true };
+        } else if (mockMode === 'GLOBAL') {
+          geoCache = { ipCountry: 'US', isChinaTimezone: false, isChinaIP: false, isVPN: false };
+        }
+        
+        if (geoCache) {
+          sessionStorage.setItem('geo_info', JSON.stringify(geoCache));
+          return geoCache;
+        }
+      }
+
+      // 檢查 sessionStorage 快取，避免每次重整都發送請求
       const cached = sessionStorage.getItem('geo_info');
       if (cached) {
         geoCache = JSON.parse(cached);
@@ -110,7 +135,7 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
 
     if (shouldUseIpLookup() === false) {
       geoCache = {
-        ipCountry: 'UNKNOWN',
+        ipCountry: import.meta.env.DEV ? 'LOCAL_DEV' : 'UNKNOWN',
         isChinaTimezone,
         isChinaIP: isChinaTimezone,
         isVPN: false,
@@ -155,6 +180,13 @@ export const getGeoInfo = (): GeoInfo => {
   if (geoCache) return geoCache;
   
   if (typeof window !== 'undefined') {
+    const mockMode = window.localStorage.getItem('mock_geo_mode');
+    if (mockMode) {
+      if (mockMode === 'CN') return { ipCountry: 'CN', isChinaTimezone: true, isChinaIP: true, isVPN: false };
+      if (mockMode === 'VPN') return { ipCountry: 'JP', isChinaTimezone: true, isChinaIP: false, isVPN: true };
+      if (mockMode === 'GLOBAL') return { ipCountry: 'US', isChinaTimezone: false, isChinaIP: false, isVPN: false };
+    }
+
     const cached = sessionStorage.getItem('geo_info');
     if (cached) {
       geoCache = JSON.parse(cached);
@@ -165,7 +197,7 @@ export const getGeoInfo = (): GeoInfo => {
   const isChinaTimezone = getIsChinaTimezone();
   
   return {
-    ipCountry: 'UNKNOWN',
+    ipCountry: import.meta.env.DEV ? 'LOCAL_DEV' : 'UNKNOWN',
     isChinaTimezone,
     isChinaIP: isChinaTimezone,
     isVPN: false

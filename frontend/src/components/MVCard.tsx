@@ -326,7 +326,14 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
 
 export const MVCard = memo(function MVCard({ mv, isFav, onToggleFav, onClick, isPaused }: MVCardProps & { isPaused?: boolean }) {
   const { t } = useTranslation();
-  const artistName = (mv.artist || []).map(a => a.trim()).filter(Boolean).join(', ') || t('app.unknown_artist', '未知 (Unknown)');
+  
+  // 處理藝術家名稱，過濾掉 "未知"、"Unknown" 等字串，若全為空則使用 t('app.unknown_artist')
+  const artistName = (Array.isArray(mv.artist) ? mv.artist : [mv.artist])
+    .map(a => a?.trim())
+    .filter(Boolean)
+    .filter(a => a !== '未知' && a !== 'Unknown' && a !== 'unknown')
+    .join(', ') || t('app.unknown_artist', '未知 (Unknown)');
+    
   const fallbackThumbUrl = getProxyImgUrl(mv.coverImages?.[0] || '/default.jpg', 'thumb');
   const [containerRef, containerWidth] = useContainerWidth();
   
