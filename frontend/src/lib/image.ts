@@ -38,7 +38,7 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
   try {
     let targetUrl = rawUrl;
     
-    // 如果是相對路徑的本地資源（如 /default.jpg），直接回傳，不需要過代理
+    // 如果是相對路徑的本地資源，直接回傳，不需要過代理
     if (targetUrl.startsWith('/')) {
       return targetUrl;
     }

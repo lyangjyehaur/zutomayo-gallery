@@ -23,7 +23,13 @@ if ('serviceWorker' in navigator) {
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <HelmetProvider>
-      <BrowserRouter basename={import.meta.env.BASE_URL}>
+      <BrowserRouter 
+        basename={import.meta.env.BASE_URL}
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
         <CustomCursor />
         <ErrorBoundary>
           <TooltipProvider delayDuration={200} skipDelayDuration={0} disableHoverableContent>

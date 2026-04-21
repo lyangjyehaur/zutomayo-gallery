@@ -3,6 +3,14 @@ export interface GeoInfo {
   isChinaTimezone: boolean;
   isChinaIP: boolean;
   isVPN: boolean;
+  ip?: string;
+  details?: {
+    country: string;
+    region: string;
+    province: string;
+    city: string;
+    isp: string;
+  };
 }
 
 let geoCache: GeoInfo | null = null;
@@ -45,52 +53,27 @@ export const clearGeoCache = () => {
  * 獲取 IP 所在的國家代碼
  * 使用 Promise.any 實現競速機制 (Race)，哪個 API 先回應就用哪個
  */
-const fetchIpCountry = async (): Promise<string> => {
-  // 備用 API 列表 (皆為免費、支援 HTTPS、無 CORS 限制、回傳格式簡單的服務)
-  const controllers = [new AbortController(), new AbortController(), new AbortController()];
-  
-  const fetchers = [
-    // 1. Cloudflare Trace API (原本的)
-    fetch('https://1.1.1.1/cdn-cgi/trace', { signal: controllers[0].signal })
-      .then(async (res) => {
-        if (!res.ok) throw new Error('CF API failed');
-        const text = await res.text();
-        const match = text.match(/loc=([A-Z]+)/);
-        if (match && match[1]) return match[1];
-        throw new Error('Invalid CF response');
-      }),
-      
-    // 2. IP API (備用) - 回傳純文字國家代碼 (例如 "CN", "TW", "US")
-    fetch('https://ipapi.co/country_code', { signal: controllers[1].signal })
-      .then(async (res) => {
-        if (!res.ok) throw new Error('IP API failed');
-        const text = await res.text();
-        const code = text.trim();
-        if (code.length === 2) return code;
-        throw new Error('Invalid IP API response');
-      }),
-
-    // 3. 第三備用：ip.country.is
-    // 極度精簡的開源專案，回傳 {"ip":"...","country":"TW"}
-    fetch('https://api.country.is', { signal: controllers[2].signal })
-      .then(async (res) => {
-        if (!res.ok) throw new Error('country.is failed');
-        const data = await res.json();
-        if (data && data.country) return data.country;
-        throw new Error('Invalid country.is response');
-      })
-  ];
+const fetchIpCountry = async (): Promise<{ countryCode: string, ip?: string, details?: GeoInfo['details'] }> => {
+  const apiUrl = (import.meta.env.VITE_API_URL || '/api/mvs').replace(/\/mvs$/, '/system/geo');
 
   try {
-    // 競速：誰先成功回傳國家代碼，就用誰的
-    const countryCode = await Promise.any(fetchers);
+    // 由於我們已經實作了高效且 100% 準確的本地 ip2region 服務
+    // 且該服務位於後端，不存在前端跨域、廣告攔截或第三方 API 被牆的問題
+    // 因此直接調用我們自己的 API，不再依賴第三方服務
+    const res = await fetch(apiUrl);
+    if (!res.ok) throw new Error('Backend Geo API failed');
     
-    // 成功拿到一個後，中斷其他還在跑的請求，節省頻寬與資源
-    controllers.forEach(c => c.abort());
-    
-    return countryCode;
+    const json = await res.json();
+    if (json && json.success && json.data && json.data.country) {
+      return {
+        countryCode: json.data.country === 'LOCAL' ? 'CN' : json.data.country,
+        ip: json.data.ip,
+        details: json.data.details
+      };
+    }
+    throw new Error('Invalid Backend Geo response');
   } catch (e) {
-    throw new Error('All IP detection APIs failed');
+    throw new Error('IP detection failed');
   }
 };
 
@@ -148,14 +131,35 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
       return geoCache;
     }
 
-    const ipCountry = await fetchIpCountry();
+    const { countryCode, ip, details } = await fetchIpCountry();
+    const ipCountry = countryCode;
     const isChinaIP = ipCountry === 'CN';
     const isVPN = !isChinaIP && isChinaTimezone;
 
-    geoCache = { ipCountry, isChinaTimezone, isChinaIP, isVPN };
+    geoCache = { ipCountry, isChinaTimezone, isChinaIP, isVPN, ip, details };
     
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('geo_info', JSON.stringify(geoCache));
+      
+      // 將精確的地理與 IP 資訊上報給 Umami (如果有的話)
+      if ((window as any).umami && typeof (window as any).umami.track === 'function') {
+        const payload: any = {
+          country: ipCountry,
+          isVPN: isVPN ? 'Yes' : 'No',
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          language: navigator.language || navigator.languages?.[0] || 'unknown'
+        };
+        
+        if (ip) payload.ip = ip;
+        
+        if (details) {
+          if (details.province) payload.province = details.province;
+          if (details.city) payload.city = details.city;
+          if (details.isp) payload.isp = details.isp;
+        }
+        
+        (window as any).umami.track('Z_Geo_Location_Detected', payload);
+      }
     }
     
     return geoCache;

@@ -176,9 +176,21 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
               align="center" 
               sideOffset={10} 
               className="max-w-[250px] text-left z-[100] bg-main text-main-foreground shadow-md opacity-100"
-              onPointerDownOutside={(e) => {}}
+              onPointerDownOutside={(e) => e.preventDefault()}
             >
-              <p className="text-xs leading-relaxed font-bold tracking-normal normal-case opacity-100">{geoInfo.desc}</p>
+              <div className="flex flex-col gap-1">
+                <p className="text-xs leading-relaxed font-bold tracking-normal normal-case opacity-100">{geoInfo.desc}</p>
+                {geoInfo.details && (
+                  <div className="mt-1 pt-1 border-t border-black/20 text-[10px] font-mono opacity-80 leading-tight tracking-normal normal-case">
+                    {geoInfo.details.province && geoInfo.details.city && (
+                      <p>LOC: {geoInfo.details.province} {geoInfo.details.city}</p>
+                    )}
+                    {geoInfo.details.isp && (
+                      <p>ISP: {geoInfo.details.isp}</p>
+                    )}
+                  </div>
+                )}
+              </div>
             </TooltipContent>
           </Tooltip>
         </span>

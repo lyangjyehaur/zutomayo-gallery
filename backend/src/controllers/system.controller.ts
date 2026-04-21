@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { getDB } from '../services/db.service.js';
 import fs from 'fs';
 import path from 'path';
+import { getCountryCode, getFullGeoInfo } from '../services/geo.service.js';
 
 // 取得編譯時間與版本號的變數 (只在伺服器啟動時讀取一次)
 let buildTime: string | null = null;
@@ -49,9 +50,67 @@ export const getSystemStatus = async (req: Request, res: Response, next: NextFun
     const etaRow = db.prepare('SELECT value FROM meta_settings WHERE key = ?').get('maintenance_eta') as any;
     const eta = etaRow ? etaRow.value : null;
 
-    res.json({ success: true, data: { maintenance, type, eta, buildTime, version: appVersion } });
+    res.json({ 
+      success: true, 
+      data: { 
+        maintenance, 
+        type, 
+        eta, 
+        buildTime, 
+        version: appVersion
+      } 
+    });
   } catch (error) {
     next(error);
+  }
+};
+
+/**
+ * 獲取客戶端地理位置資訊
+ * 100% 本地化查詢 (使用記憶體中的 ip2region xdb 引擎)
+ * 無外部網路依賴，0 毫秒延遲，中國大陸 IP 解析準確率極高
+ */
+export const getClientGeo = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // 1. 如果有 Cloudflare 的 CF-IPCountry 標頭，代表使用者正在透過 CF 存取
+    const cfCountry = req.headers['cf-ipcountry'] as string;
+    if (cfCountry && cfCountry !== 'XX') {
+      res.json({ success: true, data: { country: cfCountry, source: 'cloudflare' } });
+      return;
+    }
+
+    // 2. 獲取客戶端真實 IP
+    let clientIp = (req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.ip || '') as string;
+    
+    if (clientIp.includes(',')) {
+      clientIp = clientIp.split(',')[0].trim();
+    }
+    
+    if (clientIp.startsWith('::ffff:')) {
+      clientIp = clientIp.replace('::ffff:', '');
+    }
+
+    if (clientIp === '127.0.0.1' || clientIp === '::1' || clientIp.startsWith('192.168.') || clientIp.startsWith('10.')) {
+      res.json({ success: true, data: { country: 'LOCAL', source: 'local' } });
+      return;
+    }
+
+    // 3. 使用我們本地自己搭建的 ip2region 服務查詢
+    const geoInfo = await getFullGeoInfo(clientIp);
+    const countryCode = await getCountryCode(clientIp);
+
+    res.json({ 
+      success: true, 
+      data: { 
+        country: countryCode, 
+        source: 'ip2region-local',
+        ip: clientIp, // 將真實 IP 傳給前端，讓前端可以上報給 Umami
+        details: geoInfo // 把詳細資訊也傳給前端備用
+      } 
+    });
+  } catch (error) {
+    console.error('[Geo] Error resolving client IP:', error);
+    res.json({ success: true, data: { country: 'UNKNOWN', source: 'error' } });
   }
 };
 

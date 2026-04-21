@@ -44,7 +44,6 @@ const sample = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
 export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, isPaused, forceLoad = false, hideCrt = false, initialDelay }: { coverImages: string[]; title: string; isPaused?: boolean; forceLoad?: boolean; hideCrt?: boolean; initialDelay?: number }) {
   const urls = useMemo(() => {
     const normalized = (coverImages || []).map((u) => u?.trim()).filter(Boolean) as string[];
-    if (normalized.length === 0) return ['/default.jpg'];
     return normalized;
   }, [coverImages]);
 
@@ -195,7 +194,7 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
     };
   }, [shouldLoad, scheduleNext, clearTimers, isPaused]);
 
-  const currentSrc = proxied[currentIndex] || proxied[0];
+  const currentSrc = proxied[currentIndex] || '';
   const nextSrc = nextIndex !== null ? proxied[nextIndex] : null;
 
   const isFading = fadeState !== 'idle' && nextSrc;
@@ -206,7 +205,13 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
   return (
     // `.crt-lines` 套用常駐掃描線與暗角 (如果有 hideCrt 則不套用)
     <div ref={elementRef} className={`absolute inset-0 w-full h-full bg-black ${!hideCrt ? 'crt-lines' : ''}`}>
-      {!isLoaded && (
+      {/* 基礎模糊底層（提供柔和過渡，當沒有圖片時顯示黑色背景） */}
+      <div
+        className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-30 transition-all duration-1000 bg-black"
+        style={currentSrc ? { backgroundImage: `url(${currentSrc})` } : {}}
+      />
+
+      {!isLoaded && currentSrc && (
         <div className="absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2 z-20">
           <div className="size-5 border-2 border-black/10 border-t-black animate-spin rounded-full" />
           <span className="text-[8px] font-black uppercase tracking-tighter flex flex-col items-center leading-tight">
@@ -219,29 +224,31 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
       {/* 動態追加 glitch 與 signal-drop 類別 */}
       <div className={`absolute inset-0 ${glitch.active && glitch.mode === 'jitter' ? 'ztmy-glitch-jitter' : ''} ${glitch.active && glitch.mode === 'invert' ? 'ztmy-invert-flash' : ''} ${glitch.active && glitch.drop ? 'ztmy-signal-drop' : ''}`}>
         {/* 底層目前圖片 */}
-        <img
-          src={currentSrc}
-          alt={title}
-          className={`absolute inset-0 w-full h-full object-cover z-10 ${
-            transitionMode === 'block-glitch' && fadeState !== 'idle' ? 'ztmy-block-glitch-out' : ''
-          } ${
-            transitionMode === 'vhs-ff' && fadeState !== 'idle' ? 'ztmy-vhs-ff-out' : ''
-          } ${
-            transitionMode === 'pixelate' && fadeState !== 'idle' ? 'ztmy-pixelate-out' : ''
-          }`}
-          style={
-            transitionMode === 'fade'
-              ? { opacity: fadeState === 'active' ? 0 : 1, transition: `opacity ${fadeMs}ms linear` }
-              : transitionMode === 'scan-wipe'
-              ? { opacity: 1 }
-              : {
-                  animationDuration: `${fadeMs}ms`,
-                }
-          }
-          onLoad={() => setIsLoaded(true)}
-          loading={forceLoad ? "eager" : "lazy"}
-          decoding="async"
-        />
+        {currentSrc && (
+          <img
+            src={currentSrc}
+            alt={title}
+            className={`absolute inset-0 w-full h-full object-cover z-10 ${
+              transitionMode === 'block-glitch' && fadeState !== 'idle' ? 'ztmy-block-glitch-out' : ''
+            } ${
+              transitionMode === 'vhs-ff' && fadeState !== 'idle' ? 'ztmy-vhs-ff-out' : ''
+            } ${
+              transitionMode === 'pixelate' && fadeState !== 'idle' ? 'ztmy-pixelate-out' : ''
+            }`}
+            style={
+              transitionMode === 'fade'
+                ? { opacity: fadeState === 'active' ? 0 : 1, transition: `opacity ${fadeMs}ms linear` }
+                : transitionMode === 'scan-wipe'
+                ? { opacity: 1 }
+                : {
+                    animationDuration: `${fadeMs}ms`,
+                  }
+            }
+            onLoad={() => setIsLoaded(true)}
+            loading={forceLoad ? "eager" : "lazy"}
+            decoding="async"
+          />
+        )}
 
         {/* 頂層下一張圖片 */}
         {nextSrc && (
@@ -309,7 +316,7 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
         {glitch.active && glitch.mode === 'scan' && <div className="absolute inset-0 z-30 ztmy-scanline-pop" />}
 
         {/* 5. 常駐偶發效果：水平錯位橫紋 (Rolling Slice) - 只有在視野內才渲染以節省效能 */}
-        {shouldLoad && !isPaused && (
+        {shouldLoad && !isPaused && currentSrc && (
           <img
             src={currentSrc}
             alt="切片效果 (slice)"
@@ -334,7 +341,7 @@ export const MVCard = memo(function MVCard({ mv, isFav, onToggleFav, onClick, is
     .filter(a => a !== '未知' && a !== 'Unknown' && a !== 'unknown')
     .join(', ') || t('app.unknown_artist', '未知 (Unknown)');
     
-  const fallbackThumbUrl = getProxyImgUrl(mv.coverImages?.[0] || '/default.jpg', 'thumb');
+  const fallbackThumbUrl = mv.coverImages?.[0] ? getProxyImgUrl(mv.coverImages[0], 'thumb') : '';
   const [containerRef, containerWidth] = useContainerWidth();
   
   const isCompact = containerWidth < 280;

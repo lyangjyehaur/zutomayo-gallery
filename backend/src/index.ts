@@ -8,6 +8,7 @@ import authRoutes from './routes/auth.routes.js';
 import systemRoutes from './routes/system.routes.js';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { initDB } from './services/db.service.js';
+import { initGeoService } from './services/geo.service.js';
 
 const app = express();
 const PORT = process.env.PORT || 5010;
@@ -26,6 +27,9 @@ if (trustProxy === 'true') {
 
 // 初始化資料庫
 await initDB();
+
+// 在伺服器啟動時，預先將 ip2region 資料庫載入記憶體 (約 11MB)
+  initGeoService();
 
 // CORS 配置 - 僅允許特定來源
 const allowedOrigins = [
