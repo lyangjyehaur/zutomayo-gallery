@@ -847,13 +847,15 @@ function App({
                             key={groupIdx}
                             heading={
                               <div className="flex flex-col leading-tight">
-                                <span className="tracking-normal">
-                                  {group.heading.zh}
-                                </span>
-                                <span className="text-[10px] font-mono opacity-50 normal-case">
-                                  {group.heading.en}
-                                </span>
-                              </div>
+                                  <span className="tracking-normal">
+                                    {group.heading.id === 'full' ? t('app.album_category_full', '完整專輯') : 
+                                     group.heading.id === 'mini' ? t('app.album_category_mini', '迷你專輯') : 
+                                     t('app.album_category_single', '單曲 / 其他')}
+                                  </span>
+                                  <span className="text-[10px] font-mono opacity-50 normal-case">
+                                    {group.heading.en}
+                                  </span>
+                                </div>
                             }
                             className="p-2 [&_[cmdk-group-items]]:flex [&_[cmdk-group-items]]:flex-col [&_[cmdk-group-items]]:gap-1"
                           >
@@ -1446,13 +1448,13 @@ function App({
           <div className="p-6 md:p-8 border-4 border-black bg-black/5 relative group">
             <div className="absolute -top-4 left-4 md:left-6 bg-black text-main px-3 py-1 text-[10px] font-black border-2 border-main">
               <div className="flex flex-col leading-tight">
-                <span className="opacity-90">
-                  版權/法律聲明
-                </span>
-                <span className="font-mono opacity-60">
-                  Legal_Signal_Broadcast
-                </span>
-              </div>
+                  <span className="opacity-90">
+                    {t("app.footer_legal", "版權/法律聲明")}
+                  </span>
+                  <span className="font-mono opacity-60">
+                    Legal_Signal_Broadcast
+                  </span>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 min-[520px]:grid-cols-2 min-[900px]:grid-cols-3 min-[1120px]:grid-cols-4 gap-8 md:gap-10 items-center">
@@ -1460,37 +1462,46 @@ function App({
               <div className="space-y-6 min-[520px]:col-span-1 min-[900px]:col-span-2 min-[1120px]:col-span-3">
                 <div className="space-y-3">
                   <p className="text-[10px] leading-relaxed opacity-60">
-                    本站為「<span lang="ja">ずっと真夜中でいいのに。</span>
-                    」（ZUTOMAYO）粉絲建立之非官方資料庫，僅供同好交流與內容整理之用，無任何商業營利行為。
-                    <br />
-                    本站伺服器不存儲任何原始檔案，所收錄之影片、圖片、設定圖、插圖及相關視覺素材版權均屬原作者及其所屬機構所有。
-                    <br />
-                    若版權方有任何疑慮或下架要求，請與我們聯繫。
-                  </p>
-                  <p
-                    lang="ja"
-                    className="text-[10px] leading-relaxed opacity-60"
-                  >
-                    本サイトは「ずっと真夜中でいいのに。」（ZUTOMAYO）のファンによって運営されている非公式アーカイブであり、ファン同士の交流およびコンテンツの整理を目的としています。営利目的の運営は一切行っておりません。
-                    <br />
-                    本サイトのサーバーにはオリジナルのファイルは保存されておらず、掲載されている動画、画像、設定画、イラスト、その他の視覚素材の著作権は、すべて原作者および権利所有者に帰属します。
-                    <br />
-                    権利者様の方で掲載に問題がある場合や削除をご希望の際は、お手数ですがご連絡いただけますようお願い申し上げます。
-                  </p>
-                  <p
-                    lang="en"
-                    className="text-[10px] leading-relaxed opacity-60"
-                  >
-                    This is an unofficial fan-made archive site for "ZUTOMAYO"
-                    (Zutto Mayonaka de ii Noni.), created for community exchange
-                    and content organization with no commercial intent. <br />
-                    No original image files are stored on our servers. All
-                    copyrights to the videos, images, concept art,
-                    illustrations, and related visual materials belong to their
-                    respective creators and organizations. <br />
-                    If you are a copyright holder and have concerns or requests
-                    for content removal, please contact us.
-                  </p>
+                      {t("app.disclaimer_1").split("「")[0] || t("app.disclaimer_1")}
+                      {t("app.disclaimer_1").includes("「") && (
+                        <>
+                          「<span lang="ja">ずっと真夜中でいいのに。</span>」
+                          {t("app.disclaimer_1").split("」")[1]}
+                        </>
+                      )}
+                      <br />
+                      {t("app.disclaimer_2")}
+                      <br />
+                      {t("app.disclaimer_3")}
+                    </p>
+                  {i18n.language !== 'ja' && (
+                      <p
+                        lang="ja"
+                        className="text-[10px] leading-relaxed opacity-60"
+                      >
+                        本サイトは「ずっと真夜中でいいのに。」（ZUTOMAYO）のファンによって運営されている非公式アーカイブであり、ファン同士の交流およびコンテンツの整理を目的としています。営利目的の運営は一切行っておりません。
+                        <br />
+                        本サイトのサーバーにはオリジナルのファイルは保存されておらず、掲載されている動画、画像、設定画、イラスト、その他の視覚素材の著作権は、すべて原作者および権利所有者に帰属します。
+                        <br />
+                        権利者様の方で掲載に問題がある場合や削除をご希望の際は、お手数ですがご連絡いただけますようお願い申し上げます。
+                      </p>
+                    )}
+                    {i18n.language !== 'en' && (
+                      <p
+                        lang="en"
+                        className="text-[10px] leading-relaxed opacity-60"
+                      >
+                        This is an unofficial fan-made archive site for "ZUTOMAYO"
+                        (Zutto Mayonaka de ii Noni.), created for community exchange
+                        and content organization with no commercial intent. <br />
+                        No original image files are stored on our servers. All
+                        copyrights to the videos, images, concept art,
+                        illustrations, and related visual materials belong to their
+                        respective creators and organizations. <br />
+                        If you are a copyright holder and have concerns or requests
+                        for content removal, please contact us.
+                      </p>
+                    )}
                 </div>
               </div>
 

@@ -97,8 +97,6 @@
     "later": "後で",
     "syncing_visual": "ビジュアルを同期中...",
     "release": "リリース",
-    "creator": "制作",
-    "favorite": "お気に入り",
     "unknown_artist": "未知 (Unknown)",
     "image": "画像 (image)",
     "no_desc": "説明がありません (NO_METADATA_FOUND)",
@@ -152,5 +150,8 @@
     "thanks": "改善へのご協力ありがとうございます！",
     "question": "現在のページの読み込み速度はどうですか？",
     "hint": "ハーフスター評価に対応、スワイプでプレビュー"
-  }
+  },
+  "album_category_mini": "ミニアルバム",
+  "album_category_full": "フルアルバム",
+  "album_category_single": "シングル / その他"
 }

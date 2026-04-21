@@ -150,5 +150,8 @@
     "thanks": "谢谢您协助我们变得更好！",
     "question": "您觉得目前的网页加载速度如何？",
     "hint": "支持半星评分，滑动预览"
-  }
+  },
+  "album_category_mini": "迷你专辑",
+  "album_category_full": "完整专辑",
+  "album_category_single": "单曲 / 其他"
 }

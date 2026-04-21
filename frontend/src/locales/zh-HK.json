@@ -150,5 +150,8 @@
     "thanks": "多謝你幫我哋做得更好！",
     "question": "你覺得依家嘅網頁載入速度點樣？",
     "hint": "支援半星評分，滑動預覽"
-  }
+  },
+  "album_category_mini": "迷你專輯",
+  "album_category_full": "完整專輯",
+  "album_category_single": "單曲 / 其他"
 }

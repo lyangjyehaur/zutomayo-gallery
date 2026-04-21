@@ -1,7 +1,7 @@
 // 專輯分類配置 (用來控制首頁下拉選單的排序與分組)
-export const ALBUM_CATEGORIES: Record<string, { label: { zh: string; en: string }; order: number; items: string[] }> = {
+export const ALBUM_CATEGORIES: Record<string, { label: { id: string; zh: string; en: string }; order: number; items: string[] }> = {
   mini: {
-    label: { zh: "迷你專輯", en: "MINI ALBUM" },
+    label: { id: "mini", zh: "迷你專輯", en: "MINI ALBUM" },
     order: 1,
     items: [
       "虚仮の一念海馬に託す",
@@ -12,12 +12,12 @@ export const ALBUM_CATEGORIES: Record<string, { label: { zh: string; en: string 
     ],
   },
   full: {
-    label: { zh: "完整專輯", en: "FULL ALBUM" },
+    label: { id: "full", zh: "完整專輯", en: "FULL ALBUM" },
     order: 2,
     items: ["形藻土", "沈香学", "ぐされ", "潜潜話"],
   },
   single: {
-    label: { zh: "單曲 / 其他", en: "SINGLE / OTHERS" },
+    label: { id: "single", zh: "單曲 / 其他", en: "SINGLE / OTHERS" },
     order: 3,
     items: [], // 未在上方列表中的都會被自動歸類到這裡
   }

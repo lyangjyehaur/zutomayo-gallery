@@ -33,7 +33,7 @@
     "current_filters": "Current Filters:",
     "year": "Year",
     "album": "Album",
-    "creator": "Creator",
+    "creator": "Artist",
     "clear_all": "Clear All",
     "fav_notice_1": "Note: The favorite feature uses browser local storage.",
     "fav_notice_2": "If you clear browser data or change devices, your favorites will be lost.",
@@ -82,7 +82,7 @@
     "lighting": "Lighting",
     "turn_off_desc": "Turn off the lights, return to 'Forever Midnight'",
     "turn_on_desc": "Are you sure? 'Forever Midnight' is the best experience",
-    "disclaimer_1": "This site is an unofficial database created by fans of 'Zutto Mayonaka de Iinoni.' (ZUTOMAYO), solely for the purpose of community interaction and content curation, with no commercial intent.",
+    "disclaimer_1": "This site is an unofficial database created by fans of 「Zutto Mayonaka de Iinoni.」 (ZUTOMAYO), solely for the purpose of community interaction and content curation, with no commercial intent.",
     "disclaimer_2": "The servers of this site do not store any original files. The copyright of all included videos, images, design sheets, illustrations, and related visual materials belongs to the original creators and their affiliated organizations.",
     "disclaimer_3": "If copyright holders have any concerns or takedown requests, please contact us.",
     "external_resources": "External Resources",
@@ -97,8 +97,6 @@
     "later": "Later",
     "syncing_visual": "Syncing Visual...",
     "release": "Release",
-    "creator": "Artist",
-    "favorite": "Favorite",
     "unknown_artist": "Unknown",
     "image": "Image",
     "no_desc": "No description (NO_METADATA_FOUND)",
@@ -152,5 +150,8 @@
     "thanks": "Thank you for helping us improve!",
     "question": "How do you feel about the current page loading speed?",
     "hint": "Supports half-star ratings, swipe to preview"
-  }
+  },
+  "album_category_mini": "Mini Album",
+  "album_category_full": "Full Album",
+  "album_category_single": "Single / Others"
 }
