@@ -260,11 +260,11 @@ deploy_backend() {
     echo -e "${YELLOW}清理舊的 node_modules...${NC}"
     rm -rf node_modules
     
-    echo "安裝後端依賴..."
+    echo "安裝後端依賴 (僅生產環境)..."
     if [ "$PKG_MANAGER" = "pnpm" ]; then
         # pnpm >= 9 預設會阻擋安裝腳本 (better-sqlite3 等原生套件需要)，需手動允許
         pnpm config set ignore-scripts false
-        pnpm install --prod=false # 必須安裝 devDependencies 才能編譯 TypeScript
+        pnpm install --prod=true # 伺服器只需安裝 dependencies，不需 devDependencies
         
         echo -e "${YELLOW}強制重建 pnpm 二進位套件 (better-sqlite3)...${NC}"
         pnpm rebuild
@@ -272,13 +272,12 @@ deploy_backend() {
         # 將設定改回預設值以策安全
         pnpm config set ignore-scripts true
     else
-        npm install --production=false
+        npm install --production=true
         echo -e "${YELLOW}強制重建 npm 二進位套件 (better-sqlite3)...${NC}"
         npm rebuild
     fi
     
-    echo "編譯後端程式碼..."
-    $PKG_BUILD
+    echo -e "${GREEN}使用本地 (Mac) 上傳的編譯產物，跳過伺服器端 tsc 編譯...${NC}"
     
     echo -e "\n${YELLOW}[Backend] 準備備份後端資料...${NC}"
     TIMESTAMP=$(date +"%Y%m%d_%H%M%S")

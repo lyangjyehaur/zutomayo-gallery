@@ -1,5 +1,6 @@
 import path from 'path';
 import fs from 'fs';
+import geoip from 'geoip-lite';
 import { fileURLToPath } from 'url';
 import { Ip2Region } from '../utils/ip2region.js';
 
@@ -16,14 +17,18 @@ let searcher: Ip2Region | null = null;
  * 初始化 Geo 服務 (載入資料庫至記憶體)
  * 改為啟動時直接讀取本地檔案，由外部 crontab 腳本負責下載與更新
  */
-export const initGeoService = () => {
+export const initGeoService = async () => {
   try {
+    // 1. 載入 ip2region (中國大陸高精度)
     if (fs.existsSync(dbPath)) {
       searcher = new Ip2Region(dbPath);
       console.log('[GeoService] ip2region database loaded into memory.');
     } else {
       console.warn(`[GeoService] ip2region.xdb not found at ${dbPath}. Please run the update script.`);
     }
+
+    // 2. geoip-lite 內建自帶資料庫，會在首次呼叫 lookup 時自動載入記憶體
+    console.log('[GeoService] geoip-lite is ready.');
   } catch (error) {
     console.error('[GeoService] Failed to initialize geo service:', error);
   }
@@ -32,29 +37,79 @@ export const initGeoService = () => {
 /**
  * 查詢 IP 的完整地理資訊
  */
-export const getFullGeoInfo = async (ip: string): Promise<{ country: string, region: string, province: string, city: string, isp: string, raw: string } | null> => {
+export const getFullGeoInfo = async (ip: string): Promise<{ country: string, region: string, province: string, city: string, isp: string, raw: string, source: 'ip2region' | 'geoip-lite', ip2regionRaw?: string, geoipRaw?: string } | null> => {
   if (!searcher) {
-    initGeoService();
+    await initGeoService();
   }
 
+  let ip2regionResult: string | null = null;
+  let geoipResult: geoip.Lookup | null = null;
+
+  // 1. 同時執行兩個引擎的查詢
   if (searcher) {
-    const result = searcher.search(ip);
-    if (result) {
-      // ip2region 格式: 國家|區域|省份|城市|ISP
-      // 範例 1: 中国|0|广东省|深圳市|电信
-      // 範例 2: 美国|0|加利福尼亚|洛杉矶|Level3
-      // 注意：如果某個欄位沒有資料，會用 '0' 表示
-      const parts = result.split('|');
-      
+    ip2regionResult = searcher.search(ip);
+  }
+  
+  try {
+    geoipResult = geoip.lookup(ip);
+  } catch (e) {
+    console.warn(`[GeoService] geoip-lite lookup failed for ${ip}:`, e);
+  }
+
+  const ip2regionRaw = ip2regionResult || undefined;
+  const geoipRaw = geoipResult ? JSON.stringify(geoipResult) : undefined;
+
+  // 2. 判斷邏輯：優先採用 ip2region 的大中華區結果
+  if (ip2regionResult) {
+    const parts = ip2regionResult.split('|');
+    const country = parts[0] === '0' ? 'UNKNOWN' : parts[0];
+    const province = parts[2] === '0' ? '' : parts[2];
+    
+    // 如果 ip2region 判斷是亞洲核心區域，直接採信它的結果作為主數據
+    if (['中国', '台湾', '香港', '澳门'].includes(country) || ['台湾', '香港', '澳门'].includes(province)) {
       return {
-        country: parts[0] === '0' ? 'UNKNOWN' : parts[0],
+        country,
         region: parts[1] === '0' ? '' : parts[1],
-        province: parts[2] === '0' ? '' : parts[2],
+        province,
         city: parts[3] === '0' ? '' : parts[3],
         isp: parts[4] === '0' ? '' : parts[4],
-        raw: result // 新增：保存最原始的 ip2region 查詢結果字串
+        raw: ip2regionResult,
+        source: 'ip2region',
+        ip2regionRaw,
+        geoipRaw
       };
     }
+  }
+  
+  // 3. 海外 IP，採用 geoip-lite 作為主數據
+  if (geoipResult && geoipResult.country) {
+    return {
+      country: geoipResult.country, // 直接回傳標準代碼 (如 US, GB)
+      region: geoipResult.region || '',
+      province: geoipResult.region || '', // geoip-lite 的 region 通常對應省/州
+      city: geoipResult.city || '',
+      isp: '', // geoip-lite 免費版無 ISP
+      raw: JSON.stringify(geoipResult),
+      source: 'geoip-lite',
+      ip2regionRaw,
+      geoipRaw
+    };
+  }
+  
+  // 4. Fallback (最差情況：geoip-lite 查不到，但 ip2region 之前有查到海外資訊)
+  if (ip2regionResult) {
+    const parts = ip2regionResult.split('|');
+    return {
+      country: parts[0] === '0' ? 'UNKNOWN' : parts[0],
+      region: parts[1] === '0' ? '' : parts[1],
+      province: parts[2] === '0' ? '' : parts[2],
+      city: parts[3] === '0' ? '' : parts[3],
+      isp: parts[4] === '0' ? '' : parts[4],
+      raw: ip2regionResult,
+      source: 'ip2region',
+      ip2regionRaw,
+      geoipRaw
+    };
   }
   
   return null;
@@ -79,12 +134,17 @@ export const getCountryCode = async (ip: string): Promise<string> => {
   const geo = await getFullGeoInfo(ip);
   
   if (geo && geo.country !== 'UNKNOWN') {
+    // 若為 geoip-lite 回傳的結果，它本身就已經是 ISO 2 字母代碼 (例如 'US', 'GB')
+    if (geo.source === 'geoip-lite') {
+      return geo.country;
+    }
+    
     // 特殊處理：ip2region 有時會把台港澳歸在 country="中国", province="台湾"
     if (geo.province === '台湾') return 'TW';
     if (geo.province === '香港') return 'HK';
     if (geo.province === '澳门') return 'MO';
     
-    // 從映射表中尋找標準代碼
+    // 從映射表中尋找標準代碼 (針對 ip2region 的中文回傳)
     if (countryToIsoMap[geo.country]) {
       return countryToIsoMap[geo.country];
     }

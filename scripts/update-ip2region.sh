@@ -1,7 +1,7 @@
 #!/bin/bash
 # scripts/update-ip2region.sh
 # ---------------------------------------------------------
-# 用於 crontab 定期更新 ip2region.xdb 檔案的腳本
+# 用於 crontab 定期更新 ip2region.xdb 與 DB-IP 檔案的腳本
 # 建議設定每月執行一次，例如: 0 3 1 * * /path/to/update-ip2region.sh
 # ---------------------------------------------------------
 
@@ -15,29 +15,38 @@ DB_PATH="$DATA_DIR/ip2region.xdb"
 URL="https://github.com/lionsoul2014/ip2region/raw/refs/heads/master/data/ip2region_v4.xdb"
 
 echo "=========================================="
-echo "開始更新 ip2region 數據庫..."
-echo "目標路徑: $DB_PATH"
+echo "開始更新 IP 數據庫..."
 echo "=========================================="
 
 # 確保資料夾存在
 mkdir -p "$DATA_DIR"
 
-# 使用 curl 下載 (-f 失敗不輸出, -L 跟隨重定向, -o 輸出檔案)
+# 1. 更新 ip2region
+echo "下載 ip2region (中國大陸精準庫)..."
 if curl -f -L -o "$DB_PATH.tmp" "$URL"; then
-    # 覆蓋舊檔案
     mv "$DB_PATH.tmp" "$DB_PATH"
-    echo "✅ 下載成功，檔案已更新至 $DB_PATH"
-    
-    # 重啟後端服務讓記憶體重新載入最新的 xdb
-    echo "⏳ 正在重啟後端服務..."
-    if command -v pm2 &> /dev/null; then
-        pm2 restart ztmy-gallery-api
-        echo "✅ 已重啟後端服務 (pm2 restart ztmy-gallery-api)"
-    else
-        echo "⚠️ 未偵測到 pm2 命令，請確保手動重啟您的後端服務讓設定生效。"
-    fi
+    echo "✅ ip2region 下載成功"
 else
-    echo "❌ 下載失敗！請檢查網路連線或 GitHub 存取狀態。"
+    echo "❌ ip2region 下載失敗！"
     rm -f "$DB_PATH.tmp"
-    exit 1
 fi
+
+# 2. 更新 geoip-lite (海外精準庫)
+echo "更新 geoip-lite 內建資料庫..."
+cd "$PROJECT_DIR/backend" || exit
+if command -v npm &> /dev/null; then
+    npm run updatedb || npx geoip-lite-update
+    echo "✅ geoip-lite 資料庫更新完成"
+else
+    echo "⚠️ 找不到 npm，跳過 geoip-lite 更新"
+fi
+
+# 重啟後端服務讓記憶體重新載入最新的資料庫
+echo "⏳ 正在重啟後端服務..."
+if command -v pm2 &> /dev/null; then
+    pm2 restart ztmy-gallery-api
+    echo "✅ 已重啟後端服務 (pm2 restart ztmy-gallery-api)"
+else
+    echo "⚠️ 未偵測到 pm2 命令，請確保手動重啟您的後端服務讓設定生效。"
+fi
+
