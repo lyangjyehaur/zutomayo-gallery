@@ -16,7 +16,7 @@
     "dotenv": "^17.4.2",
     "express": "^4.19.2",
     "express-rate-limit": "^7.1.5",
-    "geoip-lite": "^2.0.1",
+    "geoip-lite": "^1.4.10",
     "helmet": "^7.1.0",
     "probe-image-size": "^7.2.3",
     "zod": "^3.22.4"
