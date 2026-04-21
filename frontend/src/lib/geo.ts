@@ -153,9 +153,7 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
         const payload: any = {
           country: ipCountry,
           rawCountry: rawCountry || ipCountry, // 同時上報原始的中文國家名稱
-          rawString: rawString || '',          // 上報主要的字串
-          ip2regionRaw: ip2regionRaw || '',    // 獨立上報 ip2region 結果
-          geoipRaw: geoipRaw || '',            // 獨立上報 geoip-lite 結果
+          ip2regionRaw: ip2regionRaw || '',    // 獨立上報 ip2region 結果字串
           isVPN: isVPN ? 'Yes' : 'No',
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           language: navigator.language || navigator.languages?.[0] || 'unknown'
@@ -167,6 +165,23 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
           if (details.province) payload.province = details.province;
           if (details.city) payload.city = details.city;
           if (details.isp) payload.isp = details.isp;
+        }
+        
+        // 解析 geoip-lite 的 JSON 字串，並加上 geoip_ 前綴平鋪到 payload 中
+        if (geoipRaw) {
+          try {
+            const geoipObj = JSON.parse(geoipRaw);
+            if (geoipObj.country) payload.geoip_country = geoipObj.country;
+            if (geoipObj.region) payload.geoip_region = geoipObj.region;
+            if (geoipObj.city) payload.geoip_city = geoipObj.city;
+            if (geoipObj.timezone) payload.geoip_timezone = geoipObj.timezone;
+            if (geoipObj.ll && Array.isArray(geoipObj.ll)) {
+              payload.geoip_lat = geoipObj.ll[0];
+              payload.geoip_lon = geoipObj.ll[1];
+            }
+          } catch (e) {
+            console.warn('[Geo] Failed to parse geoipRaw for Umami tracking');
+          }
         }
         
         (window as any).umami.track('Z_Geo_Location_Detected', payload);
