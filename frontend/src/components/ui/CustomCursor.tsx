@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 
 export default function CustomCursor() {
   const cursorRef = useRef<HTMLImageElement>(null);
-  const [cursorType, setCursorType] = useState('Normal');
+  const cursorTypeRef = useRef('Normal');
   const location = useLocation();
 
   const isAdminRoute = location.pathname.startsWith('/admin');
@@ -84,9 +84,10 @@ export default function CustomCursor() {
       // Dynamic re-parenting if fancybox is open
       // 由於 Fancybox 5 使用了特殊的容器層級或 transform，有時單純的 z-index 無法突破。
       // 我們恢復手動將游標 appendChild 到 Fancybox 容器內的作法，以確保它永遠在最上層。
-      // 注意：這一步必須使用 requestAnimationFrame 或放在 setState 之外，避免與 React 渲染衝突
+      // 注意：這一步必須放在 setState 之外，避免與 React 渲染衝突
       if (cursorRef.current && e.type !== 'interval') {
         const fancyboxContainer = document.querySelector('.fancybox__container');
+        // 只有當 Fancybox 真正在畫面上的時候，才執行 DOM 搬家
         if (fancyboxContainer && cursorRef.current.parentElement !== fancyboxContainer) {
           fancyboxContainer.appendChild(cursorRef.current);
         } else if (!fancyboxContainer && cursorRef.current.parentElement !== document.body) {
@@ -111,11 +112,14 @@ export default function CustomCursor() {
       const actualCursor = cursorParts[cursorParts.length - 1].trim();
 
       // 優化：避免 React 重複渲染，同時解決 stale closure (過期閉包) 導致的狀態卡死問題
+      // 【終極效能方案】：完全放棄 useState 驅動，改用 ref 直接操作 DOM 替換 src
       const setTypeIfDifferent = (newType: string) => {
-        setCursorType((prev) => {
-          if (prev !== newType) return newType;
-          return prev;
-        });
+        if (cursorTypeRef.current !== newType) {
+          cursorTypeRef.current = newType;
+          if (cursorRef.current) {
+            cursorRef.current.src = `/assets/cursor-png/${newType}.apng`;
+          }
+        }
       };
 
       // 檢查是否是在 Waline 評論區內 (Waline 內部使用了很多自定義元素，有些可能沒有顯式聲明 cursor)
@@ -133,6 +137,10 @@ export default function CustomCursor() {
                              target.closest('.fancybox__content') !== null ||
                              target.tagName.toLowerCase() === 'img' && target.closest('.fancybox__slide') !== null;
 
+      const isUnderFancybox = target.closest('.fancybox__container') !== null || 
+                              target.classList.contains('fancybox__container') ||
+                              document.querySelector('.fancybox__container') !== null;
+
       // 檢查是否是一般的互動元素 (即使它們沒有顯式設置 cursor: pointer)
       const isInteractiveElement = 
         target.tagName.toLowerCase() === 'a' || 
@@ -145,7 +153,7 @@ export default function CustomCursor() {
       // 大部分普通的 div/span/p 都是 auto，直接返回 Normal 可以省下 90% 的判斷時間
       // 注意：我們必須確保它不是任何需要特殊處理的元素（如 Waline, Fancybox, input, textarea 等）
       // 使用 isContentEditable 來判斷那些被設定為可以編輯的 div (例如 Waline 編輯器)
-      if (actualCursor === 'auto' && !isWalineTarget && !isWalineButton && !isFancyboxTarget && !isFancyboxGrab && !isInteractiveElement && target.tagName.toLowerCase() !== 'input' && target.tagName.toLowerCase() !== 'textarea' && !target.isContentEditable) {
+      if (actualCursor === 'auto' && !isWalineTarget && !isWalineButton && !isFancyboxTarget && !isFancyboxGrab && !isUnderFancybox && !isInteractiveElement && target.tagName.toLowerCase() !== 'input' && target.tagName.toLowerCase() !== 'textarea' && !target.isContentEditable) {
         // 如果有 title 還是要顯示 Help
         if (target.hasAttribute('title') || target.closest('[title]')) {
           setTypeIfDifferent('Help');
@@ -190,6 +198,13 @@ export default function CustomCursor() {
       } else if (actualCursor === 'not-allowed') {
         setTypeIfDifferent('Unavailable');
       } else {
+        // 如果在 Fancybox 中且沒有命中上述特定的指標，而且是 auto 的話，為了保證指針不消失，先預設給 Normal
+        // 但排除互動元素，因為互動元素應該要是 Link
+        if (isUnderFancybox && actualCursor === 'auto' && !isFancyboxTarget && !isInteractiveElement) {
+          setTypeIfDifferent('Normal');
+          return;
+        }
+
         // 如果上面都沒命中，但它有 title 或 disabled 屬性，我們手動補位
         if (target.hasAttribute('disabled') || target.closest('[disabled]')) {
           setTypeIfDifferent('Unavailable');
@@ -248,7 +263,7 @@ export default function CustomCursor() {
   return (
     <img
       ref={cursorRef}
-      src={`/assets/cursor-png/${cursorType}.apng`}
+      src={`/assets/cursor-png/${cursorTypeRef.current}.apng`}
       alt="cursor"
       className="pointer-events-none"
       style={{
