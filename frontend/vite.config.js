@@ -36,6 +36,8 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,ttf}'],
         navigateFallback: 'index.html',
+        navigateFallbackDenylist: [/^\/api\//, /^\/admin\//],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 放寬到 5MB 以容納大型 JS chunk
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\.ztmr\.club\/.*/i,
