@@ -146,7 +146,12 @@
     "latest": "Reciente",
     "oldest": "Antiguo",
     "hottest": "Popular",
-    "optional": "Opcional"
+    "optional": "Opcional",
+    "seconds": "segundos atrás",
+    "minutes": "minutos atrás",
+    "hours": "horas atrás",
+    "days": "días atrás",
+    "now": "justo ahora"
   },
   "geo": {
     "detecting": "Detectando...",

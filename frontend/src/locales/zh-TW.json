@@ -146,7 +146,12 @@
     "latest": "最新",
     "oldest": "最早",
     "hottest": "熱門",
-    "optional": "可選"
+    "optional": "可選",
+    "seconds": "秒前",
+    "minutes": "分鐘前",
+    "hours": "小時前",
+    "days": "天前",
+    "now": "剛剛"
   },
   "geo": {
     "detecting": "判斷中...",

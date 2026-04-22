@@ -146,7 +146,12 @@
     "latest": "최신",
     "oldest": "오래된 순",
     "hottest": "인기",
-    "optional": "선택 사항"
+    "optional": "선택 사항",
+    "seconds": "초 전",
+    "minutes": "분 전",
+    "hours": "시간 전",
+    "days": "일 전",
+    "now": "방금 전"
   },
   "geo": {
     "detecting": "판단 중...",

@@ -193,7 +193,12 @@ export function WalineComments({
             latest: t("waline.latest", "最新"),
             oldest: t("waline.oldest", "最久"),
             hottest: t("waline.hottest", "最熱"),
-            optional: t("waline.optional", "可選")
+            optional: t("waline.optional", "可選"),
+            seconds: t("waline.seconds", "秒前"),
+            minutes: t("waline.minutes", "分鐘前"),
+            hours: t("waline.hours", "小時前"),
+            days: t("waline.days", "天前"),
+            now: t("waline.now", "剛剛")
           },
           lang: currentLang
         });
