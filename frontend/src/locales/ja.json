@@ -103,6 +103,7 @@
     "pwa_recover_step_2": "サイトのキャッシュを削除",
     "pwa_recover_step_3": "再読み込みして最新バージョンを取得",
     "pwa_recover_action": "削除して再読み込み",
+    "pwa_offline_ready": "オフラインで利用可能になりました",
     "pwa_feature_1": "没入感のある全画面表示",
     "pwa_feature_2": "動的キャッシュによるオフライン閲覧",
     "pwa_feature_3": "長押しによるクイックアクセス",

@@ -103,6 +103,7 @@
     "pwa_recover_step_2": "Borrar cachés del sitio",
     "pwa_recover_step_3": "Recargar para obtener la última versión",
     "pwa_recover_action": "Borrar y recargar",
+    "pwa_offline_ready": "Aplicación lista para funcionar sin conexión",
     "pwa_feature_1": "Experiencia inmersiva a pantalla completa",
     "pwa_feature_2": "Caché de imágenes dinámico para uso sin conexión",
     "pwa_feature_3": "Atajos de la aplicación para navegación rápida",

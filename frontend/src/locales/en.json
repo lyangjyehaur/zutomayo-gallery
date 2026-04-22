@@ -103,6 +103,7 @@
     "pwa_recover_step_2": "Clear site caches",
     "pwa_recover_step_3": "Reload to get the latest version",
     "pwa_recover_action": "Clear & Reload",
+    "pwa_offline_ready": "App ready to work offline",
     "pwa_feature_1": "Immersive fullscreen experience",
     "pwa_feature_2": "Dynamic image caching for offline viewing",
     "pwa_feature_3": "Long-press app shortcuts for quick navigation",

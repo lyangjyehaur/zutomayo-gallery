@@ -103,6 +103,7 @@
     "pwa_recover_step_2": "清除站點快取",
     "pwa_recover_step_3": "重新載入以取得最新版本",
     "pwa_recover_action": "清除並重新載入",
+    "pwa_offline_ready": "PWA 準備就緒，可離線瀏覽",
     "pwa_feature_1": "無邊框沉浸式全螢幕瀏覽",
     "pwa_feature_2": "圖片動態快取，離線也能看",
     "pwa_feature_3": "支援桌面長按捷徑快速導覽",

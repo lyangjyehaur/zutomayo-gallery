@@ -21,12 +21,12 @@ export function PWAPrompt() {
 
   useEffect(() => {
     if (offlineReady) {
-      toast.success('App ready to work offline', {
+      toast.success(t('app.pwa_offline_ready', 'PWA 準備就緒，可離線瀏覽'), {
         duration: 4000,
         onDismiss: () => setOfflineReady(false),
       });
     }
-  }, [offlineReady, setOfflineReady]);
+  }, [offlineReady, setOfflineReady, t]);
 
   useEffect(() => {
     if (needRefresh) {

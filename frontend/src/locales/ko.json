@@ -103,6 +103,7 @@
     "pwa_recover_step_2": "사이트 캐시 삭제",
     "pwa_recover_step_3": "최신 버전을 위해 다시 불러오기",
     "pwa_recover_action": "삭제 후 새로고침",
+    "pwa_offline_ready": "앱을 오프라인에서 사용할 준비가 되었습니다",
     "pwa_feature_1": "몰입감 있는 전체 화면 브라우징",
     "pwa_feature_2": "오프라인에서도 볼 수 있는 동적 이미지 캐시",
     "pwa_feature_3": "바탕 화면 길게 누르기 바로가기 지원",
