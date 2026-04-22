@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { MODAL_THEME } from '@/lib/theme'
 
 export function ModalBackdrop({ onClick }: { onClick?: () => void }) {
   useEffect(() => {
@@ -12,7 +13,7 @@ export function ModalBackdrop({ onClick }: { onClick?: () => void }) {
 
   return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998]"
+      className={`fixed inset-0 z-[9998] ${MODAL_THEME.overlay.dialog}`}
       onClick={(e) => {
         e.preventDefault()
         e.stopPropagation()
