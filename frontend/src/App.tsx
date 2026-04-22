@@ -1273,10 +1273,10 @@ function App({
                       <div className="flex flex-col gap-2 mt-2 text-[15px]">
                           <span>{t("app.install_pwa_desc", "將網站加入主畫面，獲得最佳體驗：")}</span>
                           <ul className="list-disc list-outside ml-5 mt-1 space-y-2 opacity-80 text-left">
-                            <li className="leading-snug">無邊框沉浸式全螢幕瀏覽</li>
-                            <li className="leading-snug">圖片動態快取，離線也能看</li>
-                            <li className="leading-snug">支援桌面長按捷徑快速導覽</li>
-                            <li className="leading-snug">與原生 App 相同的順暢體驗</li>
+                            <li className="leading-snug">{t("app.pwa_feature_1", "無邊框沉浸式全螢幕瀏覽")}</li>
+                            <li className="leading-snug">{t("app.pwa_feature_2", "圖片動態快取，離線也能看")}</li>
+                            <li className="leading-snug">{t("app.pwa_feature_3", "支援桌面長按捷徑快速導覽")}</li>
+                            <li className="leading-snug">{t("app.pwa_feature_4", "與原生 App 相同的順暢體驗")}</li>
                           </ul>
                         </div>
                       ),

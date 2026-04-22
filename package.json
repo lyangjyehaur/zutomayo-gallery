@@ -1,6 +1,6 @@
 {
   "name": "zutomayo-gallery",
-  "version": "3.4.3",
+  "version": "3.4.4",
   "type": "module",
   "scripts": {
     "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
