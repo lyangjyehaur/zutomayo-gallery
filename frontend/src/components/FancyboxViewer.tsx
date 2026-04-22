@@ -40,15 +40,21 @@ interface ResponsiveMasonryProps {
   columnClassName?: string;
 }
 
-const getColumnCount = (breakpointColumns: typeof GALLERY_BREAKPOINTS) => {
+const getColumnCount = (breakpointColumns: any) => {
+  if (typeof window === 'undefined') return breakpointColumns.default ?? 2;
   const viewportWidth = window.innerWidth;
-  if (viewportWidth >= 1024 && breakpointColumns[1024]) {
-    return breakpointColumns[1024];
-  } else if (viewportWidth >= 768 && breakpointColumns[768]) {
-    return breakpointColumns[768];
-  } else if (viewportWidth >= 500 && breakpointColumns[500]) {
-    return breakpointColumns[500];
+  
+  const breakpoints = Object.keys(breakpointColumns)
+    .map(k => parseInt(k, 10))
+    .filter(k => !isNaN(k))
+    .sort((a, b) => b - a);
+
+  for (const bp of breakpoints) {
+    if (viewportWidth >= bp) {
+      return breakpointColumns[bp];
+    }
   }
+  
   return breakpointColumns.default ?? 2;
 };
 
@@ -62,17 +68,24 @@ function ResponsiveMasonry({
 
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout>;
+    let rAFId: number;
+
     const updateColumns = () => {
       clearTimeout(timeoutId);
+      if (rAFId) cancelAnimationFrame(rAFId);
+
       timeoutId = setTimeout(() => {
-        setColumnCount(getColumnCount(breakpointColumns));
+        rAFId = requestAnimationFrame(() => {
+          setColumnCount(getColumnCount(breakpointColumns));
+        });
       }, 150); // Debounce resize to prevent excessive re-renders
     };
 
-    window.addEventListener('resize', updateColumns);
+    window.addEventListener('resize', updateColumns, { passive: true });
     return () => {
       window.removeEventListener('resize', updateColumns);
       clearTimeout(timeoutId);
+      if (rAFId) cancelAnimationFrame(rAFId);
     };
   }, [breakpointColumns]);
 
@@ -85,7 +98,7 @@ function ResponsiveMasonry({
       const columnIndex = index % safeColumnCount;
       const key = React.isValidElement(child) && child.key ? child.key : index;
       columns[columnIndex].push(
-        <div key={key} className={`mb-4 ${columnClassName}`}>
+        <div key={key} className={`w-full ${columnClassName}`}>
           {child}
         </div>,
       );
@@ -97,9 +110,12 @@ function ResponsiveMasonry({
   const columns = distributeChildren();
 
   return (
-    <div className={`flex gap-4 ${className}`}>
+    <div 
+      className={`grid items-start gap-2 md:gap-3 ${className}`}
+      style={{ gridTemplateColumns: `repeat(${columnCount || 1}, minmax(0, 1fr))` }}
+    >
       {columns.map((columnChildren, index) => (
-        <div key={index} className="flex-1 min-w-0">
+        <div key={index} className="flex flex-col gap-2 md:gap-3 min-w-0 w-full overflow-hidden">
           {columnChildren}
         </div>
       ))}
@@ -277,19 +293,24 @@ const SkeletonHeader = () => (
   </header>
 );
 
+const loadedImagesCache = new Set<string>();
+const dimensionCache = new Map<string, { width: number; height: number }>();
+
 interface PhotoItemProps {
   photo: PhotoData;
   index: number;
   onPhotoClick?: (index: number) => void;
   delayMs?: number;
-  key?: string | number;
+  isNewItem?: boolean;
 }
 
-const PhotoItem = ({ photo, index, onPhotoClick, delayMs }: PhotoItemProps) => {
+const PhotoItem = ({ photo, index, onPhotoClick, delayMs, isNewItem = true }: PhotoItemProps) => {
   const { t } = useTranslation();
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(() => loadedImagesCache.has(photo.src));
   const [actualDimensions, setActualDimensions] = useState<{ width: number; height: number } | null>(
-    photo.width && photo.height ? { width: photo.width, height: photo.height } : null,
+    () => (photo.width && photo.height) 
+      ? { width: photo.width, height: photo.height } 
+      : (dimensionCache.get(photo.src) || null)
   );
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -310,11 +331,11 @@ const PhotoItem = ({ photo, index, onPhotoClick, delayMs }: PhotoItemProps) => {
   return (
     <div
       ref={containerRef}
-      className="mb-4 p-1 animate-in fade-in slide-in-from-bottom-4 duration-500 motion-reduce:animate-none min-h-0 min-w-0 w-full"
+      className={`p-1 min-h-0 min-w-0 w-full ${isNewItem ? 'animate-in fade-in slide-in-from-bottom-4 duration-500 motion-reduce:animate-none' : ''}`}
       style={{
         contentVisibility: 'auto', 
         containIntrinsicSize: 'auto 300px',
-        ...(delayMs !== undefined ? { animationDelay: `${delayMs}ms`, animationFillMode: 'both' } : {})
+        ...(isNewItem && delayMs !== undefined ? { animationDelay: `${delayMs}ms`, animationFillMode: 'both' } : {})
       }}
     >
       <div 
@@ -352,10 +373,13 @@ const PhotoItem = ({ photo, index, onPhotoClick, delayMs }: PhotoItemProps) => {
                 willChange: 'opacity'
               }}
               onLoad={(e) => {
+                loadedImagesCache.add(photo.src);
                 setIsLoaded(true);
                 const target = e.target as HTMLImageElement;
                 if (!actualDimensions && target.naturalWidth) {
-                  setActualDimensions({ width: target.naturalWidth, height: target.naturalHeight });
+                  const dims = { width: target.naturalWidth, height: target.naturalHeight };
+                  dimensionCache.set(photo.src, dims);
+                  setActualDimensions(dims);
                 }
               }}
               onError={(e) => {
@@ -490,8 +514,9 @@ export default function FancyboxViewer({
         
         setDisplayedPhotos((prev) => {
           const existingUrls = new Set(prev.map(p => p.src));
-          const uniqueNewPhotos = newPhotos.filter(p => !existingUrls.has(p.src));
-          return [...prev, ...uniqueNewPhotos];
+      const uniqueNewPhotos = newPhotos.filter(p => !existingUrls.has(p.src));
+      if (uniqueNewPhotos.length === 0) return prev;
+      return [...prev, ...uniqueNewPhotos];
         });
 
         setCurrentPage((prev) => prev + 1);
@@ -971,17 +996,21 @@ export default function FancyboxViewer({
         </header>
       )}
 
-      <div className="gallery-wrapper">
-        <ResponsiveMasonry breakpointColumns={breakpointColumns} className="" columnClassName="">
-          {displayedPhotos.map((photo, index) => (
-            <PhotoItem
-              key={`${photo.src}-${index}`}
-              photo={photo}
-              index={index}
-              onPhotoClick={handlePhotoClick}
-              delayMs={index >= lastBatchStartRef.current ? Math.min(index - lastBatchStartRef.current, 48) * 25 : undefined}
-            />
-          ))}
+      <div className="gallery-wrapper w-full max-w-full min-w-0">
+        <ResponsiveMasonry breakpointColumns={breakpointColumns} className="w-full max-w-full min-w-0" columnClassName="w-full max-w-full min-w-0">
+          {displayedPhotos.map((photo, index) => {
+            const isNewItem = index >= lastBatchStartRef.current;
+            return (
+              <PhotoItem
+                key={`${photo.src}-${index}`}
+                photo={photo}
+                index={index}
+                onPhotoClick={handlePhotoClick}
+                isNewItem={isNewItem}
+                delayMs={isNewItem ? Math.min(index - lastBatchStartRef.current, 48) * 25 : undefined}
+              />
+            );
+          })}
         </ResponsiveMasonry>
       </div>
 

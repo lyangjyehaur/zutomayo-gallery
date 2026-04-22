@@ -45,6 +45,7 @@
   
   font-family: var(--font-mono, monospace) !important;
   color: var(--waline-color) !important;
+  contain: inline-size;
 }
 
 /* Dark Theme overrides removed as they are now handled by global variables */
@@ -281,6 +282,7 @@
   align-items: center !important;
   width: 100% !important;
   overflow: hidden !important;
+  contain: inline-size;
 }
 
 .waline-wrapper .wl-reaction-title {
