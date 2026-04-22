@@ -1263,7 +1263,7 @@ function App({
             </TooltipContent>
           </Tooltip>
 
-          {(true || deferredPrompt) && (
+          {(import.meta.env.DEV || deferredPrompt) && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
