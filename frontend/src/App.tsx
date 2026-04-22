@@ -221,7 +221,15 @@ function App({
   const [favorites, setFavorites] = useState<string[]>(() => {
     return storage.get<string[]>(STORAGE_KEYS.FAVORITES, []) || [];
   });
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  
+  // 監聽來自 RootApp 的 PWA 安裝事件
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(globalDeferredPrompt);
+  useEffect(() => {
+    const handlePwaReady = () => setDeferredPrompt(globalDeferredPrompt);
+    pwaEventTarget.addEventListener('pwa-ready', handlePwaReady);
+    return () => pwaEventTarget.removeEventListener('pwa-ready', handlePwaReady);
+  }, []);
+  
   const pwaRecoverTapCountRef = useRef(0);
   const pwaRecoverTapTimerRef = useRef<number | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
@@ -1389,6 +1397,7 @@ function App({
                                   const { outcome } = await deferredPrompt.userChoice;
                                   if (outcome === 'accepted') {
                                     if (window.umami) window.umami.track('Z_PWA_Install_Accepted_Btn');
+                                    globalDeferredPrompt = null;
                                     setDeferredPrompt(null);
                                   } else {
                                     if (window.umami) window.umami.track('Z_PWA_Install_Dismissed_Btn');
@@ -2247,6 +2256,10 @@ function LocalizedAppLayout({ commonProps }: { commonProps: AppCommonProps }) {
   return <App {...commonProps} />;
 }
 
+// 全域儲存 PWA 事件，讓子組件可以存取
+export let globalDeferredPrompt: any = null;
+export const pwaEventTarget = new EventTarget();
+
 // 為了支援 useParams，我們需要導出一個包裹了路由環境的組件
 export default function RootApp() {
   const { t, i18n } = useTranslation();
@@ -2306,8 +2319,9 @@ export default function RootApp() {
     const handleBeforeInstallPrompt = (e: any) => {
       // 防止 Chrome 67 以前的版本自動顯示提示
       e.preventDefault();
-      // 將事件儲存起來，以便稍後觸發
-      setDeferredPrompt(e);
+      // 將事件儲存到全域變數，並觸發自訂事件通知子組件
+      globalDeferredPrompt = e;
+      pwaEventTarget.dispatchEvent(new Event('pwa-ready'));
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
