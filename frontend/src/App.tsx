@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { AdminPage } from "@/pages/AdminPage";
 import { AdminDBPage } from "@/pages/AdminDBPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
+import { PWAPrompt } from "@/components/PWAPrompt";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import {
@@ -218,6 +219,7 @@ function App({
   const [favorites, setFavorites] = useState<string[]>(() => {
     return storage.get<string[]>(STORAGE_KEYS.FAVORITES, []) || [];
   });
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isGeoTooltipOpen, setIsGeoTooltipOpen] = useState(false);
@@ -1261,6 +1263,42 @@ function App({
             </TooltipContent>
           </Tooltip>
 
+          {deferredPrompt && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={async () => {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                      if (window.umami) window.umami.track('Z_PWA_Install_Accepted_Btn');
+                      setDeferredPrompt(null);
+                    } else {
+                      if (window.umami) window.umami.track('Z_PWA_Install_Dismissed_Btn');
+                    }
+                  }}
+                  variant="neutral"
+                  size="icon"
+                  className="z-20 w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none hover:bg-main hover:text-black"
+                  data-umami-event="Z_Click_Install_PWA_Btn"
+                >
+                  <i className="hn hn-download text-xl md:text-2xl leading-none"></i>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left" align="center" sideOffset={10}>
+                <div className="flex flex-col gap-0.5">
+                  <p className="text-xs font-black tracking-widest">{t("app.install", "安裝 App")}</p>
+                  <p className="text-[10px] font-mono opacity-60 normal-case">
+                    INSTALL PWA
+                  </p>
+                  <p className="text-xs font-bold">
+                    {t("app.install_pwa_desc", "將網站加入主畫面，享受全螢幕與離線瀏覽體驗！")}
+                  </p>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
         <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -2123,34 +2161,7 @@ export default function RootApp() {
       // 防止 Chrome 67 以前的版本自動顯示提示
       e.preventDefault();
       // 將事件儲存起來，以便稍後觸發
-      const deferredPrompt = e;
-      
-      // 延遲一點時間再顯示 toast，避免跟載入動畫衝突
-          setTimeout(() => {
-            toast(t("app.install_pwa_title", "安裝 ZTMY Gallery"), {
-              description: t("app.install_pwa_desc", "將網站加入主畫面，享受全螢幕與離線瀏覽體驗！"),
-              duration: 10000,
-              position: "bottom-center",
-              action: {
-                label: t("app.install", "安裝"),
-                onClick: async () => {
-                  // 顯示安裝提示
-                  deferredPrompt.prompt();
-                  // 等待使用者回應
-                  const { outcome } = await deferredPrompt.userChoice;
-                  if (outcome === 'accepted') {
-                    if (window.umami) window.umami.track('Z_PWA_Install_Accepted');
-                  } else {
-                    if (window.umami) window.umami.track('Z_PWA_Install_Dismissed');
-                  }
-                },
-              },
-              cancel: {
-                label: t("app.later", "稍後再說"),
-                onClick: () => console.log('User dismissed PWA install'),
-              },
-            });
-          }, 3000);
+      setDeferredPrompt(e);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -2204,6 +2215,7 @@ export default function RootApp() {
           <Route path="/debug/modal" element={<DebugMVModalLightbox />} />
           <Route path="*" element={<FallbackRedirect commonProps={commonProps} />} />
         </Routes>
+      <PWAPrompt />
       <Toaster position="top-center" />
     </>
   );

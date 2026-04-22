@@ -31,7 +31,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       injectRegister: 'auto',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,ttf}'],
@@ -98,6 +98,22 @@ export default defineConfig({
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable'
+          }
+        ],
+        shortcuts: [
+          {
+            name: "所有 MV (All MVs)",
+            short_name: "Gallery",
+            description: "瀏覽所有 MV 設定圖",
+            url: "/",
+            icons: [{ src: "/pwa-192x192.png", sizes: "192x192" }]
+          },
+          {
+            name: "我的收藏 (Favorites)",
+            short_name: "Favorites",
+            description: "查看已收藏的內容",
+            url: "/zh-Hant/favorites",
+            icons: [{ src: "/pwa-192x192.png", sizes: "192x192" }]
           }
         ]
       }
