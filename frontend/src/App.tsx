@@ -103,8 +103,9 @@ const AnimatedMVCardItem = memo(function AnimatedMVCardItem({
   delayMs: number;
   isPaused: boolean;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const { elementRef, shouldLoad } = useLazyImage({
-    rootMargin: "800px",
+    rootMargin: "300px", // 加大卡片自己的載入觸發距離，避免因為滾動太快而來不及載入
     threshold: 0,
     triggerOnce: true,
   });
@@ -129,40 +130,37 @@ const AnimatedMVCardItem = memo(function AnimatedMVCardItem({
   }, []);
 
   useEffect(() => {
-    if (!elementRef.current) return;
+    if (!containerRef.current) return;
     const observer = new IntersectionObserver(
       ([entry]) => setIsInView(entry.isIntersecting),
       { threshold: 0 },
     );
-    observer.observe(elementRef.current);
+    observer.observe(containerRef.current);
     return () => observer.disconnect();
   }, []);
 
   // 如果父層要求暫停、不在可視範圍內，或者分頁被隱藏，就徹底暫停動畫
   const isEffectivelyPaused = isPaused || !isInView || !isTabActive;
 
-  const className = shouldLoad
-    ? "animate-in fade-in slide-in-from-bottom-4 duration-500 motion-reduce:animate-none"
-    : "opacity-0 translate-y-4 motion-reduce:opacity-100 motion-reduce:translate-y-0";
-
   return (
-    <div
-      ref={elementRef}
-      className={className}
-      style={{
-        ...(shouldLoad
-          ? { animationDelay: `${delayMs}ms`, animationFillMode: "both" }
-          : {}),
-      }}
-    >
-      <div style={{ animationPlayState: isEffectivelyPaused ? "paused" : "running", height: "100%" }}>
-        <MVCard
-          mv={mv}
-          isFav={isFav}
-          onToggleFav={onToggleFav}
-          onClick={onClick}
-          isPaused={isEffectivelyPaused}
-        />
+    <div ref={elementRef} style={{ contentVisibility: 'auto', containIntrinsicSize: '300px' }} className="p-1">
+      <div
+        ref={containerRef}
+        className={shouldLoad ? "animate-in fade-in slide-in-from-bottom-8 duration-700 motion-reduce:animate-none" : "opacity-0 translate-y-8"}
+        style={shouldLoad ? {
+          animationDelay: `${delayMs}ms`,
+          animationFillMode: "both",
+        } : {}}
+      >
+        <div style={{ animationPlayState: isEffectivelyPaused ? "paused" : "running", height: "100%" }}>
+          <MVCard
+            mv={mv}
+            isFav={isFav}
+            onToggleFav={onToggleFav}
+            onClick={onClick}
+            isPaused={isEffectivelyPaused}
+          />
+        </div>
       </div>
     </div>
   );
@@ -532,6 +530,8 @@ function App({
       setVisibleCount((prev) => {
         if (prev >= totalCountRef.current) return prev;
         lastBatchStartRef.current = prev;
+        // 我們改為每次觸發載入時，直接加載一整個螢幕高度的卡片量 (大約 24 張)
+        // 並將 lastBatchStartRef 設為新的起點，這樣新加載的卡片就會有從 0 開始的 delayMs
         return Math.min(prev + PAGE_SIZE, totalCountRef.current);
       });
     },
@@ -543,7 +543,7 @@ function App({
 
     const observer = new IntersectionObserver(handleIntersect, {
       root: null,
-      rootMargin: "1200px",
+      rootMargin: "3000px", // 大幅增加觸發距離，確保使用者永遠不會滾到底部才看到加載
       threshold: 0,
     });
 
@@ -1128,7 +1128,7 @@ function App({
                   isFav={favorites.includes(mv.id)}
                   onToggleFav={() => toggleFav(mv.id)}
                   onClick={() => navigate(`${basePath}/mv/${mv.id}`, { state: { fromFav: showFavOnly } })}
-                  delayMs={Math.min(batchIdx, 24) * 20}
+                  delayMs={Math.min(batchIdx, 24) * 25}
                   isPaused={isGlobalPaused}
                 />
               );
@@ -1722,10 +1722,11 @@ function App({
                 </div>
               </div>
             </div>
-          </>
-        )}
+            </>
+          )}
+          </div>
 
-          <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-8 md:gap-4 text-[10px]">
+          <div className={`${!is404Route ? "pt-8" : ""} flex flex-col md:flex-row justify-between items-center gap-8 md:gap-4 text-[10px]`}>
             <div className="text-center md:text-left flex flex-col leading-tight items-center md:items-start md:flex-1 md:basis-0">
 
               <span className="flex items-center gap-1 flex-wrap justify-center md:justify-start">
@@ -1793,52 +1794,53 @@ function App({
 
             </div>
 
-              <div className="flex flex-col items-center gap-4 order-first md:order-none md:flex-none">
-                <a
-                  href="https://dan.tw"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-3 font-black border-2 border-main px-4 py-2 bg-black text-main group transition-all hover:bg-main hover:text-black ztmy-avatar-trigger"
-                  title={t("app.visit_developer", "前往開發者個人網站")}
-                  onMouseLeave={(e) => {
-                    const img = e.currentTarget.querySelector('img');
-                    if (img) {
-                      img.style.animation = 'none';
-                      void img.offsetWidth; // 觸發 reflow
-                      img.style.animation = 'var(--animate-avatar-land)';
-                    }
-                  }}
-                  onMouseEnter={(e) => {
-                    const img = e.currentTarget.querySelector('img');
-                    if (img) {
-                      img.style.animation = 'var(--animate-avatar-jump)';
-                    }
-                  }}
-                >
-                  <img 
-                    src={`https://${geoInfo.isChinaIP ? 'cravatar.cn' : 'gravatar.com'}/avatar/2ad947c5152cd8d6d2f9b5bd450d939b?s=80&d=retro`} 
-                    alt="DANERSAKA" 
-                    className="w-8 h-8 rounded-sm border-2 border-current group-hover:border-black transition-colors origin-bottom"
-                  />
-                  <div className="flex flex-col items-start leading-tight">
-                    <div className="flex gap-2 items-center">
-                      <span className="opacity-90">{t("app.made_by_fantuan", "由 飯糰 製作")}</span>
-                      <i className="hn hn-heart-solid text-red-500 group-hover:animate-pulse text-[12px] leading-none"></i>
-                    </div>
-                    <span className="text-[8px] font-mono">
-                      <span className="opacity-60">MADE_WITH{" "}</span>
-                      <i className="hn hn-heart-solid opacity-90 text-red-500 group-hover:animate-pulse text-[10px] leading-none"></i>{" "}
-                      <span className="opacity-60">BY_DANERSAKA</span>
-                    </span>
-                  </div>
-                </a>
+            <div className="flex flex-col items-center gap-4 order-first md:order-none md:flex-none">
               <a
-                        href="https://github.com/lyangjyehaur/zutomayo-gallery"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:text-main transition-colors flex items-center gap-2 group opacity-50 hover:opacity-100"
-                        title={t("app.github_repo", "GitHub 儲存庫") + " (GitHub Repository)"}
-                      >
+                href="https://dan.tw"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-3 font-black border-2 border-main px-4 py-2 bg-black text-main group transition-all hover:bg-main hover:text-black ztmy-avatar-trigger mb-2"
+                title={t("app.visit_developer", "前往開發者個人網站")}
+                onMouseLeave={(e) => {
+                  const img = e.currentTarget.querySelector('img');
+                  if (img) {
+                    img.style.animation = 'none';
+                    void img.offsetWidth; // 觸發 reflow
+                    img.style.animation = 'var(--animate-avatar-land)';
+                  }
+                }}
+                onMouseEnter={(e) => {
+                  const img = e.currentTarget.querySelector('img');
+                  if (img) {
+                    img.style.animation = 'var(--animate-avatar-jump)';
+                  }
+                }}
+              >
+                <img 
+                  src={`https://${geoInfo.isChinaIP ? 'cravatar.cn' : 'gravatar.com'}/avatar/2ad947c5152cd8d6d2f9b5bd450d939b?s=80&d=retro`} 
+                  alt="DANERSAKA" 
+                  className="w-8 h-8 rounded-sm border-2 border-current group-hover:border-black transition-colors origin-bottom"
+                />
+                <div className="flex flex-col items-start leading-tight text-[10px]">
+                  <div className="flex gap-2 items-center">
+                    <span className="opacity-90">{t("app.made_by_fantuan", "由 飯糰 製作")}</span>
+                    <i className="hn hn-heart-solid text-red-500 group-hover:animate-pulse text-[12px] leading-none"></i>
+                  </div>
+                  <span className="text-[8px] font-mono">
+                    <span className="opacity-60">MADE_WITH{" "}</span>
+                    <i className="hn hn-heart-solid opacity-90 text-red-500 group-hover:animate-pulse text-[10px] leading-none"></i>{" "}
+                    <span className="opacity-60">BY_DANERSAKA</span>
+                  </span>
+                </div>
+              </a>
+              
+              <a
+                href="https://github.com/lyangjyehaur/zutomayo-gallery"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-main transition-colors flex items-center gap-2 group opacity-50 hover:opacity-100"
+                title={t("app.github_repo", "GitHub 儲存庫") + " (GitHub Repository)"}
+              >
                 <i className="hn hn-github text-sm" />
                 <span className="flex flex-col leading-tight">
                   <span>{t("app.open_source", "開源專案")}</span>
@@ -1848,7 +1850,7 @@ function App({
                 </span>
               </a>
             </div>
-
+            
             <div className="opacity-30 text-center md:text-right flex flex-col leading-tight items-center md:items-end md:flex-1 md:basis-0">
               <span>
                 {t("app.fan_made", "本專案為粉絲自製 所有媒體資源版權歸屬")} <a href="https://zutomayo.net" target="_blank" rel="noopener noreferrer" className="hover:text-main underline decoration-dashed underline-offset-2 transition-colors">ZUTOMAYO</a>
@@ -1858,7 +1860,6 @@ function App({
               </span>
             </div>
           </div>
-        </div>
         </div>
       </footer>
 

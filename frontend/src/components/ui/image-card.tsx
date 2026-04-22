@@ -128,11 +128,12 @@ export default function ImageCard({ imageUrl, caption, className, children, medi
   return (
     <figure
       className={cn(
-        "overflow-hidden rounded-base border-2 border-border bg-main font-base shadow-shadow",
+        "overflow-hidden rounded-base border-2 border-border bg-main font-base",
         className,
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 300px' }}
     >
       <style>{`
         @keyframes image-card-title-marquee {
@@ -149,29 +150,30 @@ export default function ImageCard({ imageUrl, caption, className, children, medi
           media
         ) : (
           <>
-            {!isLoaded && (
-              <div className="absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2 transition-opacity duration-700 z-0">
-                <div className="size-5 border-2 border-black/10 border-t-black animate-spin rounded-full" />
-                <span className="text-[8px] font-black uppercase tracking-tighter flex flex-col items-center leading-tight">
-                  <span className="opacity-40 tracking-normal">同步視覺中...</span>
-                  <span className="font-mono opacity-20 normal-case">Syncing_Visual...</span>
-                </span>
-              </div>
+            <div className="absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2 z-0 transition-opacity duration-700 pointer-events-none" style={{ opacity: isLoaded ? 0 : 1, willChange: 'opacity' }}>
+              <div className="size-5 border-2 border-black/10 border-t-black animate-spin rounded-full" />
+              <span className="text-[8px] font-black uppercase tracking-tighter flex flex-col items-center leading-tight">
+                <span className="opacity-40 tracking-normal">同步視覺中...</span>
+                <span className="font-mono opacity-20 normal-case">Syncing_Visual...</span>
+              </span>
+            </div>
+            {imageUrl && (
+              <img 
+                className={cn(
+                  "w-full h-full object-cover relative z-10",
+                )} 
+                style={{
+                  opacity: isLoaded ? 1 : 0,
+                  transition: 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                  willChange: 'opacity'
+                }}
+                src={imageUrl} 
+                alt="圖片 (image)" 
+                onLoad={() => setIsLoaded(true)}
+                loading="lazy"
+                decoding="async"
+              />
             )}
-            <img 
-              className={cn(
-                "w-full h-full object-cover relative z-10",
-              )} 
-              style={{
-                opacity: isLoaded ? 1 : 0,
-                transition: 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
-                willChange: 'opacity'
-              }}
-              src={imageUrl} 
-              alt="圖片 (image)" 
-              onLoad={() => setIsLoaded(true)}
-              loading="lazy"
-            />
           </>
         )}
       </div>

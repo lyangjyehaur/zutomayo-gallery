@@ -310,16 +310,20 @@ const PhotoItem = ({ photo, index, onPhotoClick, delayMs }: PhotoItemProps) => {
   return (
     <div
       ref={containerRef}
-      className="mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500 motion-reduce:animate-none min-h-0 min-w-0 w-full"
-      style={delayMs !== undefined ? { animationDelay: `${delayMs}ms`, animationFillMode: 'both' } : undefined}
+      className="mb-4 p-1 animate-in fade-in slide-in-from-bottom-4 duration-500 motion-reduce:animate-none min-h-0 min-w-0 w-full"
+      style={{
+        contentVisibility: 'auto', 
+        containIntrinsicSize: 'auto 300px',
+        ...(delayMs !== undefined ? { animationDelay: `${delayMs}ms`, animationFillMode: 'both' } : {})
+      }}
     >
       <div 
-        className="gallery-item block cursor-pointer min-h-0 min-w-0 w-full" 
+        className="gallery-item block cursor-pointer min-h-0 min-w-0 w-full group shadow-[4px_4px_0px_0px_#000] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all" 
         data-index={index} 
         data-filename={photo.rawFilename || photo.caption}
         onClick={handleClick}
       >
-        <div className="border-3 border-black bg-card shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all w-full group">
+        <div className="border-3 border-black bg-card overflow-hidden w-full h-full">
           <div className="relative bg-secondary-background overflow-hidden w-full" style={aspectRatio ? { aspectRatio } : {}}>
             {/* Loading 佔位符：在圖片尚未載入完成時顯示，且這時我們已經用 aspectRatio 撐開了空間 */}
             <div

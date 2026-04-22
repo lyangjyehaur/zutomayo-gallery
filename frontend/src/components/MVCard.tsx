@@ -202,20 +202,22 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
   // 4. 隨機化 Rolling Slice 的啟動延遲時間，避免所有卡片同時出現橫線錯位 (-0 到 -6秒)
   const sliceDelay = useMemo(() => `${(Math.random() * -6).toFixed(2)}s`, []);
 
+  // 避免模糊底圖頻繁切換時觸發瀏覽器的 repaint
+  const blurBgStyle = useMemo(() => {
+    return currentSrc ? { backgroundImage: `url(${currentSrc})` } : {};
+  }, [currentSrc]);
+
   return (
     // `.crt-lines` 套用常駐掃描線與暗角 (如果有 hideCrt 則不套用)
-    <div ref={elementRef} className={`absolute inset-0 w-full h-full bg-black ${!hideCrt ? 'crt-lines' : ''}`}>
+    <div ref={elementRef} className={`absolute inset-0 w-full h-full bg-black ${!hideCrt ? 'crt-lines' : ''}`} style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 300px' }}>
       {/* 基礎模糊底層（提供柔和過渡，當沒有圖片時顯示黑色背景） */}
       <div
         className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-30 transition-all duration-1000 bg-black"
-        style={{
-          ...(currentSrc ? { backgroundImage: `url(${currentSrc})` } : {}),
-          willChange: 'background-image'
-        }}
+        style={blurBgStyle}
       />
 
       {!isLoaded && currentSrc && (
-        <div className="absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2 z-0 transition-opacity duration-700">
+        <div className="absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2 z-0 transition-opacity duration-700 pointer-events-none" style={{ opacity: isLoaded ? 0 : 1, willChange: 'opacity' }}>
           <div className="size-5 border-2 border-black/10 border-t-black animate-spin rounded-full" />
           <span className="text-[8px] font-black uppercase tracking-tighter flex flex-col items-center leading-tight">
             <span className="opacity-40 tracking-normal">同步視覺中...</span>
@@ -250,7 +252,7 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
                 opacity: isLoaded ? 1 : 0,
                 transition: isLoaded ? 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
               }),
-              willChange: 'opacity'
+              willChange: 'opacity, filter'
             }}
             onLoad={() => setIsLoaded(true)}
             loading={forceLoad ? "eager" : "lazy"}
@@ -297,11 +299,12 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
         {/* 掃描擦除專用：新舊圖交界處的高亮綠色掃描帶 */}
         {fadeState !== 'idle' && isScanWipe && (
           <div
-            className="absolute left-0 right-0 h-2 bg-green-400/80 mix-blend-screen shadow-[0_0_15px_5px_rgba(74,222,128,0.6)] z-30"
+            className="absolute left-0 right-0 h-2 bg-green-400/80 mix-blend-screen shadow-[0_0_15px_5px_rgba(74,222,128,0.6)] z-30 pointer-events-none"
             style={{
               top: fadeState === 'active' ? '100%' : '0%',
               transition: `top ${fadeMs}ms linear`,
-              transform: 'translateY(-50%)'
+              transform: 'translateY(-50%)',
+              willChange: 'top'
             }}
           />
         )}
@@ -310,12 +313,12 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
         {glitch.active && glitch.mode === 'rgb' && (
           <>
             <div
-              className="glitch-layer glitch-red absolute inset-0 bg-cover bg-center opacity-60"
-              style={{ backgroundImage: `url(${currentSrc})`, display: 'block' }}
+              className="glitch-layer glitch-red absolute inset-0 bg-cover bg-center opacity-60 pointer-events-none"
+              style={{ backgroundImage: `url(${currentSrc})`, display: 'block', willChange: 'transform' }}
             />
             <div
-              className="glitch-layer glitch-blue absolute inset-0 bg-cover bg-center opacity-60"
-              style={{ backgroundImage: `url(${currentSrc})`, display: 'block' }}
+              className="glitch-layer glitch-blue absolute inset-0 bg-cover bg-center opacity-60 pointer-events-none"
+              style={{ backgroundImage: `url(${currentSrc})`, display: 'block', willChange: 'transform' }}
             />
           </>
         )}
@@ -359,7 +362,7 @@ export const MVCard = memo(function MVCard({ mv, isFav, onToggleFav, onClick, is
   return (
     <div
       ref={containerRef}
-      className="relative group isolate cursor-pointer transition-all hover:translate-x-1 hover:translate-y-1 mv-card"
+      className="relative group isolate cursor-pointer transition-all hover:translate-x-[4px] hover:translate-y-[4px] mv-card shadow-[4px_4px_0px_0px_#000] hover:shadow-none rounded-base"
       data-umami-event="Z_MV_Card_Click"
       data-umami-event-title={mv.title}
       data-umami-event-id={mv.id}
@@ -370,8 +373,10 @@ export const MVCard = memo(function MVCard({ mv, isFav, onToggleFav, onClick, is
         caption={mv.title}
         isPaused={isPaused}
         lang="ja"
-        className="border-2 bg-card text-foreground transition-all group-hover:shadow-none"
-        media={<CoverCarousel coverImages={mv.coverImages ?? []} title={mv.title} isPaused={isPaused} />}
+        className="border-2 bg-card text-foreground transition-all"
+        media={
+          <CoverCarousel coverImages={mv.coverImages ?? []} title={mv.title} isPaused={isPaused} />
+        }
       >
         <div className={`flex flex-col ${!isVeryCompact ? 'gap-3 px-4 py-3 text-xs' : 'gap-2 px-3 py-2 text-[10px]'} bg-main text-main-foreground uppercase transition-all duration-300`}>
           <div className={`flex ${!isCompact ? 'flex-row items-end justify-between gap-4' : 'flex-col gap-3'}`}>
