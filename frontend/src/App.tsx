@@ -263,33 +263,49 @@ function App({
       pwaRecoverTapTimerRef.current = null;
     }
 
-    toast(t("app.pwa_recover_title", "修復更新/清除快取"), {
-      description: (
-        <div className="flex flex-col gap-2 mt-2 text-[15px]">
-          <span>{t("app.pwa_recover_desc", "將執行以下操作：")}</span>
-          <ul className="list-disc list-outside ml-5 mt-1 space-y-2 opacity-80 text-left">
-            <li className="leading-snug">{t("app.pwa_recover_step_1", "註銷 Service Worker")}</li>
-            <li className="leading-snug">{t("app.pwa_recover_step_2", "清除站點快取")}</li>
-            <li className="leading-snug">{t("app.pwa_recover_step_3", "重新載入以取得最新版本")}</li>
-          </ul>
+    toast.custom((t_id) => (
+      <>
+        <ModalBackdrop />
+        <div className="bg-background text-foreground border-border border-2 font-heading shadow-shadow rounded-base flex flex-col gap-4 p-5 w-[356px] md:w-[400px] relative z-[9999] pointer-events-auto">
+          <h2 className="text-lg font-bold w-full leading-tight">
+            {t("app.pwa_recover_title", "修復更新/清除快取")}
+          </h2>
+          <div className="w-full font-base">
+            <div className="flex flex-col gap-2 mt-2 text-[15px]">
+              <span>{t("app.pwa_recover_desc", "將執行以下操作：")}</span>
+              <ul className="list-disc list-outside ml-5 mt-1 space-y-2 opacity-80 text-left">
+                <li className="leading-snug">{t("app.pwa_recover_step_1", "註銷 Service Worker")}</li>
+                <li className="leading-snug">{t("app.pwa_recover_step_2", "清除站點快取")}</li>
+                <li className="leading-snug">{t("app.pwa_recover_step_3", "重新載入以取得最新版本")}</li>
+              </ul>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 w-full mt-2">
+            <button
+              onClick={() => {
+                toast.dismiss(t_id);
+                runPWARecovery();
+              }}
+              className="font-base border-2 text-[15px] h-10 px-4 bg-main text-main-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none"
+            >
+              {t("app.pwa_recover_action", "清除並重新載入")}
+            </button>
+            <button
+              onClick={() => {
+                toast.dismiss(t_id);
+              }}
+              className="font-base border-2 text-[15px] h-10 px-4 bg-secondary-background text-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none"
+            >
+              {t("common.cancel", "取消")}
+            </button>
+          </div>
         </div>
-      ),
+      </>
+    ), {
       duration: Infinity,
       position: "bottom-center",
-      className: "!flex-col !items-start !gap-4 !p-5 w-[356px] md:w-[400px]",
-      classNames: {
-        actionButton: "!w-full !justify-center !text-center !h-10 !text-[15px]",
-        cancelButton: "!w-full !justify-center !text-center !h-10 !text-[15px] !mt-2",
-        title: "!text-lg !font-bold",
-        description: "!w-full",
-      },
-      action: {
-        label: t("app.pwa_recover_action", "清除並重新載入"),
-        onClick: () => runPWARecovery(),
-      },
-      cancel: {
-        label: t("app.cancel", "取消"),
-      },
+      unstyled: true,
+      className: "!bg-transparent !border-0 !shadow-none !p-0 !w-auto !max-w-none",
     });
   }, [runPWARecovery, t]);
   const [isMobile, setIsMobile] = useState(
