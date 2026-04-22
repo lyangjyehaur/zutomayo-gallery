@@ -66,6 +66,7 @@ export function PWAPrompt() {
         duration: Infinity,
         position: 'bottom-center',
         unstyled: true,
+        className: '!bg-transparent !border-0 !shadow-none !p-0 !w-auto !max-w-none',
       });
     }
   }, [needRefresh, setNeedRefresh, t, updateServiceWorker]);
