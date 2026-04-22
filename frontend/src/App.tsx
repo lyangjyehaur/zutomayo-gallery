@@ -221,12 +221,76 @@ function App({
     return storage.get<string[]>(STORAGE_KEYS.FAVORITES, []) || [];
   });
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const pwaRecoverTapCountRef = useRef(0);
+  const pwaRecoverTapTimerRef = useRef<number | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isGeoTooltipOpen, setIsGeoTooltipOpen] = useState(false);
   const [shouldRenderFeedback, setShouldRenderFeedback] = useState(false);
   const [isSurveyForceOpen, setIsSurveyForceOpen] = useState(false);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const runPWARecovery = useCallback(async () => {
+    try {
+      if ("serviceWorker" in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+    } finally {
+      const url = new URL(window.location.href);
+      url.searchParams.set("__refresh", String(Date.now()));
+      window.location.replace(url.toString());
+    }
+  }, []);
+
+  const triggerPWARecovery = useCallback(() => {
+    pwaRecoverTapCountRef.current += 1;
+    if (pwaRecoverTapTimerRef.current) window.clearTimeout(pwaRecoverTapTimerRef.current);
+    pwaRecoverTapTimerRef.current = window.setTimeout(() => {
+      pwaRecoverTapCountRef.current = 0;
+      pwaRecoverTapTimerRef.current = null;
+    }, 1500);
+
+    if (pwaRecoverTapCountRef.current < 7) return;
+
+    pwaRecoverTapCountRef.current = 0;
+    if (pwaRecoverTapTimerRef.current) {
+      window.clearTimeout(pwaRecoverTapTimerRef.current);
+      pwaRecoverTapTimerRef.current = null;
+    }
+
+    toast(t("app.pwa_recover_title", "修復更新/清除快取"), {
+      description: (
+        <div className="flex flex-col gap-2 mt-2 text-[15px]">
+          <span>{t("app.pwa_recover_desc", "將執行以下操作：")}</span>
+          <ul className="list-disc list-outside ml-5 mt-1 space-y-2 opacity-80 text-left">
+            <li className="leading-snug">{t("app.pwa_recover_step_1", "註銷 Service Worker")}</li>
+            <li className="leading-snug">{t("app.pwa_recover_step_2", "清除站點快取")}</li>
+            <li className="leading-snug">{t("app.pwa_recover_step_3", "重新載入以取得最新版本")}</li>
+          </ul>
+        </div>
+      ),
+      duration: Infinity,
+      position: "bottom-center",
+      className: "!flex-col !items-start !gap-4 !p-5 w-[356px] md:w-[400px]",
+      classNames: {
+        actionButton: "!w-full !justify-center !text-center !h-10 !text-[15px]",
+        cancelButton: "!w-full !justify-center !text-center !h-10 !text-[15px] !mt-2",
+        title: "!text-lg !font-bold",
+        description: "!w-full",
+      },
+      action: {
+        label: t("app.pwa_recover_action", "清除並重新載入"),
+        onClick: () => runPWARecovery(),
+      },
+      cancel: {
+        label: t("app.cancel", "取消"),
+      },
+    });
+  }, [runPWARecovery, t]);
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" ? window.innerWidth < 1024 : false,
   );
@@ -1869,7 +1933,17 @@ function App({
                 </Tooltip>
               </span>
 
-              <span className="opacity-18 normal-case text-[8px] mt-1">
+              <span
+                className="opacity-18 normal-case text-[8px] mt-1 select-none cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  triggerPWARecovery();
+                }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                  triggerPWARecovery();
+                }}
+              >
                 <span>ZUTOMAYO_MV_GALLERY_BUILD_{import.meta.env.VITE_BUILD_DATE?.replace(/-/g, '')}_{import.meta.env.VITE_BUILD_HASH || 'dev'}_{geoInfo.labelEn}
                 </span>
               </span>
