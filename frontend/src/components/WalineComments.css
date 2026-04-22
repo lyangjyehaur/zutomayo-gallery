@@ -252,14 +252,11 @@
 /* Metadata pills (browser, OS, etc.) */
 .waline-wrapper .wl-card .wl-meta > span {
   background: var(--waline-info-bg-color) !important;
-  border: 2px solid #000000 !important;
   padding: 2px 6px !important;
-  border-radius: 0 !important;
   font-family: var(--font-mono, monospace) !important;
   font-size: 10px !important;
   color: var(--color-main) !important;
   opacity: 0.8 !important; /* 淡一點的 main color */
-  box-shadow: none !important;
 }
 
 /* 隱藏 IP 屬地、作業系統、瀏覽器等系統資訊標籤 */

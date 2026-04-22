@@ -847,12 +847,12 @@ function App({
       {/* 跑馬燈 */}
       {!is404Route && !isDemo3DCard && metadata?.settings?.announcements &&
         metadata.settings.announcements.length > 0 && (
-          <div className="w-full relative z-20 bg-main border-y-2 border-transparent">
+          <div className="w-full relative z-20 bg-main border-b-2 border-border">
             <Marquee items={metadata.settings.announcements} />
           </div>
         )}
 
-      <main className={`mx-auto px-4 w-full pt-4 relative flex-1 ${is404Route ? 'flex items-center justify-center border-t-0' : 'max-w-7xl pb-8 border-t-2 border-border max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-[80%]'}`}>
+      <main className={`mx-auto px-4 w-full pt-4 relative flex-1 ${is404Route ? 'flex items-center justify-center' : 'max-w-7xl pb-8 max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-[80%]'}`}>
         {isNotFound ? (
           <Navigate to={`${basePath}/404?from=${encodeURIComponent(location.pathname + location.search)}`} replace />
         ) : is404Route ? (
