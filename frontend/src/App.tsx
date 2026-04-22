@@ -1267,22 +1267,48 @@ function App({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  onClick={async () => {
-                    if (deferredPrompt) {
-                      deferredPrompt.prompt();
-                      const { outcome } = await deferredPrompt.userChoice;
-                      if (outcome === 'accepted') {
-                        if (window.umami) window.umami.track('Z_PWA_Install_Accepted_Btn');
-                        setDeferredPrompt(null);
-                      } else {
-                        if (window.umami) window.umami.track('Z_PWA_Install_Dismissed_Btn');
-                      }
-                    } else {
-                      toast.info("預覽模式：安裝事件尚未觸發", {
-                        description: "實際環境中必須滿足 PWA 條件才會出現安裝提示",
-                        duration: 3000
-                      });
-                    }
+                  onClick={() => {
+                    toast(t("app.install_pwa_title", "安裝 ZTMY Gallery"), {
+                      description: (
+                        <div className="flex flex-col gap-1 mt-1 text-sm">
+                          <span>{t("app.install_pwa_desc", "將網站加入主畫面，獲得最佳體驗：")}</span>
+                          <ul className="list-disc list-inside pl-4 mt-1 space-y-1 opacity-80">
+                            <li>無邊框沉浸式全螢幕瀏覽</li>
+                            <li>圖片動態快取，離線也能看</li>
+                            <li>支援桌面長按捷徑快速導覽</li>
+                            <li>與原生 App 相同的順暢體驗</li>
+                          </ul>
+                        </div>
+                      ),
+                      duration: Infinity,
+                      position: "bottom-center",
+                      action: {
+                        label: t("app.install", "確定安裝"),
+                        onClick: async () => {
+                          if (deferredPrompt) {
+                            deferredPrompt.prompt();
+                            const { outcome } = await deferredPrompt.userChoice;
+                            if (outcome === 'accepted') {
+                              if (window.umami) window.umami.track('Z_PWA_Install_Accepted_Btn');
+                              setDeferredPrompt(null);
+                            } else {
+                              if (window.umami) window.umami.track('Z_PWA_Install_Dismissed_Btn');
+                            }
+                          } else {
+                            toast.info("預覽模式：安裝事件尚未觸發", {
+                              description: "實際環境中必須滿足 PWA 條件才會出現系統安裝提示",
+                              duration: 3000
+                            });
+                          }
+                        },
+                      },
+                      cancel: {
+                        label: t("app.cancel", "取消"),
+                        onClick: () => {
+                          if (window.umami) window.umami.track('Z_PWA_Install_Cancel_Toast');
+                        },
+                      },
+                    });
                   }}
                   variant="neutral"
                   size="icon"
