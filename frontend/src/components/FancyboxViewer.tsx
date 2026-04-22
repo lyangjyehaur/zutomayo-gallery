@@ -12,6 +12,7 @@ if (typeof window !== 'undefined') {
 import { MVImage } from '@/lib/types';
 import { getProxyImgUrl } from '@/lib/image';
 import { GALLERY_BREAKPOINTS } from '@/components/galleryBreakpoints';
+export { GALLERY_BREAKPOINTS } from '@/components/galleryBreakpoints';
 import { useTranslation } from 'react-i18next';
 
 interface FancyboxViewerProps {
@@ -82,8 +83,9 @@ function ResponsiveMasonry({
     React.Children.forEach(children, (child, index) => {
       if (!child) return;
       const columnIndex = index % safeColumnCount;
+      const key = React.isValidElement(child) && child.key ? child.key : index;
       columns[columnIndex].push(
-        <div key={index} className={`mb-4 ${columnClassName}`}>
+        <div key={key} className={`mb-4 ${columnClassName}`}>
           {child}
         </div>,
       );
@@ -265,26 +267,8 @@ interface SkeletonItemProps {
   key?: string | number;
 }
 
-const SkeletonItem = ({ width, height }: SkeletonItemProps) => {
-  const { t } = useTranslation();
-  const aspectRatio = width && height ? `${width} / ${height}` : '16 / 9';
-
-  return (
-    <div className="mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="border-3 border-black bg-card shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
-        <div className="relative bg-secondary-background overflow-hidden" style={{ aspectRatio }}>
-          <div className="absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2">
-            <div className="size-5 border-2 border-black/10 border-t-black animate-spin rounded-full" />
-            <span className="text-[8px] font-black uppercase tracking-tighter flex flex-col items-center leading-tight">
-              <span className="opacity-40 tracking-normal">{t("app.syncing_visual", "同步視覺中...")}</span>
-              <span className="font-mono opacity-20 normal-case">Syncing_Visual...</span>
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+// 這個獨立的骨架元件不再需要了，但我們保留它以備後用，或者直接移除
+// const SkeletonItem = ({ width, height }: SkeletonItemProps) => { ... }
 
 const SkeletonHeader = () => (
   <header className="mb-8 lg:mb-12 border-b-8 border-border bg-card p-4 sm:p-6 shadow-neo-sm">
@@ -309,28 +293,14 @@ const PhotoItem = ({ photo, index, onPhotoClick, delayMs }: PhotoItemProps) => {
   );
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (actualDimensions) return;
+  // 移除元件內部的預先加載邏輯 (useEffect 裡的 new Image())，
+  // 因為真正的加載動作應該交由 img 標籤原生的 loading="lazy" 來處理，
+  // 否則如果一次性給 DOM 添加太多 PhotoItem（雖然有 delayMs 錯開動畫，但 DOM 是同時建立的），
+  // 就會瞬間觸發大量的 new Image() 網路請求。
 
-    const img = new Image();
-    const handleLoad = () => {
-      if (img.naturalWidth && img.naturalHeight) {
-        setActualDimensions({
-          width: img.naturalWidth,
-          height: img.naturalHeight,
-        });
-      }
-    };
-    img.onload = handleLoad;
-    img.src = photo.src;
-    
-    // Check if the image is already cached/loaded
-    if (img.complete && img.naturalWidth) {
-      handleLoad();
-    }
-  }, [photo.src, actualDimensions]);
-
-  const aspectRatio = actualDimensions ? `${actualDimensions.width} / ${actualDimensions.height}` : null;
+  const aspectRatio = actualDimensions && actualDimensions.width && actualDimensions.height
+    ? `${actualDimensions.width} / ${actualDimensions.height}` 
+    : undefined;
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -350,9 +320,10 @@ const PhotoItem = ({ photo, index, onPhotoClick, delayMs }: PhotoItemProps) => {
         onClick={handleClick}
       >
         <div className="border-3 border-black bg-card shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all w-full group">
-          <div className="relative bg-secondary-background overflow-hidden w-full" style={{ aspectRatio: aspectRatio || '16 / 9' }}>
+          <div className="relative bg-secondary-background overflow-hidden w-full" style={aspectRatio ? { aspectRatio } : {}}>
+            {/* Loading 佔位符：在圖片尚未載入完成時顯示，且這時我們已經用 aspectRatio 撐開了空間 */}
             <div
-              className={`absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2 transition-opacity duration-500 pointer-events-none ${
+              className={`absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2 transition-opacity duration-700 pointer-events-none z-0 ${
                 isLoaded ? 'opacity-0' : 'opacity-100'
               }`}
             >
@@ -366,11 +337,14 @@ const PhotoItem = ({ photo, index, onPhotoClick, delayMs }: PhotoItemProps) => {
             <img
               alt={photo.caption}
               src={photo.src}
-              className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ${
-                isLoaded ? 'opacity-100 scale-100 blur-0' : 'opacity-0 scale-110 blur-xl'
-              }`}
+              className={`w-full h-auto object-cover relative z-10`}
               loading="lazy"
               decoding="async"
+              style={{
+                ...(aspectRatio ? { position: 'absolute', inset: 0, height: '100%' } : {}),
+                opacity: isLoaded ? 1 : 0,
+                transition: 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
               onLoad={(e) => {
                 setIsLoaded(true);
                 const target = e.target as HTMLImageElement;
@@ -421,13 +395,13 @@ export default function FancyboxViewer({
   onLightboxClose,
 }: FancyboxViewerProps) {
   const { t } = useTranslation();
-  // 將 images 陣列過濾出有效圖片 (移除強制時間排序，尊重後台儲存的陣列順序)
+  // 將 images 陣列過濾出有效圖片
   const processedImages = useMemo(() => {
     return images.filter((img) => img.url && img.url.trim() !== '');
   }, [images]);
 
   const [displayedPhotos, setDisplayedPhotos] = useState<PhotoData[]>([]);
-  const [loading, setLoading] = useState(true);
+  // loading state 已經移除，不需要了
   const [loadingMore, setLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -444,81 +418,58 @@ export default function FancyboxViewer({
     displayedCountRef.current = displayedPhotos.length;
   }, [displayedPhotos.length]);
 
-  const preloadImageDimensions = useCallback((url: string): Promise<{ width: number; height: number } | null> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        resolve({ width: img.naturalWidth, height: img.naturalHeight });
-      };
-      img.onerror = () => resolve(null);
-      img.src = url;
-    });
-  }, []);
-
   const getPhotosFromRange = useCallback(
     async (startIndex: number, count: number): Promise<PhotoData[]> => {
       const filteredImages = processedImages.slice(startIndex, startIndex + count);
 
-      const photosWithDimensions = await Promise.all(
-        filteredImages.map(async (img, index) => {
-          const thumbUrl = img.thumbnail ? getProxyImgUrl(img.thumbnail, 'thumb') : getProxyImgUrl(img.url, 'thumb');
-          const isVideo = img.url.match(/\.(mp4|webm)$/i) || img.url.includes('video.twimg.com') || (img.thumbnail && img.thumbnail !== img.url && !img.url.match(/\.gif$/i));
-          const isGif = img.url.match(/\.gif$/i) || img.url.includes('tweet_video_thumb');
-          const fullUrl = isVideo ? img.url : getProxyImgUrl(img.url, 'full');
+      // 直接回傳圖片資料，不進行 Promise.all 預先下載
+      // 尺寸會先交給 null，然後依賴後端的備用尺寸或等圖片實際載入後自己撐開
+      return filteredImages.map((img, index) => {
+        const thumbUrl = img.thumbnail ? getProxyImgUrl(img.thumbnail, 'thumb') : getProxyImgUrl(img.url, 'thumb');
+        const isVideo = img.url.match(/\.(mp4|webm)$/i) || img.url.includes('video.twimg.com') || (img.thumbnail && img.thumbnail !== img.url && !img.url.match(/\.gif$/i));
+        const isGif = img.url.match(/\.gif$/i) || img.url.includes('tweet_video_thumb');
+        const fullUrl = isVideo ? img.url : getProxyImgUrl(img.url, 'full');
 
-          let width = img.width;
-          let height = img.height;
-          if (!width || !height) {
-            const dimensions = await preloadImageDimensions(thumbUrl);
-            if (dimensions) {
-              width = dimensions.width;
-              height = dimensions.height;
-            }
-          }
+        const caption = img.caption || `${mvTitle}_${index}`;
 
-          const caption = img.caption || `${mvTitle}_${index}`;
+        // 擷取原始副檔名，並組合出包含副檔名的完整下載檔名
+        const ext = getExtensionFromUrl(img.url);
+        const fullFilename = `${mvTitle}_${caption.replace(/[^a-zA-Z0-9_\-\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff]/g, '_')}.${ext}`;
 
-          // 擷取原始副檔名，並組合出包含副檔名的完整下載檔名
-          const ext = getExtensionFromUrl(img.url);
-          const fullFilename = `${mvTitle}_${caption.replace(/[^a-zA-Z0-9_\-\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff]/g, '_')}.${ext}`;
-
-          return {
-            src: thumbUrl,
-            full: fullUrl,
-            raw: isVideo ? getProxyImgUrl(img.url, 'raw', fullFilename) : getProxyImgUrl(img.url, 'raw', fullFilename),
-            caption,
-            richText: img.richText || '',
-            width,
-            height,
-            rawFilename: fullFilename,
-            isVideo, // 加入 isVideo 標記
-            isGif,   // 加入 isGif 標記
-            groupId: img.groupId,
-            tweetUrl: img.tweetUrl,
-            ...img // 保留其他可能的新增欄位
-          };
-        }),
-      );
-
-      return photosWithDimensions;
+        // 如果有寬高則回傳，沒有的話就讓瀑布流 CSS 自己處理（不再卡死等待）
+        return {
+          src: thumbUrl,
+          full: fullUrl,
+          raw: isVideo ? getProxyImgUrl(img.url, 'raw', fullFilename) : getProxyImgUrl(img.url, 'raw', fullFilename),
+          caption,
+          richText: img.richText || '',
+          width: img.width, // 將由後端 API 獲取的尺寸傳給元件
+          height: img.height,
+          rawFilename: fullFilename,
+          isVideo, // 加入 isVideo 標記
+          isGif,   // 加入 isGif 標記
+          groupId: img.groupId,
+          tweetUrl: img.tweetUrl,
+          ...img // 保留其他可能的新增欄位
+        };
+      });
     },
-    [processedImages, mvTitle, preloadImageDimensions],
+    [processedImages, mvTitle],
   );
 
   useEffect(() => {
     if (processedImages.length === 0) {
-      setLoading(false);
       setHasMore(false);
       return;
     }
 
-    setLoading(true);
     getPhotosFromRange(0, itemsPerPage).then((firstPagePhotos) => {
       lastBatchStartRef.current = 0;
+      
+      // 直接設定資料，不使用延遲隱藏
       setDisplayedPhotos(firstPagePhotos);
       setCurrentPage(1);
       setHasMore(firstPagePhotos.length < processedImages.length);
-      setLoading(false);
     });
   }, [processedImages, itemsPerPage, getPhotosFromRange]);
 
@@ -529,22 +480,21 @@ export default function FancyboxViewer({
 
     const startIndex = currentPage * itemsPerPage;
     getPhotosFromRange(startIndex, itemsPerPage).then((newPhotos) => {
-      // 為了能看清楚 Loading 動畫，不論自動或手動都增加一點延遲
-      const delay = 1200;
-      setTimeout(() => {
-        if (newPhotos.length > 0) {
-          lastBatchStartRef.current = displayedCountRef.current;
-          setDisplayedPhotos((prev) => {
-            const existingUrls = new Set(prev.map(p => p.src));
-            const uniqueNewPhotos = newPhotos.filter(p => !existingUrls.has(p.src));
-            return [...prev, ...uniqueNewPhotos];
-          });
-          setCurrentPage((prev) => prev + 1);
-        }
+      // 不再需要 setTimeout 延遲，直接加載
+      if (newPhotos.length > 0) {
+        lastBatchStartRef.current = displayedCountRef.current;
+        
+        setDisplayedPhotos((prev) => {
+          const existingUrls = new Set(prev.map(p => p.src));
+          const uniqueNewPhotos = newPhotos.filter(p => !existingUrls.has(p.src));
+          return [...prev, ...uniqueNewPhotos];
+        });
 
-        setHasMore(startIndex + newPhotos.length < processedImages.length);
-        setLoadingMore(false);
-      }, delay);
+        setCurrentPage((prev) => prev + 1);
+      }
+
+      setHasMore(startIndex + newPhotos.length < processedImages.length);
+      setLoadingMore(false);
     });
   }, [currentPage, processedImages.length, loadingMore, hasMore, itemsPerPage, getPhotosFromRange, autoLoadMore]);
 
@@ -579,6 +529,8 @@ export default function FancyboxViewer({
   const handleAfterClose = useCallback(() => {
     document.dispatchEvent(new CustomEvent('lightboxAfterClose', { detail: { provider: 'fb' } }));
     document.dispatchEvent(new CustomEvent('fbAfterClose'));
+    
+    // 確保這裡不會意外觸發父層的 onClose 導致 Modal 關閉
     onLightboxClose?.();
   }, [onLightboxClose]);
 
@@ -665,9 +617,14 @@ export default function FancyboxViewer({
             overlay?.root?.unmount?.();
             overlay?.host?.remove?.();
             fancyboxRef.current = null;
-            handleAfterClose();
+            
+            // 確保在動畫結束後再觸發 onClose，避免跟其他彈窗邏輯衝突
+            setTimeout(() => {
+              handleAfterClose();
+            }, 300); // 增加延遲，確保 Fancybox 完全清理完畢
           },
         },
+        Hash: false, // 暫時關閉，以防與 SPA 路由衝突。如果未來要開啟，需特別處理與 React Router 的整合。
         Carousel: {
           infinite: true,
           transition: 'slide',
@@ -696,18 +653,9 @@ export default function FancyboxViewer({
     };
   }, []);
 
-  if (loading) {
-    return (
-      <div ref={containerRef} className={`p-4 sm:p-6 lg:p-10 min-h-screen font-mono ${className}`}>
-        {showHeader && <SkeletonHeader />}
-        <ResponsiveMasonry breakpointColumns={breakpointColumns} className="" columnClassName="">
-          {Array.from({ length: Math.min(itemsPerPage, processedImages.length || 4) }).map((_, i) => (
-            <SkeletonItem key={i} />
-          ))}
-        </ResponsiveMasonry>
-      </div>
-    );
-  }
+  // 移除額外的 loading 狀態，因為我們已經在每個 PhotoItem 內部處理了骨架與過渡
+  // 我們只需要在 processedImages.length === 0 且仍在獲取資料時才需要顯示
+  // 但由於 processedImages 是同步從 props.images 過濾出來的，所以我們可以直接渲染
 
   if (processedImages.length === 0) {
     return (
@@ -1030,8 +978,6 @@ export default function FancyboxViewer({
               delayMs={index >= lastBatchStartRef.current ? Math.min(index - lastBatchStartRef.current, 48) * 25 : undefined}
             />
           ))}
-
-          {loadingMore && Array.from({ length: 4 }).map((_, i) => <SkeletonItem key={`loading-${i}`} />)}
         </ResponsiveMasonry>
       </div>
 

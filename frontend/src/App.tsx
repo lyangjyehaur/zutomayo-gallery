@@ -41,7 +41,6 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import DebugLightGallery from "@/debug/DebugLightGallery";
 import DebugFancyboxMasonry from "@/debug/DebugFancyboxMasonry";
 import DebugMVModalLightbox from "@/debug/DebugMVModalLightbox";
 import { STORAGE_KEYS, storage } from "@/config/storage";
@@ -1936,6 +1935,11 @@ function App({
       <MVDetailsModal
         mv={selectedMv}
         onClose={() => {
+          // 如果 Fancybox 還開著，強制不執行路由切換
+          if (document.body.classList.contains('fancybox__body') || document.querySelector('.fancybox__container')) {
+            return;
+          }
+          
           if (window.history.state && window.history.state.idx > 0) {
             navigate(-1);
           } else {
@@ -2196,7 +2200,6 @@ export default function RootApp() {
             }
           />
           <Route path="/admin/db" element={<AdminDBPage />} />
-          <Route path="/debug/lg/:mvid?" element={<DebugLightGallery />} />
           <Route path="/debug/fb/:mvid?" element={<DebugFancyboxMasonry />} />
           <Route path="/debug/modal" element={<DebugMVModalLightbox />} />
           <Route path="*" element={<FallbackRedirect commonProps={commonProps} />} />

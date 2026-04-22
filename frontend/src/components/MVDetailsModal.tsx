@@ -12,8 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { MVItem } from '@/lib/types';
 import { getProxyImgUrl } from '@/lib/image';
 import { initGeo } from '@/lib/geo';
-import LightGalleryViewer, { GALLERY_BREAKPOINTS } from '@/components/LightGalleryViewer';
-import FancyboxViewer from '@/components/FancyboxViewer';
+import FancyboxViewer, { GALLERY_BREAKPOINTS } from '@/components/FancyboxViewer';
 import { WalineComments } from '@/components/WalineComments';
 import { VERSION_CONFIG } from '@/config/version';
 import { getLightboxProvider } from '@/config';
@@ -83,11 +82,9 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
 
   const lightboxProvider = getLightboxProvider();
 
-  const lgDismissableSelectors =
-    '.lg-backdrop, .lg-outer, .lg-components, .lg-container, .lg-toolbar, .lg-actions, .lg-thumb-outer, .lg-sub-html';
   const fbDismissableSelectors =
     '.fancybox__container, .fancybox__backdrop, .fancybox__carousel, .fancybox__toolbar, .fancybox__nav, .f-thumbs, .f-caption';
-  const dismissableSelectors = lightboxProvider === 'fb' ? fbDismissableSelectors : lgDismissableSelectors;
+  const dismissableSelectors = fbDismissableSelectors;
 
   // 處理 Dialog 外部點擊
   const handlePointerDownOutside = (e: React.PointerEvent) => {
@@ -104,12 +101,13 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
       e.preventDefault();
     }
   };
-  const GalleryViewer = (lightboxProvider === 'fb' ? FancyboxViewer : LightGalleryViewer) as React.ComponentType<any>;
+  const GalleryViewer = FancyboxViewer;
 
   const leftColumnRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
   const [descHeight, setDescHeight] = useState<number | undefined>(undefined);
   const [scrollTop, setScrollTop] = useState(0);
+  const [isDeferredReady, setIsDeferredReady] = useState(false);
   const [marqueeState, setMarqueeState] = useState({
     isMarquee: false,
     distance: 0,
@@ -132,6 +130,30 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
       
       // 確保影片播放狀態被重置
       setIsVideoActivated(false);
+      
+      // 手動處理背景滾動鎖定 (使用 modal={false} 避免 pointer-events 導致的大量 DOM 樣式重算卡頓)
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      document.body.style.overflow = 'hidden';
+      if (scrollbarWidth > 0) {
+        document.body.style.paddingRight = `${scrollbarWidth}px`;
+      }
+      
+      // 延遲渲染重型組件以保持彈窗動畫流暢
+      // 等待 600ms，確保 Dialog 動畫與 Modal 開啟流程徹底完成後再加載畫廊與評論
+      const timer = setTimeout(() => {
+        requestAnimationFrame(() => {
+          setIsDeferredReady(true);
+        });
+      }, 600); 
+      return () => {
+        clearTimeout(timer);
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+      };
+    } else {
+      setIsDeferredReady(false);
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
     }
   }, [mv]);
 
@@ -139,29 +161,31 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
     if (typeof window === 'undefined') return;
 
     const updateHeight = () => {
-      // 只有在 lg (1024px) 以上才需要精確計算高度，手機端維持 max-h-[50vh]
-      if (window.innerWidth < 1024) {
-        setDescHeight(undefined);
-        return;
-      }
+      requestAnimationFrame(() => {
+        // 只有在 lg (1024px) 以上才需要精確計算高度，手機端維持 max-h-[50vh]
+        if (window.innerWidth < 1024) {
+          setDescHeight(undefined);
+          return;
+        }
 
-      if (leftColumnRef.current && playerRef.current) {
-        // 使用 window.innerHeight 減去所有已知的固定空間來精確計算
-        // Modal 的結構是: 100vh，包含 header、py-8 的 padding 等
-        
-        // 抓取彈窗可滾動區域容器 (有 px-8 py-8 的那個)
-        const scrollContainer = leftColumnRef.current.closest('.custom-scrollbar');
-        if (!scrollContainer) return;
-        
-        // 可用總高度 = 容器實際高度 - 內部上下 padding (2rem = 32px * 2 = 64px)
-        const availableHeight = scrollContainer.clientHeight - 64; 
-        
-        const playerHeight = playerRef.current.offsetHeight;
-        const gap = 16; // space-y-4
-        
-        const calculated = availableHeight - playerHeight - gap;
-        setDescHeight(Math.max(150, calculated));
-      }
+        if (leftColumnRef.current && playerRef.current) {
+          // 使用 window.innerHeight 減去所有已知的固定空間來精確計算
+          // Modal 的結構是: 100vh，包含 header、py-8 的 padding 等
+          
+          // 抓取彈窗可滾動區域容器 (有 px-8 py-8 的那個)
+          const scrollContainer = leftColumnRef.current.closest('.custom-scrollbar');
+          if (!scrollContainer) return;
+          
+          // 可用總高度 = 容器實際高度 - 內部上下 padding (2rem = 32px * 2 = 64px)
+          const availableHeight = scrollContainer.clientHeight - 64; 
+          
+          const playerHeight = playerRef.current.offsetHeight;
+          const gap = 16; // space-y-4
+          
+          const calculated = availableHeight - playerHeight - gap;
+          setDescHeight(Math.max(150, calculated));
+        }
+      });
     };
 
     const resizeObserver = new ResizeObserver(() => {
@@ -176,12 +200,13 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
     }
     
     window.addEventListener('resize', updateHeight);
-    // 延遲一下確保 DOM 渲染完成
-    setTimeout(updateHeight, 0);
+    // 延遲執行，避免阻塞彈窗動畫，給予 350ms 讓彈窗完成過場
+    const initialTimer = setTimeout(updateHeight, 350);
 
     return () => {
       resizeObserver.disconnect();
       window.removeEventListener('resize', updateHeight);
+      clearTimeout(initialTimer);
     };
   }, [mv?.id, isVideoActivated, videoPlatform]);
 
@@ -222,20 +247,57 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
           <title>{`${mv.title} | ZUTOMAYO MV Gallery`}</title>
         </Helmet>
       )}
-    <Dialog open={!!mv} onOpenChange={(open) => {
-      if (!open && !isLightboxOpenRef.current && !isClosingRef.current) {
-        isClosingRef.current = true;
-        onClose();
+      <Dialog modal={false} open={!!mv} onOpenChange={(open) => {
+      // 這裡非常重要：Radix 的 Dialog 會在關閉動畫開始時，先呼叫 onOpenChange(false)
+      // 如果我們在這裡就呼叫 onClose，React Router 會立刻切換網址
+      // 網址一切換，上層的 <MVDetailsModal> 就會直接被卸載 (Unmount)
+      // 這就是為什麼沒有關閉動畫的原因！
+      
+      // 當點擊 X 按鈕或背景時，也會觸發這個事件，但 open 會是 false
+      if (!open) {
+        // 如果燈箱開著，我們不關閉 Modal
+        if (document.body.classList.contains('fancybox__body') || document.querySelector('.fancybox__container') || isLightboxOpenRef.current) {
+          return;
+        }
+        
+        // 只有在不是因為燈箱開啟而觸發的關閉，才真正準備關閉 Modal
+        if (!isClosingRef.current) {
+          isClosingRef.current = true;
+          // 我們只把內部狀態標記為關閉，讓 Radix 的動畫開始跑
+          // 但因為 Radix 的 open={!!mv} 是綁定在外部 prop 上，
+          // 如果不呼叫 onClose，Dialog 就會卡在畫面上（因為 open 永遠是 true）。
+          // 為了讓關閉動畫順利執行，我們必須呼叫 onClose 來讓外部 mv 變成 null，
+          // 不過我們已經在父層用 AnimatePresence 或 Radix 自帶的卸載機制處理好了嗎？
+          // 事實上，React Router 的 navigate 會直接把組件樹換掉，Radix 根本沒機會播動畫。
+          
+          // 所以正確的做法是：直接呼叫 onClose，但把「延遲關閉」的邏輯放到父層，
+          // 或者放棄 Dialog 原生的退出動畫（因為 Router 切換是瞬間的）。
+          onClose();
+        }
       }
     }}>
       <DialogContent
         overlayClassName={MODAL_THEME.overlay.dialog}
         className={`max-w-none w-screen h-[100dvh] left-0 top-0 !translate-x-0 !translate-y-0 border-0 shadow-none rounded-none p-0 md:max-w-none md:w-screen md:h-[100dvh] md:left-0 md:top-0 md:!translate-x-0 md:!translate-y-0 md:border-0 md:shadow-none !flex !flex-col !gap-0 [&>button]:hidden ${MODAL_THEME.content.dialog}`}
-        onPointerDownOutside={handlePointerDownOutside}
-        onInteractOutside={handleInteractOutside}
+        onPointerDownOutside={(e) => {
+          // 當點擊 Modal 外部時，如果 Fancybox 開著，阻止關閉
+          if (document.body.classList.contains('fancybox__body') || document.querySelector('.fancybox__container') || isLightboxOpenRef.current) {
+            e.preventDefault();
+            return;
+          }
+          // 不再使用 handlePointerDownOutside，這也是多餘的攔截
+        }}
+        onInteractOutside={(e) => {
+          if (document.body.classList.contains('fancybox__body') || document.querySelector('.fancybox__container') || isLightboxOpenRef.current) {
+            e.preventDefault();
+            return;
+          }
+          // 不再使用 handleInteractOutside
+        }}
         onOpenAutoFocus={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => {
-          if (isLightboxOpenRef.current) {
+          // 如果 Fancybox 存在，阻止 Modal 處理 ESC 鍵，完全交由 Fancybox 處理
+          if (document.body.classList.contains('fancybox__body') || document.querySelector('.fancybox__container') || isLightboxOpenRef.current) {
             e.preventDefault();
             return;
           }
@@ -245,13 +307,20 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
         <div className={MODAL_THEME.crt}></div>
 
         <DialogHeader className="relative z-30 pt-10 py-6 border-b-4 border-border shadow-md transition-all duration-200">
-          <DialogClose 
+          {/* 使用一般的 button 取代 DialogClose 來完全控制關閉行為 */}
+          <button 
               className="absolute top-4 right-4 md:top-6 md:right-8 z-50 bg-background text-foreground border-3 border-foreground shadow-neo-sm hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all w-10 h-10 flex items-center justify-center rounded-none"
+              onClick={() => {
+                if (!isClosingRef.current) {
+                  isClosingRef.current = true;
+                  onClose();
+                }
+              }}
               data-umami-event="Z_Close_MV_Modal"
               data-umami-event-title={mv?.title}
             >
               <i className="hn hn-times text-2xl"></i>
-            </DialogClose>
+            </button>
           
           <DialogTitle 
             className="text-2xl pr-16 cursor-default uppercase tracking-tighter font-black flex flex-col md:flex-row md:items-center gap-x-4 overflow-hidden w-full" 
@@ -280,28 +349,31 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                       if (!parent) return;
                       
                       const handleResize = () => {
-                        const firstChild = node.children[0] as HTMLElement;
-                        if (!firstChild) return;
-                        
-                        const isCurrentlyMarquee = node.classList.contains('animate-card-title-marquee');
-                        
-                        // 計算文字真實寬度，如果是跑馬燈狀態，需要減去我們加上的 32px padding
-                        const textWidth = firstChild.offsetWidth - (isCurrentlyMarquee ? 32 : 0);
-                        const parentWidth = parent.clientWidth;
-
-                        if (textWidth > parentWidth) {
-                          const gap = 32;
-                          const distance = textWidth + gap;
-                          const duration = Math.max(distance / 48, 8);
+                        // 使用 requestAnimationFrame 避免在動畫期間引發強制同步佈局 (Layout Thrashing)
+                        requestAnimationFrame(() => {
+                          const firstChild = node.children[0] as HTMLElement;
+                          if (!firstChild) return;
                           
-                          if (!marqueeStateRef.current.isMarquee || marqueeStateRef.current.distance !== distance || marqueeStateRef.current.duration !== duration) {
-                            setMarqueeState({ isMarquee: true, distance, duration });
+                          const isCurrentlyMarquee = node.classList.contains('animate-card-title-marquee');
+                          
+                          // 計算文字真實寬度，如果是跑馬燈狀態，需要減去我們加上的 32px padding
+                          const textWidth = firstChild.offsetWidth - (isCurrentlyMarquee ? 32 : 0);
+                          const parentWidth = parent.clientWidth;
+
+                          if (textWidth > parentWidth) {
+                            const gap = 32;
+                            const distance = textWidth + gap;
+                            const duration = Math.max(distance / 48, 8);
+                            
+                            if (!marqueeStateRef.current.isMarquee || marqueeStateRef.current.distance !== distance || marqueeStateRef.current.duration !== duration) {
+                              setMarqueeState({ isMarquee: true, distance, duration });
+                            }
+                          } else {
+                            if (marqueeStateRef.current.isMarquee) {
+                              setMarqueeState({ isMarquee: false, distance: 0, duration: 0 });
+                            }
                           }
-                        } else {
-                          if (marqueeStateRef.current.isMarquee) {
-                            setMarqueeState({ isMarquee: false, distance: 0, duration: 0 });
-                          }
-                        }
+                        });
                       };
 
                       // 避免重複綁定 ResizeObserver
@@ -319,10 +391,8 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                       resizeObserver.observe(node);
                       (node as any)._resizeObserver = resizeObserver;
                       
-                      // 初始觸發一次計算，並在幾毫秒後再觸發一次以確保字體等資源已載入
-                      handleResize();
-                      setTimeout(handleResize, 100);
-                      setTimeout(handleResize, 500);
+                      // 延遲觸發，避免阻塞 Modal 開啟時的動畫
+                      setTimeout(handleResize, 350);
                     }
                   }}
                 >
@@ -540,59 +610,86 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
             {/* 設定圖畫廊區與評論區 - 在左右布局時顯示在右側，在單欄時接在描述下方 */}
             <ScrollArea className="lg:h-full custom-scrollbar w-full">
               <div className="space-y-8 lg:space-y-4 lg:pr-4 lg:pb-8">
-                <div className="space-y-4">
-                <h4 className="font-bold border-b-3 border-black pb-2 flex items-center gap-2 uppercase tracking-widest">
-                  <i className="hn hn-image text-xl text-ztmy-green"></i>{t("app.reference_art", "設定資料圖")}</h4>
-                {mv?.images && mv.images.length > 0 ? (
-                  <GalleryViewer
-                    images={mv.images}
-                    mvTitle={mv.title}
-                    mvId={mv.id}
-                    itemsPerPage={12}
-                    autoLoadMore={mv.autoLoadMore || false} // 由 Admin 後台設定控制
-                    showHeader={false}
-                    enablePagination={true}
-                    breakpointColumns={GALLERY_BREAKPOINTS}
-                    className="!p-0 !min-h-0"
-                      onLightboxOpen={handleLightboxOpen}
-                      onLightboxClose={() => { isLightboxOpenRef.current = false; setIsLightboxOpen(false); }}
-                  />
+                {isDeferredReady ? (
+                  <>
+                    <div className="space-y-4">
+                    <h4 className="font-bold border-b-3 border-black pb-2 flex items-center gap-2 uppercase tracking-widest">
+                      <i className="hn hn-image text-xl text-ztmy-green"></i>{t("app.reference_art", "設定資料圖")}</h4>
+                    {mv?.images && mv.images.length > 0 ? (
+                      <GalleryViewer
+                        images={mv.images}
+                        mvTitle={mv.title}
+                        mvId={mv.id}
+                        itemsPerPage={12}
+                        autoLoadMore={mv.autoLoadMore || false} // 由 Admin 後台設定控制
+                        showHeader={false}
+                        enablePagination={true}
+                        breakpointColumns={GALLERY_BREAKPOINTS}
+                        className="!p-0 !min-h-0"
+                          onLightboxOpen={handleLightboxOpen}
+                          onLightboxClose={() => { 
+                            // 延遲更新狀態，避免與 Radix 的事件衝突
+                            setTimeout(() => {
+                              isLightboxOpenRef.current = false; 
+                              setIsLightboxOpen(false);
+                            }, 50);
+                          }}
+                      />
+                    ) : (
+                      <div className="w-full py-16 flex flex-col items-center justify-center border-4 border-dashed border-border mt-2 select-none">
+                        <div className="text-5xl mb-4 opacity-20">
+                          <i className="hn hn-image text-5xl"></i>
+                        </div>
+                        <div className="flex flex-col items-center leading-tight">
+                          <h3 className="text-lg font-black uppercase tracking-widest opacity-80">
+                            {t("app.no_reference_art", "暫無設定圖資料")}
+                          </h3>
+                          <span className="text-[10px] font-mono opacity-40 mt-1">
+                            NO_REFERENCE_ASSETS
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Waline 評論區 */}
+                  {mv && (
+                    <div className="mt-8 pt-8">
+                      <h4 className="font-bold border-b-3 border-black pb-2 flex items-center justify-between gap-2 uppercase tracking-widest mb-4">
+                        <div className="flex items-center gap-2">
+                          <i className="hn hn-message text-xl text-ztmy-blue"></i>
+                          {t("app.comments", "留言")}
+                        </div>
+                        <div className="text-xs font-mono font-normal opacity-50 tracking-normal flex items-center gap-1.5">
+                          <i className="hn hn-eye"></i>
+                          <span className="waline-pageview-count" data-path={`/mv/${mv.id}`}>...</span>
+                        </div>
+                      </h4>
+                      <WalineComments
+                        path={`/mv/${mv.id}`}
+                        className="waline-wrapper"
+                      />
+                    </div>
+                  )}
+                  </>
                 ) : (
-                  <div className="w-full py-16 flex flex-col items-center justify-center border-4 border-dashed border-border mt-2 select-none">
-                    <div className="text-5xl mb-4 opacity-20">
-                      <i className="hn hn-image text-5xl"></i>
+                  <div className="w-full h-full min-h-[300px] flex flex-col items-center justify-center opacity-50 bg-card border-4 border-dashed border-border p-8 animate-pulse">
+                    <div className="relative mb-6">
+                      <i className="hn hn-image text-5xl opacity-20"></i>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
+                      </div>
                     </div>
                     <div className="flex flex-col items-center leading-tight">
-                      <h3 className="text-lg font-black uppercase tracking-widest opacity-80">
-                        {t("app.no_reference_art", "暫無設定圖資料")}
+                      <h3 className="text-lg font-black uppercase tracking-widest opacity-80 mb-1">
+                        {t("app.loading", "載入中...")}
                       </h3>
-                      <span className="text-[10px] font-mono opacity-40 mt-1">
-                        NO_REFERENCE_ASSETS
+                      <span className="text-[10px] font-mono opacity-40 tracking-widest">
+                        LOADING_ASSETS...
                       </span>
                     </div>
                   </div>
                 )}
-              </div>
-
-              {/* Waline 評論區 */}
-              {mv && (
-                <div className="mt-8 pt-8">
-                  <h4 className="font-bold border-b-3 border-black pb-2 flex items-center justify-between gap-2 uppercase tracking-widest mb-4">
-                    <div className="flex items-center gap-2">
-                      <i className="hn hn-message text-xl text-ztmy-blue"></i>
-                      {t("app.comments", "留言")}
-                    </div>
-                    <div className="text-xs font-mono font-normal opacity-50 tracking-normal flex items-center gap-1.5">
-                      <i className="hn hn-eye"></i>
-                      <span className="waline-pageview-count" data-path={`/mv/${mv.id}`}>...</span>
-                    </div>
-                  </h4>
-                  <WalineComments
-                    path={`/mv/${mv.id}`}
-                    className="waline-wrapper"
-                  />
-                </div>
-              )}
               </div>
             </ScrollArea>
           </div>

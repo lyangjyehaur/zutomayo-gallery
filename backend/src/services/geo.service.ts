@@ -62,17 +62,22 @@ export const getFullGeoInfo = async (ip: string): Promise<{ country: string, reg
   // 2. 判斷邏輯：優先採用 ip2region 的大中華區結果
   if (ip2regionResult) {
     const parts = ip2regionResult.split('|');
+    // 最新版的 ip2region_v4.xdb 格式為: 國家 | 省份/州 | 城市 | ISP | 國家代碼
+    // 範例: 中国|浙江省|杭州市|中国教育网|CN
     const country = parts[0] === '0' ? 'UNKNOWN' : parts[0];
-    const province = parts[2] === '0' ? '' : parts[2];
+    const province = parts[1] === '0' ? '' : parts[1];
+    const city = parts[2] === '0' ? '' : parts[2];
+    const isp = parts[3] === '0' ? '' : parts[3];
+    const countryCodeStr = parts[4] === '0' ? '' : parts[4]; // 這是 CN, TW 等代碼
     
     // 如果 ip2region 判斷是亞洲核心區域，直接採信它的結果作為主數據
     if (['中国', '台湾', '香港', '澳门'].includes(country) || ['台湾', '香港', '澳门'].includes(province)) {
       return {
         country,
-        region: parts[1] === '0' ? '' : parts[1],
+        region: province, // 這裡的 region 其實對應到省份
         province,
-        city: parts[3] === '0' ? '' : parts[3],
-        isp: parts[4] === '0' ? '' : parts[4],
+        city,
+        isp,
         raw: ip2regionResult,
         source: 'ip2region',
         ip2regionRaw,
@@ -99,12 +104,17 @@ export const getFullGeoInfo = async (ip: string): Promise<{ country: string, reg
   // 4. Fallback (最差情況：geoip-lite 查不到，但 ip2region 之前有查到海外資訊)
   if (ip2regionResult) {
     const parts = ip2regionResult.split('|');
+    const country = parts[0] === '0' ? 'UNKNOWN' : parts[0];
+    const province = parts[1] === '0' ? '' : parts[1];
+    const city = parts[2] === '0' ? '' : parts[2];
+    const isp = parts[3] === '0' ? '' : parts[3];
+    
     return {
-      country: parts[0] === '0' ? 'UNKNOWN' : parts[0],
-      region: parts[1] === '0' ? '' : parts[1],
-      province: parts[2] === '0' ? '' : parts[2],
-      city: parts[3] === '0' ? '' : parts[3],
-      isp: parts[4] === '0' ? '' : parts[4],
+      country,
+      region: province,
+      province,
+      city,
+      isp,
       raw: ip2regionResult,
       source: 'ip2region',
       ip2regionRaw,
