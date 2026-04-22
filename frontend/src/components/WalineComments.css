@@ -43,7 +43,7 @@
   --waline-box-shadow: 4px 4px 0px 0px #000000 !important;
   --waline-avatar-radius: 0 !important;
   
-  font-family: 'Mono', monospace !important;
+  font-family: var(--font-mono, monospace) !important;
   color: var(--waline-color) !important;
 }
 
@@ -255,7 +255,7 @@
   border: 2px solid #000000 !important;
   padding: 2px 6px !important;
   border-radius: 0 !important;
-  font-family: 'Mono', monospace !important;
+  font-family: var(--font-mono, monospace) !important;
   font-size: 10px !important;
   color: var(--color-main) !important;
   opacity: 0.8 !important; /* 淡一點的 main color */
@@ -329,7 +329,7 @@
   border-radius: 0 !important;
   background: var(--color-secondary-background) !important;
   color: var(--color-foreground) !important;
-  font-family: 'Mono', monospace !important;
+  font-family: var(--font-mono, monospace) !important;
   box-shadow: none !important;
 }
 
