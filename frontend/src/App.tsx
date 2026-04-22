@@ -1263,18 +1263,25 @@ function App({
             </TooltipContent>
           </Tooltip>
 
-          {deferredPrompt && (
+          {(true || deferredPrompt) && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   onClick={async () => {
-                    deferredPrompt.prompt();
-                    const { outcome } = await deferredPrompt.userChoice;
-                    if (outcome === 'accepted') {
-                      if (window.umami) window.umami.track('Z_PWA_Install_Accepted_Btn');
-                      setDeferredPrompt(null);
+                    if (deferredPrompt) {
+                      deferredPrompt.prompt();
+                      const { outcome } = await deferredPrompt.userChoice;
+                      if (outcome === 'accepted') {
+                        if (window.umami) window.umami.track('Z_PWA_Install_Accepted_Btn');
+                        setDeferredPrompt(null);
+                      } else {
+                        if (window.umami) window.umami.track('Z_PWA_Install_Dismissed_Btn');
+                      }
                     } else {
-                      if (window.umami) window.umami.track('Z_PWA_Install_Dismissed_Btn');
+                      toast.info("預覽模式：安裝事件尚未觸發", {
+                        description: "實際環境中必須滿足 PWA 條件才會出現安裝提示",
+                        duration: 3000
+                      });
                     }
                   }}
                   variant="neutral"
@@ -1282,7 +1289,7 @@ function App({
                   className="z-20 w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none hover:bg-main hover:text-black"
                   data-umami-event="Z_Click_Install_PWA_Btn"
                 >
-                  <i className="hn hn-download text-xl md:text-2xl leading-none"></i>
+                  <i className="hn hn-download-alt text-xl md:text-2xl leading-none"></i>
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="left" align="center" sideOffset={10}>
