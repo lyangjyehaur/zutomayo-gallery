@@ -1282,6 +1282,13 @@ function App({
                       ),
                       duration: Infinity,
                       position: "bottom-center",
+                      className: "!flex-col !items-start !gap-4 !p-5 w-[356px] md:w-[400px]",
+                      classNames: {
+                        actionButton: "!w-full !justify-center !text-center !h-10 !text-[15px]",
+                        cancelButton: "!w-full !justify-center !text-center !h-10 !text-[15px] !mt-2",
+                        title: "!text-lg !font-bold",
+                        description: "!w-full"
+                      },
                       action: {
                         label: t("app.install", "確定安裝"),
                         onClick: async () => {
