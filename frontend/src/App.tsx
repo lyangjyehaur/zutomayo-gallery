@@ -809,8 +809,17 @@ function App({
             </span>
           </span>
           <span
-            className="text-[10px] sm:text-xs md:text-sm bg-main/20 text-main border-2 md:border-3 border-main px-1.5 md:px-2 py-0.5 md:py-1 animate-pulse relative z-10"
+            className="text-[10px] sm:text-xs md:text-sm bg-main/20 text-main border-2 md:border-3 border-main px-1.5 md:px-2 py-0.5 md:py-1 animate-pulse relative z-10 cursor-pointer"
             style={{ animationPlayState: isGlobalPaused ? "paused" : "running" }}
+            onClick={(e) => {
+              e.stopPropagation();
+              triggerPWARecovery();
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              triggerPWARecovery();
+            }}
+            title={t("app.pwa_recover_title", "修復更新/清除快取")}
           >
             V{VERSION_CONFIG.app}
           </span>
@@ -1378,7 +1387,7 @@ function App({
                         },
                       },
                       cancel: {
-                        label: t("app.cancel", "取消"),
+                        label: t("common.cancel", "取消"),
                         onClick: () => {
                           if (window.umami) window.umami.track('Z_PWA_Install_Cancel_Toast');
                         },
@@ -1933,17 +1942,7 @@ function App({
                 </Tooltip>
               </span>
 
-              <span
-                className="opacity-18 normal-case text-[8px] mt-1 select-none cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  triggerPWARecovery();
-                }}
-                onTouchStart={(e) => {
-                  e.stopPropagation();
-                  triggerPWARecovery();
-                }}
-              >
+              <span className="opacity-18 normal-case text-[8px] mt-1">
                 <span>ZUTOMAYO_MV_GALLERY_BUILD_{import.meta.env.VITE_BUILD_DATE?.replace(/-/g, '')}_{import.meta.env.VITE_BUILD_HASH || 'dev'}_{geoInfo.labelEn}
                 </span>
               </span>
