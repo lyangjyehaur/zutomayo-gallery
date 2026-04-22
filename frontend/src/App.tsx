@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { AdminPage } from "@/pages/AdminPage";
 import { AdminDBPage } from "@/pages/AdminDBPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
+import { Demo3DCardPage } from "@/pages/Demo3DCardPage";
 import { PWAPrompt } from "@/components/PWAPrompt";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
@@ -302,7 +303,8 @@ function App({
   const selectedMvId = mvIdMatch ? mvIdMatch[1] : null;
 
   const is404Route = pathnameWithoutLang === "/404";
-  const isNotFound = pathnameWithoutLang !== "/" && pathnameWithoutLang !== "/favorites" && !is404Route && !mvIdMatch;
+  const isDemo3DCard = pathnameWithoutLang === "/demo/3d-card";
+  const isNotFound = pathnameWithoutLang !== "/" && pathnameWithoutLang !== "/favorites" && !is404Route && !isDemo3DCard && !mvIdMatch;
 
   // 動態獲取唯一的年份、專輯與藝術家清單，並處理分組
   const {
@@ -753,7 +755,7 @@ function App({
       </header>
 
       {/* 跑馬燈 */}
-      {!is404Route && metadata?.settings?.announcements &&
+      {!is404Route && !isDemo3DCard && metadata?.settings?.announcements &&
         metadata.settings.announcements.length > 0 && (
           <div className="w-full relative z-20 bg-main border-y-2 border-transparent">
             <Marquee items={metadata.settings.announcements} />
@@ -765,6 +767,8 @@ function App({
           <Navigate to={`${basePath}/404?from=${encodeURIComponent(location.pathname + location.search)}`} replace />
         ) : is404Route ? (
           <NotFoundPage />
+        ) : isDemo3DCard ? (
+          <Demo3DCardPage basePath={basePath} />
         ) : (
           <>
             {/* 過濾控制列與活躍標籤 */}
