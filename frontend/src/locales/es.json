@@ -8,6 +8,8 @@
     "load_more": "Cargar más"
   },
   "app": {
+    "title": "ZUTOMAYO MV Gallery",
+    "subtitle": "日々研磨爆裂中！",
     "search_placeholder": "Buscar palabras clave...",
     "all_years": "Todos los años",
     "all_albums": "Todos los álbumes",
@@ -111,6 +113,7 @@
     "install": "Instalar",
     "later": "Más tarde",
     "syncing_visual": "Sincronizando visual...",
+    "image": "Imagen (image)",
     "release": "Lanzamiento",
     "unknown_artist": "Desconocido (Unknown)",
     "feedback_subtitle": "Feedback",
@@ -179,6 +182,31 @@
     "total_rows": "Total {{count}} filas",
     "previous": "Anterior",
     "next": "Siguiente"
+  },
+  "maintenance": {
+    "title_ui": "Actualización del Sistema",
+    "title_sys": "Mantenimiento del Sistema",
+    "status": "Estado del Sistema",
+    "upgrading": "Actualizando",
+    "maintaining": "Mantenimiento",
+    "desc_ui": "La interfaz de usuario y la apariencia principal de la base de datos están experimentando una nueva actualización, por favor espéralo.",
+    "desc_sys": "El webmaster está realizando actualmente el mantenimiento de la base de datos y las actualizaciones del sistema, por favor vuelve más tarde.",
+    "eta": "Tiempo Estimado de Recuperación",
+    "unknown": "Desconocido",
+    "by": "Made by Danersaka",
+    "db": "Base de datos ZTMY MV",
+    "unknown_time": "Desconocido",
+    "almost_done": "Casi terminado",
+    "days_suffix": "d"
+  },
+  "debug": {
+    "modal_title": "Debug MV (Alternar Lightbox)",
+    "modal_desc": "Este es un modal de depuración para validar la integración de LightGallery/Fancybox.",
+    "page_title": "Depuración de Lightbox de Detalles del MV",
+    "current_provider": "Proveedor actual: ",
+    "open_modal": "Abrir Modal",
+    "use_fancybox": "Usar Fancybox",
+    "use_lightgallery": "Usar LightGallery"
   },
   "survey": {
     "toast_success": "¡Gracias por tu calificación de {{rating}} estrellas!",

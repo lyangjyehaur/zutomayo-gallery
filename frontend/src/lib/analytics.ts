@@ -22,7 +22,7 @@ export const initAnalytics = () => {
     window.location.protocol === 'file:';
 
   if (isLocal) {
-      console.log('本地環境，跳過 Umami 統計加載。但為測試目的，模擬 window.umami.track 方法。');
+      console.log('Local environment detected, skipping Umami analytics loading. Mocking window.umami.track for testing purposes.');
       
       // 模擬 umami 的 track 方法
       window.umami = {

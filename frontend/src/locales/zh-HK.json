@@ -8,6 +8,10 @@
     "load_more": "載入更多"
   },
   "app": {
+    "title": "ZUTOMAYO MV Gallery",
+    "subtitle": "日々研磨爆裂中！",
+    "syncing_visual": "同步緊視覺...",
+    "image": "圖片 (image)",
     "search_placeholder": "關鍵字搜尋...",
     "all_years": "所有年份",
     "all_albums": "所有專輯",
@@ -110,12 +114,10 @@
     "pwa_feature_4": "與原生 App 相同的順暢體驗",
     "install": "安裝",
     "later": "稍後再說",
-    "syncing_visual": "正在同步視覺...",
     "release": "發佈",
     "unknown_artist": "未知 (Unknown)",
     "feedback_subtitle": "Feedback",
     "feedback_desc": "有任何建議或發現 Bug，歡迎喺度留言話畀我知！",
-    "image": "圖片 (image)",
     "no_desc": "暫無描述 (NO_METADATA_FOUND)",
     "load_more": "載入更多",
     "reached_bottom": "已到最底",
@@ -174,11 +176,30 @@
     "status_500": "狀態碼：500（內部錯誤）",
     "contact_support": "如果呢個錯誤持續發生，請聯絡管理員"
   },
-  "table": {
-    "no_results": "無結果。",
-    "total_rows": "總共 {{count}} 筆資料",
-    "previous": "上一頁",
-    "next": "下一頁"
+  "maintenance": {
+    "title_ui": "系統升級緊",
+    "title_sys": "系統維護緊",
+    "status": "系統狀態",
+    "upgrading": "升級緊",
+    "maintaining": "維護緊",
+    "desc_ui": "資料庫主視覺同 UI 介面做緊全新升級，敬請期待。",
+    "desc_sys": "站長而家做緊資料庫維護同系統更新，請稍後再返嚟。",
+    "eta": "預估恢復時間",
+    "unknown": "未定",
+    "by": "由 飯糰 製作",
+    "db": "ZTMY MV 資料庫",
+    "unknown_time": "未知",
+    "almost_done": "就嚟搞掂",
+    "days_suffix": "日"
+  },
+  "debug": {
+    "modal_title": "除錯 MV（燈箱切換）",
+    "modal_desc": "呢個係一個用嚟驗證 LightGallery/Fancybox 整合嘅除錯彈窗。",
+    "page_title": "MV 詳情燈箱除錯",
+    "current_provider": "目前提供者：",
+    "open_modal": "開啟彈窗",
+    "use_fancybox": "使用 Fancybox",
+    "use_lightgallery": "使用 LightGallery"
   },
   "survey": {
     "toast_success": "多謝你嘅 {{rating}} 星評價！",

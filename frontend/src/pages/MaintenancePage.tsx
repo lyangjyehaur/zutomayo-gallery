@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
+import { useTranslation } from "react-i18next";
 import { VERSION_CONFIG } from "@/config/version";
 import { useGeoLabel } from "@/hooks/useGeoLabel";
 import {
@@ -14,6 +15,7 @@ interface MaintenancePageProps {
 }
 
 export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
+  const { t } = useTranslation();
   const [timeLeft, setTimeLeft] = useState<string>('');
   const geoInfo = useGeoLabel();
 
@@ -30,13 +32,13 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
 
   useEffect(() => {
     if (!eta) {
-      setTimeLeft('未知');
+      setTimeLeft(t('maintenance.unknown_time', '未知'));
       return;
     }
 
     const targetDate = new Date(eta).getTime();
     if (isNaN(targetDate)) {
-      setTimeLeft('未知');
+      setTimeLeft(t('maintenance.unknown_time', '未知'));
       return;
     }
 
@@ -45,7 +47,7 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
       const distance = targetDate - now;
 
       if (distance < 0) {
-        setTimeLeft('即將完成');
+        setTimeLeft(t('maintenance.almost_done', '即將完成'));
         return;
       }
 
@@ -55,7 +57,7 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
       const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
       const parts = [];
-      if (days > 0) parts.push(`${days}天`);
+      if (days > 0) parts.push(`${days}${t('maintenance.days_suffix', '天')}`);
       parts.push(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
       
       setTimeLeft(parts.join(' '));
@@ -70,7 +72,7 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
   return (
     <div className="dark min-h-screen bg-background text-foreground font-base flex flex-col items-center justify-center p-6 selection:bg-main selection:text-black crt relative overflow-hidden">
       <Helmet>
-        <title>{type === 'ui' ? '系統升級中' : '系統維護中'} - ZUTOMAYO MV Gallery</title>
+        <title>{type === 'ui' ? t('maintenance.title_ui', '系統升級中') : t('maintenance.title_sys', '系統維護中')} - ZUTOMAYO MV Gallery</title>
       </Helmet>
       
       {/* 背景格線與掃描線 */}
@@ -83,10 +85,10 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
             <div className="w-2.5 h-2.5 bg-yellow-500 animate-pulse shadow-[2px_2px_0_0_rgba(234,179,8,0.4)]"></div>
             <span className="text-[10px] font-black uppercase tracking-widest flex flex-col leading-tight">
               <span className="tracking-normal flex items-baseline gap-1.5 opacity-60">
-                系統狀態 <span className="text-[8px] font-mono normal-case">System_Status</span>
+                {t('maintenance.status', '系統狀態')} <span className="text-[8px] font-mono normal-case">System_Status</span>
               </span>
               <span className="tracking-normal text-yellow-500 flex items-baseline gap-1.5">
-                {type === 'ui' ? '升級中' : '維護中'} <span className="text-[8px] font-mono normal-case">{type === 'ui' ? 'Upgrading' : 'Maintenance'}</span>
+                {type === 'ui' ? t('maintenance.upgrading', '升級中') : t('maintenance.maintaining', '維護中')} <span className="text-[8px] font-mono normal-case">{type === 'ui' ? 'Upgrading' : 'Maintenance'}</span>
               </span>
             </span>
           </div>
@@ -99,7 +101,7 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
           
           <div className="flex flex-col items-center gap-2">
             <h1 className="text-3xl font-black uppercase tracking-widest text-yellow-500 mb-1">
-              {type === 'ui' ? '系統升級中' : '系統維護中'}
+              {type === 'ui' ? t('maintenance.title_ui', '系統升級中') : t('maintenance.title_sys', '系統維護中')}
             </h1>
             <p className="text-xs font-mono opacity-60 tracking-widest uppercase">
               {type === 'ui' ? 'SYSTEM_UPGRADE_IN_PROGRESS' : 'SYSTEM_UNDER_MAINTENANCE'}
@@ -110,17 +112,17 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
           
           <p className="text-sm font-bold opacity-80 leading-relaxed max-w-xs">
             {type === 'ui' 
-              ? '資料庫主視覺與 UI 介面正在進行全新升級，敬請期待。'
-              : '站長目前正在進行資料庫維護與系統更新，請稍後再回來。'}
+              ? t('maintenance.desc_ui', '資料庫主視覺與 UI 介面正在進行全新升級，敬請期待。')
+              : t('maintenance.desc_sys', '站長目前正在進行資料庫維護與系統更新，請稍後再回來。')}
           </p>
 
           <div className="mt-4 px-8 py-3 border-2 border-black bg-black text-main uppercase flex flex-col items-center gap-3 shadow-[4px_4px_0_0_rgba(0,0,0,0.3)]">
             <span className="flex flex-col items-center leading-tight opacity-80">
-              <span className="tracking-normal font-bold text-xs">預估恢復時間</span>
+              <span className="tracking-normal font-bold text-xs">{t('maintenance.eta', '預估恢復時間')}</span>
               <span className="text-[8px] font-mono opacity-60 normal-case mt-0.5">ESTIMATED_TIME_TO_RECOVERY</span>
             </span>
             <span className="flex flex-col items-center leading-tight text-white glitch-text">
-              <span className="tracking-normal font-black text-sm">{timeLeft}</span>
+              <span className="tracking-normal font-black text-sm">{timeLeft || t('maintenance.unknown', '未定')}</span>
               <span className="text-[8px] font-mono opacity-60 normal-case mt-0.5 text-main">{!eta ? 'UNKNOWN' : 'COUNTDOWN'}</span>
             </span>
           </div>
@@ -142,7 +144,7 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
           />
           <div className="flex flex-col items-start leading-tight">
             <div className="flex gap-2 items-center">
-              <span className="opacity-90">由 飯糰 製作</span>
+              <span className="opacity-90">{t('maintenance.by', '由 飯糰 製作')}</span>
               <i className="hn hn-heart-solid text-red-500 group-hover:animate-pulse text-[12px] leading-none"></i>
             </div>
             <span className="text-[8px] font-mono">
@@ -153,7 +155,7 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
           </div>
         </a>
         <span className="flex items-center gap-1 flex-wrap justify-center">
-          <span className="opacity-30">© {new Date().getFullYear()} ZTMY MV 資料庫 V{VERSION_CONFIG.app} | </span>
+          <span className="opacity-30">© {new Date().getFullYear()} {t('maintenance.db', 'ZTMY MV 資料庫')} V{VERSION_CONFIG.app} | </span>
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
               <span 

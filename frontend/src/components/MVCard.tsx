@@ -220,7 +220,7 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
         <div className="absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2 z-0 transition-opacity duration-700 pointer-events-none" style={{ opacity: isLoaded ? 0 : 1, willChange: 'opacity' }}>
           <div className="size-5 border-2 border-black/10 border-t-black animate-spin rounded-full" />
           <span className="text-[8px] font-black uppercase tracking-tighter flex flex-col items-center leading-tight">
-            <span className="opacity-40 tracking-normal">同步視覺中...</span>
+            <span className="opacity-40 tracking-normal">{t("app.syncing_visual", "同步視覺中...")}</span>
             <span className="font-mono opacity-20 normal-case">Syncing_Visual...</span>
           </span>
         </div>

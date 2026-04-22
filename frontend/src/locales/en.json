@@ -8,6 +8,10 @@
     "load_more": "Load More"
   },
   "app": {
+    "title": "ZUTOMAYO MV Gallery",
+    "subtitle": "日々研磨爆裂中！",
+    "syncing_visual": "Syncing Visual...",
+    "image": "Image",
     "search_placeholder": "Search keywords...",
     "all_years": "All Years",
     "all_albums": "All Albums",
@@ -179,6 +183,31 @@
     "total_rows": "Total {{count}} rows",
     "previous": "Previous",
     "next": "Next"
+  },
+  "maintenance": {
+    "title_ui": "System Upgrading",
+    "title_sys": "System Maintenance",
+    "status": "System Status",
+    "upgrading": "Upgrading",
+    "maintaining": "Maintenance",
+    "desc_ui": "The main visual and UI of the database are undergoing a brand new upgrade, please look forward to it.",
+    "desc_sys": "The webmaster is currently performing database maintenance and system updates, please come back later.",
+    "eta": "Estimated Time of Recovery",
+    "unknown": "Unknown",
+    "by": "Made by Danersaka",
+    "db": "ZTMY MV Database",
+    "unknown_time": "Unknown",
+    "almost_done": "Almost done",
+    "days_suffix": "d"
+  },
+  "debug": {
+    "modal_title": "Debug MV (Lightbox Toggle)",
+    "modal_desc": "This is a debug modal to validate LightGallery/Fancybox integration.",
+    "page_title": "MV Details Lightbox Debug",
+    "current_provider": "Current Provider: ",
+    "open_modal": "Open Modal",
+    "use_fancybox": "Use Fancybox",
+    "use_lightgallery": "Use LightGallery"
   },
   "survey": {
     "toast_success": "Thank you for your {{rating}}-star rating!",

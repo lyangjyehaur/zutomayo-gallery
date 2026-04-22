@@ -238,7 +238,7 @@ export function WalineComments({
         
         initializedRef.current = true;
       } catch (error) {
-        console.error('Waline 初始化失败:', error);
+        console.error('Waline initialization failed:', error);
       }
     };
 

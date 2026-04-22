@@ -8,6 +8,8 @@
     "load_more": "さらに読み込む"
   },
   "app": {
+    "title": "ZUTOMAYO MV Gallery",
+    "subtitle": "日々研磨爆裂中！",
     "search_placeholder": "キーワードで検索...",
     "all_years": "すべての年",
     "all_albums": "すべてのアルバム",
@@ -111,6 +113,7 @@
     "install": "インストール",
     "later": "後で",
     "syncing_visual": "ビジュアルを同期中...",
+    "image": "画像 (image)",
     "release": "リリース",
     "unknown_artist": "不明 (Unknown)",
     "feedback_subtitle": "Feedback",
@@ -179,6 +182,31 @@
     "total_rows": "合計 {{count}} 件のデータ",
     "previous": "前へ",
     "next": "次へ"
+  },
+  "maintenance": {
+    "title_ui": "システムアップグレード中",
+    "title_sys": "システムメンテナンス中",
+    "status": "システムステータス",
+    "upgrading": "アップグレード中",
+    "maintaining": "メンテナンス中",
+    "desc_ui": "データベースのメインビジュアルとUIインターフェースを新しくアップグレードしています。お楽しみに。",
+    "desc_sys": "現在、管理者がデータベースのメンテナンスとシステム更新を行っています。後でもう一度アクセスしてください。",
+    "eta": "復旧予定時間",
+    "unknown": "未定",
+    "by": "Made by Danersaka",
+    "db": "ZTMY MV データベース",
+    "unknown_time": "不明",
+    "almost_done": "まもなく完了",
+    "days_suffix": "日"
+  },
+  "debug": {
+    "modal_title": "デバッグMV（Lightbox切り替え）",
+    "modal_desc": "これはLightGalleryとFancyboxの統合を検証するためのデバッグモーダルです。",
+    "page_title": "MV詳細Lightboxデバッグ",
+    "current_provider": "現在のプロバイダ：",
+    "open_modal": "モーダルを開く",
+    "use_fancybox": "Fancyboxを使用",
+    "use_lightgallery": "LightGalleryを使用"
   },
   "survey": {
     "toast_success": "{{rating}}つ星の評価をありがとうございます！",

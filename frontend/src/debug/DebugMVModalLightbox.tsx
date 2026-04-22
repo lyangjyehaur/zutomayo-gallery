@@ -1,24 +1,26 @@
 import * as React from 'react';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MVDetailsModal } from '@/components/MVDetailsModal';
 import type { MVItem } from '@/lib/types';
 import { getLightboxProvider, setLightboxProvider } from '@/config';
 
 export default function DebugMVModalLightbox() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const provider = getLightboxProvider();
 
   const mv = useMemo<MVItem>(
     () => ({
       id: 'debug-mv',
-      title: '除錯 MV（燈箱切換） (Debug MV)',
+      title: t('debug.modal_title', '除錯 MV（燈箱切換） (Debug MV)'),
       year: '2026',
       date: '04-16',
       album: ['DEBUG_ALBUM'],
       artist: 'DEBUG_ARTIST',
       youtube: '',
       bilibili: '',
-      description: '這是一個用於驗證 LightGallery/Fancybox 整合的除錯彈窗。 (This is a debug modal to validate LightGallery/Fancybox integration.)',
+      description: t('debug.modal_desc', '這是一個用於驗證 LightGallery/Fancybox 整合的除錯彈窗。 (This is a debug modal to validate LightGallery/Fancybox integration.)'),
       coverImages: [],
       keywords: [{ text: 'debug' }, { text: 'lightbox' }],
       images: [
@@ -101,11 +103,11 @@ export default function DebugMVModalLightbox() {
     <div className="min-h-screen bg-background p-10 font-mono">
       <header className="mb-10 border-b-8 border-border pb-4">
         <h1 className="text-3xl font-black uppercase italic tracking-tighter flex flex-col leading-tight">
-          <span className="tracking-normal">MV 詳情燈箱除錯</span>
+          <span className="tracking-normal">{t('debug.page_title', 'MV 詳情燈箱除錯')}</span>
           <span className="text-[10px] font-mono opacity-60 normal-case">MVDetailsModal_Lightbox_Debug</span>
         </h1>
         <p className="mt-2 font-bold opacity-50 uppercase flex flex-col leading-tight">
-          <span className="tracking-normal">目前提供者：{provider.toUpperCase()}</span>
+          <span className="tracking-normal">{t('debug.current_provider', '目前提供者：')}{provider.toUpperCase()}</span>
           <span className="text-[10px] font-mono opacity-60 normal-case">Current_Provider</span>
         </p>
       </header>
@@ -116,7 +118,7 @@ export default function DebugMVModalLightbox() {
           onClick={() => setOpen(true)}
         >
           <span className="flex flex-col items-center leading-tight">
-            <span className="tracking-normal">開啟彈窗</span>
+            <span className="tracking-normal">{t('debug.open_modal', '開啟彈窗')}</span>
             <span className="text-[10px] font-mono opacity-60 normal-case">Open_Modal</span>
           </span>
         </button>
@@ -129,7 +131,7 @@ export default function DebugMVModalLightbox() {
           }}
         >
           <span className="flex flex-col items-center leading-tight">
-            <span className="tracking-normal">使用 Fancybox</span>
+            <span className="tracking-normal">{t('debug.use_fancybox', '使用 Fancybox')}</span>
             <span className="text-[10px] font-mono opacity-60 normal-case">Use_Fancybox</span>
           </span>
         </button>
@@ -142,7 +144,7 @@ export default function DebugMVModalLightbox() {
           }}
         >
           <span className="flex flex-col items-center leading-tight">
-            <span className="tracking-normal">使用 LightGallery</span>
+            <span className="tracking-normal">{t('debug.use_lightgallery', '使用 LightGallery')}</span>
             <span className="text-[10px] font-mono opacity-60 normal-case">Use_LightGallery</span>
           </span>
         </button>

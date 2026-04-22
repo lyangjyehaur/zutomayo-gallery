@@ -8,6 +8,10 @@
     "load_more": "載入更多"
   },
   "app": {
+    "title": "ZUTOMAYO MV Gallery",
+    "subtitle": "日々研磨爆裂中！",
+    "syncing_visual": "同步視覺中...",
+    "image": "圖片 (image)",
     "search_placeholder": "關鍵字檢索...",
     "all_years": "所有年份",
     "all_albums": "所有專輯",
@@ -174,11 +178,30 @@
     "status_500": "狀態碼：500（內部錯誤）",
     "contact_support": "若此錯誤持續發生，請聯絡管理者"
   },
-  "table": {
-    "no_results": "無結果。",
-    "total_rows": "總共 {{count}} 筆資料",
-    "previous": "上一頁",
-    "next": "下一頁"
+  "maintenance": {
+    "title_ui": "系統升級中",
+    "title_sys": "系統維護中",
+    "status": "系統狀態",
+    "upgrading": "升級中",
+    "maintaining": "維護中",
+    "desc_ui": "資料庫主視覺與 UI 介面正在進行全新升級，敬請期待。",
+    "desc_sys": "站長目前正在進行資料庫維護與系統更新，請稍後再回來。",
+    "eta": "預估恢復時間",
+    "unknown": "未定",
+    "by": "由 飯糰 製作",
+    "db": "ZTMY MV 資料庫",
+    "unknown_time": "未知",
+    "almost_done": "即將完成",
+    "days_suffix": "天"
+  },
+  "debug": {
+    "modal_title": "除錯 MV（燈箱切換）",
+    "modal_desc": "這是一個用於驗證 LightGallery/Fancybox 整合的除錯彈窗。",
+    "page_title": "MV 詳情燈箱除錯",
+    "current_provider": "目前提供者：",
+    "open_modal": "開啟彈窗",
+    "use_fancybox": "使用 Fancybox",
+    "use_lightgallery": "使用 LightGallery"
   },
   "survey": {
     "toast_success": "感謝您的 {{rating}} 星評價！",
