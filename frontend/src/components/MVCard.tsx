@@ -42,6 +42,7 @@ const getRandomInt = (min: number, max: number) => {
 const sample = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
 
 export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, isPaused, forceLoad = false, hideCrt = false, initialDelay }: { coverImages: string[]; title: string; isPaused?: boolean; forceLoad?: boolean; hideCrt?: boolean; initialDelay?: number }) {
+  const { t } = useTranslation();
   const urls = useMemo(() => {
     const normalized = (coverImages || []).map((u) => u?.trim()).filter(Boolean) as string[];
     return normalized;
