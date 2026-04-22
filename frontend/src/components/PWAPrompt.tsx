@@ -29,25 +29,44 @@ export function PWAPrompt() {
 
   useEffect(() => {
     if (needRefresh) {
-      toast(t('app.pwa_update_title', '發現新版本！'), {
-        description: t('app.pwa_update_desc', '點擊更新以載入最新內容。'),
+      const toastId = toast.custom((t_id) => (
+        <>
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998]"
+          />
+          <div className="bg-background text-foreground border-border border-2 font-heading shadow-shadow rounded-base flex flex-col gap-4 p-5 w-[356px] md:w-[400px] relative z-[9999] pointer-events-auto">
+            <h2 className="text-lg font-bold w-full leading-tight">
+              {t('app.pwa_update_title', '發現新版本！')}
+            </h2>
+            <div className="w-full font-base">
+              <p className="text-[15px] leading-snug">{t('app.pwa_update_desc', '點擊更新以載入最新內容。')}</p>
+            </div>
+            <div className="flex flex-col gap-2 w-full mt-2">
+              <button
+                onClick={() => {
+                  toast.dismiss(t_id);
+                  updateServiceWorker(true);
+                }}
+                className="font-base border-2 text-[15px] h-10 px-4 bg-main text-main-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none"
+              >
+                {t('app.pwa_update_reload', '重新載入')}
+              </button>
+              <button
+                onClick={() => {
+                  toast.dismiss(t_id);
+                  setNeedRefresh(false);
+                }}
+                className="font-base border-2 text-[15px] h-10 px-4 bg-secondary-background text-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none"
+              >
+                {t('app.later', '稍後再說')}
+              </button>
+            </div>
+          </div>
+        </>
+      ), {
         duration: Infinity,
         position: 'bottom-center',
-        className: '!flex-col !items-start !gap-4 !p-5 w-[356px] md:w-[400px]',
-        classNames: {
-          actionButton: '!w-full !justify-center !text-center !h-10 !text-[15px]',
-          cancelButton: '!w-full !justify-center !text-center !h-10 !text-[15px] !mt-2',
-          title: '!text-lg !font-bold',
-          description: '!w-full',
-        },
-        action: {
-          label: t('app.pwa_update_reload', '重新載入'),
-          onClick: () => updateServiceWorker(true),
-        },
-        cancel: {
-          label: t('app.later', '稍後再說'),
-          onClick: () => setNeedRefresh(false),
-        },
+        unstyled: true,
       });
     }
   }, [needRefresh, setNeedRefresh, t, updateServiceWorker]);
