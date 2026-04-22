@@ -208,11 +208,14 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
       {/* 基礎模糊底層（提供柔和過渡，當沒有圖片時顯示黑色背景） */}
       <div
         className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-30 transition-all duration-1000 bg-black"
-        style={currentSrc ? { backgroundImage: `url(${currentSrc})` } : {}}
+        style={{
+          ...(currentSrc ? { backgroundImage: `url(${currentSrc})` } : {}),
+          willChange: 'background-image'
+        }}
       />
 
       {!isLoaded && currentSrc && (
-        <div className="absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2 z-20">
+        <div className="absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2 z-0 transition-opacity duration-700">
           <div className="size-5 border-2 border-black/10 border-t-black animate-spin rounded-full" />
           <span className="text-[8px] font-black uppercase tracking-tighter flex flex-col items-center leading-tight">
             <span className="opacity-40 tracking-normal">同步視覺中...</span>
@@ -222,7 +225,7 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
       )}
 
       {/* 動態追加 glitch 與 signal-drop 類別 */}
-      <div className={`absolute inset-0 ${glitch.active && glitch.mode === 'jitter' ? 'ztmy-glitch-jitter' : ''} ${glitch.active && glitch.mode === 'invert' ? 'ztmy-invert-flash' : ''} ${glitch.active && glitch.drop ? 'ztmy-signal-drop' : ''}`}>
+      <div className={`absolute inset-0 ${glitch.active && glitch.mode === 'jitter' ? 'ztmy-glitch-jitter' : ''} ${glitch.active && glitch.mode === 'invert' ? 'ztmy-invert-flash' : ''} ${glitch.active && glitch.drop ? 'ztmy-signal-drop' : ''}`} style={{ willChange: glitch.active ? 'transform, filter' : 'auto' }}>
         {/* 底層目前圖片 */}
         {currentSrc && (
           <img
@@ -235,22 +238,27 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
             } ${
               transitionMode === 'pixelate' && fadeState !== 'idle' ? 'ztmy-pixelate-out' : ''
             }`}
-            style={
-              transitionMode === 'fade'
+            style={{
+              ...(transitionMode === 'fade'
                 ? { opacity: fadeState === 'active' ? 0 : 1, transition: `opacity ${fadeMs}ms linear` }
                 : transitionMode === 'scan-wipe'
                 ? { opacity: 1 }
                 : {
                     animationDuration: `${fadeMs}ms`,
-                  }
-            }
+                  }),
+              ...(transitionMode !== 'fade' && {
+                opacity: isLoaded ? 1 : 0,
+                transition: isLoaded ? 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
+              }),
+              willChange: 'opacity'
+            }}
             onLoad={() => setIsLoaded(true)}
             loading={forceLoad ? "eager" : "lazy"}
             decoding="async"
           />
         )}
 
-        {/* 頂層下一張圖片 */}
+            {/* 頂層下一張圖片 */}
         {nextSrc && (
           <img
             src={nextSrc}
@@ -262,8 +270,8 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
             } ${
               transitionMode === 'pixelate' && fadeState !== 'idle' ? 'ztmy-pixelate-in' : ''
             }`}
-            style={
-              transitionMode === 'scan-wipe'
+            style={{
+              ...(transitionMode === 'scan-wipe'
                 ? {
                     clipPath: fadeState === 'active' ? 'inset(0 0 0 0)' : 'inset(0 0 100% 0)',
                     transition: `clip-path ${fadeMs}ms linear`,
@@ -278,8 +286,9 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
                     // 對於透過 class 控制的動畫，確保它可見並把 duration 傳入
                     opacity: fadeState === 'active' ? 1 : 0,
                     animationDuration: `${fadeMs}ms`,
-                  }
-            }
+                  }),
+              willChange: transitionMode === 'scan-wipe' ? 'clip-path, filter' : 'opacity'
+            }}
             loading={forceLoad ? "eager" : "lazy"}
             decoding="async"
           />
@@ -321,7 +330,7 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
             src={currentSrc}
             alt="切片效果 (slice)"
             className="absolute inset-0 w-full h-full object-cover z-20 ztmy-rolling-slice"
-            style={{ animationDelay: sliceDelay }}
+            style={{ animationDelay: sliceDelay, willChange: 'transform, clip-path' }}
             loading="lazy"
             decoding="async"
           />

@@ -1770,9 +1770,11 @@ function App({
                       {geoInfo.details && (
                         <div className="mt-1 pt-1 border-t border-black/20 text-[10px] font-mono opacity-80 leading-tight">
                           {geoInfo.details.province && geoInfo.details.city ? (
-                            <p>LOC: {geoInfo.details.province} {geoInfo.details.city}</p>
+                            <p>LOC: {geoInfo.details.city.startsWith(geoInfo.details.province) || geoInfo.details.province.startsWith(geoInfo.details.city) || geoInfo.details.province === geoInfo.details.city ? geoInfo.details.city || geoInfo.details.province : `${geoInfo.details.province} ${geoInfo.details.city}`}</p>
                           ) : geoInfo.details.province ? (
                             <p>LOC: {geoInfo.details.province}</p>
+                          ) : geoInfo.details.city ? (
+                            <p>LOC: {geoInfo.details.city}</p>
                           ) : null}
                           {geoInfo.details.isp && (
                             <p>ISP: {geoInfo.details.isp}</p>
@@ -1934,6 +1936,9 @@ function App({
       <MVDetailsModal
         mv={selectedMv}
         onClose={() => {
+          if (document.body.classList.contains('fancybox__body') || document.querySelector('.fancybox__container')) {
+            return;
+          }
           if (window.history.state && window.history.state.idx > 0) {
             navigate(-1);
           } else {

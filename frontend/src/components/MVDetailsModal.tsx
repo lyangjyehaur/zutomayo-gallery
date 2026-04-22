@@ -248,34 +248,34 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
         </Helmet>
       )}
       <Dialog modal={false} open={!!mv} onOpenChange={(open) => {
-      // 這裡非常重要：Radix 的 Dialog 會在關閉動畫開始時，先呼叫 onOpenChange(false)
-      // 如果我們在這裡就呼叫 onClose，React Router 會立刻切換網址
-      // 網址一切換，上層的 <MVDetailsModal> 就會直接被卸載 (Unmount)
-      // 這就是為什麼沒有關閉動畫的原因！
-      
-      // 當點擊 X 按鈕或背景時，也會觸發這個事件，但 open 會是 false
-      if (!open) {
-        // 如果燈箱開著，我們不關閉 Modal
-        if (document.body.classList.contains('fancybox__body') || document.querySelector('.fancybox__container') || isLightboxOpenRef.current) {
-          return;
-        }
+        // 這裡非常重要：Radix 的 Dialog 會在關閉動畫開始時，先呼叫 onOpenChange(false)
+        // 如果我們在這裡就呼叫 onClose，React Router 會立刻切換網址
+        // 網址一切換，上層的 <MVDetailsModal> 就會直接被卸載 (Unmount)
+        // 這就是為什麼沒有關閉動畫的原因！
         
-        // 只有在不是因為燈箱開啟而觸發的關閉，才真正準備關閉 Modal
-        if (!isClosingRef.current) {
-          isClosingRef.current = true;
-          // 我們只把內部狀態標記為關閉，讓 Radix 的動畫開始跑
-          // 但因為 Radix 的 open={!!mv} 是綁定在外部 prop 上，
-          // 如果不呼叫 onClose，Dialog 就會卡在畫面上（因為 open 永遠是 true）。
-          // 為了讓關閉動畫順利執行，我們必須呼叫 onClose 來讓外部 mv 變成 null，
-          // 不過我們已經在父層用 AnimatePresence 或 Radix 自帶的卸載機制處理好了嗎？
-          // 事實上，React Router 的 navigate 會直接把組件樹換掉，Radix 根本沒機會播動畫。
+        // 當點擊 X 按鈕或背景時，也會觸發這個事件，但 open 會是 false
+        if (!open) {
+          // 如果燈箱開著，我們不關閉 Modal
+          if (document.body.classList.contains('fancybox__body') || document.querySelector('.fancybox__container') || isLightboxOpenRef.current) {
+            return;
+          }
           
-          // 所以正確的做法是：直接呼叫 onClose，但把「延遲關閉」的邏輯放到父層，
-          // 或者放棄 Dialog 原生的退出動畫（因為 Router 切換是瞬間的）。
-          onClose();
+          // 只有在不是因為燈箱開啟而觸發的關閉，才真正準備關閉 Modal
+          if (!isClosingRef.current) {
+            isClosingRef.current = true;
+            // 我們只把內部狀態標記為關閉，讓 Radix 的動畫開始跑
+            // 但因為 Radix 的 open={!!mv} 是綁定在外部 prop 上，
+            // 如果不呼叫 onClose，Dialog 就會卡在畫面上（因為 open 永遠是 true）。
+            // 為了讓關閉動畫順利執行，我們必須呼叫 onClose 來讓外部 mv 變成 null，
+            // 不過我們已經在父層用 AnimatePresence 或 Radix 自帶的卸載機制處理好了嗎？
+            // 事實上，React Router 的 navigate 會直接把組件樹換掉，Radix 根本沒機會播動畫。
+            
+            // 所以正確的做法是：直接呼叫 onClose，但把「延遲關閉」的邏輯放到父層，
+            // 或者放棄 Dialog 原生的退出動畫（因為 Router 切換是瞬間的）。
+            onClose();
+          }
         }
-      }
-    }}>
+      }}>
       <DialogContent
         overlayClassName={MODAL_THEME.overlay.dialog}
         className={`max-w-none w-screen h-[100dvh] left-0 top-0 !translate-x-0 !translate-y-0 border-0 shadow-none rounded-none p-0 md:max-w-none md:w-screen md:h-[100dvh] md:left-0 md:top-0 md:!translate-x-0 md:!translate-y-0 md:border-0 md:shadow-none !flex !flex-col !gap-0 [&>button]:hidden ${MODAL_THEME.content.dialog}`}

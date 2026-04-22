@@ -326,6 +326,7 @@ const PhotoItem = ({ photo, index, onPhotoClick, delayMs }: PhotoItemProps) => {
               className={`absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2 transition-opacity duration-700 pointer-events-none z-0 ${
                 isLoaded ? 'opacity-0' : 'opacity-100'
               }`}
+              style={{ willChange: 'opacity' }}
             >
               <div className="size-5 border-2 border-black/10 border-t-black animate-spin rounded-full" />
               <span className="text-[8px] font-black uppercase tracking-tighter flex flex-col items-center leading-tight">
@@ -343,7 +344,8 @@ const PhotoItem = ({ photo, index, onPhotoClick, delayMs }: PhotoItemProps) => {
               style={{
                 ...(aspectRatio ? { position: 'absolute', inset: 0, height: '100%' } : {}),
                 opacity: isLoaded ? 1 : 0,
-                transition: 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+                transition: 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                willChange: 'opacity'
               }}
               onLoad={(e) => {
                 setIsLoaded(true);
@@ -359,14 +361,13 @@ const PhotoItem = ({ photo, index, onPhotoClick, delayMs }: PhotoItemProps) => {
               }}
             />
             
-            {/* GIF 標籤 */}
             {photo.isGif && (
-              <div className="absolute top-2 left-2 flex items-center justify-center bg-black/60 text-white rounded px-2 py-0.5 shadow-sm backdrop-blur-sm border border-white/10 z-10 pointer-events-none">
+              <div className="absolute top-2 left-2 flex items-center justify-center bg-black/60 text-white rounded px-2 py-0.5 shadow-sm backdrop-blur-sm border border-white/10 z-20 pointer-events-none">
                 <span className="font-black text-[10px] tracking-widest">GIF</span>
               </div>
             )}
             {photo.isVideo && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none transition-opacity group-hover:bg-black/30 z-10 backdrop-blur-[1px]">
+              <div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none transition-opacity group-hover:bg-black/30 z-20 backdrop-blur-[1px]">
                 <div className="bg-black/70 text-white p-2 sm:p-3 border-2 border-white/20 shadow-lg flex items-center justify-center backdrop-blur-md transform transition-transform group-hover:scale-110">
                   <i className="hn hn-play-solid text-xl sm:text-2xl ml-0.5" />
                 </div>
@@ -436,7 +437,6 @@ export default function FancyboxViewer({
         const ext = getExtensionFromUrl(img.url);
         const fullFilename = `${mvTitle}_${caption.replace(/[^a-zA-Z0-9_\-\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff]/g, '_')}.${ext}`;
 
-        // 如果有寬高則回傳，沒有的話就讓瀑布流 CSS 自己處理（不再卡死等待）
         return {
           src: thumbUrl,
           full: fullUrl,

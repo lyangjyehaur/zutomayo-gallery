@@ -183,9 +183,11 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
                 {geoInfo.details && (
                   <div className="mt-1 pt-1 border-t border-black/20 text-[10px] font-mono opacity-80 leading-tight tracking-normal normal-case">
                     {geoInfo.details.province && geoInfo.details.city ? (
-                      <p>LOC: {geoInfo.details.province} {geoInfo.details.city}</p>
+                      <p>LOC: {geoInfo.details.city.startsWith(geoInfo.details.province) || geoInfo.details.province.startsWith(geoInfo.details.city) || geoInfo.details.province === geoInfo.details.city ? geoInfo.details.city || geoInfo.details.province : `${geoInfo.details.province} ${geoInfo.details.city}`}</p>
                     ) : geoInfo.details.province ? (
                       <p>LOC: {geoInfo.details.province}</p>
+                    ) : geoInfo.details.city ? (
+                      <p>LOC: {geoInfo.details.city}</p>
                     ) : null}
                     {geoInfo.details.isp && (
                       <p>ISP: {geoInfo.details.isp}</p>

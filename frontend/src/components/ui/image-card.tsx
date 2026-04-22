@@ -150,7 +150,7 @@ export default function ImageCard({ imageUrl, caption, className, children, medi
         ) : (
           <>
             {!isLoaded && (
-              <div className="absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2">
+              <div className="absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2 transition-opacity duration-700 z-0">
                 <div className="size-5 border-2 border-black/10 border-t-black animate-spin rounded-full" />
                 <span className="text-[8px] font-black uppercase tracking-tighter flex flex-col items-center leading-tight">
                   <span className="opacity-40 tracking-normal">同步視覺中...</span>
@@ -160,12 +160,17 @@ export default function ImageCard({ imageUrl, caption, className, children, medi
             )}
             <img 
               className={cn(
-                "w-full h-full object-cover transition-all duration-700",
-                isLoaded ? "opacity-100 scale-100 blur-0" : "opacity-0 scale-110 blur-xl"
+                "w-full h-full object-cover relative z-10",
               )} 
+              style={{
+                opacity: isLoaded ? 1 : 0,
+                transition: 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                willChange: 'opacity'
+              }}
               src={imageUrl} 
               alt="圖片 (image)" 
               onLoad={() => setIsLoaded(true)}
+              loading="lazy"
             />
           </>
         )}
