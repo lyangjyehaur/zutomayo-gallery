@@ -262,6 +262,11 @@
   box-shadow: none !important;
 }
 
+/* 隱藏 IP 屬地、作業系統、瀏覽器等系統資訊標籤 */
+.waline-wrapper .wl-card .wl-meta > span.wl-sys {
+  display: none !important;
+}
+
 /* Badges (Admin) */
 .waline-wrapper .wl-card .wl-badge {
   border: 2px solid #000000 !important;
