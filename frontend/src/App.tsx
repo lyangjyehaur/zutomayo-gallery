@@ -265,8 +265,8 @@ function App({
 
     toast.custom((t_id) => (
       <>
-        <ModalBackdrop />
-        <div className="bg-background text-foreground border-border border-2 font-heading shadow-shadow rounded-base flex flex-col gap-4 p-5 w-[356px] md:w-[400px] relative z-[9999] pointer-events-auto">
+        <ModalBackdrop zIndex="z-[9999]" />
+        <div className="bg-background text-foreground border-border border-2 font-heading shadow-shadow rounded-base flex flex-col gap-4 p-5 w-[356px] md:w-[400px] relative z-[10000] pointer-events-auto">
           <h2 className="text-lg font-bold w-full leading-tight">
             {t("app.pwa_recover_title", "修復更新/清除快取")}
           </h2>
@@ -1364,8 +1364,8 @@ function App({
                   onClick={() => {
                     toast.custom((t_id) => (
                       <>
-                        <ModalBackdrop />
-                        <div className="bg-background text-foreground border-border border-2 font-heading shadow-shadow rounded-base flex flex-col gap-4 p-5 w-[356px] md:w-[400px] relative z-[9999] pointer-events-auto">
+                        <ModalBackdrop zIndex="z-[9999]" />
+                        <div className="bg-background text-foreground border-border border-2 font-heading shadow-shadow rounded-base flex flex-col gap-4 p-5 w-[356px] md:w-[400px] relative z-[10000] pointer-events-auto">
                           <h2 className="text-lg font-bold w-full leading-tight">
                             {t("app.install_pwa_title", "安裝 ZTMY Gallery")}
                           </h2>

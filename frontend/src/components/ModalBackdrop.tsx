@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { MODAL_THEME } from '@/lib/theme'
 
-export function ModalBackdrop({ onClick }: { onClick?: () => void }) {
+export function ModalBackdrop({ onClick, zIndex = 'z-[9998]' }: { onClick?: () => void, zIndex?: string }) {
   useEffect(() => {
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -13,7 +13,7 @@ export function ModalBackdrop({ onClick }: { onClick?: () => void }) {
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-[9998] ${MODAL_THEME.overlay.dialog}`}
+      className={`fixed inset-0 ${zIndex} ${MODAL_THEME.overlay.dialog}`}
       onClick={(e) => {
         e.preventDefault()
         e.stopPropagation()

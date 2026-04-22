@@ -32,8 +32,8 @@ export function PWAPrompt() {
     if (needRefresh) {
       toast.custom((t_id) => (
         <>
-          <ModalBackdrop />
-          <div className="bg-background text-foreground border-border border-2 font-heading shadow-shadow rounded-base flex flex-col gap-4 p-5 w-[356px] md:w-[400px] relative z-[9999] pointer-events-auto">
+          <ModalBackdrop zIndex="z-[9999]" />
+          <div className="bg-background text-foreground border-border border-2 font-heading shadow-shadow rounded-base flex flex-col gap-4 p-5 w-[356px] md:w-[400px] relative z-[10000] pointer-events-auto">
             <h2 className="text-lg font-bold w-full leading-tight">
               {t('app.pwa_update_title', '發現新版本！')}
             </h2>
