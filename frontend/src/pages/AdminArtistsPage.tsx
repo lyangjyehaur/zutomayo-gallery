@@ -15,21 +15,30 @@ export function AdminArtistsPage() {
   const [artistMeta, setArtistMeta] = useState<Record<string, ArtistMeta>>({});
   const [mvData, setMvData] = useState<MVItem[]>([]);
   const [selectedArtist, setSelectedArtist] = useState<string | null>(null);
+  
+  // 批量解析推文的狀態
+  const [tweetUrl, setTweetUrl] = useState('');
+  const [isParsing, setIsParsing] = useState(false);
+  const [batchStatus, setBatchStatus] = useState<{ total: number, current: number, failedUrls: string[] } | null>(null);
 
   const verifyPassword = async (pwd: string) => {
     try {
-      const res = await fetch('/api/v1/mvs', {
+      const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
+      const res = await fetch(`${apiUrl}/verify-admin`, {
+        method: 'POST',
         headers: { 'x-admin-password': pwd }
       });
       if (res.ok) {
         setIsAuthenticated(true);
-        localStorage.setItem('ztmy_admin_pwd', pwd);
         fetchData();
       } else {
-        toast.error('密碼錯誤');
+        toast.error('身分驗證過期，請重新登入');
+        localStorage.removeItem('ztmy_admin_pwd');
+        navigate('/admin');
       }
     } catch (e) {
-      toast.error('驗證失敗');
+      toast.error('驗證失敗，請重新登入');
+      navigate('/admin');
     } finally {
       setIsInitializing(false);
     }
@@ -37,29 +46,35 @@ export function AdminArtistsPage() {
 
   const fetchData = async () => {
     try {
+      const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
       const [metaRes, mvRes] = await Promise.all([
-        fetch('/api/v1/meta'),
-        fetch('/api/v1/mvs')
+        fetch(`${apiUrl}/metadata`),
+        fetch(`${apiUrl}?limit=1000`)
       ]);
       const metaData = await metaRes.json();
       const mvs = await mvRes.json();
-      setArtistMeta(metaData.artistMeta || {});
+      setArtistMeta(metaData.data?.artistMeta || metaData.artistMeta || {});
       setMvData(mvs.data || []);
     } catch (e) {
-      toast.error('載入失敗');
+      toast.error('載入資料失敗');
     }
   };
 
   useEffect(() => {
     const pwd = localStorage.getItem('ztmy_admin_pwd');
-    if (pwd) verifyPassword(pwd);
-    else setIsInitializing(false);
+    if (pwd) {
+      verifyPassword(pwd);
+    } else {
+      toast.info('請先登入管理員帳號');
+      navigate('/admin');
+    }
   }, []);
 
   const handleSave = async () => {
     const pwd = localStorage.getItem('ztmy_admin_pwd');
+    const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
     toast.promise(
-      fetch('/api/v1/meta', {
+      fetch(`${apiUrl}/metadata`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-password': pwd || '' },
         body: JSON.stringify({ artistMeta })
@@ -72,29 +87,102 @@ export function AdminArtistsPage() {
     );
   };
 
+  const handleParseTweet = async () => {
+    if (!tweetUrl.trim()) return toast.error('請輸入推文網址');
+    if (!selectedArtist) return toast.error('請先選擇一位畫師');
+    
+    const urls = tweetUrl.split('\n').map(u => u.trim()).filter(u => u);
+    if (urls.length === 0) return;
+
+    setIsParsing(true);
+    setBatchStatus({ total: urls.length, current: 0, failedUrls: [] });
+    
+    let currentFailedUrls: string[] = [];
+    let allNewImages: any[] = [];
+
+    try {
+      const apiUrl = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, '') + '/mvs/twitter-resolve';
+      
+      for (const url of urls) {
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
+            },
+            body: JSON.stringify({ url }),
+          });
+          
+          if (!response.ok) throw new Error('推文解析失敗');
+          const json = await response.json();
+          
+          if (json.success && json.data && json.data.length > 0) {
+            const groupId = json.data.length > 1 ? `tweet-${Date.now()}-${Math.floor(Math.random() * 1000)}` : undefined;
+            const newImages = json.data.map((media: any) => ({
+              url: media.url,
+              thumbnail: media.thumbnail || '',
+              tweetUrl: url,
+              tweetText: media.text,
+              tweetAuthor: media.user_name,
+              tweetHandle: media.user_screen_name,
+              tweetDate: media.date,
+              groupId,
+              width: 0,
+              height: 0,
+              caption: '',
+              alt: ''
+            }));
+            
+            allNewImages = [...allNewImages, ...newImages];
+          } else {
+            throw new Error('推文中找不到媒體');
+          }
+        } catch (err: any) {
+          console.error(err);
+          currentFailedUrls.push(url);
+        } finally {
+          setBatchStatus(prev => prev ? { ...prev, current: prev.current + 1, failedUrls: currentFailedUrls } : null);
+        }
+      }
+
+      if (allNewImages.length > 0) {
+        // 將解析出的圖片加到當前畫師的 collaborations 陣列中
+        setArtistMeta(p => {
+          const current = p[selectedArtist] || { id: '', hideId: false };
+          return {
+            ...p,
+            [selectedArtist]: {
+              ...current,
+              collaborations: [...(current.collaborations || []), ...allNewImages]
+            }
+          };
+        });
+        setTweetUrl('');
+      }
+      
+      if (currentFailedUrls.length === 0) {
+        toast.success(`解析完成: 成功取得 ${allNewImages.length} 個媒體，已加入畫師綜合插畫列表中`);
+        setTimeout(() => setBatchStatus(null), 2000);
+      } else {
+        toast.warning(`完成，但有 ${currentFailedUrls.length} 個連結解析失敗`);
+      }
+    } catch (err: any) {
+      toast.error('解析過程發生錯誤: ' + err.message);
+      setBatchStatus(null);
+    } finally {
+      setIsParsing(false);
+    }
+  };
+
   const availableArtists = Array.from(new Set([
     ...Object.keys(artistMeta),
     ...mvData.flatMap(mv => mv.artist || [])
   ])).filter(Boolean).sort((a, b) => a.localeCompare(b));
 
-  if (isInitializing) return <div className="h-screen bg-background text-foreground flex items-center justify-center">驗證中...</div>;
+  if (isInitializing) return <div className="h-screen bg-background text-foreground flex items-center justify-center font-bold tracking-widest animate-pulse">VERIFYING...</div>;
 
-  if (!isAuthenticated) {
-    return (
-      <div className="h-screen bg-background text-foreground flex flex-col items-center justify-center">
-        <div className="bg-card border-4 border-black p-8 shadow-neo max-w-sm w-full flex flex-col gap-4">
-          <h2 className="text-xl font-black uppercase">管理員驗證</h2>
-          <Input 
-            type="password" 
-            placeholder="請輸入密碼" 
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') verifyPassword(e.currentTarget.value);
-            }} 
-          />
-        </div>
-      </div>
-    );
-  }
+  if (!isAuthenticated) return null;
 
   const currentMeta = selectedArtist ? (artistMeta[selectedArtist] || { id: '', hideId: false }) : null;
 
@@ -150,14 +238,30 @@ export function AdminArtistsPage() {
                   <Input value={currentMeta.displayName || ''} onChange={e => setArtistMeta(p => ({ ...p, [selectedArtist]: { ...currentMeta, displayName: e.target.value } }))} className="border-2 border-black font-bold" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-black uppercase">Twitter/X / SNS ID</label>
+                  <label className="text-xs font-black uppercase">Twitter/X ID</label>
                   <Input value={currentMeta.id || ''} onChange={e => setArtistMeta(p => ({ ...p, [selectedArtist]: { ...currentMeta, id: e.target.value } }))} className="border-2 border-black font-mono" placeholder="@username" />
                 </div>
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-xs font-black uppercase">個人主頁 (Profile URL)</label>
-                  <Input value={currentMeta.profileUrl || ''} onChange={e => setArtistMeta(p => ({ ...p, [selectedArtist]: { ...currentMeta, profileUrl: e.target.value } }))} className="border-2 border-black font-mono" placeholder="https://..." />
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase flex items-center gap-1"><i className="hn hn-instagram" /> Instagram</label>
+                  <Input value={currentMeta.instagram || ''} onChange={e => setArtistMeta(p => ({ ...p, [selectedArtist]: { ...currentMeta, instagram: e.target.value } }))} className="border-2 border-black font-mono" placeholder="@username 或網址" />
                 </div>
-                <div className="space-y-2 md:col-span-2">
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase flex items-center gap-1"><i className="hn hn-youtube" /> YouTube</label>
+                  <Input value={currentMeta.youtube || ''} onChange={e => setArtistMeta(p => ({ ...p, [selectedArtist]: { ...currentMeta, youtube: e.target.value } }))} className="border-2 border-black font-mono" placeholder="頻道網址" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase flex items-center gap-1">Pixiv</label>
+                  <Input value={currentMeta.pixiv || ''} onChange={e => setArtistMeta(p => ({ ...p, [selectedArtist]: { ...currentMeta, pixiv: e.target.value } }))} className="border-2 border-black font-mono" placeholder="畫師主頁網址" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase flex items-center gap-1">TikTok</label>
+                  <Input value={currentMeta.tiktok || ''} onChange={e => setArtistMeta(p => ({ ...p, [selectedArtist]: { ...currentMeta, tiktok: e.target.value } }))} className="border-2 border-black font-mono" placeholder="@username 或網址" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase flex items-center gap-1"><i className="hn hn-link" /> 個人網站 (Website)</label>
+                  <Input value={currentMeta.website || currentMeta.profileUrl || ''} onChange={e => setArtistMeta(p => ({ ...p, [selectedArtist]: { ...currentMeta, website: e.target.value, profileUrl: e.target.value } }))} className="border-2 border-black font-mono" placeholder="https://..." />
+                </div>
+                <div className="space-y-2">
                   <label className="text-xs font-black uppercase">數據 ID (Data ID)</label>
                   <Input value={currentMeta.dataId || ''} onChange={e => setArtistMeta(p => ({ ...p, [selectedArtist]: { ...currentMeta, dataId: e.target.value } }))} className="border-2 border-black font-mono" placeholder="URL 拼接用 ID" />
                 </div>
@@ -169,17 +273,60 @@ export function AdminArtistsPage() {
 
               {/* 綜合插畫管理 */}
               <div className="bg-card border-4 border-black p-6 shadow-neo space-y-4">
-                <div className="flex justify-between items-center border-b-4 border-black pb-4 mb-4">
-                  <h3 className="text-xl font-black uppercase tracking-widest">綜合插畫 (Compilation Illusts)</h3>
-                  <Button 
-                    onClick={() => {
-                      const newCollab: MVImage = { url: '', width: 1920, height: 1080 };
-                      setArtistMeta(p => ({ ...p, [selectedArtist]: { ...currentMeta, collaborations: [...(currentMeta.collaborations || []), newCollab] } }))
-                    }}
-                    className="bg-ztmy-green text-black border-2 border-black hover:bg-ztmy-green/80 shadow-neo-sm"
-                  >
-                    <i className="hn hn-plus mr-2" /> 新增圖片
-                  </Button>
+                <div className="flex flex-col md:flex-row md:justify-between md:items-start border-b-4 border-black pb-4 mb-4 gap-4">
+                  <h3 className="text-xl font-black uppercase tracking-widest whitespace-nowrap pt-2">綜合插畫 (Compilation)</h3>
+                  
+                  <div className="flex flex-col gap-2 w-full md:w-auto flex-1 md:max-w-md">
+                    <div className="flex flex-col sm:flex-row gap-2 w-full">
+                      <Textarea 
+                        placeholder="貼上多行推文網址 (每行一個)..." 
+                        value={tweetUrl}
+                        onChange={e => setTweetUrl(e.target.value)}
+                        className="border-2 border-black font-mono text-xs min-h-[80px]"
+                      />
+                      <div className="flex sm:flex-col gap-2 shrink-0">
+                        <Button 
+                          onClick={handleParseTweet}
+                          disabled={isParsing}
+                          className="bg-black text-white border-2 border-black hover:bg-main hover:text-black shadow-neo-sm flex-1 sm:flex-none"
+                        >
+                          {isParsing ? <i className="hn hn-refresh animate-spin mr-2" /> : <i className="hn hn-download mr-2" />} 
+                          {isParsing ? '解析中...' : '開始解析'}
+                        </Button>
+                        <Button 
+                          onClick={() => {
+                            const newCollab: MVImage = { url: '', width: 1920, height: 1080 };
+                            setArtistMeta(p => ({ ...p, [selectedArtist]: { ...currentMeta, collaborations: [...(currentMeta.collaborations || []), newCollab] } }))
+                          }}
+                          className="bg-ztmy-green text-black border-2 border-black hover:bg-ztmy-green/80 shadow-neo-sm flex-1 sm:flex-none"
+                          title="手動新增空白圖片"
+                        >
+                          <i className="hn hn-plus mr-2" /> 手動新增
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* 進度條 */}
+                    {batchStatus && batchStatus.total > 0 && (
+                      <div className="mt-2 p-3 border-2 border-black bg-black/5">
+                        <div className="flex justify-between text-xs font-bold uppercase mb-2">
+                          <span>處理進度</span>
+                          <span>{batchStatus.current} / {batchStatus.total}</span>
+                        </div>
+                        <div className="h-2 bg-black/20 w-full rounded-full overflow-hidden border border-black">
+                          <div 
+                            className="h-full bg-ztmy-green transition-all duration-300"
+                            style={{ width: `${(batchStatus.current / batchStatus.total) * 100}%` }}
+                          />
+                        </div>
+                        {batchStatus.failedUrls.length > 0 && (
+                          <div className="mt-2 text-xs text-red-600 font-bold">
+                            <i className="hn hn-exclamation-triangle mr-1" /> {batchStatus.failedUrls.length} 個網址解析失敗
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 
                 <div className="space-y-4">

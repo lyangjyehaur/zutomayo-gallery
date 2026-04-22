@@ -398,9 +398,9 @@ function App({
 
   const is404Route = pathnameWithoutLang === "/404";
   const isDemo3DCard = pathnameWithoutLang === "/demo/3d-card";
-  const isIllustratorsRoute = pathnameWithoutLang === "/illustrators";
+  const isIllustratorsRoute = pathnameWithoutLang === "/illustrators" || pathnameWithoutLang.startsWith("/illustrators/");
   const isFanArtRoute = pathnameWithoutLang === "/fanart";
-  const isNotFound = pathnameWithoutLang !== "/" && pathnameWithoutLang !== "/favorites" && pathnameWithoutLang !== "/illustrators" && pathnameWithoutLang !== "/fanart" && !is404Route && !isDemo3DCard && !mvIdMatch;
+  const isNotFound = pathnameWithoutLang !== "/" && pathnameWithoutLang !== "/favorites" && !isIllustratorsRoute && !isFanArtRoute && !is404Route && !isDemo3DCard && !mvIdMatch;
 
   // 動態獲取唯一的年份、專輯與藝術家清單，並處理分組
   const {
@@ -2375,6 +2375,7 @@ export default function RootApp() {
             <Route index element={null} />
             <Route path="favorites" element={null} />
             <Route path="illustrators" element={null} />
+            <Route path="illustrators/:artistId" element={null} />
             <Route path="fanart" element={null} />
             <Route path="mv/:id" element={null} />
             <Route path="404" element={null} />

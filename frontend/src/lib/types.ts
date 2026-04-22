@@ -35,10 +35,15 @@ export interface MVItem {
 }
 
 export interface ArtistMeta {
-  id?: string;
+  id?: string; // 通常用作 Twitter/X 帳號
   hideId?: boolean;
   displayName?: string;
-  profileUrl?: string;
+  profileUrl?: string; // 個人網站 (舊)
+  website?: string; // 個人網站 (新)
+  instagram?: string;
+  youtube?: string;
+  pixiv?: string;
+  tiktok?: string;
   bio?: string;
   dataId?: string;
   collaborations?: MVImage[];

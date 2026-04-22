@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate, useParams } from 'react-router-dom';
 import { MVItem } from '@/lib/types';
 import { IllustratorDetailsModal } from '@/components/IllustratorDetailsModal';
 import { WalineComments } from '@/components/WalineComments';
@@ -11,7 +12,10 @@ interface IllustratorsPageProps {
 }
 
 export function IllustratorsPage({ mvData, metadata }: IllustratorsPageProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
+  const { artistId } = useParams();
+  
   const [selectedIllustrator, setSelectedIllustrator] = useState<{ name: string; snsId?: string; mvs: MVItem[]; meta?: any } | null>(null);
 
   const illustrators = useMemo(() => {
@@ -38,6 +42,40 @@ export function IllustratorsPage({ mvData, metadata }: IllustratorsPageProps) {
     return Array.from(artistsMap.values()).sort((a, b) => b.mvs.length - a.mvs.length);
   }, [mvData, metadata]);
 
+  // 監聽 URL 路由變化，打開或關閉對應畫師 Modal
+  useEffect(() => {
+    if (artistId) {
+      // 根據 URL 的 artistId 尋找對應的畫師，匹配邏輯：
+      // 1. dataId
+      // 2. snsId 去掉 '@'
+      // 3. encodeURIComponent 過的 name
+      const decodedId = decodeURIComponent(artistId);
+      const found = illustrators.find(a => 
+        a.meta?.dataId === decodedId || 
+        a.meta?.id?.replace('@', '') === decodedId || 
+        a.name === decodedId
+      );
+      if (found) {
+        setSelectedIllustrator(found);
+      } else {
+        setSelectedIllustrator(null);
+      }
+    } else {
+      setSelectedIllustrator(null);
+    }
+  }, [artistId, illustrators]);
+
+  const handleOpenIllustrator = (artist: any) => {
+    const idToUse = artist.meta?.dataId || artist.meta?.id?.replace('@', '') || artist.name;
+    const activeLang = i18n.language ? (i18n.language === 'zh' ? 'zh-TW' : i18n.language) : 'zh-TW';
+    navigate(`/${activeLang}/illustrators/${encodeURIComponent(idToUse)}`);
+  };
+
+  const handleCloseModal = () => {
+    const activeLang = i18n.language ? (i18n.language === 'zh' ? 'zh-TW' : i18n.language) : 'zh-TW';
+    navigate(`/${activeLang}/illustrators`);
+  };
+
   return (
     <div className="w-full pb-16">
       {/* 標題區塊 */}
@@ -48,7 +86,7 @@ export function IllustratorsPage({ mvData, metadata }: IllustratorsPageProps) {
           </span>
         </h2>
         <p className="text-sm md:text-base opacity-70 font-bold max-w-2xl px-4">
-          {t('illustrators.desc', '參與 ZUTOMAYO 音樂錄影帶製作的畫師與動畫師陣容。點擊社群連結以支持他們的作品！')}
+          {t('illustrators.desc', '參與 ZUTOMAYO MV 製作的畫師與動畫師陣容。')}
         </p>
         <div className="mt-4 border-2 border-dashed border-yellow-500 text-yellow-600 dark:text-yellow-400 bg-yellow-500/10 px-4 py-2 text-sm font-bold flex items-center gap-2">
           <i className="hn hn-exclamation-triangle text-lg"></i>
@@ -67,10 +105,13 @@ export function IllustratorsPage({ mvData, metadata }: IllustratorsPageProps) {
           const avatarUrl = hasSnsId ? `https://unavatar.io/x/${username}` : '';
           const safeAvatarUrl = hasSnsId ? getProxyImgUrl(avatarUrl, 'small') : '';
           
+          // 從 metadata 中取得畫師額外資料
+          const meta = artist.meta || {};
+          
           return (
           <div 
             key={idx} 
-            onClick={() => isTVChany && setSelectedIllustrator(artist)}
+            onClick={() => isTVChany && handleOpenIllustrator(artist)}
             className={`group flex flex-col bg-card border-4 border-black p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all relative overflow-hidden ${
               isTVChany 
                 ? 'hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none cursor-pointer' 
@@ -97,26 +138,16 @@ export function IllustratorsPage({ mvData, metadata }: IllustratorsPageProps) {
               </div>
             )}
             
-            <div className="flex justify-between items-start mb-4 relative z-10">
-              <h3 className={`text-2xl font-black truncate pr-4 transition-colors ${isTVChany ? 'group-hover:text-main' : ''}`} title={artist.name} lang="ja">{artist.name}</h3>
-              {artist.snsId && (
-                <a 
-                  href={`https://x.com/${artist.snsId.replace('@', '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => {
-                    if (!isTVChany) e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  className={`p-2 transition-colors ${
-                    isTVChany 
-                      ? 'bg-black text-white hover:bg-main hover:text-black' 
-                      : 'bg-black/20 text-black/50 cursor-not-allowed pointer-events-none'
-                  }`}
-                  title="Twitter/X"
-                >
-                  <i className="hn hn-x text-xl"></i>
-                </a>
+            <div className="flex flex-col gap-2 mb-4 relative z-10">
+              <div className="flex justify-between items-start">
+                <h3 className={`text-2xl font-black truncate pr-4 transition-colors ${isTVChany ? 'group-hover:text-main' : ''}`} title={artist.name} lang="ja">{meta.displayName || artist.name}</h3>
+              </div>
+              
+              {/* 畫師介紹 (Bio) */}
+              {meta.bio && (
+                <div className="mt-1 text-xs md:text-sm font-bold opacity-80 line-clamp-3 whitespace-pre-wrap pr-2 p-2 border-l-4 border-main">
+                  {meta.bio}
+                </div>
               )}
             </div>
 
@@ -155,7 +186,7 @@ export function IllustratorsPage({ mvData, metadata }: IllustratorsPageProps) {
             {t('illustrators.feedback_title', '畫師專欄・建言獻策')}
           </h3>
           <p className="text-sm opacity-70 mb-6">
-            {t('illustrators.feedback_desc', '您覺得畫師詳情頁還需要增加哪些資訊？（例如：畫師介紹、個人主頁、代表作過濾等），歡迎在這裡留言討論！')}
+            {t('illustrators.feedback_desc', '您覺得畫師專欄還需要如何改進？歡迎在這裡留言討論！')}
           </p>
           <WalineComments 
             path="/illustrators-feedback" 
@@ -167,7 +198,7 @@ export function IllustratorsPage({ mvData, metadata }: IllustratorsPageProps) {
 
       <IllustratorDetailsModal 
         illustrator={selectedIllustrator} 
-        onClose={() => setSelectedIllustrator(null)} 
+        onClose={handleCloseModal} 
       />
     </div>
   );

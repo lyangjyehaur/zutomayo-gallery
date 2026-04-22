@@ -87,7 +87,8 @@ export const initDB = () => {
   const artistsTableInfo = dbInstance.pragma('table_info(meta_artists)') as any[];
   const artistsExistingColumns = artistsTableInfo.map(col => col.name);
   const artistsExpectedColumns = [
-    'name', 'snsId', 'hideId', 'displayName', 'profileUrl', 'bio', 'dataId', 'collaborations'
+    'name', 'snsId', 'hideId', 'displayName', 'profileUrl', 'bio', 'dataId', 'collaborations',
+    'instagram', 'youtube', 'pixiv', 'tiktok', 'website'
   ];
 
   for (const col of artistsExpectedColumns) {

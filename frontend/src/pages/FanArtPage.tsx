@@ -57,7 +57,8 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
     mvData.forEach(mv => {
       if (mv.images && Array.isArray(mv.images)) {
         mv.images.forEach(img => {
-          if (img.type === 'fanart' || img.tweetUrl) { // 兼容沒有加上 type 的舊推文解析資料
+          // 只抓取明確標記為 fanart 的圖片
+          if (img.type === 'fanart') {
             if (fanArtMap.has(img.url)) {
               const existing = fanArtMap.get(img.url)!;
               if (!existing.mvIds.includes(mv.id)) {
@@ -105,6 +106,8 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
       return matchYear && matchAlbum;
     });
   }, [availableMVs, filterYear, filterAlbum]);
+
+  const [isFilterExpanded, setIsFilterExpanded] = useState<boolean>(false);
 
   // 切換 MV 選擇
   const toggleMvSelection = (id: string) => {
@@ -156,26 +159,44 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
           </span>
         </h2>
         <p className="text-sm md:text-base opacity-70 font-bold max-w-2xl px-4">
-          {t('fanart.desc', '來自社群的神仙二創作品大賞。（目前展示為開發中佔位圖）')}
+          {t('fanart.desc', '來自社群的神仙二創作品大賞。')}
         </p>
         <div className="mt-4 border-2 border-dashed border-yellow-500 text-yellow-600 dark:text-yellow-400 bg-yellow-500/10 px-4 py-2 text-sm font-bold flex items-center gap-2">
           <i className="hn hn-exclamation-triangle text-lg"></i>
-          <span>{t('fanart.under_construction', '頁面施工中，等待後端 UGC API 接入，歡迎在最下方留言建言獻策！')}</span>
+          <span>{t('fanart.under_construction', '頁面施工中，歡迎在最下方留言建言獻策！')}</span>
         </div>
       </div>
 
       {/* 篩選器面板 */}
       <div className="max-w-4xl mx-auto px-4 mb-12">
-        <div className="p-6 border-4 border-black bg-card shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative mt-4">
+        <div className={`border-4 border-black bg-card shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative mt-4 transition-all duration-300 ${isFilterExpanded ? 'p-6' : 'px-4 py-0'}`}>
           <div className="absolute -top-4 -left-4 bg-main border-2 border-black px-4 py-1 text-sm font-black rotate-[-2deg] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-10 text-black">
             FILTERS
           </div>
           
-          <h3 className="text-xl font-black uppercase mb-4 mt-2">
-            {t('fanart.filter_title', '篩選作品')}
-          </h3>
+          <div className="flex justify-between items-center cursor-pointer select-none h-14 px-4 py-0" onClick={() => setIsFilterExpanded(!isFilterExpanded)}>
+            <h3 className="text-xl font-black uppercase m-0 flex items-center h-full pt-[2px] leading-none">
+              {t('fanart.filter_title', '篩選作品')}
+            </h3>
+            <div className="flex items-center gap-4">
+              {/* 篩選狀態摘要 (收起時顯示) */}
+              {!isFilterExpanded && (
+                <div className="text-xs font-bold opacity-60 hidden md:block">
+                  {selectedMvs.length > 0 ? `已選 ${selectedMvs.length} 個 MV` : '所有作品'} 
+                  {!includeCollab ? ' (不含大合繪)' : ''}
+                  {filterYear !== 'all' || filterAlbum !== 'all' ? ' · 有啟用初篩' : ''}
+                </div>
+              )}
+              <button 
+                className="bg-black text-white w-8 h-8 flex items-center justify-center border-2 border-black hover:bg-main hover:text-black transition-colors"
+                aria-label={isFilterExpanded ? t('fanart.collapse_filter', '收起篩選器') : t('fanart.expand_filter', '展開篩選器')}
+              >
+                <i className={`hn ${isFilterExpanded ? 'hn-minus' : 'hn-plus'} text-sm`}></i>
+              </button>
+            </div>
+          </div>
           
-          <div className="space-y-6">
+          <div className={`space-y-6 overflow-hidden transition-all duration-500 origin-top ${isFilterExpanded ? 'max-h-[2000px] opacity-100 mt-6' : 'max-h-0 opacity-0 mt-0'}`}>
             {/* 特殊選項：綜合插畫 */}
             <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" onClick={() => setIncludeCollab(!includeCollab)}>
               <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${includeCollab ? 'bg-main' : 'bg-card'}`}>
@@ -248,9 +269,12 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
             </div>
           </div>
 
-          <div className="mt-8 flex justify-end">
-            <button className="bg-black text-white px-6 py-2 font-black uppercase tracking-widest border-2 border-transparent shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] cursor-default">
-              {t('fanart.apply_filters', `已篩選出 ${displayedFanArts.length} 張作品`)}
+          <div className={`mt-8 flex justify-end transition-opacity duration-300 ${isFilterExpanded ? 'opacity-100' : 'opacity-0 h-0 mt-0 overflow-hidden'}`}>
+            <button 
+              onClick={() => setIsFilterExpanded(false)}
+              className="bg-black text-white px-6 py-2 font-black uppercase tracking-widest border-2 border-black hover:bg-main hover:text-black transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-y-1 hover:translate-x-1"
+            >
+              {t('fanart.apply_filters', `套用並收起 (${displayedFanArts.length} 張作品)`)}
             </button>
           </div>
         </div>
@@ -314,7 +338,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
             {t('fanart.feedback_title', 'FanArt專欄・建言獻策')}
           </h3>
           <p className="text-sm opacity-70 mb-6">
-            {t('fanart.feedback_desc', '您覺得 FanArt 二創畫廊的篩選器還需要增加哪些維度？（例如：熱度排序、時間排序等），歡迎在這裡留言討論！')}
+            {t('fanart.feedback_desc', '您覺得 FanArt 二創畫廊還需要如何改進？歡迎在這裡留言討論！')}
           </p>
           <WalineComments 
             path="/fanart-feedback" 

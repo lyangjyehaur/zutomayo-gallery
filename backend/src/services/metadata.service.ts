@@ -13,6 +13,11 @@ export interface ArtistMeta {
   bio?: string;
   dataId?: string;
   collaborations?: any[];
+  instagram?: string;
+  youtube?: string;
+  pixiv?: string;
+  tiktok?: string;
+  website?: string;
 }
 
 export interface MetadataSettings {
@@ -95,6 +100,12 @@ const normalizeMetadata = (raw: unknown): Metadata => {
       const bio = typeof (v as any).bio === 'string' ? (v as any).bio : undefined;
       const dataId = typeof (v as any).dataId === 'string' ? (v as any).dataId : undefined;
       const collaborations = Array.isArray((v as any).collaborations) ? (v as any).collaborations : undefined;
+      const instagram = typeof (v as any).instagram === 'string' ? (v as any).instagram : undefined;
+      const youtube = typeof (v as any).youtube === 'string' ? (v as any).youtube : undefined;
+      const pixiv = typeof (v as any).pixiv === 'string' ? (v as any).pixiv : undefined;
+      const tiktok = typeof (v as any).tiktok === 'string' ? (v as any).tiktok : undefined;
+      const website = typeof (v as any).website === 'string' ? (v as any).website : undefined;
+
       base.artistMeta[k] = { 
         ...(id ? { id } : {}), 
         ...(hideId !== undefined ? { hideId } : {}),
@@ -102,7 +113,12 @@ const normalizeMetadata = (raw: unknown): Metadata => {
         ...(profileUrl ? { profileUrl } : {}),
         ...(bio ? { bio } : {}),
         ...(dataId ? { dataId } : {}),
-        ...(collaborations ? { collaborations } : {})
+        ...(collaborations ? { collaborations } : {}),
+        ...(instagram ? { instagram } : {}),
+        ...(youtube ? { youtube } : {}),
+        ...(pixiv ? { pixiv } : {}),
+        ...(tiktok ? { tiktok } : {}),
+        ...(website ? { website } : {})
       };
     }
   };
@@ -141,6 +157,11 @@ export const getMetadata = async (): Promise<Metadata> => {
       ...(row.profileUrl ? { profileUrl: row.profileUrl } : {}),
       ...(row.bio ? { bio: row.bio } : {}),
       ...(row.dataId ? { dataId: row.dataId } : {}),
+      ...(row.instagram ? { instagram: row.instagram } : {}),
+      ...(row.youtube ? { youtube: row.youtube } : {}),
+      ...(row.pixiv ? { pixiv: row.pixiv } : {}),
+      ...(row.tiktok ? { tiktok: row.tiktok } : {}),
+      ...(row.website ? { website: row.website } : {}),
     };
     if (row.collaborations) {
       try {
@@ -182,7 +203,7 @@ export const updateMetadata = async (data: Partial<Metadata>): Promise<Metadata>
     if (data.artistMeta) {
       current.artistMeta = data.artistMeta;
       db.prepare('DELETE FROM meta_artists').run();
-      const stmt = db.prepare('INSERT INTO meta_artists (name, snsId, hideId, displayName, profileUrl, bio, dataId, collaborations) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+      const stmt = db.prepare('INSERT INTO meta_artists (name, snsId, hideId, displayName, profileUrl, bio, dataId, collaborations, instagram, youtube, pixiv, tiktok, website) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
       for (const [name, meta] of Object.entries(data.artistMeta)) {
         stmt.run(
           name, 
@@ -192,7 +213,12 @@ export const updateMetadata = async (data: Partial<Metadata>): Promise<Metadata>
           meta.profileUrl || '',
           meta.bio || '',
           meta.dataId || '',
-          meta.collaborations ? JSON.stringify(meta.collaborations) : ''
+          meta.collaborations ? JSON.stringify(meta.collaborations) : '',
+          meta.instagram || '',
+          meta.youtube || '',
+          meta.pixiv || '',
+          meta.tiktok || '',
+          meta.website || ''
         );
       }
     }
