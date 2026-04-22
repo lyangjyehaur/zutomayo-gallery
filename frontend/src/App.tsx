@@ -826,7 +826,7 @@ function App({
             </span>
           </span>
           <span
-            className="text-[10px] sm:text-xs md:text-sm bg-main/20 text-main border-2 md:border-3 border-main px-1.5 md:px-2 py-0.5 md:py-1 animate-pulse relative z-10 cursor-pointer"
+            className="text-[10px] sm:text-xs md:text-sm bg-main/20 text-main border-2 md:border-3 border-main px-1.5 md:px-2 py-0.5 md:py-1 animate-pulse relative z-10 cursor-pointer select-none"
             style={{ animationPlayState: isGlobalPaused ? "paused" : "running" }}
             onClick={(e) => {
               e.stopPropagation();
