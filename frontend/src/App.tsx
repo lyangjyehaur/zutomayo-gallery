@@ -1931,15 +1931,9 @@ function App({
       <SpeedRatingSurvey forceOpen={isSurveyForceOpen} onCloseForce={() => setIsSurveyForceOpen(false)} />
       */}
 
-      {/* 詳情彈窗 */}
       <MVDetailsModal
         mv={selectedMv}
         onClose={() => {
-          // 如果 Fancybox 還開著，強制不執行路由切換
-          if (document.body.classList.contains('fancybox__body') || document.querySelector('.fancybox__container')) {
-            return;
-          }
-          
           if (window.history.state && window.history.state.idx > 0) {
             navigate(-1);
           } else {

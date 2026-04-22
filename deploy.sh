@@ -263,18 +263,15 @@ deploy_backend() {
     echo "安裝後端依賴 (僅生產環境)..."
     if [ "$PKG_MANAGER" = "pnpm" ]; then
         # pnpm >= 9 預設會阻擋安裝腳本 (better-sqlite3 等原生套件需要)，需手動允許
-        pnpm config set ignore-scripts false
-        pnpm install --prod=true # 伺服器只需安裝 dependencies，不需 devDependencies
-        
-        echo -e "${YELLOW}強制重建 pnpm 二進位套件 (better-sqlite3)...${NC}"
-        pnpm rebuild
-        
-        # 將設定改回預設值以策安全
         pnpm config set ignore-scripts true
+        pnpm install --prod=true --ignore-scripts # 伺服器只需安裝 dependencies，且忽略 geoip-lite 耗記憶體的安裝腳本
+        
+        echo -e "${YELLOW}強制重建原生套件 (better-sqlite3, bcrypt)...${NC}"
+        pnpm rebuild better-sqlite3 bcrypt
     else
-        npm install --production=true
-        echo -e "${YELLOW}強制重建 npm 二進位套件 (better-sqlite3)...${NC}"
-        npm rebuild
+        npm install --omit=dev --ignore-scripts
+        echo -e "${YELLOW}強制重建原生套件 (better-sqlite3, bcrypt)...${NC}"
+        npm rebuild better-sqlite3 bcrypt
     fi
     
     echo -e "${GREEN}使用本地 (Mac) 上傳的編譯產物，跳過伺服器端 tsc 編譯...${NC}"
