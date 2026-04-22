@@ -28,6 +28,8 @@ import { useTranslation } from 'react-i18next';
 interface MVDetailsModalProps {
   mv: MVItem | null;
   onClose: () => void;
+  isFav?: boolean;
+  onToggleFav?: () => void;
 }
 
 /**
@@ -38,7 +40,7 @@ interface MVDetailsModalProps {
  * 2. LightGallery 燈箱通過 Portal 渲染到 body，層級高於 Dialog
  * 3. 通過 CSS 和事件管理確保兩者正確協作
  */
-export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
+export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsModalProps) {
   const { t } = useTranslation();
 
   // 影片播放狀態
@@ -331,9 +333,33 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                 : '8px'
             }}
           >
-            {/* MV Title */}
-            <span className="ztmy-cyber-title shrink-0 max-w-full md:max-w-[40%] flex min-w-0" data-text={mv?.title}>
-              <span className="ztmy-cyber-text relative flex min-w-0 w-full overflow-hidden group" data-text={mv?.title}>
+            {/* MV Title & Favorite Button Wrapper */}
+            <div className="shrink-0 max-w-full md:max-w-[40%] flex items-center min-w-0 gap-3">
+              {/* Favorite Button */}
+              {onToggleFav && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleFav();
+                  }}
+                  className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-none border-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all ${
+                    isFav 
+                      ? 'bg-ztmy-green border-black text-black' 
+                      : 'bg-background border-foreground text-foreground opacity-70 hover:opacity-100'
+                  }`}
+                  data-umami-event="Z_Toggle_Favorite_Modal"
+                  data-umami-event-title={mv?.title}
+                  data-umami-event-id={mv?.id}
+                  data-umami-event-action={isFav ? 'remove' : 'add'}
+                  title={isFav ? t('app.unfavorited', '已取消收藏') : t('app.favorite', '收藏')}
+                >
+                  <i className={`hn ${isFav ? 'hn-star-solid' : 'hn-star'} text-xl`}></i>
+                </button>
+              )}
+              
+              {/* MV Title Text */}
+              <span className="flex min-w-0" data-text={mv?.title}>
+                <span className="ztmy-modal-glitch relative flex min-w-0 w-full overflow-hidden group" data-text={mv?.title}>
                 <span 
                   className={`inline-block whitespace-nowrap ${marqueeState.isMarquee ? 'overflow-visible animate-card-title-marquee' : 'max-w-full truncate'}`}
                   style={{
@@ -401,6 +427,7 @@ export function MVDetailsModal({ mv, onClose }: MVDetailsModalProps) {
                 </span>
               </span>
             </span>
+            </div>
             {mv?.keywords && mv.keywords.length > 0 && (
               <div 
                 className="flex-1 flex flex-wrap items-center gap-2 italic text-sm font-bold tracking-normal normal-case md:pt-1.5 min-w-0 md:opacity-80 md:flex md:!max-h-full"

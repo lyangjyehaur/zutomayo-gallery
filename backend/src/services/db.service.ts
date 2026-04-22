@@ -69,17 +69,35 @@ export const initDB = () => {
   `);
 
   // 自動化檢查與新增 MVs 表的欄位
-  const tableInfo = dbInstance.pragma('table_info(mvs)') as any[];
-  const existingColumns = tableInfo.map(col => col.name);
-  const expectedColumns = [
+  const mvsTableInfo = dbInstance.pragma('table_info(mvs)') as any[];
+  const mvsExistingColumns = mvsTableInfo.map(col => col.name);
+  const mvsExpectedColumns = [
     'id', 'title', 'artist', 'year', 'date', 'youtube', 'bilibili', 
     'description', 'album', 'coverImages', 'keywords', 'images'
   ];
 
-  for (const col of expectedColumns) {
-    if (!existingColumns.includes(col)) {
+  for (const col of mvsExpectedColumns) {
+    if (!mvsExistingColumns.includes(col)) {
       console.log(`Auto-migrating: Adding missing column '${col}' to 'mvs' table...`);
       dbInstance.exec(`ALTER TABLE mvs ADD COLUMN ${col} TEXT`);
+    }
+  }
+
+  // 自動化檢查與新增 meta_artists 表的欄位
+  const artistsTableInfo = dbInstance.pragma('table_info(meta_artists)') as any[];
+  const artistsExistingColumns = artistsTableInfo.map(col => col.name);
+  const artistsExpectedColumns = [
+    'name', 'snsId', 'hideId', 'displayName', 'profileUrl', 'bio', 'dataId', 'collaborations'
+  ];
+
+  for (const col of artistsExpectedColumns) {
+    if (!artistsExistingColumns.includes(col)) {
+      console.log(`Auto-migrating: Adding missing column '${col}' to 'meta_artists' table...`);
+      if (col === 'hideId') {
+        dbInstance.exec(`ALTER TABLE meta_artists ADD COLUMN ${col} INTEGER`);
+      } else {
+        dbInstance.exec(`ALTER TABLE meta_artists ADD COLUMN ${col} TEXT`);
+      }
     }
   }
 

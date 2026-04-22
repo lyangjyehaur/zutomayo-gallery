@@ -312,7 +312,7 @@ const PhotoItem = ({ photo, index, onPhotoClick, delayMs, isNewItem = true }: Ph
       ? { width: photo.width, height: photo.height } 
       : (dimensionCache.get(photo.src) || null)
   );
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef2 = useRef<HTMLDivElement>(null);
 
   // 移除元件內部的預先加載邏輯 (useEffect 裡的 new Image())，
   // 因為真正的加載動作應該交由 img 標籤原生的 loading="lazy" 來處理，
@@ -330,7 +330,7 @@ const PhotoItem = ({ photo, index, onPhotoClick, delayMs, isNewItem = true }: Ph
 
   return (
     <div
-      ref={containerRef}
+      ref={containerRef2}
       className={`p-1 min-h-0 min-w-0 w-full ${isNewItem ? 'animate-in fade-in slide-in-from-bottom-4 duration-500 motion-reduce:animate-none' : ''}`}
       style={{
         contentVisibility: 'auto', 
@@ -409,7 +409,9 @@ const PhotoItem = ({ photo, index, onPhotoClick, delayMs, isNewItem = true }: Ph
 };
 
 export default function FancyboxViewer({
-  images,
+  images = [],
+  children,
+  options = {},
   mvTitle = '',
   mvId = '',
   itemsPerPage = 12,
@@ -422,27 +424,56 @@ export default function FancyboxViewer({
   autoLoadMore = false, // 預設手動點擊
   onLightboxOpen,
   onLightboxClose,
-}: FancyboxViewerProps) {
+}: {
+  images?: any[];
+  children?: React.ReactNode;
+  options?: any;
+  mvTitle?: string;
+  mvId?: string;
+  itemsPerPage?: number;
+  showHeader?: boolean;
+  headerTitle?: string;
+  headerSubtitle?: string;
+  breakpointColumns?: any;
+  className?: string;
+  enablePagination?: boolean;
+  autoLoadMore?: boolean;
+  onLightboxOpen?: () => void;
+  onLightboxClose?: () => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
-  // 將 images 陣列過濾出有效圖片
+
+  // 獨立模式的 Hooks
+  useEffect(() => {
+    if (!children) return;
+    const container = containerRef.current;
+    if (!container) return;
+
+    NativeFancybox.bind(container, '[data-fancybox]', {
+      ...(options || {}),
+    });
+
+    return () => {
+      NativeFancybox.unbind(container);
+      NativeFancybox.close();
+    };
+  }, [options, children]);
+
+  // 原有邏輯的 Hooks...
   const processedImages = useMemo(() => {
-    return images.filter((img) => img.url && img.url.trim() !== '');
+    return (images || []).filter((img) => img.url && img.url.trim() !== '');
   }, [images]);
 
   const [displayedPhotos, setDisplayedPhotos] = useState<PhotoData[]>([]);
-  // loading state 已經移除，不需要了
   const [loadingMore, setLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const lastBatchStartRef = useRef(0);
   const displayedCountRef = useRef(0);
-  
-  // Intersection Observer 用的哨兵
   const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
-
   const fancyboxRef = useRef<ReturnType<typeof NativeFancybox.show> | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  
+
   useEffect(() => {
     displayedCountRef.current = displayedPhotos.length;
   }, [displayedPhotos.length]);
@@ -685,6 +716,14 @@ export default function FancyboxViewer({
   // 移除額外的 loading 狀態，因為我們已經在每個 PhotoItem 內部處理了骨架與過渡
   // 我們只需要在 processedImages.length === 0 且仍在獲取資料時才需要顯示
   // 但由於 processedImages 是同步從 props.images 過濾出來的，所以我們可以直接渲染
+
+  if (children) {
+    return (
+      <div ref={containerRef} className={className}>
+        {children}
+      </div>
+    );
+  }
 
   if (processedImages.length === 0) {
     return (

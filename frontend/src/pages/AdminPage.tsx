@@ -2127,6 +2127,24 @@ const currentMV = data[activeIndex];
             <Button 
               variant="neutral" 
               size="sm" 
+              onClick={() => navigate('/admin/artists')}
+              className="border-2 border-transparent text-green-600 hover:text-green-700 hover:bg-green-50"
+              title="畫師管理（ARTISTS MANAGER）"
+            >
+              <i className="hn hn-user text-base" />
+            </Button>
+            <Button 
+              variant="neutral" 
+              size="sm" 
+              onClick={() => navigate('/admin/fanart')}
+              className="border-2 border-transparent text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+              title="FanArt 管理（FANART MANAGER）"
+            >
+              <i className="hn hn-image text-base" />
+            </Button>
+            <Button 
+              variant="neutral" 
+              size="sm" 
               onClick={() => navigate('/admin/db')}
               className="border-2 border-transparent text-blue-600 hover:text-blue-700 hover:bg-blue-50"
               title="資料庫管理（SQL EXPLORER）"
@@ -2260,6 +2278,24 @@ const currentMV = data[activeIndex];
             <i className="hn hn-save text-base mr-2" /> {isSaving ? '同步中...' : '儲存回寫 (COMMIT)'}
           </Button>
           <div className="w-px h-8 bg-black/20 mx-2"></div>
+          <Button 
+            variant="neutral" 
+            size="sm" 
+            onClick={() => navigate('/admin/artists')}
+            className="border-2 border-transparent text-green-600 hover:text-green-700 hover:bg-green-50"
+            title="畫師管理（ARTISTS MANAGER）"
+          >
+            <i className="hn hn-user text-base" />
+          </Button>
+          <Button 
+            variant="neutral" 
+            size="sm" 
+            onClick={() => navigate('/admin/fanart')}
+            className="border-2 border-transparent text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+            title="FanArt 管理（FANART MANAGER）"
+          >
+            <i className="hn hn-image text-base" />
+          </Button>
           <Button 
             variant="neutral" 
             size="sm" 

@@ -33,3 +33,13 @@ export interface MVItem {
   keywords: MVKeyword[];
   [key: string]: any;
 }
+
+export interface ArtistMeta {
+  id?: string;
+  hideId?: boolean;
+  displayName?: string;
+  profileUrl?: string;
+  bio?: string;
+  dataId?: string;
+  collaborations?: MVImage[];
+}

@@ -25,8 +25,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AdminPage } from "@/pages/AdminPage";
 import { AdminDBPage } from "@/pages/AdminDBPage";
+import { AdminArtistsPage } from "@/pages/AdminArtistsPage";
+import { AdminFanArtPage } from "@/pages/AdminFanArtPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { Demo3DCardPage } from "@/pages/Demo3DCardPage";
+import { PageNavigation } from "@/components/PageNavigation";
+import { IllustratorsPage } from "@/pages/IllustratorsPage";
+import { FanArtPage } from "@/pages/FanArtPage";
 import { PWAPrompt } from "@/components/PWAPrompt";
 import { ModalBackdrop } from "@/components/ModalBackdrop";
 import { Toaster } from "@/components/ui/sonner";
@@ -393,7 +398,9 @@ function App({
 
   const is404Route = pathnameWithoutLang === "/404";
   const isDemo3DCard = pathnameWithoutLang === "/demo/3d-card";
-  const isNotFound = pathnameWithoutLang !== "/" && pathnameWithoutLang !== "/favorites" && !is404Route && !isDemo3DCard && !mvIdMatch;
+  const isIllustratorsRoute = pathnameWithoutLang === "/illustrators";
+  const isFanArtRoute = pathnameWithoutLang === "/fanart";
+  const isNotFound = pathnameWithoutLang !== "/" && pathnameWithoutLang !== "/favorites" && pathnameWithoutLang !== "/illustrators" && pathnameWithoutLang !== "/fanart" && !is404Route && !isDemo3DCard && !mvIdMatch;
 
   // 動態獲取唯一的年份、專輯與藝術家清單，並處理分組
   const {
@@ -813,8 +820,16 @@ function App({
       <div className="pointer-events-none fixed inset-0 z-[-1] crt-lines-global opacity-100" />
 
       <div className="flex-1 relative flex flex-col">
+        {/* 跑馬燈 (置於最頂部) */}
+        {!is404Route && !isDemo3DCard && metadata?.settings?.announcements &&
+          metadata.settings.announcements.length > 0 && (
+            <div className="w-full relative z-40 bg-main border-y-4 border-black">
+              <Marquee items={metadata.settings.announcements} />
+            </div>
+          )}
+
         {/* 頁首 */}
-        <header className="py-12 md:py-16 text-center bg-card relative overflow-hidden border-b-2 border-border z-30">
+        <header className="py-12 md:py-16 text-center bg-card relative overflow-hidden z-30">
         <div className="absolute inset-0 opacity-5 pointer-events-none crt-lines"></div>
 
         <h1 className="text-3xl sm:text-4xl md:text-6xl font-black flex flex-col md:flex-row items-center justify-center gap-2 sm:gap-4 px-2">
@@ -852,13 +867,11 @@ function App({
         <p className="mt-2 text-sm opacity-70">{t("app.slogan", "日々研磨爆裂中！")}</p>
       </header>
 
-      {/* 跑馬燈 */}
-      {!is404Route && !isDemo3DCard && metadata?.settings?.announcements &&
-        metadata.settings.announcements.length > 0 && (
-          <div className="w-full relative z-20 bg-main border-b-2 border-border">
-            <Marquee items={metadata.settings.announcements} />
-          </div>
-        )}
+      {/* 頁首 */}
+      {/* 頁面導航 */}
+      {!is404Route && !isDemo3DCard && (
+        <PageNavigation currentRoute={pathnameWithoutLang} basePath={basePath} />
+      )}
 
       <main className={`mx-auto px-4 w-full pt-4 relative flex-1 ${is404Route ? 'flex items-center justify-center' : 'max-w-7xl pb-8 max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-[80%]'}`}>
         {isNotFound ? (
@@ -867,6 +880,10 @@ function App({
           <NotFoundPage />
         ) : isDemo3DCard ? (
           <Demo3DCardPage basePath={basePath} />
+        ) : isIllustratorsRoute ? (
+          <IllustratorsPage mvData={mvData} metadata={metadata} />
+        ) : isFanArtRoute ? (
+          <FanArtPage mvData={mvData} />
         ) : (
           <>
             {/* 過濾控制列與活躍標籤 */}
@@ -1336,7 +1353,8 @@ function App({
           </Tooltip>
         </div>
 
-        <Tooltip>
+        {(pathnameWithoutLang === "/" || pathnameWithoutLang === "/favorites" || !!mvIdMatch) && (
+          <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 onClick={() =>
@@ -1364,6 +1382,7 @@ function App({
               </div>
             </TooltipContent>
           </Tooltip>
+        )}
 
           {(import.meta.env.DEV || deferredPrompt) && (
             <Tooltip>
@@ -1454,7 +1473,8 @@ function App({
             </Tooltip>
           )}
 
-        <Tooltip>
+        {(pathnameWithoutLang === "/" || pathnameWithoutLang === "/favorites" || !!mvIdMatch) && (
+          <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 onClick={() => navigate(showFavOnly ? basePath : `${basePath}/favorites`)}
@@ -1482,6 +1502,7 @@ function App({
               </div>
             </TooltipContent>
           </Tooltip>
+        )}
 
         <Dialog open={isAboutOpen} onOpenChange={setIsAboutOpen}>
           <Tooltip>
@@ -2129,6 +2150,8 @@ function App({
 
       <MVDetailsModal
         mv={selectedMv}
+        isFav={selectedMv ? favorites.includes(selectedMv.id) : false}
+        onToggleFav={() => selectedMv && toggleFav(selectedMv.id)}
         onClose={() => {
           if (document.body.classList.contains('fancybox__body') || document.querySelector('.fancybox__container')) {
             return;
@@ -2351,6 +2374,8 @@ export default function RootApp() {
           <Route path="/:lng" element={<LocalizedAppLayout commonProps={commonProps} />}>
             <Route index element={null} />
             <Route path="favorites" element={null} />
+            <Route path="illustrators" element={null} />
+            <Route path="fanart" element={null} />
             <Route path="mv/:id" element={null} />
             <Route path="404" element={null} />
             <Route path="*" element={null} />
@@ -2371,6 +2396,8 @@ export default function RootApp() {
             }
           />
           <Route path="/admin/db" element={<AdminDBPage />} />
+          <Route path="/admin/artists" element={<AdminArtistsPage />} />
+          <Route path="/admin/fanart" element={<AdminFanArtPage />} />
           <Route path="/debug/fb/:mvid?" element={<DebugFancyboxMasonry />} />
           <Route path="/debug/modal" element={<DebugMVModalLightbox />} />
           <Route path="*" element={<FallbackRedirect commonProps={commonProps} />} />

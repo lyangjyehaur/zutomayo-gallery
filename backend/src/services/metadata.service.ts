@@ -8,6 +8,11 @@ export interface AlbumMeta {
 export interface ArtistMeta {
   id?: string;
   hideId?: boolean;
+  displayName?: string;
+  profileUrl?: string;
+  bio?: string;
+  dataId?: string;
+  collaborations?: any[];
 }
 
 export interface MetadataSettings {
@@ -85,7 +90,20 @@ const normalizeMetadata = (raw: unknown): Metadata => {
       if (!v || typeof v !== 'object') continue;
       const id = typeof (v as any).id === 'string' ? (v as any).id : undefined;
       const hideId = typeof (v as any).hideId === 'boolean' ? (v as any).hideId : undefined;
-      base.artistMeta[k] = { ...(id ? { id } : {}), ...(hideId !== undefined ? { hideId } : {}) };
+      const displayName = typeof (v as any).displayName === 'string' ? (v as any).displayName : undefined;
+      const profileUrl = typeof (v as any).profileUrl === 'string' ? (v as any).profileUrl : undefined;
+      const bio = typeof (v as any).bio === 'string' ? (v as any).bio : undefined;
+      const dataId = typeof (v as any).dataId === 'string' ? (v as any).dataId : undefined;
+      const collaborations = Array.isArray((v as any).collaborations) ? (v as any).collaborations : undefined;
+      base.artistMeta[k] = { 
+        ...(id ? { id } : {}), 
+        ...(hideId !== undefined ? { hideId } : {}),
+        ...(displayName ? { displayName } : {}),
+        ...(profileUrl ? { profileUrl } : {}),
+        ...(bio ? { bio } : {}),
+        ...(dataId ? { dataId } : {}),
+        ...(collaborations ? { collaborations } : {})
+      };
     }
   };
 
@@ -118,8 +136,17 @@ export const getMetadata = async (): Promise<Metadata> => {
   for (const row of artists) {
     artistMeta[row.name] = { 
       ...(row.snsId ? { id: row.snsId } : {}), 
-      ...(row.hideId !== null ? { hideId: Boolean(row.hideId) } : {}) 
+      ...(row.hideId !== null ? { hideId: Boolean(row.hideId) } : {}),
+      ...(row.displayName ? { displayName: row.displayName } : {}),
+      ...(row.profileUrl ? { profileUrl: row.profileUrl } : {}),
+      ...(row.bio ? { bio: row.bio } : {}),
+      ...(row.dataId ? { dataId: row.dataId } : {}),
     };
+    if (row.collaborations) {
+      try {
+        artistMeta[row.name].collaborations = JSON.parse(row.collaborations);
+      } catch(e) {}
+    }
   }
 
   const settings: MetadataSettings = { showAutoAlbumDate: false, announcements: [] };
@@ -155,9 +182,18 @@ export const updateMetadata = async (data: Partial<Metadata>): Promise<Metadata>
     if (data.artistMeta) {
       current.artistMeta = data.artistMeta;
       db.prepare('DELETE FROM meta_artists').run();
-      const stmt = db.prepare('INSERT INTO meta_artists (name, snsId, hideId) VALUES (?, ?, ?)');
+      const stmt = db.prepare('INSERT INTO meta_artists (name, snsId, hideId, displayName, profileUrl, bio, dataId, collaborations) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
       for (const [name, meta] of Object.entries(data.artistMeta)) {
-        stmt.run(name, meta.id || '', meta.hideId ? 1 : 0);
+        stmt.run(
+          name, 
+          meta.id || '', 
+          meta.hideId ? 1 : 0,
+          meta.displayName || '',
+          meta.profileUrl || '',
+          meta.bio || '',
+          meta.dataId || '',
+          meta.collaborations ? JSON.stringify(meta.collaborations) : ''
+        );
       }
     }
 

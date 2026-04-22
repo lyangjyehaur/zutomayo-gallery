@@ -85,11 +85,12 @@ define(['./workbox-419f8a89'], (function (workbox) { 'use strict';
     "revision": "3ca0b8505b4bec776b69afdba2768812"
   }, {
     "url": "index.html",
-    "revision": "0.7h6vh00d8do"
+    "revision": "0.din7geqte7k"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
-    allowlist: [/^\/$/]
+    allowlist: [/^\/$/],
+    denylist: [/^\/api\//, /^\/admin\//]
   }));
   workbox.registerRoute(/^https:\/\/api\.ztmr\.club\/.*/i, new workbox.NetworkFirst({
     "cacheName": "api-cache",

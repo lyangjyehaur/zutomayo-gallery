@@ -12,6 +12,12 @@ export default function CustomCursor() {
   const [isTouchDevice, setIsTouchDevice] = useState(false);
 
   useEffect(() => {
+    if (isAdminRoute) {
+      document.body.classList.add('is-admin');
+    } else {
+      document.body.classList.remove('is-admin');
+    }
+    
     // Check if the device supports hover (ignore touch devices)
     const isTouch = !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
     setIsTouchDevice(isTouch);
