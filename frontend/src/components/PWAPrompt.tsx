@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import { ModalBackdrop } from '@/components/ModalBackdrop';
 
 export function PWAPrompt() {
   const { t } = useTranslation();
@@ -29,11 +30,9 @@ export function PWAPrompt() {
 
   useEffect(() => {
     if (needRefresh) {
-      const toastId = toast.custom((t_id) => (
+      toast.custom((t_id) => (
         <>
-          <div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998]"
-          />
+          <ModalBackdrop />
           <div className="bg-background text-foreground border-border border-2 font-heading shadow-shadow rounded-base flex flex-col gap-4 p-5 w-[356px] md:w-[400px] relative z-[9999] pointer-events-auto">
             <h2 className="text-lg font-bold w-full leading-tight">
               {t('app.pwa_update_title', '發現新版本！')}

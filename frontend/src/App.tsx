@@ -28,6 +28,7 @@ import { AdminDBPage } from "@/pages/AdminDBPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { Demo3DCardPage } from "@/pages/Demo3DCardPage";
 import { PWAPrompt } from "@/components/PWAPrompt";
+import { ModalBackdrop } from "@/components/ModalBackdrop";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import {
@@ -1345,53 +1346,64 @@ function App({
               <TooltipTrigger asChild>
                 <Button
                   onClick={() => {
-                    toast(t("app.install_pwa_title", "安裝 ZTMY Gallery"), {
-                      description: (
-                      <div className="flex flex-col gap-2 mt-2 text-[15px]">
-                          <span>{t("app.install_pwa_desc", "將網站加入主畫面，獲得最佳體驗：")}</span>
-                          <ul className="list-disc list-outside ml-5 mt-1 space-y-2 opacity-80 text-left">
-                            <li className="leading-snug">{t("app.pwa_feature_1", "無邊框沉浸式全螢幕瀏覽")}</li>
-                            <li className="leading-snug">{t("app.pwa_feature_2", "圖片動態快取，離線也能看")}</li>
-                            <li className="leading-snug">{t("app.pwa_feature_3", "支援桌面長按捷徑快速導覽")}</li>
-                            <li className="leading-snug">{t("app.pwa_feature_4", "與原生 App 相同的順暢體驗")}</li>
-                          </ul>
+                    toast.custom((t_id) => (
+                      <>
+                        <ModalBackdrop />
+                        <div className="bg-background text-foreground border-border border-2 font-heading shadow-shadow rounded-base flex flex-col gap-4 p-5 w-[356px] md:w-[400px] relative z-[9999] pointer-events-auto">
+                          <h2 className="text-lg font-bold w-full leading-tight">
+                            {t("app.install_pwa_title", "安裝 ZTMY Gallery")}
+                          </h2>
+                          <div className="w-full font-base">
+                            <div className="flex flex-col gap-2 mt-2 text-[15px]">
+                              <span>{t("app.install_pwa_desc", "將網站加入主畫面，獲得最佳體驗：")}</span>
+                              <ul className="list-disc list-outside ml-5 mt-1 space-y-2 opacity-80 text-left">
+                                <li className="leading-snug">{t("app.pwa_feature_1", "無邊框沉浸式全螢幕瀏覽")}</li>
+                                <li className="leading-snug">{t("app.pwa_feature_2", "圖片動態快取，離線也能看")}</li>
+                                <li className="leading-snug">{t("app.pwa_feature_3", "支援桌面長按捷徑快速導覽")}</li>
+                                <li className="leading-snug">{t("app.pwa_feature_4", "與原生 App 相同的順暢體驗")}</li>
+                              </ul>
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-2 w-full mt-2">
+                            <button
+                              onClick={async () => {
+                                toast.dismiss(t_id);
+                                if (deferredPrompt) {
+                                  deferredPrompt.prompt();
+                                  const { outcome } = await deferredPrompt.userChoice;
+                                  if (outcome === 'accepted') {
+                                    if (window.umami) window.umami.track('Z_PWA_Install_Accepted_Btn');
+                                    setDeferredPrompt(null);
+                                  } else {
+                                    if (window.umami) window.umami.track('Z_PWA_Install_Dismissed_Btn');
+                                  }
+                                } else {
+                                  toast.info("預覽模式：安裝事件尚未觸發", {
+                                    description: "實際環境中必須滿足 PWA 條件才會出現系統安裝提示",
+                                    duration: 3000
+                                  });
+                                }
+                              }}
+                              className="font-base border-2 text-[15px] h-10 px-4 bg-main text-main-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none"
+                            >
+                              {t("app.install", "確定安裝")}
+                            </button>
+                            <button
+                              onClick={() => {
+                                toast.dismiss(t_id);
+                                if (window.umami) window.umami.track('Z_PWA_Install_Cancel_Toast');
+                              }}
+                              className="font-base border-2 text-[15px] h-10 px-4 bg-secondary-background text-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none"
+                            >
+                              {t("common.cancel", "取消")}
+                            </button>
+                          </div>
                         </div>
-                      ),
+                      </>
+                    ), {
                       duration: Infinity,
                       position: "bottom-center",
-                      className: "!flex-col !items-start !gap-4 !p-5 w-[356px] md:w-[400px]",
-                      classNames: {
-                        actionButton: "!w-full !justify-center !text-center !h-10 !text-[15px]",
-                        cancelButton: "!w-full !justify-center !text-center !h-10 !text-[15px] !mt-2",
-                        title: "!text-lg !font-bold",
-                        description: "!w-full"
-                      },
-                      action: {
-                        label: t("app.install", "確定安裝"),
-                        onClick: async () => {
-                          if (deferredPrompt) {
-                            deferredPrompt.prompt();
-                            const { outcome } = await deferredPrompt.userChoice;
-                            if (outcome === 'accepted') {
-                              if (window.umami) window.umami.track('Z_PWA_Install_Accepted_Btn');
-                              setDeferredPrompt(null);
-                            } else {
-                              if (window.umami) window.umami.track('Z_PWA_Install_Dismissed_Btn');
-                            }
-                          } else {
-                            toast.info("預覽模式：安裝事件尚未觸發", {
-                              description: "實際環境中必須滿足 PWA 條件才會出現系統安裝提示",
-                              duration: 3000
-                            });
-                          }
-                        },
-                      },
-                      cancel: {
-                        label: t("common.cancel", "取消"),
-                        onClick: () => {
-                          if (window.umami) window.umami.track('Z_PWA_Install_Cancel_Toast');
-                        },
-                      },
+                      unstyled: true,
                     });
                   }}
                   variant="neutral"
