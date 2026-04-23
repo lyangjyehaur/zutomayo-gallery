@@ -1,5 +1,6 @@
 import { MVItem } from '../types.js';
 import { MV, sequelize } from './pg.service.js';
+import { meiliClient, syncDataToMeili } from './meili.service.js';
 
 // 運行時數據緩存，支持熱更新
 let runtimeData: MVItem[] | null = null;
@@ -51,14 +52,30 @@ export class MVService {
     let data = [...await getRuntimeData()];
 
     if (filters.search) {
-      const k = filters.search.toLowerCase();
-      data = data.filter(mv => 
-        mv.title.toLowerCase().includes(k) || 
-        mv.keywords.some(key => {
-          const text = typeof key === 'string' ? key : key.text;
-          return text.toLowerCase().includes(k);
-        })
-      );
+      try {
+        const searchResult = await meiliClient.index('mvs').search(filters.search, {
+          limit: 1000, // 取得所有可能的匹配
+        });
+        
+        const matchedIds = searchResult.hits.map(hit => hit.id);
+        
+        // 依照 Meilisearch 返回的相關度順序重新排序並過濾資料
+        data = matchedIds
+          .map(id => data.find(mv => mv.id === id))
+          .filter((mv): mv is MVItem => mv !== undefined);
+          
+      } catch (error) {
+        console.error('[MVService] Meilisearch query failed, falling back to memory search:', error);
+        // 降級到原本的記憶體搜尋
+        const k = filters.search.toLowerCase();
+        data = data.filter(mv => 
+          mv.title.toLowerCase().includes(k) || 
+          mv.keywords.some(key => {
+            const text = typeof key === 'string' ? key : key.text;
+            return text.toLowerCase().includes(k);
+          })
+        );
+      }
     }
 
     if (filters.year && filters.year !== 'all') {
@@ -69,8 +86,11 @@ export class MVService {
       data = data.filter(mv => mv.artist && mv.artist.includes(filters.artist!));
     }
 
-    // 修正：預設返回原始順序（asc），只有明確要求 desc 才反轉
-    if (filters.sort === 'desc') return data.reverse();
+    // 只有在沒有使用搜尋（即沒有 Meilisearch 相關度排序）時，才套用預設排序
+    if (!filters.search) {
+      if (filters.sort === 'desc') return data.reverse();
+    }
+    
     return data;
   }
 
@@ -150,6 +170,9 @@ export class MVService {
 
     // 更新成功後，更新運行時緩存
     runtimeData = finalData;
+    
+    // 背景同步至 Meilisearch (不阻塞 API 回應)
+    syncDataToMeili().catch(err => console.error('[MVService] Background sync to Meilisearch failed:', err));
     
     // 計算總數
     result.totalUpdated = result.updated.length;
