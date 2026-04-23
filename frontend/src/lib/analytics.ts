@@ -4,6 +4,10 @@ declare global {
       track: (eventName: string, eventData?: Record<string, any>) => void;
       identify?: (data: Record<string, any>) => void;
     };
+    umami_old?: {
+      track: (eventName: string, eventData?: Record<string, any>) => void;
+      identify?: (data: Record<string, any>) => void;
+    };
   }
 }
 
@@ -83,6 +87,16 @@ export const initAnalytics = () => {
       script.src = "https://u.danndann.cn/script.js";
       script.defer = true;
       script.setAttribute('data-website-id', '405e07a8-7aae-41a6-bdb9-6851e898ab0c');
+      // 將舊版的實例命名為 umami_old，避免與新版衝突
+      script.setAttribute('data-host-url', 'https://u.danndann.cn');
+      script.setAttribute('data-domains', 'gallery.ztmr.club');
+      script.onload = () => {
+        // 在舊版載入完成後，把全域變數移到 umami_old
+        if (window.umami) {
+          window.umami_old = window.umami;
+          delete window.umami;
+        }
+      };
       document.head.appendChild(script);
     }
     
@@ -94,17 +108,20 @@ export const initAnalytics = () => {
       script2.src = "/commons/commons.js";
       script2.defer = true;
       script2.setAttribute('data-website-id', targetWebsiteId); 
+      // 確保新版實例佔用 window.umami，並且使用 /commons/api/send 發送數據
+      script2.setAttribute('data-host-url', 'https://gallery.ztmr.club/commons');
       document.head.appendChild(script2);
       
       // 第二部分：螢幕錄影回放 (偽裝為 feedback.js)
-       const script3 = document.createElement('script');
-       script3.src = "/commons/feedback.js";
-       script3.defer = true;
-       script3.setAttribute('data-website-id', targetWebsiteId);
-       script3.setAttribute('data-sample-rate', '0.50'); // 50% 的訪客會被錄影
-       script3.setAttribute('data-mask-level', 'moderate'); // 適度遮罩敏感資訊
-       script3.setAttribute('data-max-duration', '300000'); // 最大錄影時長：5分鐘
-       document.head.appendChild(script3);
+      const script3 = document.createElement('script');
+      script3.src = "/commons/feedback.js";
+      script3.defer = true;
+      script3.setAttribute('data-website-id', targetWebsiteId);
+      script3.setAttribute('data-sample-rate', '0.50'); // 50% 的訪客會被錄影
+      script3.setAttribute('data-mask-level', 'moderate'); // 適度遮罩敏感資訊
+      script3.setAttribute('data-max-duration', '300000'); // 最大錄影時長：5分鐘
+      script3.setAttribute('data-host-url', 'https://gallery.ztmr.club/commons');
+      document.head.appendChild(script3);
     }
   }
 
@@ -267,6 +284,11 @@ export const initAnalytics = () => {
 
       // 發送自定義事件 (加入 Z_ 前綴)
       window.umami.track(eventName, eventData);
+      
+      // 同步發送給舊版 Umami (如果有載入)
+      if (window.umami_old && typeof window.umami_old.track === 'function') {
+        window.umami_old.track(eventName, eventData);
+      }
     }
   }, { capture: true });
 
@@ -315,5 +337,10 @@ export const initAnalytics = () => {
 
     // 發送輸入變更事件 (加入 Z_ 前綴)
     window.umami.track('Z_Input_Change', eventData);
+    
+    // 同步發送給舊版 Umami
+    if (window.umami_old && typeof window.umami_old.track === 'function') {
+      window.umami_old.track('Z_Input_Change', eventData);
+    }
   }, { capture: true });
 };

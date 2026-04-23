@@ -59,22 +59,21 @@ export const getFullGeoInfo = async (ip: string): Promise<{ country: string, reg
   const ip2regionRaw = ip2regionResult || undefined;
   const geoipRaw = geoipResult ? JSON.stringify(geoipResult) : undefined;
 
-  // 2. 判斷邏輯：優先採用 ip2region 的大中華區結果
-  if (ip2regionResult) {
-    const parts = ip2regionResult.split('|');
-    // 最新版的 ip2region_v4.xdb 格式為: 國家 | 省份/州 | 城市 | ISP | 國家代碼
-    // 範例: 中国|浙江省|杭州市|中国教育网|CN
-    const country = parts[0] === '0' ? 'UNKNOWN' : parts[0];
-    const province = parts[1] === '0' ? '' : parts[1];
-    const city = parts[2] === '0' ? '' : parts[2];
-    const isp = parts[3] === '0' ? '' : parts[3];
-    const countryCodeStr = parts[4] === '0' ? '' : parts[4]; // 這是 CN, TW 等代碼
-    
-    // 如果 ip2region 判斷是亞洲核心區域，直接採信它的結果作為主數據
-    if (['中国', '台湾', '香港', '澳门'].includes(country) || ['台湾', '香港', '澳门'].includes(province)) {
+  // 2. 判斷邏輯：以 geoip-lite 為國際標準 (解決 ip2region 把 TW/HK 歸類為 CN 的問題)
+  if (geoipResult && geoipResult.country) {
+    const isoCountry = geoipResult.country; // e.g. 'CN', 'TW', 'HK', 'US'
+
+    // 如果 geoip-lite 判斷為中國大陸 (CN)，我們才使用 ip2region 的高精度詳細資料
+    if (isoCountry === 'CN' && ip2regionResult) {
+      const parts = ip2regionResult.split('|');
+      const country = parts[0] === '0' ? 'UNKNOWN' : parts[0];
+      const province = parts[1] === '0' ? '' : parts[1];
+      const city = parts[2] === '0' ? '' : parts[2];
+      const isp = parts[3] === '0' ? '' : parts[3];
+
       return {
-        country,
-        region: province, // 這裡的 region 其實對應到省份
+        country, // 回傳 '中国' 讓後續映射
+        region: province,
         province,
         city,
         isp,
@@ -84,12 +83,10 @@ export const getFullGeoInfo = async (ip: string): Promise<{ country: string, reg
         geoipRaw
       };
     }
-  }
-  
-  // 3. 海外 IP，採用 geoip-lite 作為主數據
-  if (geoipResult && geoipResult.country) {
+
+    // 非中國大陸 IP (包含 TW, HK, MO 或海外)，完全信任 geoip-lite 的國際標準解析
     return {
-      country: geoipResult.country, // 直接回傳標準代碼 (如 US, GB)
+      country: isoCountry, // 直接回傳標準代碼 (如 TW, US)
       region: geoipResult.region || '',
       province: geoipResult.region || '', // geoip-lite 的 region 通常對應省/州
       city: geoipResult.city || '',
@@ -101,7 +98,7 @@ export const getFullGeoInfo = async (ip: string): Promise<{ country: string, reg
     };
   }
   
-  // 4. Fallback (最差情況：geoip-lite 查不到，但 ip2region 之前有查到海外資訊)
+  // 3. Fallback (最差情況：geoip-lite 查不到，但 ip2region 之前有查到資訊)
   if (ip2regionResult) {
     const parts = ip2regionResult.split('|');
     const country = parts[0] === '0' ? 'UNKNOWN' : parts[0];
