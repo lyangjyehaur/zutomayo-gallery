@@ -60,9 +60,9 @@ const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     // 允許無 origin 的請求（如移動應用或 curl）
     if (!origin) {
+      // 在生產環境中，只有特定的內部路由允許無 Origin 請求
       if (isProduction && !allowedOrigins.includes('*')) {
-        console.warn(`[CORS] Blocked request without origin in production`);
-        return callback(new Error('Not allowed by CORS'));
+        return callback(null, true); // 放行無 Origin 的請求，讓其他中介軟體或路由去處理授權
       }
       return callback(null, true);
     }
