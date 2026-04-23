@@ -1,9 +1,16 @@
 import { Sequelize, DataTypes } from 'sequelize';
 
+// 從環境變數讀取資料庫連線資訊，若無則提供預設值 (給本地開發用)
+const DB_HOST = process.env.DB_HOST || '45.147.26.57';
+const DB_PORT = parseInt(process.env.DB_PORT || '5432', 10);
+const DB_NAME = process.env.DB_NAME || 'zutomayo_gallery';
+const DB_USER = process.env.DB_USER || 'zutomayo_gallery';
+const DB_PASS = process.env.DB_PASS || 'FBZNYC3HSJExdHX3';
+
 // 連線到 PostgreSQL
-export const sequelize = new Sequelize('zutomayo_gallery', 'zutomayo_gallery', 'FBZNYC3HSJExdHX3', {
-  host: 'postgresql',
-  port: 5432,
+export const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASS, {
+  host: DB_HOST,
+  port: DB_PORT,
   dialect: 'postgres',
   logging: false, // 關閉終端機的 SQL 語法輸出
   timezone: '+08:00',
