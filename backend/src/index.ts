@@ -14,6 +14,7 @@ import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler.j
 import { sequelize } from './services/pg.service.js';
 import { initGeoService } from './services/geo.service.js';
 import { initRedis, redisClient } from './services/redis.service.js';
+import { initMeiliSearch, syncDataToMeili } from './services/meili.service.js';
 import { TwitterMonitorService } from './services/twitter-monitor.service.js';
 
 const app = express();
@@ -37,6 +38,10 @@ try {
   
   await sequelize.authenticate();
   console.log('PostgreSQL Database connected');
+  
+  // 啟動時初始化並同步 Meilisearch 資料
+  await initMeiliSearch();
+  await syncDataToMeili();
   initGeoService();
   console.log('IP2Region DB initialized');
   
