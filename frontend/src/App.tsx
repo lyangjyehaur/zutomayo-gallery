@@ -91,6 +91,7 @@ import useSWR from "swr";
 
 import { MODAL_THEME } from "@/lib/theme";
 import { MaintenancePage } from "@/pages/MaintenancePage";
+import AdminLayout from "@/components/admin/AdminLayout";
 import { useTranslation } from 'react-i18next';
 import { isSupportedLang, normalizeLang } from "@/i18n";
 
@@ -2418,24 +2419,26 @@ export default function RootApp() {
             <Route path="404" element={null} />
             <Route path="*" element={null} />
           </Route>
-          <Route
-            path="/admin"
-            element={
-              <AdminPage
-                mvData={mvData || []}
-                metadata={metadataData || defaultMetadata}
-                systemStatus={systemStatus}
-                onRefresh={() => {
-                  mutate();
-                  mutateMetadata();
-                  mutateSystemStatus();
-                }}
-              />
-            }
-          />
-          <Route path="/admin/db" element={<AdminDBPage />} />
-          <Route path="/admin/artists" element={<AdminArtistsPage />} />
-          <Route path="/admin/fanart" element={<AdminFanArtPage />} />
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route
+              index
+              element={
+                <AdminPage
+                  mvData={mvData || []}
+                  metadata={metadataData || defaultMetadata}
+                  systemStatus={systemStatus}
+                  onRefresh={() => {
+                    mutate();
+                    mutateMetadata();
+                    mutateSystemStatus();
+                  }}
+                />
+              }
+            />
+            <Route path="db" element={<AdminDBPage />} />
+            <Route path="artists" element={<AdminArtistsPage />} />
+            <Route path="fanart" element={<AdminFanArtPage />} />
+          </Route>
           <Route path="/debug/fb/:mvid?" element={<DebugFancyboxMasonry />} />
           <Route path="/debug/modal" element={<DebugMVModalLightbox />} />
           <Route path="*" element={<FallbackRedirect commonProps={commonProps} />} />

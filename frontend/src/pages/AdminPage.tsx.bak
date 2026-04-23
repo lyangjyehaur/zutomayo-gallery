@@ -1816,6 +1816,17 @@ const currentMV = data[activeIndex];
           <h2 className="text-xl font-black mb-2">沒有找到 MV 資料</h2>
           <p className="text-sm">資料庫目前是空的，或是無法載入資料。</p>
         </div>
+
+        </AlertDialog>
+
+        <div className="h-8 border-t-4 border-black bg-card flex items-center justify-between px-8 text-[10px] font-bold opacity-70 shrink-0 z-40 absolute bottom-0 left-0 right-0 w-full">
+          <span>ZTMY.ADMIN.PANEL</span>
+          <span>
+            FE: {VERSION_CONFIG.app}
+            {systemStatus?.version && ` | BE: ${systemStatus.version}`}
+            {systemStatus?.buildTime && ` | 🕒 ${new Date(systemStatus.buildTime).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(/\//g, '')}`}
+          </span>
+        </div>
       </div>
     );
   }
@@ -3268,6 +3279,38 @@ const currentMV = data[activeIndex];
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AlertDialog open={isLogoutConfirmOpen} onOpenChange={setIsLogoutConfirmOpen}>
+        <AlertDialogContent className="border-4 border-black rounded-none shadow-neo p-0 overflow-hidden max-w-sm">
+          <AlertDialogHeader className="p-6 bg-red-500 text-white border-b-4 border-black">
+            <AlertDialogTitle className="font-black uppercase tracking-widest flex items-center gap-2">
+              <i className="hn hn-logout text-xl" /> 確認登出？
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-white/80 font-mono text-xs mt-2">
+              您確定要登出管理員身分嗎？所有未儲存的變更將會遺失。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="p-4 bg-secondary-background flex gap-4">
+            <AlertDialogCancel className="flex-1 border-2 border-black shadow-none hover:bg-black/5 rounded-none font-bold">
+              取消
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleLogout}
+              className="flex-1 bg-red-500 text-white hover:bg-red-600 border-2 border-black shadow-neo rounded-none font-bold"
+            >
+              確定登出
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <div className="h-8 border-t-4 border-black bg-card flex items-center justify-between px-8 text-[10px] font-bold opacity-70 shrink-0 z-40 absolute bottom-0 left-0 right-0 w-full">
+        <span>ZTMY.ADMIN.PANEL</span>
+        <span>
+          FE: {VERSION_CONFIG.app} (🕒 {VERSION_CONFIG.buildDate.replace(/-/g, '')})
+          {systemStatus?.version && ` | BE: ${systemStatus.version}`}
+          {systemStatus?.buildTime && ` (🕒 ${new Date(systemStatus.buildTime).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(/\//g, '')})`}
+        </span>
+      </div>
     </div>
     
     

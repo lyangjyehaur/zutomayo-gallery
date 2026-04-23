@@ -8,8 +8,6 @@ import { MVItem, MVImage } from '@/lib/types';
 
 export function AdminFanArtPage() {
   const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(true);
   const [mvData, setMvData] = useState<MVItem[]>([]);
   
   const [tweetUrl, setTweetUrl] = useState('');
@@ -19,29 +17,6 @@ export function AdminFanArtPage() {
   
   const [selectedMvIds, setSelectedMvIds] = useState<Set<string>>(new Set());
   const [isSaving, setIsSaving] = useState(false);
-
-  const verifyPassword = async (pwd: string) => {
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
-      const res = await fetch(`${apiUrl}/verify-admin`, {
-        method: 'POST',
-        headers: { 'x-admin-password': pwd }
-      });
-      if (res.ok) {
-        setIsAuthenticated(true);
-        fetchData();
-      } else {
-        toast.error('身分驗證過期，請重新登入');
-        localStorage.removeItem('ztmy_admin_pwd');
-        navigate('/admin');
-      }
-    } catch (e) {
-      toast.error('驗證失敗，請重新登入');
-      navigate('/admin');
-    } finally {
-      setIsInitializing(false);
-    }
-  };
 
   const fetchData = async () => {
     try {
@@ -57,9 +32,8 @@ export function AdminFanArtPage() {
   useEffect(() => {
     const pwd = localStorage.getItem('ztmy_admin_pwd');
     if (pwd) {
-      verifyPassword(pwd);
+      fetchData();
     } else {
-      toast.info('請先登入管理員帳號');
       navigate('/admin');
     }
   }, []);
@@ -188,23 +162,17 @@ export function AdminFanArtPage() {
     });
   };
 
-  if (isInitializing) return <div className="h-screen bg-background text-foreground flex items-center justify-center font-bold tracking-widest animate-pulse">VERIFYING...</div>;
-
-  if (!isAuthenticated) return null;
-
   return (
-    <div className="min-h-screen bg-background text-foreground pb-20">
+    <div className="h-full flex flex-col bg-background text-foreground overflow-hidden font-mono">
       {/* 頂部導航 */}
-      <div className="bg-ztmy-green border-b-4 border-black p-4 flex items-center justify-between sticky top-0 z-50">
+      <div className="h-20 border-b-4 border-black bg-card flex items-center justify-between px-8 shadow-neo-sm shrink-0">
         <div className="flex items-center gap-4">
-          <Button variant="neutral" size="sm" onClick={() => navigate('/admin')}>
-            <i className="hn hn-arrow-left mr-2" /> 返回主控台
-          </Button>
           <h1 className="text-xl font-black uppercase tracking-widest text-black">FanArt 管理中心</h1>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-6xl mx-auto p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
         
         {/* 左側：解析推文與圖片預覽 */}
         <div className="space-y-6">
@@ -318,6 +286,7 @@ export function AdminFanArtPage() {
           </div>
         </div>
 
+      </div>
       </div>
     </div>
   );

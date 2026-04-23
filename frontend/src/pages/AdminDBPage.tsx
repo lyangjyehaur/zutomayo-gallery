@@ -20,19 +20,10 @@ import {
 export function AdminDBPage() {
   const navigate = useNavigate();
 
-  // 認證狀態
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(true);
-
   // DB 狀態
   const [dbQuery, setDbQuery] = useState("SELECT name FROM sqlite_master WHERE type='table';");
   const [dbResults, setDbResults] = useState<any[] | null>(null);
   const [dbMessage, setDbMessage] = useState<string>('');
-  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
-  
-  // 登入追蹤狀態
-  const [loginAttempts, setLoginAttempts] = useState(0);
-  const [loginFailures, setLoginFailures] = useState(0);
 
   const dbColumns = useMemo<ColumnDef<any>[]>(() => {
     if (!dbResults || dbResults.length === 0) return [];
@@ -46,68 +37,12 @@ export function AdminDBPage() {
     }));
   }, [dbResults]);
 
-  const verifyPassword = async (pwd: string) => {
-    // 若已登入，阻擋追蹤與後續邏輯
-    if (isAuthenticated) return;
-
-    setIsInitializing(true);
-    
-    // 追蹤：有人嘗試登入 DB 頁面
-    if (window.umami && typeof window.umami.track === 'function') {
-      window.umami.track('Z_Admin_Login_Attempt', { 
-        method: 'db_password', 
-        attempt_count: loginAttempts + 1 
-      });
-      setLoginAttempts(prev => prev + 1);
-    }
-
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
-      const res = await fetch(`${apiUrl}/verify-admin`, {
-        method: 'POST',
-        headers: { 'x-admin-password': pwd }
-      });
-      if (res.ok) {
-        setIsAuthenticated(true);
-        handleRunQuery("SELECT name FROM sqlite_master WHERE type='table';");
-      } else {
-        toast.error('身分驗證過期，請重新登入');
-        
-        // 追蹤：DB 頁面登入連線失敗
-      if (window.umami && typeof window.umami.track === 'function') {
-        window.umami.track('Z_Admin_Login_Failed', { 
-          method: 'db_password',
-          reason: 'network_error',
-          failure_count: loginFailures + 1 
-        });
-        setLoginFailures(prev => prev + 1);
-      }
-        navigate('/admin');
-      }
-    } catch (e) {
-      toast.error('伺服器連線失敗');
-      
-      // 追蹤：DB 頁面登入連線失敗
-      if ((window as any).umami && typeof (window as any).umami.track === 'function') {
-        (window as any).umami.track('Z_Admin_Login_Failed', { 
-          method: 'db_password',
-          reason: 'network_error',
-          failureCount: loginFailures + 1 
-        });
-        setLoginFailures(prev => prev + 1);
-      }
-      navigate('/admin');
-    } finally {
-      setIsInitializing(false);
-    }
-  };
-
   useEffect(() => {
     const saved = localStorage.getItem('ztmy_admin_pwd');
-    if (saved) {
-      verifyPassword(saved);
-    } else {
+    if (!saved) {
       navigate('/admin');
+    } else {
+      handleRunQuery("SELECT name FROM sqlite_master WHERE type='table';");
     }
   }, []);
 
@@ -164,42 +99,11 @@ export function AdminDBPage() {
     }
   };
 
-  const handleLogout = () => {
-    setIsLogoutConfirmOpen(false);
-    localStorage.removeItem('ztmy_admin_pwd');
-    setIsAuthenticated(false);
-    toast.success('已安全登出');
-    navigate('/admin');
-  };
-
-  if (isInitializing || !isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center font-mono text-foreground crt-lines p-4 relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none opacity-5 crt-lines-global" />
-        <div className="text-xl font-black uppercase tracking-widest animate-pulse flex items-center gap-2">
-          <i className="hn hn-refresh animate-spin text-xl" />
-          <span className="flex flex-col leading-tight">
-            <span className="tracking-normal opacity-70">驗證中...</span>
-            <span className="text-[10px] font-mono opacity-40 normal-case">AUTHENTICATING...</span>
-          </span>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="h-screen bg-background text-foreground flex flex-col font-mono font-normal overflow-hidden">
+    <div className="h-full flex flex-col font-mono font-normal overflow-hidden bg-background text-foreground">
       {/* 頂部控制欄 */}
-      <div className="h-20 border-b-4 border-black bg-card flex items-center justify-between px-8 shadow-neo-sm z-40 shrink-0">
+      <div className="h-20 border-b-4 border-black bg-card flex items-center justify-between px-8 shadow-neo-sm shrink-0">
         <div className="flex items-center gap-4">
-          <Button 
-            variant="neutral" 
-            size="icon" 
-            onClick={() => navigate('/admin')} 
-            className="rounded-full bg-black text-white hover:bg-main hover:text-black border-2 border-transparent transition-all shadow-neo-sm"
-          >
-            <i className="hn hn-arrow-left text-xl" />
-          </Button>
           <div>
             <h1 className="text-2xl font-black uppercase tracking-widest flex items-center gap-3">
               <i className="hn hn-table text-2xl text-blue-600" />
@@ -218,16 +122,6 @@ export function AdminDBPage() {
         <div className="flex items-center gap-4">
           <Button variant="neutral" size="sm" onClick={handleExportDB} className="h-8 text-xs font-bold bg-white text-black hover:bg-ztmy-green border-2 border-black shadow-neo-sm">
             下載 .sqlite 備份
-          </Button>
-          <div className="w-px h-8 bg-black/20 mx-2"></div>
-          <Button 
-            variant="neutral" 
-            size="sm" 
-            onClick={() => setIsLogoutConfirmOpen(true)}
-            className="border-2 border-transparent text-red-500 hover:text-red-600 hover:bg-red-50"
-            title="登出管理員"
-          >
-            <i className="hn hn-logout text-base" />
           </Button>
         </div>
       </div>
@@ -283,31 +177,6 @@ export function AdminDBPage() {
           )}
         </div>
       </div>
-
-      {/* 登出確認 Dialog */}
-      <AlertDialog open={isLogoutConfirmOpen} onOpenChange={setIsLogoutConfirmOpen}>
-        <AlertDialogContent className="border-4 border-black rounded-none shadow-neo p-0 overflow-hidden max-w-sm">
-          <AlertDialogHeader className="p-6 bg-red-500 text-white border-b-4 border-black">
-            <AlertDialogTitle className="font-black uppercase tracking-widest flex items-center gap-2">
-              <i className="hn hn-logout text-xl" /> 確認登出？
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-white/80 font-mono text-xs mt-2">
-              您確定要登出管理員身分嗎？
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="p-4 bg-secondary-background flex gap-4">
-            <AlertDialogCancel className="flex-1 border-2 border-black shadow-none hover:bg-black/5 rounded-none font-bold">
-              取消
-            </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleLogout}
-              className="flex-1 bg-red-500 text-white hover:bg-red-600 border-2 border-black shadow-neo rounded-none font-bold"
-            >
-              確定登出
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

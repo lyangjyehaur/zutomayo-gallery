@@ -10,8 +10,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 
 export function AdminArtistsPage() {
   const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(true);
   const [artistMeta, setArtistMeta] = useState<Record<string, ArtistMeta>>({});
   const [mvData, setMvData] = useState<MVItem[]>([]);
   const [selectedArtist, setSelectedArtist] = useState<string | null>(null);
@@ -20,29 +18,6 @@ export function AdminArtistsPage() {
   const [tweetUrl, setTweetUrl] = useState('');
   const [isParsing, setIsParsing] = useState(false);
   const [batchStatus, setBatchStatus] = useState<{ total: number, current: number, failedUrls: string[] } | null>(null);
-
-  const verifyPassword = async (pwd: string) => {
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
-      const res = await fetch(`${apiUrl}/verify-admin`, {
-        method: 'POST',
-        headers: { 'x-admin-password': pwd }
-      });
-      if (res.ok) {
-        setIsAuthenticated(true);
-        fetchData();
-      } else {
-        toast.error('身分驗證過期，請重新登入');
-        localStorage.removeItem('ztmy_admin_pwd');
-        navigate('/admin');
-      }
-    } catch (e) {
-      toast.error('驗證失敗，請重新登入');
-      navigate('/admin');
-    } finally {
-      setIsInitializing(false);
-    }
-  };
 
   const fetchData = async () => {
     try {
@@ -63,9 +38,8 @@ export function AdminArtistsPage() {
   useEffect(() => {
     const pwd = localStorage.getItem('ztmy_admin_pwd');
     if (pwd) {
-      verifyPassword(pwd);
+      fetchData();
     } else {
-      toast.info('請先登入管理員帳號');
       navigate('/admin');
     }
   }, []);
@@ -180,19 +154,12 @@ export function AdminArtistsPage() {
     ...mvData.flatMap(mv => mv.artist || [])
   ])).filter(Boolean).sort((a, b) => a.localeCompare(b));
 
-  if (isInitializing) return <div className="h-screen bg-background text-foreground flex items-center justify-center font-bold tracking-widest animate-pulse">VERIFYING...</div>;
-
-  if (!isAuthenticated) return null;
-
   const currentMeta = selectedArtist ? (artistMeta[selectedArtist] || { id: '', hideId: false }) : null;
 
   return (
-    <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden font-mono">
-      <div className="h-20 border-b-4 border-black bg-card flex items-center justify-between px-8 shadow-neo-sm z-40 shrink-0">
+    <div className="h-full flex flex-col bg-background text-foreground overflow-hidden font-mono">
+      <div className="h-20 border-b-4 border-black bg-card flex items-center justify-between px-8 shadow-neo-sm shrink-0">
         <div className="flex items-center gap-4">
-          <Button variant="neutral" size="icon" onClick={() => navigate('/admin')} className="rounded-full bg-black text-white hover:bg-main hover:text-black">
-            <i className="hn hn-arrow-left text-xl" />
-          </Button>
           <div>
             <h1 className="text-xl font-black uppercase tracking-widest leading-none">畫師管理控制台</h1>
             <div className="text-[10px] font-bold opacity-40">ARTIST.ADMIN.PANEL</div>
