@@ -2,7 +2,7 @@ import { Sequelize, DataTypes, Model } from 'sequelize';
 
 // 連線到 PostgreSQL
 export const sequelize = new Sequelize('zutomayo_gallery', 'zutomayo_gallery', 'FBZNYC3HSJExdHX3', {
-  host: '127.0.0.1',
+  host: 'postgresql',
   port: 5432,
   dialect: 'postgres',
   logging: false, // 關閉終端機的 SQL 語法輸出
