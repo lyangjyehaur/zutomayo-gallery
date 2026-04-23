@@ -12,20 +12,11 @@ const getRuntimeData = async (): Promise<MVItem[]> => {
       runtimeData = rows.map(row => {
         const mv = row.toJSON() as any;
         
-        // 兼容舊版字串格式的 artist
-        if (mv.artist) {
-          try {
-            if (typeof mv.artist === 'string') {
-              mv.artist = JSON.parse(mv.artist);
-            }
-            if (!Array.isArray(mv.artist)) mv.artist = [mv.artist];
-          } catch (err) {
-            // 解析失敗代表是舊版的純字串，直接包裝成陣列
-            mv.artist = [mv.artist];
-          }
-        } else {
-          mv.artist = [];
-        }
+        // 確保陣列型別
+        if (!mv.artist) mv.artist = [];
+        if (!mv.album) mv.album = [];
+        if (!Array.isArray(mv.artist)) mv.artist = [mv.artist];
+        if (!Array.isArray(mv.album)) mv.album = [mv.album];
 
         return mv as MVItem;
       });
@@ -153,8 +144,6 @@ export class MVService {
       // 寫入/更新資料
       for (const mv of newData) {
         const mvData = { ...mv };
-        // Sequelize JSONB 欄位會自動處理物件/陣列，但如果是 artist 可能是陣列，也給它保持原樣
-        // 確保某些可能未定義的欄位為 null 或適當值
         await MV.upsert(mvData as any, { transaction: t });
       }
     });

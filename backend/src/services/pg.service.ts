@@ -1,4 +1,4 @@
-import { Sequelize, DataTypes, Model } from 'sequelize';
+import { Sequelize, DataTypes } from 'sequelize';
 
 // 連線到 PostgreSQL
 export const sequelize = new Sequelize('zutomayo_gallery', 'zutomayo_gallery', 'FBZNYC3HSJExdHX3', {
@@ -13,13 +13,13 @@ export const sequelize = new Sequelize('zutomayo_gallery', 'zutomayo_gallery', '
 export const MV = sequelize.define('MV', {
   id: { type: DataTypes.STRING, primaryKey: true },
   title: DataTypes.STRING,
-  artist: DataTypes.STRING,
+  artist: DataTypes.JSONB,
   year: DataTypes.STRING(4),
   date: DataTypes.DATE,
   youtube: DataTypes.STRING,
   bilibili: DataTypes.STRING,
   description: DataTypes.TEXT,
-  album: DataTypes.STRING,
+  album: DataTypes.JSONB,
   coverImages: DataTypes.JSONB,
   keywords: DataTypes.JSONB,
   images: DataTypes.JSONB,

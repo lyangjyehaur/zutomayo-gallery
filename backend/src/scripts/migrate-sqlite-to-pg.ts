@@ -26,6 +26,16 @@ const safeParseJSON = (str: any) => {
   }
 };
 
+const safeParseArray = (str: any) => {
+  if (!str) return [];
+  try {
+    const parsed = JSON.parse(str);
+    return Array.isArray(parsed) ? parsed : [parsed];
+  } catch (e) {
+    return [str];
+  }
+};
+
 const safeDate = (dateStr: any) => {
   if (!dateStr) return null;
   const d = new Date(dateStr);
@@ -52,6 +62,8 @@ async function migrate() {
     const mvData = mvs.map((m: any) => ({
       ...m,
       date: safeDate(m.date),
+      artist: safeParseArray(m.artist),
+      album: safeParseArray(m.album),
       coverImages: safeParseJSON(m.coverImages),
       keywords: safeParseJSON(m.keywords),
       images: safeParseJSON(m.images),
