@@ -112,9 +112,9 @@ export const initAnalytics = () => {
       script2.setAttribute('data-host-url', 'https://gallery.ztmr.club/commons');
       document.head.appendChild(script2);
       
-      // 第二部分：螢幕錄影回放 (偽裝為 feedback.js)
+      // 第二部分：螢幕錄影回放 (偽裝為 telemetry.js)
       const script3 = document.createElement('script');
-      script3.src = "/commons/feedback.js";
+      script3.src = "/commons/telemetry.js";
       script3.defer = true;
       script3.setAttribute('data-website-id', targetWebsiteId);
       script3.setAttribute('data-sample-rate', '0.50'); // 50% 的訪客會被錄影

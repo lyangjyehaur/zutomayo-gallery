@@ -7,6 +7,7 @@ import mvRoutes from './routes/mv.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import systemRoutes from './routes/system.routes.js';
 import fanartRoutes from './routes/fanart.routes.js';
+import webhookRoutes from './routes/webhook.routes.js';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { sequelize } from './services/pg.service.js';
 import { initGeoService } from './services/geo.service.js';
@@ -156,6 +157,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/mvs', mvRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/fanarts', fanartRoutes);
+app.use('/api/webhook', webhookRoutes);
 
 // 404 處理 - 必須在所有路由之後
 app.use(notFoundHandler);
