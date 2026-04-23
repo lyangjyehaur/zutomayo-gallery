@@ -2827,8 +2827,8 @@ const currentMV = data[activeIndex];
 
       {/* Metadata 全局設定 Dialog */}
       <Dialog open={isMetadataDialogOpen} onOpenChange={setIsMetadataDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-0 border-4 border-black rounded-none shadow-neo overflow-hidden">
-          <DialogHeader className="p-6 bg-black text-white border-b-4 border-black">
+        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0 border-4 border-black rounded-none shadow-neo overflow-hidden">
+          <DialogHeader className="p-6 bg-black text-white border-b-4 border-black shrink-0">
             <DialogTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-2">
               <i className="hn hn-disc text-xl" /> 全局設定 (Metadata)
             </DialogTitle>
@@ -2837,7 +2837,7 @@ const currentMV = data[activeIndex];
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto p-6 bg-background space-y-8 font-mono">
+          <div className="flex-1 overflow-y-auto p-6 bg-background space-y-12 font-mono custom-scrollbar">
 
             <div className="flex flex-col gap-3 border-2 border-black p-3 bg-yellow-500/20">
               <div className="flex items-center justify-between">
@@ -3022,9 +3022,9 @@ const currentMV = data[activeIndex];
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {Object.entries(localMetadata.albumMeta || {}).map(([album, meta], idx) => (
-                  <div key={idx} className="flex items-center gap-2 border-2 border-black p-2 bg-card">
+                  <div key={idx} className="flex flex-col gap-2 border-2 border-black p-3 bg-card shadow-neo-sm relative group">
                     <Input 
                       value={album} 
                       onChange={(e) => {
@@ -3038,33 +3038,40 @@ const currentMV = data[activeIndex];
                         });
                       }} 
                       placeholder="專輯名稱" 
-                      className="flex-1 h-8 text-xs font-bold border-none bg-black/5"
+                      className="w-full h-8 text-xs font-bold border-2 border-transparent hover:border-black/20 focus:border-black bg-black/5 rounded-none"
                     />
-                    <Input 
-                      value={meta?.date || ""} 
-                      onChange={(e) => {
-                        const newVal = e.target.value;
-                        setLocalMetadata(prev => ({
-                          ...prev,
-                          albumMeta: { ...prev.albumMeta, [album]: { ...(prev.albumMeta?.[album] || {}), date: newVal } }
-                        }));
-                      }} 
-                      placeholder="日期 (可空)" 
-                      className="w-24 h-8 text-xs font-mono text-center"
-                    />
-                    <Switch
-                      checked={!!meta?.hideDate}
-                      onCheckedChange={(checked) => {
-                        setLocalMetadata((prev) => ({
-                          ...prev,
-                          albumMeta: { ...prev.albumMeta, [album]: { ...(prev.albumMeta?.[album] || {}), hideDate: checked } },
-                        }));
-                      }}
-                    />
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 flex items-center bg-black/5 px-2">
+                        <span className="text-[10px] font-bold opacity-50 shrink-0 mr-2">發布</span>
+                        <Input 
+                          value={meta?.date || ""} 
+                          onChange={(e) => {
+                            const newVal = e.target.value;
+                            setLocalMetadata(prev => ({
+                              ...prev,
+                              albumMeta: { ...prev.albumMeta, [album]: { ...(prev.albumMeta?.[album] || {}), date: newVal } }
+                            }));
+                          }} 
+                          placeholder="YYYY/MM/DD (可空)" 
+                          className="w-full h-8 text-xs font-mono text-center border-none bg-transparent shadow-none px-0"
+                        />
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0 bg-black/5 px-2 h-8" title="隱藏日期">
+                        <Switch
+                          checked={!!meta?.hideDate}
+                          onCheckedChange={(checked) => {
+                            setLocalMetadata((prev) => ({
+                              ...prev,
+                              albumMeta: { ...prev.albumMeta, [album]: { ...(prev.albumMeta?.[album] || {}), hideDate: checked } },
+                            }));
+                          }}
+                        />
+                      </div>
+                    </div>
                     <Button 
                       variant="neutral" 
                       size="icon" 
-                      className="h-8 w-8 text-red-500 hover:bg-red-500 hover:text-white"
+                      className="absolute -top-3 -right-3 h-6 w-6 rounded-full border-2 border-black bg-red-500 text-white hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity z-10"
                       onClick={() => {
                         setLocalMetadata(prev => {
                           const newAlbumMeta = { ...prev.albumMeta };
@@ -3073,14 +3080,14 @@ const currentMV = data[activeIndex];
                         });
                       }}
                     >
-                      <i className="hn hn-trash text-base" />
+                      <i className="hn hn-trash text-[10px]" />
                     </Button>
                   </div>
                 ))}
                 
                 <Button 
                   variant="neutral" 
-                  className="h-full min-h-[52px] border-2 border-dashed border-black/30 opacity-50 hover:opacity-100 flex items-center justify-center gap-2"
+                  className="h-full min-h-[88px] border-2 border-dashed border-black/30 opacity-50 hover:opacity-100 flex flex-col items-center justify-center gap-2 bg-transparent"
                   onClick={() => {
                     const newKey = `新專輯_${Object.keys(localMetadata.albumMeta || {}).length + 1}`;
                     setLocalMetadata(prev => ({
@@ -3089,7 +3096,8 @@ const currentMV = data[activeIndex];
                     }));
                   }}
                 >
-                  <i className="hn hn-plus text-base mr-2" /> 新增專輯發布日期
+                  <i className="hn hn-plus text-xl" /> 
+                  <span className="text-xs font-bold">新增專輯發布日期</span>
                 </Button>
               </div>
             </section>
@@ -3134,9 +3142,9 @@ const currentMV = data[activeIndex];
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {Object.entries(localMetadata.artistMeta || {}).map(([artist, meta], idx) => (
-                  <div key={idx} className="flex items-center gap-2 border-2 border-black p-2 bg-card">
+                  <div key={idx} className="flex flex-col gap-2 border-2 border-black p-3 bg-card shadow-neo-sm relative group">
                     <Input 
                       value={artist} 
                       onChange={(e) => {
@@ -3150,33 +3158,40 @@ const currentMV = data[activeIndex];
                         });
                       }} 
                       placeholder="畫師名稱" 
-                      className="flex-1 h-8 text-xs font-bold border-none bg-black/5"
+                      className="w-full h-8 text-xs font-bold border-2 border-transparent hover:border-black/20 focus:border-black bg-black/5 rounded-none"
                     />
-                    <Input 
-                      value={meta?.id || ""} 
-                      onChange={(e) => {
-                        const newVal = e.target.value;
-                        setLocalMetadata(prev => ({
-                          ...prev,
-                          artistMeta: { ...prev.artistMeta, [artist]: { ...(prev.artistMeta?.[artist] || {}), id: newVal } }
-                        }));
-                      }} 
-                      placeholder="社群 ID (Twitter/SNS ID)" 
-                      className="flex-1 h-8 text-xs font-mono"
-                    />
-                    <Switch
-                      checked={!!meta?.hideId}
-                      onCheckedChange={(checked) => {
-                        setLocalMetadata((prev) => ({
-                          ...prev,
-                          artistMeta: { ...prev.artistMeta, [artist]: { ...(prev.artistMeta?.[artist] || {}), hideId: checked } },
-                        }));
-                      }}
-                    />
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 flex items-center bg-black/5 px-2">
+                        <span className="text-[10px] font-bold opacity-50 shrink-0 mr-2"><i className="hn hn-twitter" /></span>
+                        <Input 
+                          value={meta?.id || ""} 
+                          onChange={(e) => {
+                            const newVal = e.target.value;
+                            setLocalMetadata(prev => ({
+                              ...prev,
+                              artistMeta: { ...prev.artistMeta, [artist]: { ...(prev.artistMeta?.[artist] || {}), id: newVal } }
+                            }));
+                          }} 
+                          placeholder="社群 ID" 
+                          className="w-full h-8 text-xs font-mono text-left border-none bg-transparent shadow-none px-0"
+                        />
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0 bg-black/5 px-2 h-8" title="隱藏社群 ID">
+                        <Switch
+                          checked={!!meta?.hideId}
+                          onCheckedChange={(checked) => {
+                            setLocalMetadata((prev) => ({
+                              ...prev,
+                              artistMeta: { ...prev.artistMeta, [artist]: { ...(prev.artistMeta?.[artist] || {}), hideId: checked } },
+                            }));
+                          }}
+                        />
+                      </div>
+                    </div>
                     <Button 
                       variant="neutral" 
                       size="icon" 
-                      className="h-8 w-8 text-red-500 hover:bg-red-500 hover:text-white"
+                      className="absolute -top-3 -right-3 h-6 w-6 rounded-full border-2 border-black bg-red-500 text-white hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity z-10"
                       onClick={() => {
                         setLocalMetadata(prev => {
                           const newArtistMeta = { ...prev.artistMeta };
@@ -3185,14 +3200,14 @@ const currentMV = data[activeIndex];
                         });
                       }}
                     >
-                      <i className="hn hn-trash text-base" />
+                      <i className="hn hn-trash text-[10px]" />
                     </Button>
                   </div>
                 ))}
                 
                 <Button 
                   variant="neutral" 
-                  className="h-full min-h-[52px] border-2 border-dashed border-black/30 opacity-50 hover:opacity-100 flex items-center justify-center gap-2"
+                  className="h-full min-h-[88px] border-2 border-dashed border-black/30 opacity-50 hover:opacity-100 flex flex-col items-center justify-center gap-2 bg-transparent"
                   onClick={() => {
                     const newKey = `新畫師_${Object.keys(localMetadata.artistMeta || {}).length + 1}`;
                     setLocalMetadata(prev => ({
@@ -3201,7 +3216,8 @@ const currentMV = data[activeIndex];
                     }));
                   }}
                 >
-                  <i className="hn hn-plus text-base mr-2" /> 新增畫師 ID
+                  <i className="hn hn-plus text-xl" /> 
+                  <span className="text-xs font-bold">新增畫師 ID</span>
                 </Button>
               </div>
             </section>
