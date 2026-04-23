@@ -722,6 +722,7 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
 
   // 圖片列表分批加載狀態
   const [imageDisplayLimit, setImageDisplayLimit] = useState(12);
+  const [imageTypeTab, setImageTypeTab] = useState<'official' | 'fanart'>('official');
   const imageSentinelRef = useRef<HTMLDivElement>(null);
   
   // 批處理狀態
@@ -940,8 +941,14 @@ const currentMV = data[activeIndex];
   }, [activeIndex]);
 
   const visibleImages = useMemo(() => {
-    return (currentMV?.images || []).slice(0, imageDisplayLimit);
-  }, [currentMV?.images, imageDisplayLimit]);
+    return (currentMV?.images || [])
+      .map((img, originalIndex) => ({ img, originalIndex }))
+      .filter(({ img }) => {
+        if (imageTypeTab === 'fanart') return img.type === 'fanart';
+        return img.type !== 'fanart';
+      })
+      .slice(0, imageDisplayLimit);
+  }, [currentMV?.images, imageDisplayLimit, imageTypeTab]);
 
   const handleImageObserver = useCallback((entries: IntersectionObserverEntry[]) => {
     const [target] = entries;
@@ -1580,7 +1587,9 @@ const currentMV = data[activeIndex];
   };
 
   const addImage = () => {
-    const images = [...(currentMV.images || []), { url: '', caption: '', alt: '', richText: '', width: 0, height: 0 }];
+    const newImage: any = { url: '', caption: '', alt: '', richText: '', width: 0, height: 0 };
+    if (imageTypeTab === 'fanart') newImage.type = 'fanart';
+    const images = [...(currentMV.images || []), newImage];
     updateField('images', images);
     // 確保新增的圖片在視線範圍內
     setImageDisplayLimit(prev => Math.max(prev, images.length));
@@ -2162,18 +2171,37 @@ const currentMV = data[activeIndex];
             {/* 設定圖管理 (瀑布流數據源) */}
             <div className={activeSection !== 'images' ? 'hidden' : ''}>
             <section className="space-y-6">
-              <div className="flex justify-between items-center">
-                <div className="flex flex-col gap-1">
-                  <div className="flex flex-col gap-1">
-                    <h3 className="text-sm font-black uppercase text-main bg-main/10 inline-block px-2">03 設定圖庫</h3>
-                    <span className="text-[10px] font-bold opacity-40 font-mono normal-case ml-2">03_Setting_Images_Gallery</span>
+              <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-center flex-wrap gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex flex-col gap-1">
+                        <h3 className="text-sm font-black uppercase text-main bg-main/10 inline-block px-2">03 設定圖庫</h3>
+                        <span className="text-[10px] font-bold opacity-40 font-mono normal-case ml-2">03_Setting_Images_Gallery</span>
+                      </div>
+                      <span className="text-[10px] font-bold ml-2 flex flex-col leading-tight">
+                        <span className="opacity-60">總數：{currentMV.images?.length || 0}</span>
+                        <span className="font-mono opacity-30 normal-case">TOTAL_COUNT</span>
+                      </span>
+                    </div>
+
+                    <div className="flex bg-black/5 p-1 rounded-sm border-2 border-black ml-4">
+                      <button
+                        onClick={() => setImageTypeTab('official')}
+                        className={`px-4 py-1 text-xs font-black uppercase transition-colors ${imageTypeTab === 'official' ? 'bg-black text-white' : 'text-black/60 hover:text-black'}`}
+                      >
+                        MV 圖片 (Official)
+                      </button>
+                      <button
+                        onClick={() => setImageTypeTab('fanart')}
+                        className={`px-4 py-1 text-xs font-black uppercase transition-colors ${imageTypeTab === 'fanart' ? 'bg-black text-white' : 'text-black/60 hover:text-black'}`}
+                      >
+                        FanArt 圖片
+                      </button>
+                    </div>
                   </div>
-                  <span className="text-[10px] font-bold ml-2 flex flex-col leading-tight">
-                    <span className="opacity-60">總數：{currentMV.images?.length || 0}</span>
-                    <span className="font-mono opacity-30 normal-case">TOTAL_COUNT</span>
-                  </span>
-                </div>
-                <div className="flex gap-2">
+                  
+                  <div className="flex gap-2 flex-wrap justify-end">
                   {isSelectionMode && selectedImageIndices.size > 0 && (
                     <Button 
                       variant="neutral" 
@@ -2269,7 +2297,7 @@ const currentMV = data[activeIndex];
 
               <div className="space-y-4">
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                  {visibleImages.map((img, imgIdx) => {
+                  {visibleImages.map(({ img, originalIndex: imgIdx }) => {
                     const isGif = img.url?.match(/\.gif$/i) || img.url?.includes('tweet_video_thumb');
                     const isVideo = (img.url?.match(/\.(mp4|webm)$/i) || img.url?.includes('video.twimg.com') || (img.thumbnail && img.thumbnail !== img.url)) && !isGif;
                     return (
@@ -2440,9 +2468,9 @@ const currentMV = data[activeIndex];
                                 </div>
                               </div>
                           )}
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                             {/* 左側：預覽與尺寸 */}
-                            <div className="space-y-4">
+                            <div className="space-y-4 lg:col-span-5 xl:col-span-4">
                               <div className="aspect-square bg-black/5 border-2 border-dashed border-black/20 flex items-center justify-center overflow-hidden relative rounded">
                                 {currentMV.images[editingImageIdx].url ? (
                                   <>
@@ -2497,7 +2525,7 @@ const currentMV = data[activeIndex];
                             </div>
                             
                             {/* 右側：表單 */}
-                            <div className="md:col-span-2 space-y-4">
+                            <div className="space-y-4 lg:col-span-7 xl:col-span-8">
                               <div className="space-y-1">
                                 <label className="text-[10px] font-bold opacity-60 uppercase flex justify-between">
                                   <span>圖片 URL 或 推文連結</span>
