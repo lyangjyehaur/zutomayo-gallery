@@ -70,6 +70,13 @@ const MasonryImage = ({ item, index, mvTitle }: { item: any, index: number, mvTi
   );
 };
 
+const EMPTY_IMAGES: any[] = [];
+const FANCYBOX_OPTIONS = {
+  Carousel: { infinite: true },
+  Toolbar: { display: { left: ["infobar"], middle: ["zoomIn", "zoomOut", "toggle1to1", "rotateCCW", "rotateCW", "flipX", "flipY"], right: ["slideshow", "fullscreen", "download", "close"] } },
+  Thumbs: { autoStart: true },
+};
+
 export function IllustratorDetailsModal({ illustrator, onClose }: IllustratorDetailsModalProps) {
   const { t } = useTranslation();
   const collabs = useMemo(() => {
@@ -122,7 +129,7 @@ export function IllustratorDetailsModal({ illustrator, onClose }: IllustratorDet
       }
     };
 
-    scrollViewport.addEventListener('scroll', handleScroll);
+    scrollViewport.addEventListener('scroll', handleScroll, { passive: true });
     return () => scrollViewport.removeEventListener('scroll', handleScroll);
   }, [currentDisplayImages.length]);
 
@@ -313,12 +320,8 @@ export function IllustratorDetailsModal({ illustrator, onClose }: IllustratorDet
             <ScrollArea className="h-full w-full p-4 md:p-8" id="illustrator-scroll-area">
               {currentDisplayImages.length > 0 ? (
                 <FancyboxViewer 
-                  images={[]}
-                  options={{
-                    Carousel: { infinite: true },
-                    Toolbar: { display: { left: ["infobar"], middle: ["zoomIn", "zoomOut", "toggle1to1", "rotateCCW", "rotateCW", "flipX", "flipY"], right: ["slideshow", "fullscreen", "download", "close"] } },
-                    Thumbs: { autoStart: true },
-                  }}
+                  images={EMPTY_IMAGES}
+                  options={FANCYBOX_OPTIONS}
                 >
                   <div className="columns-1 sm:columns-2 xl:columns-3 2xl:columns-4 gap-4 md:gap-6">
                     {activeTab === 'mv' ? currentDisplayImages.slice(0, visibleCount).map((art, idx) => {

@@ -104,7 +104,7 @@ export default function ImageCard({ imageUrl, caption, className, children, medi
       scheduleCheck()
     }
 
-    window.addEventListener("resize", handleResize)
+    window.addEventListener("resize", handleResize, { passive: true })
 
     return () => {
       window.cancelAnimationFrame(frameId)

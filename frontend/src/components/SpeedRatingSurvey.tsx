@@ -18,7 +18,7 @@ export function useActiveTimer(thresholdSeconds = 60, onTrigger: () => void) {
     };
 
     const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
-    events.forEach(e => window.addEventListener(e, handleActivity));
+    events.forEach(e => window.addEventListener(e, handleActivity, { passive: true }));
 
     timerRef.current = setInterval(() => {
       const now = Date.now();
@@ -29,6 +29,7 @@ export function useActiveTimer(thresholdSeconds = 60, onTrigger: () => void) {
           onTrigger();
           localStorage.setItem('speed_rating_shown', 'true');
           if (timerRef.current) clearInterval(timerRef.current);
+          events.forEach(e => window.removeEventListener(e, handleActivity));
         }
       }
     }, 1000);

@@ -226,20 +226,8 @@ export default function CustomCursor() {
       }
     };
 
-    // 增加一個低頻定時器，用於補捉某些不會觸發 mouseover/mousemove 但 DOM 發生變化的情況（例如 Modal 彈出時游標停在原地）
-    const intervalId = setInterval(() => {
-      // 如果滑鼠還沒動過（剛載入頁面），不進行檢測，避免效能浪費
-      if (lastX === 0 && lastY === 0) return;
-      
-      const elUnderCursor = document.elementFromPoint(lastX, lastY) as HTMLElement;
-      // 在定時器中，只要元素存在就強制更新一次游標狀態，不依賴 lastTarget 判斷
-      if (elUnderCursor) {
-        updateCursorType({ target: elUnderCursor, type: 'interval' } as unknown as Event);
-      }
-    }, 200);
-
     window.addEventListener('mousemove', updatePosition, { capture: true, passive: true });
-    // 使用 mousemove 觸發更新，依賴 requestAnimationFrame 來降頻
+    // 使用 mousemove 觸發更新
     window.addEventListener('mousemove', updateCursorType, { capture: true, passive: true });
     window.addEventListener('mouseleave', handleMouseLeave);
     // Also update on mouse down/up in case cursor changes
@@ -250,7 +238,6 @@ export default function CustomCursor() {
 
     return () => {
       disableNativeCursor();
-      clearInterval(intervalId);
       if (rafId) cancelAnimationFrame(rafId);
       
       window.removeEventListener('mousemove', updatePosition, { capture: true });

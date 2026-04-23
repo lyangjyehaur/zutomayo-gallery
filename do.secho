@@ -1,0 +1,1 @@
+    ports: cat << 'EOF' > /opt/rsshub/docker-compose.yml

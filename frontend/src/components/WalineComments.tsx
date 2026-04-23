@@ -107,6 +107,7 @@ export function WalineComments({
   useEffect(() => {
     let observer: MutationObserver | null = null;
     let walineInstance: any = null;
+    let isMounted = true;
     if (!containerRef.current || initializedRef.current) return;
     
     const currentContainer = containerRef.current;
@@ -117,9 +118,11 @@ export function WalineComments({
       try {
           // 動態導入 Waline
           const { init } = await import('@waline/client');
+          if (!isMounted) return;
           
           // 使用我們寫好的 geo 庫，包含 IP 與時區的精確判斷
           const geoInfo = await initGeo();
+          if (!isMounted) return;
           
           // 統一使用 comments.ztmr.club
           const serverURL = 'https://comments.ztmr.club';
@@ -239,6 +242,7 @@ export function WalineComments({
     initWaline();
 
     return () => {
+      isMounted = false;
       // 清理 Waline 实例
       if (walineInstance && typeof walineInstance.destroy === 'function') {
         walineInstance.destroy();

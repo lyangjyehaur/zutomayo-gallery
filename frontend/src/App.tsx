@@ -106,8 +106,8 @@ const AnimatedMVCardItem = memo(function AnimatedMVCardItem({
 }: {
   mv: MVItem;
   isFav: boolean;
-  onToggleFav: () => void;
-  onClick: () => void;
+  onToggleFav: (id: string) => void;
+  onClick: (id: string) => void;
   delayMs: number;
   isPaused: boolean;
 }) {
@@ -120,22 +120,6 @@ const AnimatedMVCardItem = memo(function AnimatedMVCardItem({
 
   // 偵測是否離開可視範圍來暫停動畫
   const [isInView, setIsInView] = useState(true);
-  const [isTabActive, setIsTabActive] = useState(true);
-
-  // 監聽分頁可見性，避免分頁閒置時動畫計時器堆積
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      setIsTabActive(!document.hidden);
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    // 初始化狀態
-    handleVisibilityChange();
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, []);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -147,8 +131,11 @@ const AnimatedMVCardItem = memo(function AnimatedMVCardItem({
     return () => observer.disconnect();
   }, []);
 
-  // 如果父層要求暫停、不在可視範圍內，或者分頁被隱藏，就徹底暫停動畫
-  const isEffectivelyPaused = isPaused || !isInView || !isTabActive;
+  // 如果父層要求暫停或不在可視範圍內，就徹底暫停動畫
+  const isEffectivelyPaused = isPaused || !isInView;
+
+  const handleToggleFav = useCallback(() => onToggleFav(mv.id), [onToggleFav, mv.id]);
+  const handleClick = useCallback(() => onClick(mv.id), [onClick, mv.id]);
 
   return (
     <div ref={elementRef} style={{ contentVisibility: 'auto', containIntrinsicSize: '300px' }} className="p-1">
@@ -164,8 +151,8 @@ const AnimatedMVCardItem = memo(function AnimatedMVCardItem({
           <MVCard
             mv={mv}
             isFav={isFav}
-            onToggleFav={onToggleFav}
-            onClick={onClick}
+            onToggleFav={handleToggleFav}
+            onClick={handleClick}
             isPaused={isEffectivelyPaused}
           />
         </div>
@@ -226,6 +213,10 @@ function App({
   const [favorites, setFavorites] = useState<string[]>(() => {
     return storage.get<string[]>(STORAGE_KEYS.FAVORITES, []) || [];
   });
+  const favoritesRef = useRef(favorites);
+  useEffect(() => {
+    favoritesRef.current = favorites;
+  }, [favorites]);
   
   // 監聽來自 RootApp 的 PWA 安裝事件
   const [deferredPrompt, setDeferredPrompt] = useState<any>(globalDeferredPrompt);
@@ -329,7 +320,7 @@ function App({
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
-    window.addEventListener("resize", handleResize);
+    window.addEventListener("resize", handleResize, { passive: true });
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
@@ -528,10 +519,11 @@ function App({
   // 收藏切換
   const toggleFav = useCallback(
     (id: string) => {
-      const isRemoving = favorites.includes(id);
+      const currentFavs = favoritesRef.current;
+      const isRemoving = currentFavs.includes(id);
       const newFavs = isRemoving
-        ? favorites.filter((favId) => favId !== id)
-        : [...favorites, id];
+        ? currentFavs.filter((favId) => favId !== id)
+        : [...currentFavs, id];
       setFavorites(newFavs);
       storage.set(STORAGE_KEYS.FAVORITES, newFavs);
 
@@ -550,8 +542,6 @@ function App({
           action: {
             label: "復原",
             onClick: () => {
-              // 在復原時，因為我們還沒有更新到最新的 toggleFav 閉包，
-              // 直接在這裡執行加入收藏的邏輯
               setFavorites((prev) => {
                 if (prev.includes(id)) return prev;
                 const restoredFavs = [...prev, id];
@@ -573,7 +563,7 @@ function App({
         });
       }
     },
-    [favorites, mvData],
+    [mvData],
   );
 
   // 監聽其他標籤頁的收藏變化
@@ -613,13 +603,17 @@ function App({
     sortOrder,
   ]);
 
+  const handleMVClick = useCallback((id: string) => {
+    navigate(`${basePath}/mv/${id}`, { state: { fromFav: showFavOnly } });
+  }, [navigate, basePath, showFavOnly]);
+
   // 返回頂部顯示狀態
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 300);
     };
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -659,7 +653,16 @@ function App({
 
   const [isAboutOpen, setIsAboutOpen] = useState(false);
 
-  const isGlobalPaused = !!selectedMvId || (isFeedbackOpen && isMobile) || (isAboutOpen && isMobile);
+  const [isTabActive, setIsTabActive] = useState(() => typeof document !== 'undefined' ? !document.hidden : true);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const handleVisibilityChange = () => setIsTabActive(!document.hidden);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
+
+  const isGlobalPaused = !!selectedMvId || (isFeedbackOpen && isMobile) || (isAboutOpen && isMobile) || !isTabActive;
 
   // 控制背景滾動
   useEffect(() => {
@@ -1279,8 +1282,8 @@ function App({
                   key={mv.id}
                   mv={mv}
                   isFav={favorites.includes(mv.id)}
-                  onToggleFav={() => toggleFav(mv.id)}
-                  onClick={() => navigate(`${basePath}/mv/${mv.id}`, { state: { fromFav: showFavOnly } })}
+                  onToggleFav={toggleFav}
+                  onClick={handleMVClick}
                   delayMs={Math.min(batchIdx, 24) * 25}
                   isPaused={isGlobalPaused}
                 />
@@ -2355,11 +2358,13 @@ export default function RootApp() {
   // 為了保留原本的延遲加載動畫效果
   const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
+    let timer: number;
     if (!isSwrLoading) {
-      setTimeout(() => setIsLoading(false), 800);
+      timer = window.setTimeout(() => setIsLoading(false), 800);
     } else {
       setIsLoading(true);
     }
+    return () => clearTimeout(timer);
   }, [isSwrLoading]);
 
   // 全域初始化 Google Analytics 與 Umami 及 地理位置探測

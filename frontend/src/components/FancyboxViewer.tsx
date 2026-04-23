@@ -304,7 +304,7 @@ interface PhotoItemProps {
   isNewItem?: boolean;
 }
 
-const PhotoItem = ({ photo, index, onPhotoClick, delayMs, isNewItem = true }: PhotoItemProps) => {
+const PhotoItem = React.memo(function PhotoItem({ photo, index, onPhotoClick, delayMs, isNewItem = true }: PhotoItemProps) {
   const { t } = useTranslation();
   const [isLoaded, setIsLoaded] = useState(() => loadedImagesCache.has(photo.src));
   const [actualDimensions, setActualDimensions] = useState<{ width: number; height: number } | null>(
@@ -406,7 +406,7 @@ const PhotoItem = ({ photo, index, onPhotoClick, delayMs, isNewItem = true }: Ph
       </div>
     </div>
   );
-};
+});
 
 export default function FancyboxViewer({
   images = [],
@@ -594,6 +594,13 @@ export default function FancyboxViewer({
     onLightboxClose?.();
   }, [onLightboxClose]);
 
+  const overlayRef = useRef<{ root?: Root; host?: HTMLElement } | null>(null);
+
+  const displayedPhotosRef = useRef(displayedPhotos);
+  useEffect(() => {
+    displayedPhotosRef.current = displayedPhotos;
+  }, [displayedPhotos]);
+
   const handlePhotoClick = useCallback(
     (index: number) => {
       // Pre-query thumb elements to avoid querying inside the loop (O(N) -> O(1) inside loop)
@@ -607,7 +614,8 @@ export default function FancyboxViewer({
         if (img) thumbMap.set(idx, img);
       });
 
-      const slides = displayedPhotos.map((photo, i) => {
+      const currentPhotos = displayedPhotosRef.current;
+      const slides = currentPhotos.map((photo, i) => {
         const thumbEl = thumbMap.get(i);
         return {
           src: photo.full,
@@ -654,7 +662,8 @@ export default function FancyboxViewer({
             host.className = 'ztmy-fb-overlay-host';
             container.appendChild(host);
             const root = createRoot(host);
-            root.render(<FancyboxCaptionOverlay api={api} photos={displayedPhotos} />);
+            root.render(<FancyboxCaptionOverlay api={api} photos={currentPhotos} />);
+            overlayRef.current = { root, host };
             (api as any).__ztmyOverlay = { root, host };
           },
           destroy: (api) => {
@@ -673,9 +682,12 @@ export default function FancyboxViewer({
               });
             }
 
-            const overlay = (api as any)?.__ztmyOverlay as { root?: Root; host?: HTMLElement } | undefined;
-            overlay?.root?.unmount?.();
-            overlay?.host?.remove?.();
+            const overlay = overlayRef.current || ((api as any)?.__ztmyOverlay as { root?: Root; host?: HTMLElement } | undefined);
+            if (overlay) {
+              overlay.root?.unmount?.();
+              overlay.host?.remove?.();
+              overlayRef.current = null;
+            }
             fancyboxRef.current = null;
             
             // 確保在動畫結束後再觸發 onClose，避免跟其他彈窗邏輯衝突
@@ -704,11 +716,16 @@ export default function FancyboxViewer({
         },
       });
     },
-    [displayedPhotos, handleAfterOpen, handleAfterClose],
+    [handleAfterOpen, handleAfterClose],
   );
 
   useEffect(() => {
     return () => {
+      if (overlayRef.current) {
+        overlayRef.current.root?.unmount?.();
+        overlayRef.current.host?.remove?.();
+        overlayRef.current = null;
+      }
       NativeFancybox.close(true);
     };
   }, []);

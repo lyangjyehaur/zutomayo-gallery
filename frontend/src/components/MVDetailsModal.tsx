@@ -118,6 +118,59 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
   const marqueeStateRef = useRef(marqueeState);
   const isScrolled = scrollTop > 20;
 
+  const titleMarqueeRef = useRef<HTMLSpanElement>(null);
+
+  // 處理標題跑馬燈的 ResizeObserver
+  useEffect(() => {
+    const node = titleMarqueeRef.current;
+    if (!node) return;
+    
+    const parent = node.parentElement;
+    if (!parent) return;
+
+    let timeoutId: number;
+
+    const handleResize = () => {
+      requestAnimationFrame(() => {
+        const firstChild = node.children[0] as HTMLElement;
+        if (!firstChild) return;
+        
+        const isCurrentlyMarquee = node.classList.contains('animate-card-title-marquee');
+        const textWidth = firstChild.offsetWidth - (isCurrentlyMarquee ? 32 : 0);
+        const parentWidth = parent.clientWidth;
+
+        if (textWidth > parentWidth) {
+          const gap = 32;
+          const distance = textWidth + gap;
+          const duration = Math.max(distance / 48, 8);
+          
+          if (!marqueeStateRef.current.isMarquee || marqueeStateRef.current.distance !== distance || marqueeStateRef.current.duration !== duration) {
+            setMarqueeState({ isMarquee: true, distance, duration });
+          }
+        } else {
+          if (marqueeStateRef.current.isMarquee) {
+            setMarqueeState({ isMarquee: false, distance: 0, duration: 0 });
+          }
+        }
+      });
+    };
+
+    const resizeObserver = new ResizeObserver(() => {
+      handleResize();
+    });
+    
+    resizeObserver.observe(parent);
+    resizeObserver.observe(node);
+    
+    // 延遲觸發，避免阻塞 Modal 開啟時的動畫
+    timeoutId = window.setTimeout(handleResize, 350);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.clearTimeout(timeoutId);
+    };
+  }, [mv?.title]);
+
   // 同步 marqueeState 到 ref
   useEffect(() => {
     marqueeStateRef.current = marqueeState;
@@ -201,14 +254,14 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
       resizeObserver.observe(playerRef.current);
     }
     
-    window.addEventListener('resize', updateHeight);
-    // 延遲執行，避免阻塞彈窗動畫，給予 350ms 讓彈窗完成過場
+    window.addEventListener('resize', updateHeight, { passive: true });
+    // 延遲執行，避免阻塞彈窗動畫，給予 350ms 讓彈窗完成過場 
     const initialTimer = setTimeout(updateHeight, 350);
 
     return () => {
       resizeObserver.disconnect();
       window.removeEventListener('resize', updateHeight);
-      clearTimeout(initialTimer);
+      window.clearTimeout(initialTimer);
     };
   }, [mv?.id, isVideoActivated, videoPlatform]);
 
@@ -386,58 +439,7 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
                     animationTimingFunction: 'linear',
                     animationIterationCount: 'infinite'
                   } as React.CSSProperties}
-                  ref={(node) => {
-                    if (node) {
-                      const parent = node.parentElement;
-                      if (!parent) return;
-                      
-                      const handleResize = () => {
-                        // 使用 requestAnimationFrame 避免在動畫期間引發強制同步佈局 (Layout Thrashing)
-                        requestAnimationFrame(() => {
-                          const firstChild = node.children[0] as HTMLElement;
-                          if (!firstChild) return;
-                          
-                          const isCurrentlyMarquee = node.classList.contains('animate-card-title-marquee');
-                          
-                          // 計算文字真實寬度，如果是跑馬燈狀態，需要減去我們加上的 32px padding
-                          const textWidth = firstChild.offsetWidth - (isCurrentlyMarquee ? 32 : 0);
-                          const parentWidth = parent.clientWidth;
-
-                          if (textWidth > parentWidth) {
-                            const gap = 32;
-                            const distance = textWidth + gap;
-                            const duration = Math.max(distance / 48, 8);
-                            
-                            if (!marqueeStateRef.current.isMarquee || marqueeStateRef.current.distance !== distance || marqueeStateRef.current.duration !== duration) {
-                              setMarqueeState({ isMarquee: true, distance, duration });
-                            }
-                          } else {
-                            if (marqueeStateRef.current.isMarquee) {
-                              setMarqueeState({ isMarquee: false, distance: 0, duration: 0 });
-                            }
-                          }
-                        });
-                      };
-
-                      // 避免重複綁定 ResizeObserver
-                      if ((node as any)._resizeObserver) {
-                        (node as any)._resizeObserver.disconnect();
-                      }
-
-                      const resizeObserver = new ResizeObserver(() => {
-                        handleResize();
-                      });
-                      
-                      if (node.parentElement) {
-                        resizeObserver.observe(node.parentElement);
-                      }
-                      resizeObserver.observe(node);
-                      (node as any)._resizeObserver = resizeObserver;
-                      
-                      // 延遲觸發，避免阻塞 Modal 開啟時的動畫
-                      setTimeout(handleResize, 350);
-                    }
-                  }}
+                  ref={titleMarqueeRef}
                 >
                   <span style={{ display: 'inline-block', paddingRight: marqueeState.isMarquee ? '32px' : '0px' }}>{mv?.title}</span>
                   <span style={{ display: marqueeState.isMarquee ? 'inline-block' : 'none', paddingRight: marqueeState.isMarquee ? '32px' : '0px' }} aria-hidden="true">{mv?.title}</span>
