@@ -78,15 +78,34 @@ export const initAnalytics = () => {
       // 注意：這裡不 return，讓下面的事件監聽器也能綁定上去
   } else {
     // 避免重複載入 (只在非本地環境載入真實的 script)
-    if (document.querySelector('script[data-website-id="405e07a8-7aae-41a6-bdb9-6851e898ab0c"]')) {
-        return;
+    if (!document.querySelector('script[data-website-id="405e07a8-7aae-41a6-bdb9-6851e898ab0c"]')) {
+      const script = document.createElement('script');
+      script.src = "https://u.danndann.cn/script.js";
+      script.defer = true;
+      script.setAttribute('data-website-id', '405e07a8-7aae-41a6-bdb9-6851e898ab0c');
+      document.head.appendChild(script);
     }
-
-    const script = document.createElement('script');
-    script.src = "https://u.danndann.cn/script.js";
-    script.defer = true;
-    script.setAttribute('data-website-id', '405e07a8-7aae-41a6-bdb9-6851e898ab0c');
-    document.head.appendChild(script);
+    
+    // 額外添加 server3 上自建的 Umami 追蹤 (偽裝為 commons.js)
+    const targetWebsiteId = '76cef12d-6b0a-4b5c-882b-36d87912e4f5';
+    if (!document.querySelector(`script[data-website-id="${targetWebsiteId}"]`)) {
+      // 第一部分：基礎數據追蹤 (commons.js)
+      const script2 = document.createElement('script');
+      script2.src = "/commons/commons.js";
+      script2.defer = true;
+      script2.setAttribute('data-website-id', targetWebsiteId); 
+      document.head.appendChild(script2);
+      
+      // 第二部分：螢幕錄影回放 (偽裝為 feedback.js)
+       const script3 = document.createElement('script');
+       script3.src = "/commons/feedback.js";
+       script3.defer = true;
+       script3.setAttribute('data-website-id', targetWebsiteId);
+       script3.setAttribute('data-sample-rate', '0.50'); // 50% 的訪客會被錄影
+       script3.setAttribute('data-mask-level', 'moderate'); // 適度遮罩敏感資訊
+       script3.setAttribute('data-max-duration', '300000'); // 最大錄影時長：5分鐘
+       document.head.appendChild(script3);
+    }
   }
 
   // 全域事件代理，追蹤所有可交互元素的點擊
