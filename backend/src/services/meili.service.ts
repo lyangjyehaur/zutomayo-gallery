@@ -1,10 +1,10 @@
-import { MeiliSearch } from 'meilisearch';
+import { Meilisearch } from 'meilisearch';
 import { MV, Fanart } from './pg.service.js';
 
 const MEILI_HOST = process.env.MEILI_HOST || 'http://localhost:7700';
 const MEILI_MASTER_KEY = process.env.MEILI_MASTER_KEY || 'Ztmr_Meili_Master_Key_2026!';
 
-export const meiliClient = new MeiliSearch({
+export const meiliClient = new Meilisearch({
   host: MEILI_HOST,
   apiKey: MEILI_MASTER_KEY,
 });
