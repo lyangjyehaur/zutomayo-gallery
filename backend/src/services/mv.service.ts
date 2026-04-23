@@ -53,6 +53,11 @@ export class MVService {
 
     if (filters.search) {
       try {
+        const isProduction = process.env.NODE_ENV === 'production';
+        if (!isProduction && !process.env.MEILI_HOST) {
+          throw new Error('Skipping Meilisearch in local environment');
+        }
+
         const searchResult = await meiliClient.index('mvs').search(filters.search, {
           limit: 1000, // 取得所有可能的匹配
         });
@@ -64,8 +69,10 @@ export class MVService {
           .map(id => data.find(mv => mv.id === id))
           .filter((mv): mv is MVItem => mv !== undefined);
           
-      } catch (error) {
-        console.error('[MVService] Meilisearch query failed, falling back to memory search:', error);
+      } catch (error: any) {
+        if (error.message !== 'Skipping Meilisearch in local environment') {
+          console.error('[MVService] Meilisearch query failed, falling back to memory search:', error);
+        }
         // 降級到原本的記憶體搜尋
         const k = filters.search.toLowerCase();
         data = data.filter(mv => 

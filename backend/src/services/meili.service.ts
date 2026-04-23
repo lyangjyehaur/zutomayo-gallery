@@ -1,6 +1,7 @@
 import { Meilisearch } from 'meilisearch';
 import { MV, Fanart } from './pg.service.js';
 
+const isProduction = process.env.NODE_ENV === 'production';
 const MEILI_HOST = process.env.MEILI_HOST || 'http://localhost:7700';
 const MEILI_MASTER_KEY = process.env.MEILI_MASTER_KEY || 'Ztmr_Meili_Master_Key_2026!';
 
@@ -10,6 +11,11 @@ export const meiliClient = new Meilisearch({
 });
 
 export const initMeiliSearch = async () => {
+  // 本地開發時若沒提供 MEILI_HOST 則跳過
+  if (!isProduction && !process.env.MEILI_HOST) {
+    console.log('[Meilisearch] Skipped initialization in development environment');
+    return;
+  }
   try {
     const health = await meiliClient.health();
     console.log('[Meilisearch] Status:', health.status);
@@ -55,6 +61,7 @@ export const initMeiliSearch = async () => {
 };
 
 export const syncDataToMeili = async () => {
+  if (!isProduction && !process.env.MEILI_HOST) return;
   try {
     console.log('[Meilisearch] Starting data sync...');
 
