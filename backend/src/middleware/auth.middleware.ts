@@ -3,6 +3,12 @@ import { authService } from '../services/auth.service.js';
 import bcrypt from 'bcrypt';
 
 export const requireAdmin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  // 開發環境直接放行 (後門)
+  if (process.env.NODE_ENV !== 'production') {
+    next();
+    return;
+  }
+
   const password = req.headers['x-admin-password'];
   if (typeof password !== 'string') {
     res.status(401).json({ success: false, message: 'Unauthorized: 未提供密碼' });
