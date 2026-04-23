@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
+import RedisStore from 'rate-limit-redis';
 import mvRoutes from './routes/mv.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import systemRoutes from './routes/system.routes.js';
@@ -11,6 +12,7 @@ import webhookRoutes from './routes/webhook.routes.js';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { sequelize } from './services/pg.service.js';
 import { initGeoService } from './services/geo.service.js';
+import { initRedis, redisClient } from './services/redis.service.js';
 import { TwitterMonitorService } from './services/twitter-monitor.service.js';
 
 const app = express();
@@ -30,6 +32,8 @@ if (trustProxy === 'true') {
 
 // 初始化服務
 try {
+  await initRedis();
+  
   await sequelize.authenticate();
   console.log('PostgreSQL Database connected');
   initGeoService();
@@ -109,13 +113,17 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 分鐘
   max: 1000, // 每個 IP 1000 次請求
+  standardHeaders: true,
+  legacyHeaders: false,
+  // 如果 Redis 成功連線，就使用 Redis Store，否則自動退回 Memory Store (預設行為)
+  store: new RedisStore({
+    sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+  }),
   message: {
     success: false,
     error: '請求過於頻繁，請稍後再試',
     retryAfter: 900,
   },
-  standardHeaders: true,
-  legacyHeaders: false,
   handler: (req, res) => {
     res.status(429).json({
       success: false,
@@ -129,6 +137,10 @@ const apiLimiter = rateLimit({
 const writeLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 分鐘 (原為 1 小時)
   max: 200, // 每個 IP 200 次寫入 (原為 30 次)
+  store: new RedisStore({
+    sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+    prefix: 'rl:write:', // 加上前綴以區分不同限流器
+  }),
   message: {
     success: false,
     error: '寫入操作過於頻繁，請稍後再試',

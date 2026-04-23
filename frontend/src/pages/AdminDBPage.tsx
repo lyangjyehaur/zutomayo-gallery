@@ -53,10 +53,10 @@ export function AdminDBPage() {
     setIsInitializing(true);
     
     // 追蹤：有人嘗試登入 DB 頁面
-    if ((window as any).umami && typeof (window as any).umami.track === 'function') {
-      (window as any).umami.track('Z_Admin_Login_Attempt', { 
+    if (window.umami && typeof window.umami.track === 'function') {
+      window.umami.track('Z_Admin_Login_Attempt', { 
         method: 'db_password', 
-        attemptCount: loginAttempts + 1 
+        attempt_count: loginAttempts + 1 
       });
       setLoginAttempts(prev => prev + 1);
     }
@@ -73,15 +73,15 @@ export function AdminDBPage() {
       } else {
         toast.error('身分驗證過期，請重新登入');
         
-        // 追蹤：DB 頁面登入失敗
-        if ((window as any).umami && typeof (window as any).umami.track === 'function') {
-          (window as any).umami.track('Z_Admin_Login_Failed', { 
-            method: 'db_password',
-            reason: 'invalid_password',
-            failureCount: loginFailures + 1 
-          });
-          setLoginFailures(prev => prev + 1);
-        }
+        // 追蹤：DB 頁面登入連線失敗
+      if (window.umami && typeof window.umami.track === 'function') {
+        window.umami.track('Z_Admin_Login_Failed', { 
+          method: 'db_password',
+          reason: 'network_error',
+          failure_count: loginFailures + 1 
+        });
+        setLoginFailures(prev => prev + 1);
+      }
         navigate('/admin');
       }
     } catch (e) {

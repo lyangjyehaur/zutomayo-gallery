@@ -329,7 +329,7 @@ export const initAnalytics = () => {
     const eventData: Record<string, string> = {
       type: inputType ? `${tagName}[type="${inputType}"]` : tagName,
       label: label,
-      value: value ? value.substring(0, 100) : 'empty' // 記錄輸入的值，限制最大長度為100字元
+      value: value ? value.substring(0, 100) : 'unknown' // 記錄輸入的值，限制最大長度為100字元
     };
 
     const elementClasses = target.getAttribute('class');

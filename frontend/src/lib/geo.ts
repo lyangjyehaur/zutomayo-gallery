@@ -151,13 +151,13 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
       // 將精確的地理與 IP 資訊上報給 Umami (如果有的話)
       if ((window as any).umami && typeof (window as any).umami.track === 'function') {
         const payload: any = {
-          country: ipCountry,
-          rawCountry: rawCountry || ipCountry, // 同時上報原始的中文國家名稱
-          ip2regionRaw: ip2regionRaw || '',    // 獨立上報 ip2region 結果字串
-          isVPN: isVPN ? 'Yes' : 'No',
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          language: navigator.language || navigator.languages?.[0] || 'unknown'
-        };
+            country: ipCountry,
+            raw_country: rawCountry || ipCountry, // 同時上報原始的中文國家名稱
+            ip2region_raw: ip2regionRaw || 'unknown', // 獨立上報 ip2region 結果字串
+            is_vpn: isVPN ? 'true' : 'false',
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            language: navigator.language || navigator.languages?.[0] || 'unknown'
+          };
         
         if (ip) payload.ip = ip;
         

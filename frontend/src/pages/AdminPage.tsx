@@ -710,7 +710,7 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
     if (!silent && (window as any).umami && typeof (window as any).umami.track === 'function') {
       (window as any).umami.track('Z_Admin_Login_Attempt', { 
         method: 'password', 
-        attemptCount: loginAttempts + 1 
+        attempt_count: loginAttempts + 1 
       });
       setLoginAttempts(prev => prev + 1);
     }
@@ -736,7 +736,7 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
             (window as any).umami.track('Z_Admin_Login_Failed', { 
               method: 'password',
               reason: 'invalid_password',
-              failureCount: loginFailures + 1 
+              failure_count: loginFailures + 1 
             });
             setLoginFailures(prev => prev + 1);
           }
@@ -753,7 +753,7 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
           (window as any).umami.track('Z_Admin_Login_Failed', { 
             method: 'password',
             reason: 'network_error',
-            failureCount: loginFailures + 1 
+            failure_count: loginFailures + 1 
           });
           setLoginFailures(prev => prev + 1);
         }
@@ -774,7 +774,7 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
     if ((window as any).umami && typeof (window as any).umami.track === 'function') {
       (window as any).umami.track('Z_Admin_Login_Attempt', { 
         method: 'passkey', 
-        attemptCount: loginAttempts + 1 
+        attempt_count: loginAttempts + 1 
       });
       setLoginAttempts(prev => prev + 1);
     }
@@ -807,7 +807,7 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
           (window as any).umami.track('Z_Admin_Login_Failed', { 
             method: 'passkey',
             reason: 'verification_failed',
-            failureCount: loginFailures + 1 
+            failure_count: loginFailures + 1 
           });
           setLoginFailures(prev => prev + 1);
         }
@@ -820,7 +820,7 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
         (window as any).umami.track('Z_Admin_Login_Failed', { 
           method: 'passkey',
           reason: 'error_or_cancelled',
-          failureCount: loginFailures + 1 
+          failure_count: loginFailures + 1 
         });
         setLoginFailures(prev => prev + 1);
       }
