@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
+import morgan from 'morgan';
 import RedisStore from 'rate-limit-redis';
 import mvRoutes from './routes/mv.routes.js';
 import authRoutes from './routes/auth.routes.js';
@@ -96,6 +97,16 @@ app.use(helmet({
   },
   crossOriginEmbedderPolicy: false, // 允許嵌入外部資源
 }));
+
+// HTTP 請求日誌記錄 (Morgan)
+// 在生產環境使用 combined 格式 (包含 IP, User-Agent 等詳細資訊)，開發環境使用 dev 格式
+if (isProduction) {
+  app.use(morgan('combined', {
+    skip: (req, res) => req.url === '/health' || req.url === '/api/system/status' // 略過頻繁的健康檢查日誌
+  }));
+} else {
+  app.use(morgan('dev'));
+}
 
 // 健康檢查 (放在 CORS 之前，允許本機 curl 等無 Origin 請求)
 app.get('/health', (req, res) => res.json({
