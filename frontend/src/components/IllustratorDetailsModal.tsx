@@ -126,6 +126,14 @@ export function IllustratorDetailsModal({ illustrator, onClose }: IllustratorDet
     return () => scrollViewport.removeEventListener('scroll', handleScroll);
   }, [currentDisplayImages.length]);
 
+  // 判斷是否為 macOS (排除 iOS 與觸控裝置，讓手機端統一顯示右上角叉叉)
+  const isMac = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const isMacOs = /Mac/i.test(navigator.userAgent) || navigator.platform?.toUpperCase().indexOf('MAC') >= 0;
+    const isMobileOrTouch = /(iPhone|iPod|iPad)/i.test(navigator.userAgent) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+    return isMacOs && !isMobileOrTouch;
+  }, []);
+
   if (!illustrator) return null;
 
   return (
@@ -154,12 +162,19 @@ export function IllustratorDetailsModal({ illustrator, onClose }: IllustratorDet
       >
         <div className={MODAL_THEME.crt}></div>
 
-        <div className="absolute right-4 top-4 z-[110]">
+        <div className={`absolute top-4 z-[110] ${isMac ? 'left-4' : 'right-4'}`}>
           <button 
             onClick={onClose}
-            className="bg-background text-foreground border-3 border-foreground shadow-neo-sm hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all w-10 h-10 rounded-none flex items-center justify-center shrink-0 hover:bg-main hover:text-black"
+            className={`bg-background text-foreground border-3 border-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all ${isMac ? 'w-auto px-3' : 'w-10'} h-10 rounded-none flex items-center justify-center shrink-0 hover:bg-main hover:text-black font-black uppercase tracking-widest text-xs gap-1.5`}
           >
-            <i className="hn hn-times text-xl leading-none"></i>
+            {isMac ? (
+              <>
+                <i className="hn hn-angle-left text-xs leading-none"></i>
+                <span>返回</span>
+              </>
+            ) : (
+              <i className="hn hn-times text-xl leading-none"></i>
+            )}
           </button>
         </div>
 
@@ -169,7 +184,7 @@ export function IllustratorDetailsModal({ illustrator, onClose }: IllustratorDet
           <div className="w-full md:w-[350px] lg:w-[450px] shrink-0 bg-card border-b-4 md:border-b-0 md:border-r-4 border-black flex flex-col relative h-auto md:h-full z-20 max-h-[50vh] md:max-h-full">
             
             {/* 可滾動的資訊區塊 */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8 flex flex-col gap-6">
+            <div className={`flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8 flex flex-col gap-6 ${isMac ? 'pt-16 md:pt-20' : ''}`}>
               <DialogHeader className="flex flex-col items-start gap-4 text-left pr-12">
                 <DialogTitle className="text-3xl md:text-5xl font-black tracking-tighter uppercase break-words leading-none w-full" lang="ja">
                   <span className="bg-black text-main px-2 py-1 inline-block rotate-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">

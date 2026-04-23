@@ -2,36 +2,19 @@ import { Router } from 'express';
 import { getMVs, getMVById, updateMVs, probeImage, getMetadata, updateMetadata, resolveTwitterMedia } from '../controllers/mv.controller.js';
 import { requireAdmin } from '../middleware/auth.middleware.js';
 import { authService } from '../services/auth.service.js';
-import { getDB } from '../services/db.service.js';
+import { sequelize } from '../services/pg.service.js';
 import bcrypt from 'bcrypt';
 
 const router = Router();
 
-// 匯出 SQLite 備份 (供管理員下載)
-router.get('/export-db', requireAdmin, async (req, res) => {
-  try {
-    const db = getDB();
-    const dbPath = db.name;
-    res.download(dbPath, 'zutomayo-gallery.sqlite');
-  } catch (error: any) {
-    res.status(500).json({ error: '無法匯出資料庫' });
-  }
-});
-
 // 執行原生 SQL (供管理員操作)
 router.post('/db/query', requireAdmin, async (req, res) => {
   try {
-    const db = getDB();
     const { sql } = req.body;
     if (!sql) return res.status(400).json({ error: 'SQL 不可為空' });
     
-    if (sql.trim().toUpperCase().startsWith('SELECT') || sql.trim().toUpperCase().startsWith('PRAGMA')) {
-      const rows = db.prepare(sql).all();
-      res.json({ rows });
-    } else {
-      const result = db.prepare(sql).run();
-      res.json({ result: { changes: result.changes, lastID: result.lastInsertRowid } });
-    }
+    const [results, metadata] = await sequelize.query(sql);
+    res.json({ rows: results, metadata });
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }

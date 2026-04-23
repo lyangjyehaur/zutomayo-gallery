@@ -6,9 +6,11 @@ import helmet from 'helmet';
 import mvRoutes from './routes/mv.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import systemRoutes from './routes/system.routes.js';
+import fanartRoutes from './routes/fanart.routes.js';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler.js';
-import { initDB } from './services/db.service.js';
+import { sequelize } from './services/pg.service.js';
 import { initGeoService } from './services/geo.service.js';
+import { TwitterMonitorService } from './services/twitter-monitor.service.js';
 
 const app = express();
 const PORT = process.env.PORT || 5010;
@@ -25,11 +27,18 @@ if (trustProxy === 'true') {
   app.set('trust proxy', false);
 }
 
-// 初始化資料庫
-await initDB();
-
-// 在伺服器啟動時，預先將 ip2region 資料庫載入記憶體 (約 11MB)
+// 初始化服務
+try {
+  await sequelize.authenticate();
+  console.log('PostgreSQL Database connected');
   initGeoService();
+  console.log('IP2Region DB initialized');
+  
+  // 啟動 Twitter 監聽服務
+  TwitterMonitorService.start();
+} catch (error) {
+  console.error('Failed to initialize services:', error);
+}
 
 // CORS 配置 - 僅允許特定來源
 const allowedOrigins = [
@@ -146,6 +155,7 @@ app.use('/api/', (req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/mvs', mvRoutes);
 app.use('/api/system', systemRoutes);
+app.use('/api/fanarts', fanartRoutes);
 
 // 404 處理 - 必須在所有路由之後
 app.use(notFoundHandler);

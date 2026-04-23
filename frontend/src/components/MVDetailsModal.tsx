@@ -242,6 +242,14 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
     }
   }, [isVideoActivated, videoPlatform, mv?.title]);
 
+  // 判斷是否為 macOS (排除 iOS 與觸控裝置，讓手機端統一顯示右上角叉叉)
+  const isMac = React.useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const isMacOs = /Mac/i.test(navigator.userAgent) || navigator.platform?.toUpperCase().indexOf('MAC') >= 0;
+    const isMobileOrTouch = /(iPhone|iPod|iPad)/i.test(navigator.userAgent) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+    return isMacOs && !isMobileOrTouch;
+  }, []);
+
   return (
     <>
       {mv && (
@@ -310,8 +318,9 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
 
         <DialogHeader className="relative z-30 pt-10 py-6 border-b-4 border-border shadow-md transition-all duration-200">
           {/* 使用一般的 button 取代 DialogClose 來完全控制關閉行為 */}
-          <button 
-              className="absolute top-4 right-4 md:top-6 md:right-8 z-50 bg-background text-foreground border-3 border-foreground shadow-neo-sm hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all w-10 h-10 flex items-center justify-center rounded-none"
+          <div className={`absolute top-4 z-[110] ${isMac ? 'left-4 md:left-8 md:top-6' : 'right-4 md:right-8 md:top-6'}`}>
+            <button 
+              className={`bg-background text-foreground border-3 border-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all ${isMac ? 'w-auto px-3' : 'w-10'} h-10 flex items-center justify-center rounded-none font-black uppercase tracking-widest text-xs gap-1.5`}
               onClick={() => {
                 if (!isClosingRef.current) {
                   isClosingRef.current = true;
@@ -321,11 +330,19 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
               data-umami-event="Z_Close_MV_Modal"
               data-umami-event-title={mv?.title}
             >
-              <i className="hn hn-times text-2xl"></i>
+              {isMac ? (
+                <>
+                  <i className="hn hn-angle-left text-xs leading-none"></i>
+                  <span>返回</span>
+                </>
+              ) : (
+                <i className="hn hn-times text-2xl leading-none"></i>
+              )}
             </button>
+          </div>
           
           <DialogTitle 
-            className="text-2xl pr-16 cursor-default uppercase tracking-tighter font-black flex flex-col md:flex-row md:items-center gap-x-4 overflow-hidden w-full" 
+            className={`text-2xl cursor-default uppercase tracking-tighter font-black flex flex-col md:flex-row md:items-center gap-x-4 overflow-hidden w-full ${isMac ? 'pl-24 md:pl-32 pr-4' : 'pr-16 md:pr-20'}`} 
             lang="ja"
             style={{
               rowGap: typeof window !== 'undefined' && window.innerWidth < 768
@@ -342,10 +359,10 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
                     e.stopPropagation();
                     onToggleFav();
                   }}
-                  className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-none border-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all ${
+                  className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-none hover:scale-110 hover:-translate-y-0.5 transition-all ${
                     isFav 
-                      ? 'bg-ztmy-green border-black text-black' 
-                      : 'bg-background border-foreground text-foreground opacity-70 hover:opacity-100'
+                      ? 'text-yellow-400 drop-shadow-[0_0_2px_rgba(250,204,21,0.5)]' 
+                      : 'text-foreground opacity-50 hover:opacity-100 hover:text-yellow-400'
                   }`}
                   data-umami-event="Z_Toggle_Favorite_Modal"
                   data-umami-event-title={mv?.title}
@@ -353,7 +370,7 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
                   data-umami-event-action={isFav ? 'remove' : 'add'}
                   title={isFav ? t('app.unfavorited', '已取消收藏') : t('app.favorite', '收藏')}
                 >
-                  <i className={`hn ${isFav ? 'hn-star-solid' : 'hn-star'} text-xl`}></i>
+                  <i className={`hn ${isFav ? 'hn-star-solid' : 'hn-star'} text-2xl`}></i>
                 </button>
               )}
               

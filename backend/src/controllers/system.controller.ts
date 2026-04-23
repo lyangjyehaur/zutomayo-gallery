@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { getDB } from '../services/db.service.js';
+import { MetaSetting, sequelize } from '../services/pg.service.js';
 import fs from 'fs';
 import path from 'path';
 import { getCountryCode, getFullGeoInfo } from '../services/geo.service.js';
@@ -38,17 +38,14 @@ try {
 
 export const getSystemStatus = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const db = getDB();
-    const row = db.prepare('SELECT value FROM meta_settings WHERE key = ?').get('maintenance_mode') as any;
-    // 預設為 true (站點初始化時默認開啟維護模式)
-    const maintenance = row ? row.value === 'true' : true;
+    const row = await MetaSetting.findByPk('maintenance_mode');
+    const maintenance = row ? (row.toJSON() as any).value === 'true' : true;
     
-    const typeRow = db.prepare('SELECT value FROM meta_settings WHERE key = ?').get('maintenance_type') as any;
-    // 預設為 'ui' (介面升級)
-    const type = typeRow ? typeRow.value : 'ui';
+    const typeRow = await MetaSetting.findByPk('maintenance_type');
+    const type = typeRow ? (typeRow.toJSON() as any).value : 'ui';
 
-    const etaRow = db.prepare('SELECT value FROM meta_settings WHERE key = ?').get('maintenance_eta') as any;
-    const eta = etaRow ? etaRow.value : null;
+    const etaRow = await MetaSetting.findByPk('maintenance_eta');
+    const eta = etaRow ? (etaRow.toJSON() as any).value : null;
 
     res.json({ 
       success: true, 
@@ -130,27 +127,17 @@ export const toggleMaintenance = async (req: Request, res: Response, next: NextF
       return;
     }
 
-    const db = getDB();
-    
-    const transaction = db.transaction(() => {
-      db.prepare(
-        'INSERT INTO meta_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
-      ).run('maintenance_mode', maintenance ? 'true' : 'false');
+    await sequelize.transaction(async (t) => {
+      await MetaSetting.upsert({ key: 'maintenance_mode', value: maintenance ? 'true' : 'false' }, { transaction: t });
 
       if (type) {
-        db.prepare(
-          'INSERT INTO meta_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
-        ).run('maintenance_type', type);
+        await MetaSetting.upsert({ key: 'maintenance_type', value: type }, { transaction: t });
       }
 
       if (eta !== undefined) {
-        db.prepare(
-          'INSERT INTO meta_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
-        ).run('maintenance_eta', eta ? String(eta) : '');
+        await MetaSetting.upsert({ key: 'maintenance_eta', value: eta ? String(eta) : '' }, { transaction: t });
       }
     });
-
-    transaction();
 
     res.json({ success: true, data: { maintenance, type, eta } });
   } catch (error) {

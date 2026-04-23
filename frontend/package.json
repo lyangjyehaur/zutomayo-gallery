@@ -4,7 +4,7 @@
   "version": "3.5.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "build": "pnpm run sync-locales && vite build",
     "preview": "vite preview",
     "test": "vitest run",

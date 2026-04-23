@@ -1,45 +1,23 @@
 import { MVItem } from '../types.js';
-import { getDB } from './db.service.js';
+import { MV, sequelize } from './pg.service.js';
 
 // 運行時數據緩存，支持熱更新
 let runtimeData: MVItem[] | null = null;
 const getRuntimeData = async (): Promise<MVItem[]> => {
   if (!runtimeData) {
     try {
-      const db = getDB();
-      const rows = db.prepare('SELECT * FROM mvs').all() as any[];
+      const rows = await MV.findAll();
       
       // 動態讀取所有欄位
       runtimeData = rows.map(row => {
-        const mv: any = { ...row };
-        // 將 JSON 字串轉回陣列
-        if (mv.album) {
-          try { mv.album = JSON.parse(mv.album); } catch (e) { mv.album = []; }
-        }
-        if (mv.coverImages) {
-          try { mv.coverImages = JSON.parse(mv.coverImages); } catch (e) { mv.coverImages = []; }
-        }
-        if (mv.keywords) {
-          try {
-            const parsed = JSON.parse(mv.keywords);
-            mv.keywords = Array.isArray(parsed) 
-              ? parsed.map((k: any) => typeof k === 'string' ? { text: k } : k)
-              : [];
-          } catch (err) {
-            mv.keywords = [];
-          }
-        } else {
-          mv.keywords = [];
-        }
-        
-        if (mv.images) {
-          try { mv.images = JSON.parse(mv.images); } catch (e) { mv.images = []; }
-        }
+        const mv = row.toJSON() as any;
         
         // 兼容舊版字串格式的 artist
         if (mv.artist) {
           try {
-            mv.artist = JSON.parse(mv.artist);
+            if (typeof mv.artist === 'string') {
+              mv.artist = JSON.parse(mv.artist);
+            }
             if (!Array.isArray(mv.artist)) mv.artist = [mv.artist];
           } catch (err) {
             // 解析失敗代表是舊版的純字串，直接包裝成陣列
@@ -52,7 +30,7 @@ const getRuntimeData = async (): Promise<MVItem[]> => {
         return mv as MVItem;
       });
     } catch (e) {
-      console.error('Failed to read from SQLite, returning empty array.', e);
+      console.error('Failed to read from DB, returning empty array.', e);
       runtimeData = [];
     }
   }
@@ -163,50 +141,24 @@ export class MVService {
     }
     
     // 更新到資料庫
-    const db = getDB();
-    
-    // 使用 transaction 確保資料一致性
-    const transaction = db.transaction(() => {
+    await sequelize.transaction(async (t) => {
       if (!partial) {
         // 全量更新：先清空資料庫
-        db.prepare('DELETE FROM mvs').run();
-      } else {
+        await MV.destroy({ where: {}, transaction: t });
+      } else if (deletedIds.length > 0) {
         // 部分更新：只刪除需要刪除的
-        const deleteStmt = db.prepare('DELETE FROM mvs WHERE id = ?');
-        for (const id of deletedIds) {
-          deleteStmt.run(id);
-        }
+        await MV.destroy({ where: { id: deletedIds }, transaction: t });
       }
 
-      // 獲取目前資料表的所有欄位，以便動態產生 INSERT 語法
-      const tableInfo = db.prepare("PRAGMA table_info(mvs)").all() as any[];
-      const columns = tableInfo.map(col => col.name);
-      
-      const placeholders = columns.map(() => '?').join(', ');
-      
       // 寫入/更新資料
-      const stmt = db.prepare(`
-        INSERT OR REPLACE INTO mvs (${columns.join(', ')})
-        VALUES (${placeholders})
-      `);
-      
       for (const mv of newData) {
-        // 依照資料庫欄位順序，準備對應的值
-        const values = columns.map(col => {
-          const val = (mv as any)[col];
-          // 如果是這五個預設陣列欄位，將其轉為 JSON 字串
-          if (['album', 'coverImages', 'keywords', 'images', 'artist'].includes(col)) {
-            return JSON.stringify(val || []);
-          }
-          // 其他字串或數字欄位直接返回，若 undefined 則存 NULL 或空字串
-          return val !== undefined ? val : '';
-        });
-        stmt.run(...values);
+        const mvData = { ...mv };
+        // Sequelize JSONB 欄位會自動處理物件/陣列，但如果是 artist 可能是陣列，也給它保持原樣
+        // 確保某些可能未定義的欄位為 null 或適當值
+        await MV.upsert(mvData as any, { transaction: t });
       }
     });
 
-    transaction();
-    
     // 更新成功後，更新運行時緩存
     runtimeData = finalData;
     

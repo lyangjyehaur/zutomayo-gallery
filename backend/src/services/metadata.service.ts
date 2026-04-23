@@ -1,4 +1,4 @@
-import { getDB } from './db.service.js';
+import { MetaAlbum, MetaArtist, MetaSetting, sequelize } from './pg.service.js';
 
 export interface AlbumMeta {
   date?: string;
@@ -134,48 +134,50 @@ const normalizeMetadata = (raw: unknown): Metadata => {
 
 export const getMetadata = async (): Promise<Metadata> => {
   if (runtimeMetadata) return runtimeMetadata;
-  const db = getDB();
   
-  const albums = db.prepare('SELECT * FROM meta_albums').all() as any[];
-  const artists = db.prepare('SELECT * FROM meta_artists').all() as any[];
-  const settingsRows = db.prepare('SELECT * FROM meta_settings').all() as any[];
+  const albums = await MetaAlbum.findAll();
+  const artists = await MetaArtist.findAll();
+  const settingsRows = await MetaSetting.findAll();
 
   const albumMeta: Record<string, AlbumMeta> = {};
   for (const row of albums) {
-    albumMeta[row.name] = { 
-      ...(row.date ? { date: row.date } : {}), 
-      ...(row.hideDate !== null ? { hideDate: Boolean(row.hideDate) } : {})
+    const data = row.toJSON() as any;
+    albumMeta[data.name] = { 
+      ...(data.date ? { date: data.date } : {}), 
+      ...(data.hideDate !== null && data.hideDate !== undefined ? { hideDate: Boolean(data.hideDate) } : {})
     };
   }
 
   const artistMeta: Record<string, ArtistMeta> = {};
   for (const row of artists) {
-    artistMeta[row.name] = { 
-      ...(row.snsId ? { id: row.snsId } : {}), 
-      ...(row.hideId !== null ? { hideId: Boolean(row.hideId) } : {}),
-      ...(row.displayName ? { displayName: row.displayName } : {}),
-      ...(row.profileUrl ? { profileUrl: row.profileUrl } : {}),
-      ...(row.bio ? { bio: row.bio } : {}),
-      ...(row.dataId ? { dataId: row.dataId } : {}),
-      ...(row.instagram ? { instagram: row.instagram } : {}),
-      ...(row.youtube ? { youtube: row.youtube } : {}),
-      ...(row.pixiv ? { pixiv: row.pixiv } : {}),
-      ...(row.tiktok ? { tiktok: row.tiktok } : {}),
-      ...(row.website ? { website: row.website } : {}),
+    const data = row.toJSON() as any;
+    artistMeta[data.name] = { 
+      ...(data.snsId ? { id: data.snsId } : {}), 
+      ...(data.hideId !== null && data.hideId !== undefined ? { hideId: Boolean(data.hideId) } : {}),
+      ...(data.displayName ? { displayName: data.displayName } : {}),
+      ...(data.profileUrl ? { profileUrl: data.profileUrl } : {}),
+      ...(data.bio ? { bio: data.bio } : {}),
+      ...(data.dataId ? { dataId: data.dataId } : {}),
+      ...(data.instagram ? { instagram: data.instagram } : {}),
+      ...(data.youtube ? { youtube: data.youtube } : {}),
+      ...(data.pixiv ? { pixiv: data.pixiv } : {}),
+      ...(data.tiktok ? { tiktok: data.tiktok } : {}),
+      ...(data.website ? { website: data.website } : {}),
     };
-    if (row.collaborations) {
+    if (data.collaborations) {
       try {
-        artistMeta[row.name].collaborations = JSON.parse(row.collaborations);
+        artistMeta[data.name].collaborations = typeof data.collaborations === 'string' ? JSON.parse(data.collaborations) : data.collaborations;
       } catch(e) {}
     }
   }
 
   const settings: MetadataSettings = { showAutoAlbumDate: false, announcements: [] };
   for (const row of settingsRows) {
-    if (row.key === 'showAutoAlbumDate') settings.showAutoAlbumDate = row.value === 'true';
-    if (row.key === 'announcements') {
+    const data = row.toJSON() as any;
+    if (data.key === 'showAutoAlbumDate') settings.showAutoAlbumDate = data.value === 'true';
+    if (data.key === 'announcements') {
       try {
-        settings.announcements = JSON.parse(row.value);
+        settings.announcements = JSON.parse(data.value);
       } catch (e) {
         settings.announcements = [];
       }
@@ -187,52 +189,50 @@ export const getMetadata = async (): Promise<Metadata> => {
 };
 
 export const updateMetadata = async (data: Partial<Metadata>): Promise<Metadata> => {
-  const db = getDB();
   const current = await getMetadata();
   
-  const transaction = db.transaction(() => {
+  await sequelize.transaction(async (t) => {
     if (data.albumMeta) {
       current.albumMeta = data.albumMeta;
-      db.prepare('DELETE FROM meta_albums').run();
-      const stmt = db.prepare('INSERT INTO meta_albums (name, date, hideDate) VALUES (?, ?, ?)');
+      await MetaAlbum.destroy({ where: {}, transaction: t });
       for (const [name, meta] of Object.entries(data.albumMeta)) {
-        stmt.run(name, meta.date || '', meta.hideDate ? 1 : 0);
+        await MetaAlbum.create({
+          name,
+          date: meta.date || '',
+          hideDate: meta.hideDate ? true : false
+        }, { transaction: t });
       }
     }
 
     if (data.artistMeta) {
       current.artistMeta = data.artistMeta;
-      db.prepare('DELETE FROM meta_artists').run();
-      const stmt = db.prepare('INSERT INTO meta_artists (name, snsId, hideId, displayName, profileUrl, bio, dataId, collaborations, instagram, youtube, pixiv, tiktok, website) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+      await MetaArtist.destroy({ where: {}, transaction: t });
       for (const [name, meta] of Object.entries(data.artistMeta)) {
-        stmt.run(
-          name, 
-          meta.id || '', 
-          meta.hideId ? 1 : 0,
-          meta.displayName || '',
-          meta.profileUrl || '',
-          meta.bio || '',
-          meta.dataId || '',
-          meta.collaborations ? JSON.stringify(meta.collaborations) : '',
-          meta.instagram || '',
-          meta.youtube || '',
-          meta.pixiv || '',
-          meta.tiktok || '',
-          meta.website || ''
-        );
+        await MetaArtist.create({
+          name,
+          snsId: meta.id || '',
+          hideId: meta.hideId ? true : false,
+          displayName: meta.displayName || '',
+          profileUrl: meta.profileUrl || '',
+          bio: meta.bio || '',
+          dataId: meta.dataId || '',
+          collaborations: meta.collaborations ? meta.collaborations : [],
+          instagram: meta.instagram || '',
+          youtube: meta.youtube || '',
+          pixiv: meta.pixiv || '',
+          tiktok: meta.tiktok || '',
+          website: meta.website || ''
+        }, { transaction: t });
       }
     }
 
     if (data.settings) {
       current.settings = { ...current.settings, ...data.settings };
-      const stmt = db.prepare('INSERT OR REPLACE INTO meta_settings (key, value) VALUES (?, ?)');
-      stmt.run('showAutoAlbumDate', current.settings.showAutoAlbumDate ? 'true' : 'false');
-      stmt.run('announcements', JSON.stringify(current.settings.announcements || []));
+      await MetaSetting.upsert({ key: 'showAutoAlbumDate', value: current.settings.showAutoAlbumDate ? 'true' : 'false' }, { transaction: t });
+      await MetaSetting.upsert({ key: 'announcements', value: JSON.stringify(current.settings.announcements || []) }, { transaction: t });
     }
   });
 
-  transaction();
-  
   runtimeMetadata = normalizeMetadata(current);
   return runtimeMetadata;
 };

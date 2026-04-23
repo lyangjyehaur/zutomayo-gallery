@@ -1,5 +1,5 @@
-import { getDB } from './db.service.js';
 import crypto from 'crypto';
+import { AuthPasskey, AuthSetting, sequelize } from './pg.service.js';
 
 export interface Passkey {
   id: string;
@@ -36,73 +36,63 @@ export class AuthService {
   }
 
   async getPasskeys(): Promise<Passkey[]> {
-    const db = getDB();
-    const rows = db.prepare('SELECT * FROM auth_passkeys').all() as any[];
+    const rows = await AuthPasskey.findAll();
     return rows.map(r => {
+      const data = r.toJSON() as any;
       let transports;
-      if (r.transports) {
+      if (data.transports) {
         try {
-          transports = JSON.parse(r.transports);
+          transports = typeof data.transports === 'string' ? JSON.parse(data.transports) : data.transports;
         } catch (e) {
           transports = [];
         }
       }
       return {
-        id: r.id,
-        publicKey: r.publicKey,
-        counter: r.counter,
+        id: data.id,
+        publicKey: data.publicKey,
+        counter: data.counter,
         transports,
-        name: r.name,
-        createdAt: r.createdAt
+        name: data.name,
+        createdAt: data.createdAt
       };
     });
   }
 
   async savePasskey(passkey: Passkey) {
-    const db = getDB();
-    const stmt = db.prepare(
-      'INSERT OR REPLACE INTO auth_passkeys (id, publicKey, counter, transports, name, createdAt) VALUES (?, ?, ?, ?, ?, ?)'
-    );
-    stmt.run(
-      passkey.id,
-      passkey.publicKey,
-      passkey.counter,
-      passkey.transports ? JSON.stringify(passkey.transports) : null,
-      passkey.name || null,
-      passkey.createdAt
-    );
+    await AuthPasskey.upsert({
+      id: passkey.id,
+      publicKey: passkey.publicKey,
+      counter: passkey.counter,
+      transports: passkey.transports ? passkey.transports : null,
+      name: passkey.name || null,
+      createdAt: passkey.createdAt ? new Date(passkey.createdAt) : new Date()
+    } as any);
   }
 
   async removePasskey(id: string) {
-    const db = getDB();
-    db.prepare('DELETE FROM auth_passkeys WHERE id = ?').run(id);
+    await AuthPasskey.destroy({ where: { id } });
   }
 
   async setCurrentChallenge(challenge: string) {
-    const db = getDB();
-    db.prepare('INSERT OR REPLACE INTO auth_settings (key, value) VALUES (?, ?)').run('currentChallenge', challenge);
+    await AuthSetting.upsert({ key: 'currentChallenge', value: challenge });
   }
 
   async getCurrentChallenge(): Promise<string | undefined> {
-    const db = getDB();
-    const row = db.prepare('SELECT value FROM auth_settings WHERE key = ?').get('currentChallenge') as any;
-    return row ? row.value : undefined;
+    const row = await AuthSetting.findByPk('currentChallenge');
+    return row ? (row.toJSON() as any).value : undefined;
   }
 
   async getPassword(): Promise<string | undefined> {
-    const db = getDB();
-    const row = db.prepare('SELECT value FROM auth_settings WHERE key = ?').get('password') as any;
-    return row ? row.value : undefined;
+    const row = await AuthSetting.findByPk('password');
+    return row ? (row.toJSON() as any).value : undefined;
   }
 
   async setPassword(password: string) {
-    const db = getDB();
-    db.prepare('INSERT OR REPLACE INTO auth_settings (key, value) VALUES (?, ?)').run('password', password);
+    await AuthSetting.upsert({ key: 'password', value: password });
   }
 
   async updatePasskeyCounter(id: string, counter: number) {
-    const db = getDB();
-    db.prepare('UPDATE auth_passkeys SET counter = ? WHERE id = ?').run(counter, id);
+    await AuthPasskey.update({ counter }, { where: { id } });
   }
 }
 
