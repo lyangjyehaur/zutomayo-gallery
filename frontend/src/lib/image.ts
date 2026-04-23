@@ -85,12 +85,17 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
       const name = mode === 'raw' ? 'orig' : (mode === 'full' ? 'large' : 'small');
       targetUrl = `${cleanUrl}?format=${format}&name=${name}`;
       
-      return targetUrl.replace('https://pbs.twimg.com', 'https://assets.ztmr.club/ti');
+      // 非 raw 模式走 assets 代理，raw 模式交給下方的 imgproxy 處理下載與自訂檔名
+      if (mode !== 'raw') {
+        return targetUrl.replace('https://pbs.twimg.com', 'https://assets.ztmr.club/ti');
+      }
     }
 
     // 處理 YouTube 圖片連結
     if (targetUrl.includes('ytimg.com') || targetUrl.includes('youtube.com')) {
-      return targetUrl.replace('https://i.ytimg.com', 'https://assets.ztmr.club/yi');
+      if (mode !== 'raw') {
+        return targetUrl.replace('https://i.ytimg.com', 'https://assets.ztmr.club/yi');
+      }
     }
 
     // 其他圖片，預設使用 img.ztmr.club 代理
