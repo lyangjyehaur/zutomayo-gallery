@@ -767,7 +767,7 @@ function App({
     }, 1500);
     
     return () => clearTimeout(timer);
-  }, [favorites.length, isMobile, theme, i18n.language]);
+  }, [favorites.length, isMobile, i18n.language]);
 
   useEffect(() => {
     if (error && window.umami && typeof window.umami.track === 'function') {
