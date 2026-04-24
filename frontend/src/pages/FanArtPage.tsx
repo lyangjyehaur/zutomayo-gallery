@@ -33,11 +33,11 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
     availableMVs.forEach(mv => {
       if (mv.albums && Array.isArray(mv.albums)) {
         mv.albums.forEach(a => {
-          if (a) albums.add(a.trim());
+          const name = typeof a === 'object' ? (a as any).name : a;
+          if (name) albums.add(name.trim());
         });
       } else if (mv.albums && typeof mv.albums === 'string') {
-        const albumList = (mv.albums as string).split(',').map(a => a.trim()).filter(Boolean);
-        albumList.forEach(a => albums.add(a.name));
+        (mv.albums as string).split(',').map(a => a.trim()).filter(Boolean).forEach(a => albums.add(a));
       }
     });
     return Array.from(albums).sort();
@@ -101,7 +101,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
         if (!mv.albums) {
           matchAlbum = false;
         } else if (Array.isArray(mv.albums)) {
-          matchAlbum = mv.albums.map(a => a.trim()).includes(filterAlbum);
+          matchAlbum = mv.albums.map(a => typeof a === 'object' ? (a as any).name.trim() : a.trim()).includes(filterAlbum);
         } else if (typeof mv.albums === 'string') {
           const albumList = (mv.albums as string).split(',').map(a => a.trim());
           matchAlbum = albumList.includes(filterAlbum);

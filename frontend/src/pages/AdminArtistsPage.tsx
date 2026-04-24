@@ -151,7 +151,7 @@ export function AdminArtistsPage() {
 
   const availableArtists = Array.from(new Set([
     ...Object.keys(artistMeta),
-    ...mvData.flatMap(mv => mv.creators || [])
+    ...mvData.flatMap(mv => mv.creators?.map(c => typeof c === 'object' ? c.name : c) || [])
   ])).filter(Boolean).sort((a, b) => a.localeCompare(b));
 
   const currentMeta = selectedArtist ? (artistMeta[selectedArtist] || { id: '', hideId: false }) : null;

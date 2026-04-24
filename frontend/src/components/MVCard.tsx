@@ -348,11 +348,13 @@ export const MVCard = memo(function MVCard({ mv, isFav, onToggleFav, onClick, is
   const { t } = useTranslation();
   
   // 處理藝術家名稱，過濾掉 "未知"、"Unknown" 等字串，若全為空則使用 t('app.unknown_artist')
-  const artistName = (Array.isArray(mv.artist) ? mv.artist : [mv.artist])
-    .map(a => a?.trim())
-    .filter(Boolean)
-    .filter(a => a !== '未知' && a !== 'Unknown' && a !== 'unknown')
-    .join(', ') || t('app.unknown_artist', '未知 (Unknown)');
+  const artistName = mv.creators && mv.creators.length > 0
+    ? mv.creators.map(a => typeof a === 'object' ? a.name : a).filter(Boolean).join(', ')
+    : (Array.isArray(mv.artist) ? mv.artist : [mv.artist])
+        .map(a => a?.trim())
+        .filter(Boolean)
+        .filter(a => a !== '未知' && a !== 'Unknown' && a !== 'unknown')
+        .join(', ') || t('app.unknown_artist', '未知 (Unknown)');
     
   const coverUrls = mv.images?.filter(img => img.MVMedia?.usage === 'cover').map(img => img.url) || [];
   const fallbackThumbUrl = coverUrls[0] ? getProxyImgUrl(coverUrls[0], 'thumb') : '';
