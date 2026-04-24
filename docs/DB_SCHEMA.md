@@ -130,7 +130,7 @@
 存放系統中各個表裡的 `type` 或 `status` 所代表的具體含義，方便統一管理分類。
 | 欄位名稱 | 型別 | 約束 | 說明 |
 | :--- | :--- | :--- | :--- |
-| `id` | `UUID` | `PRIMARY KEY` | 唯一識別碼 |
+| `id` | `VARCHAR(20)` | `PRIMARY KEY` | 唯一識別碼 (簡短 ID，如自訂代碼或 NanoID) |
 | `category` | `VARCHAR(255)` | `NOT NULL` | 分類名 (如 `album_type`, `media_category`, `fanart_status`) |
 | `code` | `VARCHAR(255)` | `NOT NULL` | 代碼值 (如 `full`, `video`, `organized`) |
 | `label` | `VARCHAR(255)` | `NOT NULL` | 顯示名稱 (如 `完整專輯`, `已收錄`) |
