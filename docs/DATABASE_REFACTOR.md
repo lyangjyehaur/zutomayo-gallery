@@ -11,24 +11,29 @@
 
 ### 核心實體表 (Entities)
 - **`mvs`**: 儲存 MV 核心資訊 (ID, Title, Year, Date, YouTube, Bilibili, Description)。
-- **`images`**: 儲存所有圖片 (包含官方 Cover、Gallery、FanArt)。
+- **`media`** (原 images): 儲存所有媒體 (包含官方 Cover、Gallery、FanArt 圖片及影片)。
   - `type`: `'cover'` | `'official'` | `'fanart'`
-  - `original_url`: 圖片原始來源網址 (唯一鍵)。
+  - `media_type`: `'image'` | `'video'` | `'gif'`
+  - `original_url`: 媒體原始來源網址 (唯一鍵)。
   - `url`: 備份至 R2 後的網址 (前端實際讀取的網址)。
-- **`artists`**: 儲存創作者/畫師名稱 (唯一鍵)。
-- **`albums`**: 儲存專輯名稱 (唯一鍵)。
-- **`keywords`**: 儲存搜尋標籤/關鍵字 (唯一鍵)。
+- **`artists`**: 儲存創作者/畫師名稱 (唯一鍵)。包含 `twitter` (原 sns_id) 欄位。
+- **`albums`**: 儲存專輯名稱 (唯一鍵)。包含 `type` (專輯類別) 欄位。
+- **`keywords`**: 儲存搜尋標籤/關鍵字。支援 `lang` (語系) 欄位以避免重複。
 
-### 擴展屬性表 (Extensions)
-- **`fanart_metadata`**: 針對 `images` 表中 `type='fanart'` 的擴展屬性。
-  - 關聯：`image_id` (1:1 對應 `images.id`)。
-  - 欄位：`tweet_url`, `tweet_text`, `tweet_author`, `tweet_handle`, `tweet_date`, `status`。
+### 擴展屬性與分組表 (Extensions & Groups)
+- **`media_groups`**: 將同一個來源 (如同一篇推文) 的多張媒體綁定在一起。取代了舊版的 `fanart_metadata`。
+  - 欄位：`source_url`, `source_text`, `author_name`, `author_handle`, `post_date`, `status`。
+
+### 全局配置與字典 (Global Configs)
+- **`sys_dictionaries`**: 存放所有表的 `type` 和 `status` 的具體含義 (如 album_type, media_type, fanart_status)。
+- **`sys_configs`**: 存放全域設定 (如維護模式等)。取代了舊版的 `meta_settings`。
+- **`sys_announcements`**: 獨立存放首頁公告。
 
 ### 中繼關聯表 (Junction Tables)
-- **`mv_images`**: 關聯 `mvs` 與 `images`。
+- **`mv_media`**: 關聯 `mvs` 與 `media`。
   - `usage`: `'cover'` (封面圖) | `'gallery'` (相簿/設定資料/二創圖)。
   - `order_index`: 控制圖片在前端顯示的排序。
-- **`artist_images`**: 關聯 `artists` 與 `images` (用於標記單張圖片的具體畫師，例如多畫師合作 MV 中的特定場景圖或二創圖)。
+- **`artist_media`**: 關聯 `artists` 與 `media` (用於標記單張圖片的具體畫師，例如多畫師合作 MV 中的特定場景圖或二創圖)。
 - **`mv_artists`**: 關聯 `mvs` 與 `artists`。
 - **`mv_albums`**: 關聯 `mvs` 與 `albums`。
 - **`mv_keywords`**: 關聯 `mvs` 與 `keywords`。
