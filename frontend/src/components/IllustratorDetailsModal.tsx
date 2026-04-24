@@ -10,78 +10,20 @@ import { Button } from '@/components/ui/button';
 import { MODAL_THEME } from '@/lib/theme';
 import { useTranslation } from 'react-i18next';
 import { MVItem, ArtistMeta } from '@/lib/types';
-import { useLazyImage } from '@/hooks/useLazyImage';
-import FancyboxViewer, { ResponsiveMasonry } from '@/components/FancyboxViewer';
-import { getProxyImgUrl, isMediaVideo } from '@/lib/image';
+import FancyboxViewer from '@/components/FancyboxViewer';
 
 interface IllustratorDetailsModalProps {
   illustrator: { name: string; snsId?: string; mvs: MVItem[]; meta?: ArtistMeta } | null;
   onClose: () => void;
 }
 
-const MasonryImage = ({ item, index, mvTitle }: { item: any, index: number, mvTitle: string }) => {
-  const { elementRef, shouldLoad } = useLazyImage({
-    rootMargin: '300px',
-    threshold: 0,
-    triggerOnce: true,
-  });
-
-  return (
-    <div 
-      ref={elementRef}
-      className="border-4 border-black bg-card shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] group-hover:translate-x-1 group-hover:translate-y-1 group-hover:shadow-none transition-all duration-200 relative overflow-hidden h-full"
-    >
-      {shouldLoad ? (
-        <>
-          <img 
-            src={getProxyImgUrl(item.thumbnail || item.url, 'thumb')} 
-            alt={item.caption || item.alt || mvTitle} 
-            className="w-full h-auto object-cover border-b-4 border-black bg-white"
-            loading="lazy"
-          />
-          <div className="p-3 bg-card flex flex-col gap-1 relative z-10">
-            <span className="text-sm font-black truncate">{item.caption || 'Artwork'}</span>
-            <div className="flex justify-between items-center text-[10px] font-mono opacity-70">
-              <span className="bg-black/10 px-1 truncate max-w-[90%]" title={mvTitle}>{mvTitle}</span>
-            </div>
-          </div>
-          {/* Glitch Overlay Effect on Hover */}
-          <div className="absolute inset-0 z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300 ztmy-noise-pop"></div>
-          
-          {/* Video Icon Indicator */}
-          {(item.url?.match(/\.(mp4|webm)$/i) || item.url?.includes('video.twimg.com') || (item.thumbnail && item.thumbnail !== item.url && !item.url.match(/\.gif$/i))) && (
-            <div className="absolute top-2 left-2 bg-black/70 text-white p-1.5 border border-white/20 shadow-sm z-30 pointer-events-none">
-              <i className="hn hn-play-solid text-xs"></i>
-            </div>
-          )}
-          
-          {/* GIF Icon Indicator */}
-          {(item.url?.match(/\.gif$/i) || item.url?.includes('tweet_video_thumb')) && (
-            <div className="absolute top-2 left-2 bg-black/70 text-white px-1.5 py-0.5 border border-white/20 shadow-sm z-30 pointer-events-none">
-              <span className="font-black text-[10px] tracking-widest">GIF</span>
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="w-full h-64 bg-black/5 animate-pulse flex items-center justify-center">
-          <i className="hn hn-image text-4xl opacity-20"></i>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const EMPTY_IMAGES: any[] = [];
-const FANCYBOX_OPTIONS = {
-  Carousel: { infinite: true },
-  Toolbar: { display: { left: ["infobar"], middle: ["zoomIn", "zoomOut", "toggle1to1", "rotateCCW", "rotateCW", "flipX", "flipY"], right: ["slideshow", "fullscreen", "download", "close"] } },
-  Thumbs: { autoStart: true },
-};
-
 export function IllustratorDetailsModal({ illustrator, onClose }: IllustratorDetailsModalProps) {
   const { t } = useTranslation();
   const collabs = useMemo(() => {
-    return illustrator?.meta?.collaborations || [];
+    return (illustrator?.meta?.collaborations || []).map(img => ({
+      ...img,
+      caption: img.caption || 'COMPILATION ILLUST'
+    }));
   }, [illustrator]);
 
   const [activeTab, setActiveTab] = useState<'collab' | 'mv'>(collabs.length > 0 ? 'collab' : 'mv');
@@ -96,10 +38,13 @@ export function IllustratorDetailsModal({ illustrator, onClose }: IllustratorDet
   // Extract all images from the illustrator's MVs as mock FanArt/Artworks
   const artworks = useMemo(() => {
     if (!illustrator) return [];
-    const imgs: { item: any, mvTitle: string }[] = [];
+    const imgs: any[] = [];
     illustrator.mvs.forEach(mv => {
       mv.images?.forEach(img => {
-        imgs.push({ item: img, mvTitle: mv.title });
+        imgs.push({ 
+          ...img, 
+          caption: img.caption ? `[${mv.title}] ${img.caption}` : mv.title 
+        });
       });
     });
     return imgs.length > 0 ? imgs : [];
@@ -298,77 +243,17 @@ export function IllustratorDetailsModal({ illustrator, onClose }: IllustratorDet
 
           {/* 右側 Masonry Content (畫廊) */}
           <div className="flex-1 relative z-10 w-full bg-black/5 overflow-hidden">
-            <ScrollArea className="h-full w-full p-4 md:p-8" id="illustrator-scroll-area">
+            <ScrollArea className="h-full w-full" id="illustrator-scroll-area">
               {currentDisplayImages.length > 0 ? (
                 <FancyboxViewer 
-                  images={EMPTY_IMAGES}
-                  options={FANCYBOX_OPTIONS}
-                >
-                  <ResponsiveMasonry breakpointColumns={{ default: 1, 640: 2, 1280: 3, 1536: 4 }} className="w-full">
-                    {activeTab === 'mv' ? currentDisplayImages.slice(0, visibleCount).map((art, idx) => {
-                      const isVideo = isMediaVideo(art.item.url, art.item.type);
-                      return (
-                      <div key={`${art.item.url}-${idx}`} className="block break-inside-avoid h-max relative group cursor-pointer w-full">
-                        <a 
-                          href={art.item.url} 
-                          data-fancybox="illustrator-gallery"
-                          data-src={art.item.url}
-                          data-caption={art.item.caption || art.mvTitle}
-                          data-type={isVideo ? "html5video" : "image"}
-                          {...(isVideo ? {
-                            "data-video-autoplay": "true",
-                            "data-video-loop": "true",
-                            "data-video-muted": "true",
-                            "data-video-playsinline": "true"
-                          } : {})}
-                          className="absolute inset-0 z-40 w-full h-full block"
-                        >
-                          <span className="sr-only">View full size</span>
-                        </a>
-                        <div className="pointer-events-none relative z-10">
-                          <MasonryImage item={art.item} mvTitle={art.mvTitle} index={idx} />
-                        </div>
-                      </div>
-                    )}) : currentDisplayImages.slice(0, visibleCount).map((img: any, idx) => {
-                      const isVideo = isMediaVideo(img.url, img.type);
-                      return (
-                      <div key={`${img.url}-${idx}`} className="block break-inside-avoid h-max relative group cursor-pointer w-full">
-                        <a 
-                          href={img.url} 
-                          data-fancybox="illustrator-gallery"
-                          data-src={img.url}
-                          data-caption={img.caption || "COMPILATION ILLUST"}
-                          data-type={isVideo ? "html5video" : "image"}
-                          {...(isVideo ? {
-                            "data-video-autoplay": "true",
-                            "data-video-loop": "true",
-                            "data-video-muted": "true",
-                            "data-video-playsinline": "true"
-                          } : {})}
-                          className="absolute inset-0 z-40 w-full h-full block"
-                        >
-                          <span className="sr-only">View full size</span>
-                        </a>
-                        <div className="pointer-events-none relative z-10">
-                          <MasonryImage item={img} mvTitle="COMPILATION ILLUST" index={idx} />
-                        </div>
-                      </div>
-                    )})}
-                  </ResponsiveMasonry>
-                  
-                  {visibleCount < currentDisplayImages.length && (
-                    <div className="w-full py-8 flex justify-center">
-                      <Button 
-                        onClick={() => setVisibleCount(prev => Math.min(prev + 20, currentDisplayImages.length))}
-                        variant="neutral"
-                        className="font-black tracking-widest uppercase border-2 border-black shadow-neo-sm hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none"
-                      >
-                        <i className="hn hn-arrow-down mr-2"></i>
-                        {t('common.load_more', '載入更多 (LOAD MORE)')}
-                      </Button>
-                    </div>
-                  )}
-                </FancyboxViewer>
+                  images={currentDisplayImages}
+                  itemsPerPage={20}
+                  autoLoadMore={false}
+                  enablePagination={true}
+                  showHeader={false}
+                  breakpointColumns={{ default: 1, 640: 2, 1280: 3, 1536: 4 }}
+                  className="!p-4 md:!p-8 !min-h-0"
+                />
               ) : (
                 <div className="w-full py-20 flex flex-col items-center justify-center opacity-30 text-center">
                   <i className="hn hn-image text-5xl mb-4"></i>

@@ -151,16 +151,25 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
     });
   }, [allFanArts, includeCollab, selectedMvs]);
 
-  const [visibleCount, setVisibleCount] = useState(20);
+  const fancyboxImages = useMemo(() => {
+    return filteredFanArts.map(art => {
+      const authorText = art.tweetAuthor ? `@${art.tweetHandle || art.tweetAuthor}` : '';
+      const baseCaption = art.caption || (authorText ? `FanArt by ${authorText}` : 'FanArt');
+      
+      let richText = art.richText || '';
+      if (!richText) {
+        const postContent = art.caption ? art.caption.replace(/\n/g, '<br/>') : '';
+        const linkHtml = art.tweetUrl ? `<br/><br/><a href="${art.tweetUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">View Original Tweet <i class="hn hn-external-link"></i></a>` : '';
+        richText = `<div class="author">${authorText || 'FanArt'}</div><div class="post">${postContent}${linkHtml}</div>`;
+      }
 
-  // 處理切換篩選條件時重置載入數量
-  React.useEffect(() => {
-    setVisibleCount(20);
-  }, [selectedMvs, includeCollab, filterYear, filterAlbum]);
-
-  const displayedFanArts = useMemo(() => {
-    return filteredFanArts.slice(0, visibleCount);
-  }, [filteredFanArts, visibleCount]);
+      return {
+        ...art,
+        caption: baseCaption,
+        richText
+      };
+    });
+  }, [filteredFanArts]);
 
   return (
     <div className="w-full pb-16">
@@ -287,69 +296,24 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
               onClick={() => setIsFilterExpanded(false)}
               className="bg-black text-white px-6 py-2 font-black uppercase tracking-widest border-2 border-black hover:bg-main hover:text-black transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-y-1 hover:translate-x-1"
             >
-              {t('fanart.apply_filters', `套用並收起 (${filteredFanArts.length} 張作品)`)}
+              {t('fanart.apply_filters', '套用並收起 ({{count}} 張作品)', { count: filteredFanArts.length })}
             </button>
           </div>
         </div>
       </div>
 
       {/* FanArt 畫廊區塊 */}
-      {displayedFanArts.length > 0 ? (
+      {fancyboxImages.length > 0 ? (
         <div className="max-w-[1600px] mx-auto px-4 md:px-8 pb-12">
-          <ResponsiveMasonry breakpointColumns={{ default: 1, 640: 2, 1024: 3, 1280: 4 }}>
-            {displayedFanArts.map((art, idx) => (
-              <div 
-                key={idx} 
-                className="break-inside-avoid border-4 border-black bg-card shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all group overflow-hidden w-full"
-              >
-                <a href={art.tweetUrl || art.url} target="_blank" rel="noopener noreferrer" className="block relative overflow-hidden">
-                  <img 
-                    src={getProxyImgUrl(art.thumbnail || art.url, 'thumb')} 
-                    alt={art.caption || 'FanArt'} 
-                    className="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-500" 
-                    loading="lazy"
-                  />
-                  {art.tweetAuthor && (
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 pt-12 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <p className="text-white font-bold text-sm truncate">@{art.tweetHandle || art.tweetAuthor}</p>
-                    </div>
-                  )}
-                </a>
-                {(art.caption || art.mvTitles.length > 0) && (
-                  <div className="p-3 border-t-4 border-black bg-background flex flex-col gap-2">
-                    {art.caption && <p className="text-sm font-bold line-clamp-2">{art.caption}</p>}
-                    {art.mvTitles.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {art.mvTitles.map(title => (
-                          <span key={title} className="text-[10px] bg-black text-white px-1.5 py-0.5 uppercase font-bold tracking-wider">
-                            {title}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </ResponsiveMasonry>
-
-          {visibleCount < filteredFanArts.length && (
-            <div className="w-full py-12 flex justify-center">
-              <button 
-                onClick={() => setVisibleCount(prev => Math.min(prev + 20, filteredFanArts.length))}
-                className="group px-6 sm:px-8 py-3 sm:py-4 bg-card border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none active:translate-x-2 active:translate-y-2 transition-all font-black uppercase tracking-tighter text-sm sm:text-lg flex flex-col items-center gap-1 min-w-[200px]"
-              >
-                <span className="flex flex-col items-center leading-tight">
-                  <span className="tracking-normal">
-                    {t('common.load_more', '載入更多')} ({visibleCount} / {filteredFanArts.length})
-                  </span>
-                  <span className="text-[10px] font-mono opacity-60 normal-case">
-                    Load_More_Fanarts
-                  </span>
-                </span>
-              </button>
-            </div>
-          )}
+          <FancyboxViewer
+            images={fancyboxImages}
+            itemsPerPage={20}
+            autoLoadMore={false}
+            enablePagination={true}
+            showHeader={false}
+            breakpointColumns={{ default: 1, 640: 2, 1024: 3, 1280: 4 }}
+            className="!p-0 !min-h-0"
+          />
         </div>
       ) : (
         <div className="w-full py-10 flex flex-col items-center justify-center opacity-30 text-center px-4">
