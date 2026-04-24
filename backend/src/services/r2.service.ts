@@ -75,14 +75,19 @@ export const backupImageToR2 = async (url: string, folder: string = 'images'): P
     }
 
     // 3. 下載原圖
-    console.log(`[R2] Downloading image: ${url}`);
     // 如果是推特圖，加上 name=orig 來抓取最大畫質
     let fetchUrl = url;
-    if (fetchUrl.includes('pbs.twimg.com') && !fetchUrl.includes('name=')) {
+    if (fetchUrl.includes('pbs.twimg.com')) {
+      // 移除現有的格式參數，確保我們能附加 orig
+      fetchUrl = fetchUrl.replace(/&name=[a-z0-9]+/i, '');
+      fetchUrl = fetchUrl.replace(/\?name=[a-z0-9]+/i, '?');
+      
+      // 確保加上 name=orig
       fetchUrl = fetchUrl.includes('?') ? `${fetchUrl}&name=orig` : `${fetchUrl}?name=orig`;
-    } else if (fetchUrl.includes('pbs.twimg.com') && fetchUrl.includes('name=large')) {
-      fetchUrl = fetchUrl.replace('name=large', 'name=orig');
+      // 清理可能出現的 ?& 狀況
+      fetchUrl = fetchUrl.replace('?&', '?');
     }
+    console.log(`[R2] Downloading image: ${fetchUrl}`);
 
     const response = await fetch(fetchUrl);
     if (!response.ok) {
