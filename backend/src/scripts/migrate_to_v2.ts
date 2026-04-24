@@ -29,9 +29,9 @@ async function migrate() {
   const keywordMap = new Map();
   const imageMap = new Map(); // key: url, value: image_id
 
-  const getOrCreateArtist = async (name: string) => {
+  const getOrCreateArtist = async (name: any) => {
     if (!name) return null;
-    const cleanName = name.trim();
+    const cleanName = String(name).trim();
     if (!artistMap.has(cleanName)) {
       const artist = await ArtistModel.create({ name: cleanName });
       artistMap.set(cleanName, artist.get('id'));
@@ -39,9 +39,9 @@ async function migrate() {
     return artistMap.get(cleanName);
   };
 
-  const getOrCreateAlbum = async (name: string) => {
+  const getOrCreateAlbum = async (name: any) => {
     if (!name) return null;
-    const cleanName = name.trim();
+    const cleanName = String(name).trim();
     if (!albumMap.has(cleanName)) {
       const album = await AlbumModel.create({ name: cleanName });
       albumMap.set(cleanName, album.get('id'));
@@ -49,9 +49,9 @@ async function migrate() {
     return albumMap.get(cleanName);
   };
 
-  const getOrCreateKeyword = async (name: string) => {
+  const getOrCreateKeyword = async (name: any) => {
     if (!name) return null;
-    const cleanName = name.trim();
+    const cleanName = String(name).trim();
     if (!keywordMap.has(cleanName)) {
       const [keyword] = await KeywordModel.findOrCreate({ where: { name: cleanName } });
       keywordMap.set(cleanName, keyword.get('id'));
