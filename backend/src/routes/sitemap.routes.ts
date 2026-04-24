@@ -1,13 +1,15 @@
 import { Router } from 'express';
 import { MV, Fanart } from '../services/pg.service.js';
 
+import { getV2MVsAsLegacyJSON } from '../services/v2_mapper.js';
+
 const router = Router();
 const BASE_URL = 'https://gallery.ztmr.club';
 
 router.get('/sitemap.xml', async (req, res) => {
   try {
     const [mvs, fanarts] = await Promise.all([
-      MV.findAll(),
+      getV2MVsAsLegacyJSON(),
       Fanart.findAll({ where: { status: 'organized' } })
     ]);
 
@@ -38,7 +40,7 @@ router.get('/sitemap.xml', async (req, res) => {
 
     // 2. MV 詳細頁 (包含圖片 Sitemap)
     mvs.forEach((row: any) => {
-      const mv = row.toJSON();
+      const mv = row;
       const lastmod = mv.updatedAt 
         ? new Date(mv.updatedAt).toISOString() 
         : (mv.date ? new Date(mv.date).toISOString() : new Date().toISOString());

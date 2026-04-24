@@ -1,5 +1,6 @@
 import { S3Client, ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
-import { Fanart, MV } from '../services/pg.service.js';
+import { getV2MVsAsLegacyJSON, saveLegacyJSONToV2 } from '../services/v2_mapper.js';
+import { Fanart } from '../services/pg.service.js';
 import { backupImageToR2 } from '../services/r2.service.js';
 
 const BUCKET_NAME = process.env.R2_BUCKET_NAME || 'zutomayo-gallery-archive';
@@ -21,9 +22,9 @@ export const rebuildR2 = async (req: any, res: any) => {
       console.log('[R2 Rebuild] Starting...');
       
       // 1. 同步 MVs
-      const mvs = await MV.findAll();
-      for (const row of mvs) {
-        const mv = row.toJSON() as any;
+      const mvs = await getV2MVsAsLegacyJSON();
+      console.log(`[R2 Rebuild] Found ${mvs.length} MVs to rebuild.`);
+      for (const mv of mvs) {
         let updated = false;
         const newImages = [];
 
@@ -57,7 +58,8 @@ export const rebuildR2 = async (req: any, res: any) => {
         }
 
         if (updated) {
-          await row.update({ images: newImages });
+          mv.images = newImages as any;
+          await saveLegacyJSONToV2([mv]);
           console.log(`[R2 Rebuild] Updated MV ${mv.id}`);
         }
       }

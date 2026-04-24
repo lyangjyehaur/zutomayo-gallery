@@ -1,26 +1,15 @@
 import { MVItem } from '../types.js';
-import { MV, sequelize } from './pg.service.js';
 import { meiliClient, syncDataToMeili } from './meili.service.js';
+import { getV2MVsAsLegacyJSON, saveLegacyJSONToV2 } from './v2_mapper.js';
+import { MVModel } from '../models/index.js';
+import { sequelize } from '../models/index.js';
 
 // 運行時數據緩存，支持熱更新
 let runtimeData: MVItem[] | null = null;
 const getRuntimeData = async (): Promise<MVItem[]> => {
   if (!runtimeData) {
     try {
-      const rows = await MV.findAll();
-      
-      // 動態讀取所有欄位
-      runtimeData = rows.map(row => {
-        const mv = row.toJSON() as any;
-        
-        // 確保陣列型別
-        if (!mv.artist) mv.artist = [];
-        if (!mv.album) mv.album = [];
-        if (!Array.isArray(mv.artist)) mv.artist = [mv.artist];
-        if (!Array.isArray(mv.album)) mv.album = [mv.album];
-
-        return mv as MVItem;
-      });
+      runtimeData = await getV2MVsAsLegacyJSON();
     } catch (e) {
       console.error('Failed to read from DB, returning empty array.', e);
       runtimeData = [];
@@ -162,16 +151,15 @@ export class MVService {
     await sequelize.transaction(async (t) => {
       if (!partial) {
         // 全量更新：先清空資料庫
-        await MV.destroy({ where: {}, transaction: t });
+        await MVModel.destroy({ where: {}, transaction: t });
       } else if (deletedIds.length > 0) {
         // 部分更新：只刪除需要刪除的
-        await MV.destroy({ where: { id: deletedIds }, transaction: t });
+        await MVModel.destroy({ where: { id: deletedIds }, transaction: t });
       }
 
-      // 寫入/更新資料
-      for (const mv of newData) {
-        const mvData = { ...mv };
-        await MV.upsert(mvData as any, { transaction: t });
+      // 寫入/更新資料 (轉交給 V2 映射器)
+      if (newData.length > 0) {
+        await saveLegacyJSONToV2(newData, t);
       }
     });
 

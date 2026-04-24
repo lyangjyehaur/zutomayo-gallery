@@ -1,5 +1,6 @@
 import { Meilisearch } from 'meilisearch';
-import { MV, Fanart } from './pg.service.js';
+import { Fanart } from './pg.service.js';
+import { getV2MVsAsLegacyJSON } from './v2_mapper.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const MEILI_HOST = process.env.MEILI_HOST || 'http://localhost:7700';
@@ -66,9 +67,8 @@ export const syncDataToMeili = async () => {
     console.log('[Meilisearch] Starting data sync...');
 
     // 1. 處理 MVs
-    const mvs = await MV.findAll();
-    const mvDocs = mvs.map(row => {
-      const mv = row.toJSON() as any;
+    const mvs = await getV2MVsAsLegacyJSON();
+    const mvDocs = mvs.map(mv => {
       // 處理 keywords 為純文字以便搜尋
       let keywords_text = [];
       if (Array.isArray(mv.keywords)) {
