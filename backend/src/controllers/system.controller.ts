@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { SysConfigModel, sequelize } from '../models/index.js';
+import { SysConfigModel, SysDictionaryModel, sequelize } from '../models/index.js';
 import fs from 'fs';
 import path from 'path';
 import { getCountryCode, getFullGeoInfo } from '../services/geo.service.js';
@@ -140,6 +140,53 @@ export const toggleMaintenance = async (req: Request, res: Response, next: NextF
     });
 
     res.json({ success: true, data: { maintenance, type, eta } });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getDictionaries = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const dicts = await SysDictionaryModel.findAll({
+      order: [['category', 'ASC'], ['sort_order', 'ASC']]
+    });
+    res.json({ success: true, data: dicts });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateDictionaries = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { dicts, deletedIds } = req.body;
+    
+    await sequelize.transaction(async (t: any) => {
+      if (deletedIds && deletedIds.length > 0) {
+        await SysDictionaryModel.destroy({
+          where: { id: deletedIds },
+          transaction: t
+        });
+      }
+      
+      if (dicts && dicts.length > 0) {
+        for (const dict of dicts) {
+          await SysDictionaryModel.upsert({
+            id: dict.id,
+            category: dict.category,
+            code: dict.code,
+            label: dict.label,
+            description: dict.description,
+            sort_order: dict.sort_order || 0
+          }, { transaction: t });
+        }
+      }
+    });
+
+    const updatedDicts = await SysDictionaryModel.findAll({
+      order: [['category', 'ASC'], ['sort_order', 'ASC']]
+    });
+    
+    res.json({ success: true, data: updatedDicts });
   } catch (error) {
     next(error);
   }

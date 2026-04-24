@@ -16,10 +16,10 @@ export function IllustratorsPage({ mvData, metadata }: IllustratorsPageProps) {
   const navigate = useNavigate();
   const { artistId } = useParams();
   
-  const [selectedIllustrator, setSelectedIllustrator] = useState<{ name: string; snsId?: string; mvs: MVItem[]; meta?: any } | null>(null);
+  const [selectedIllustrator, setSelectedIllustrator] = useState<{ name: string; twitter?: string; mvs: MVItem[]; meta?: any } | null>(null);
 
   const illustrators = useMemo(() => {
-    const artistsMap = new Map<string, { name: string; snsId?: string; mvs: MVItem[]; meta?: any }>();
+    const artistsMap = new Map<string, { name: string; twitter?: string; mvs: MVItem[]; meta?: any }>();
     
     mvData.forEach((mv) => {
       if (mv.creators) {
@@ -29,7 +29,7 @@ export function IllustratorsPage({ mvData, metadata }: IllustratorsPageProps) {
             const meta = metadata?.artistMeta?.[a];
             artistsMap.set(a, {
               name: a,
-              snsId: meta?.hideId ? undefined : meta?.id,
+              twitter: meta?.hideId ? undefined : (meta?.twitter || meta?.id),
               meta: meta,
               mvs: [],
             });
@@ -39,7 +39,27 @@ export function IllustratorsPage({ mvData, metadata }: IllustratorsPageProps) {
       }
     });
 
-    return Array.from(artistsMap.values()).sort((a, b) => b.mvs.length - a.mvs.length);
+    return Array.from(artistsMap.values()).sort((a, b) => {
+      // 1. 根據 MV 數量排序 (多到少)
+      if (b.mvs.length !== a.mvs.length) {
+        return b.mvs.length - a.mvs.length;
+      }
+      // 2. twitter 去掉 '@'
+      const aId = a.twitter ? a.twitter.replace('@', '').toLowerCase() : '';
+      const bId = b.twitter ? b.twitter.replace('@', '').toLowerCase() : '';
+      
+      // 3. 有 twitter 的排在前面
+      if (aId && !bId) return -1;
+      if (!aId && bId) return 1;
+      
+      // 4. 都有 twitter 則按字母排序
+      if (aId && bId) {
+        return aId.localeCompare(bId);
+      }
+      
+      // 5. 都沒有 twitter 則按名字排序
+      return a.name.localeCompare(b.name);
+    });
   }, [mvData, metadata]);
 
   // 監聽 URL 路由變化，打開或關閉對應畫師 Modal
@@ -99,9 +119,9 @@ export function IllustratorsPage({ mvData, metadata }: IllustratorsPageProps) {
         {illustrators.map((artist, idx) => {
           const isTVChany = artist.name.toLowerCase() === 'tv♡chany' || artist.name.toLowerCase() === 'tvchany';
           
-          // 取得頭像網址並經過代理 (如果有 snsId 才顯示)
-          const hasSnsId = !!artist.snsId;
-          const username = hasSnsId ? artist.snsId!.replace('@', '') : '';
+          // 取得頭像網址並經過代理 (如果有 twitter 才顯示)
+          const hasSnsId = !!artist.twitter;
+          const username = hasSnsId ? artist.twitter!.replace('@', '') : '';
           const avatarUrl = hasSnsId ? `https://unavatar.io/x/${username}` : '';
           const safeAvatarUrl = hasSnsId ? getProxyImgUrl(avatarUrl, 'small') : '';
           

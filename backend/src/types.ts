@@ -65,7 +65,7 @@ export interface ArtistMeta {
   displayName?: string;
   profileUrl?: string;
   bio?: string;
-  collaborations?: string[];
+  collaborations?: any[];
   instagram?: string;
   youtube?: string;
   pixiv?: string;

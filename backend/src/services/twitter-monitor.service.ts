@@ -111,7 +111,7 @@ export const TwitterMonitorService = {
                 type: 'fanart',
                 media_type: media.type === 'video' ? 'video' : (media.type === 'animated_gif' ? 'gif' : 'image'),
                 url: media.url,
-                original_url: media.original_url || media.url,
+                original_url: (media as any).original_url || media.url,
                 thumbnail_url: media.thumbnail || null,
                 group_id: groupId
               });

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { ArtistMeta, MVItem, MVImage } from '@/lib/types';
+import { ArtistMeta, MVItem, MVMedia } from '@/lib/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export function AdminArtistsPage() {
@@ -262,7 +262,7 @@ export function AdminArtistsPage() {
                         </Button>
                         <Button 
                           onClick={() => {
-                            const newCollab: MVImage = { url: '', width: 1920, height: 1080 };
+                            const newCollab: MVMedia = { url: '', width: 1920, height: 1080 };
                             setArtistMeta(p => ({ ...p, [selectedArtist]: { ...currentMeta, collaborations: [...(currentMeta.collaborations || []), newCollab] } }))
                           }}
                           className="bg-ztmy-green text-black border-2 border-black hover:bg-ztmy-green/80 shadow-neo-sm flex-1 sm:flex-none"

@@ -26,6 +26,8 @@ import { Input } from "@/components/ui/input";
 import { AdminPage } from "@/pages/AdminPage";
 import { AdminDBPage } from "@/pages/AdminDBPage";
 import { AdminArtistsPage } from "@/pages/AdminArtistsPage";
+import { AdminAlbumsPage } from "@/pages/AdminAlbumsPage";
+import { AdminDictsPage } from "@/pages/AdminDictsPage";
 import { AdminFanArtPage } from "@/pages/AdminFanArtPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { Demo3DCardPage } from "@/pages/Demo3DCardPage";
@@ -1152,9 +1154,9 @@ function App({
                     <CommandEmpty>{t("app.no_creator_found", "找不到畫師")}</CommandEmpty>
                     <CommandGroup className="p-2 [&_[cmdk-group-items]]:flex [&_[cmdk-group-items]]:flex-col [&_[cmdk-group-items]]:gap-1">
                       {uniqueArtists.map((artist) => {
-                        const snsId = metadata?.artistMeta?.[artist]?.hideId
+                        const twitter = metadata?.artistMeta?.[artist]?.hideId
                           ? undefined
-                          : metadata?.artistMeta?.[artist]?.id;
+                          : metadata?.artistMeta?.[artist]?.twitter || metadata?.artistMeta?.[artist]?.id;
                         
                         return (
                           <CommandItem
@@ -1181,9 +1183,9 @@ function App({
                             <span lang="ja" className="whitespace-normal break-words">
                               {artist}
                             </span>
-                            {snsId && (
+                            {twitter && (
                               <span className="ml-auto text-xs opacity-50 shrink-0">
-                                {snsId}
+                                {twitter}
                               </span>
                             )}
                           </CommandItem>
@@ -2438,6 +2440,8 @@ export default function RootApp() {
             />
             <Route path="db" element={<AdminDBPage />} />
             <Route path="artists" element={<AdminArtistsPage />} />
+            <Route path="albums" element={<AdminAlbumsPage />} />
+            <Route path="dicts" element={<AdminDictsPage />} />
             <Route path="fanart" element={<AdminFanArtPage />} />
           </Route>
           <Route path="/debug/fb/:mvid?" element={<DebugFancyboxMasonry />} />

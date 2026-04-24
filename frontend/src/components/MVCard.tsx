@@ -354,7 +354,7 @@ export const MVCard = memo(function MVCard({ mv, isFav, onToggleFav, onClick, is
     .filter(a => a !== '未知' && a !== 'Unknown' && a !== 'unknown')
     .join(', ') || t('app.unknown_artist', '未知 (Unknown)');
     
-  const coverUrls = mv.images?.filter(img => img.MVImage?.usage === 'cover').map(img => img.url) || [];
+  const coverUrls = mv.images?.filter(img => img.MVMedia?.usage === 'cover').map(img => img.url) || [];
   const fallbackThumbUrl = coverUrls[0] ? getProxyImgUrl(coverUrls[0], 'thumb') : '';
   const [containerRef, containerWidth] = useContainerWidth();
   

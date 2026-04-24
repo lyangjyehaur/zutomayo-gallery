@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import type { MVItem, MVImage } from '@/lib/types';
+import type { MVItem, MVMedia } from '@/lib/types';
 import FancyboxViewer from '@/components/FancyboxViewer';
 import { GALLERY_BREAKPOINTS } from '@/components/galleryBreakpoints';
 
@@ -79,13 +79,13 @@ export default function DebugFancyboxMasonry({ mvid: propMvid }: DebugFancyboxMa
   }, [mvid]);
 
   const { images, mvTitle } = useMemo(() => {
-    if (!fetchedData) return { images: fallbackImages as unknown as MVImage[], mvTitle: '' };
+    if (!fetchedData) return { images: fallbackImages as unknown as MVMedia[], mvTitle: '' };
 
     if (!Array.isArray(fetchedData)) {
       return { images: fetchedData.images || [], mvTitle: fetchedData.title || '' };
     }
 
-    const merged: MVImage[] = fetchedData.flatMap((mv) =>
+    const merged: MVMedia[] = fetchedData.flatMap((mv) =>
       (mv.images || []).map((img, idx) => ({
         ...img,
         caption: img.caption || `<span lang="ja">${mv.title}</span>_${idx}`,

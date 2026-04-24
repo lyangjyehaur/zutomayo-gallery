@@ -341,7 +341,9 @@ export default function AdminLayout() {
   const navItems = [
     { path: '/admin', label: 'MV 管理', icon: 'hn-video', subLabel: 'MV_MANAGER' },
     { path: '/admin/artists', label: '畫師管理', icon: 'hn-user', subLabel: 'ARTISTS' },
+    { path: '/admin/albums', label: '專輯管理', icon: 'hn-disc', subLabel: 'ALBUMS' },
     { path: '/admin/fanart', label: 'FanArt', icon: 'hn-image', subLabel: 'FANART' },
+    { path: '/admin/dicts', label: '字典管理', icon: 'hn-book', subLabel: 'DICTIONARIES' },
     { path: '/admin/db', label: '資料庫', icon: 'hn-table', subLabel: 'DATABASE' }
   ];
 

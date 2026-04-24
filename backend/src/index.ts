@@ -11,6 +11,7 @@ import fanartRoutes from './routes/fanart.routes.js';
 import systemRoutes from './routes/system.routes.js';
 import sitemapRoutes from './routes/sitemap.routes.js';
 import webhookRoutes from './routes/webhook.routes.js';
+import albumRoutes from './routes/album.routes.js';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { sequelize } from './services/pg.service.js';
 import { initGeoService } from './services/geo.service.js';
@@ -188,6 +189,7 @@ app.use('/api/', (req, res, next) => {
 // API 路由註冊
 app.use('/api/auth', authRoutes);
 app.use('/api/mvs', mvRoutes);
+app.use('/api/album', albumRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/fanarts', fanartRoutes);
 app.use('/api/webhook', webhookRoutes);

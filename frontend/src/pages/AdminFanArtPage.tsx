@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { MVItem, MVImage } from '@/lib/types';
+import { MVItem, MVMedia } from '@/lib/types';
 
 export function AdminFanArtPage() {
   const navigate = useNavigate();
@@ -13,7 +13,7 @@ export function AdminFanArtPage() {
   const [tweetUrl, setTweetUrl] = useState('');
   const [isParsing, setIsParsing] = useState(false);
   const [batchStatus, setBatchStatus] = useState<{ total: number, current: number, failedUrls: string[] } | null>(null);
-  const [parsedImages, setParsedImages] = useState<MVImage[]>([]);
+  const [parsedImages, setParsedImages] = useState<MVMedia[]>([]);
   
   const [selectedMvIds, setSelectedMvIds] = useState<Set<string>>(new Set());
   const [isSaving, setIsSaving] = useState(false);
@@ -272,7 +272,7 @@ export function AdminFanArtPage() {
                     />
                     <div className="flex flex-col flex-1 min-w-0">
                       <span className="font-bold truncate text-sm">{mv.title}</span>
-                      <span className="text-[10px] opacity-50 font-mono truncate">{mv.date} | {Array.isArray(mv.creators) ? mv.creators.join(', ') : mv.creators}</span>
+                      <span className="text-[10px] opacity-50 font-mono truncate">{mv.date} | {mv.creators?.map(c => c.name || c).join(', ')}</span>
                     </div>
                     {fanartCount > 0 && (
                       <span className="text-[10px] bg-ztmy-green text-black border border-black px-2 py-0.5 rounded-full font-bold">

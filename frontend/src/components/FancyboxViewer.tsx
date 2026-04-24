@@ -9,14 +9,14 @@ if (typeof window !== 'undefined') {
   (window as any).Fancybox = NativeFancybox;
 }
 
-import { MVImage } from '@/lib/types';
+import { MVMedia } from '@/lib/types';
 import { getProxyImgUrl, isMediaVideo } from '@/lib/image';
 import { GALLERY_BREAKPOINTS } from '@/components/galleryBreakpoints';
 export { GALLERY_BREAKPOINTS } from '@/components/galleryBreakpoints';
 import { useTranslation } from 'react-i18next';
 
 interface FancyboxViewerProps {
-  images: MVImage[];
+  images: MVMedia[];
   mvTitle?: string;
   mvId?: string;
   itemsPerPage?: number;
@@ -512,7 +512,11 @@ export default function FancyboxViewer({
           isVideo, // 加入 isVideo 標記
           isGif,   // 加入 isGif 標記
           groupId: img.groupId,
-          tweetUrl: img.fanart_meta?.tweet_url,
+          tweetUrl: img.group?.source_url,
+          tweetText: img.group?.source_text,
+          tweetAuthor: img.group?.author_name,
+          tweetHandle: img.group?.author_handle,
+          tweetDate: img.group?.post_date,
           originalUrl: img.url, // 加入原始網址供去重判斷
           ...img // 保留其他可能的新增欄位
         };

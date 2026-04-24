@@ -558,7 +558,7 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
                       data-umami-event-title={mv?.title}
                     >
                       <div className="absolute inset-0 z-0">
-                        <CoverCarousel coverImages={mv?.images?.filter(img => img.MVImage?.usage === 'cover').map(img => img.url) || []} title={mv?.title || ''} isPaused={isLightboxOpen} forceLoad={true} hideCrt={true} />
+                        <CoverCarousel coverImages={mv?.images?.filter(img => img.MVMedia?.usage === 'cover').map(img => img.url) || []} title={mv?.title || ''} isPaused={isLightboxOpen} forceLoad={true} hideCrt={true} />
                       </div>
                       <div className={`absolute inset-0 transition-colors z-10 ${videoPlatform === 'youtube' && isChinaIP ? 'bg-black/60' : 'bg-black/40 group-hover:bg-black/20'}`} />
                       <div className="absolute inset-0 opacity-20 pointer-events-none crt-lines z-15"></div>
@@ -661,9 +661,9 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
                     <div className="space-y-4">
                     <h4 className="font-bold border-b-3 border-black pb-2 flex items-center gap-2 uppercase tracking-widest">
                       <i className="hn hn-image text-xl text-ztmy-green"></i>{t("app.reference_art", "設定資料圖")}</h4>
-                    {mv?.images && mv.images.filter(img => img.MVImage?.usage !== 'cover').length > 0 ? (
+                    {mv?.images && mv.images.filter(img => img.MVMedia?.usage !== 'cover').length > 0 ? (
                       <GalleryViewer
-                        images={mv.images.filter(img => img.MVImage?.usage !== 'cover')}
+                        images={mv.images.filter(img => img.MVMedia?.usage !== 'cover')}
                         mvTitle={mv.title}
                         mvId={mv.id}
                         itemsPerPage={12}

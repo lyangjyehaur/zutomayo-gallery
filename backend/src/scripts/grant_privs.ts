@@ -1,3 +1,4 @@
+// @ts-ignore
 import pkg from 'pg';
 const { Client } = pkg;
 
@@ -23,7 +24,7 @@ client.connect()
     console.log('Granted all necessary privileges to zutomayo_gallery_test');
     return client.end();
   })
-  .catch(err => {
+  .catch((err: any) => {
     console.error('Connection error', err);
     process.exit(1);
   });

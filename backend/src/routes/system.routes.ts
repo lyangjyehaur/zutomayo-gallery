@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getSystemStatus, toggleMaintenance, getClientGeo } from '../controllers/system.controller.js';
+import { getSystemStatus, toggleMaintenance, getClientGeo, getDictionaries, updateDictionaries } from '../controllers/system.controller.js';
 import { syncImagesToR2 } from '../controllers/r2.controller.js';
 import { rebuildR2 } from '../controllers/r2_rebuild.js';
 import { requireAdmin } from '../middleware/auth.middleware.js';
@@ -44,6 +44,12 @@ router.get('/geo', getClientGeo);
 
 // Admin: Toggle maintenance mode
 router.put('/maintenance', requireAdmin, toggleMaintenance);
+
+// Admin: Get dictionaries
+router.get('/dicts', getDictionaries);
+
+// Admin: Update dictionaries
+router.post('/dicts', requireAdmin, updateDictionaries);
 
 // Admin: Sync existing Twitter images to R2 Bucket
 router.post('/r2-sync', requireR2SyncAuth, syncImagesToR2);

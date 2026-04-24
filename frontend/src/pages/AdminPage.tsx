@@ -769,9 +769,10 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
   const availableAlbums = useMemo(() => {
     const set = new Set<string>();
     mvData.forEach((mv) => {
-      if (Array.isArray(mv.album)) {
-        mv.album.forEach((a) => {
-          if (typeof a === 'string' && a.trim() !== '') set.add(a);
+      if (Array.isArray(mv.albums)) {
+        mv.albums.forEach((a: any) => {
+          const name = a.name || a;
+          if (typeof name === 'string' && name.trim() !== '') set.add(name);
         });
       }
     });
@@ -781,12 +782,13 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
   const availableArtists = useMemo(() => {
     const set = new Set<string>();
     mvData.forEach((mv) => {
-      if (Array.isArray(mv.artist)) {
-        mv.artist.forEach((a) => {
-          if (typeof a === 'string' && a.trim() !== '') set.add(a);
+      if (Array.isArray(mv.creators)) {
+        mv.creators.forEach((a: any) => {
+          const name = a.name || a;
+          if (typeof name === 'string' && name.trim() !== '') set.add(name);
         });
-      } else if (typeof mv.artist === 'string' && (mv.artist as string).trim() !== '') {
-        set.add(mv.artist as string);
+      } else if (typeof mv.creators === 'string' && (mv.creators as string).trim() !== '') {
+        set.add(mv.creators as string);
       }
     });
     return Array.from(set).sort();
@@ -860,8 +862,9 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
     const map: Record<string, string> = {};
     mvData.forEach((mv) => {
       if (!mv.date) return;
-      mv.album?.forEach((a) => {
-        if (!map[a] || mv.date < map[a]) map[a] = mv.date.replace(/\//g, '/');
+      mv.albums?.forEach((a: any) => {
+        const name = a.name || a;
+        if (!map[name] || mv.date < map[name]) map[name] = mv.date.replace(/\//g, '/');
       });
     });
     return map;
@@ -1512,7 +1515,7 @@ const currentMV = data[activeIndex];
   };
 
   // 取得群組標識 (A, B, C...)
-  const getGroupLetter = (groupId: string | undefined, allImages: MVImage[] | undefined) => {
+  const getGroupLetter = (groupId: string | undefined, allImages: MVMedia[] | undefined) => {
     if (!groupId || !allImages) return '';
     const uniqueGroups = Array.from(new Set(allImages.filter(img => img.groupId).map(img => img.groupId)));
     const index = uniqueGroups.indexOf(groupId);
@@ -1666,13 +1669,11 @@ const currentMV = data[activeIndex];
       title: "新影片標題",
       year: new Date().getFullYear().toString(),
       date: "",
-      album: [],
-      artist: ["Waboku"], // 改為陣列
       youtube: "",
       bilibili: "",
       description: "",
       images: [],
-      creators: [],
+      creators: [{ name: "Waboku" }],
       albums: [],
       keywords: []
     };
@@ -2061,9 +2062,9 @@ const currentMV = data[activeIndex];
                     </span>
                   </label>
                   <Textarea 
-                    value={currentMV.album?.join('\n')} 
-                    onChange={(e) => updateField('album', e.target.value.split('\n').map(s => s.trim()).filter(s => s !== ''))} 
-                    className={`min-h-[50px] font-sans text-sm ${getErrorClass(currentMV.album)}`}
+                    value={currentMV.albums?.map((a: any) => a.name || a).join('\n') || ''} 
+                    onChange={(e) => updateField('albums', e.target.value.split('\n').map(s => s.trim()).filter(s => s !== '').map(name => ({ name })))} 
+                    className={`min-h-[50px] font-sans text-sm ${getErrorClass(currentMV.albums)}`}
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
@@ -2149,11 +2150,11 @@ const currentMV = data[activeIndex];
                     </span>
                   </label>
                   <Textarea 
-                    value={(currentMV.images?.filter(img => img.MVImage?.usage === 'cover').map(img => img.url) || []).join('\n')} 
+                    value={(currentMV.images?.filter(img => img.MVMedia?.usage === 'cover').map(img => img.url) || []).join('\n')} 
                     onChange={(e) => {
                       const newUrls = e.target.value.split('\n').map(s => s.trim()).filter(s => s !== '');
-                      const otherImages = currentMV.images?.filter(img => img.MVImage?.usage !== 'cover') || [];
-                      const newCovers = newUrls.map((url, i) => ({ url, type: 'cover', MVImage: { usage: 'cover', order_index: i } }));
+                      const otherImages = currentMV.images?.filter(img => img.MVMedia?.usage !== 'cover') || [];
+                      const newCovers = newUrls.map((url, i) => ({ url, type: 'cover', MVMedia: { usage: 'cover', order_index: i } }));
                       updateField('images', [...newCovers, ...otherImages]);
                     }} 
                     className={`min-h-[100px] font-sans text-sm ${getErrorClass(currentMV.images)}`}
@@ -2165,9 +2166,9 @@ const currentMV = data[activeIndex];
                     <span className="text-[10px] font-mono opacity-40 normal-case">Artist / Animator</span>
                   </label>
                   <Textarea 
-                    value={currentMV.artist?.join('\n')} 
-                    onChange={(e) => updateField('artist', e.target.value.split('\n').map(s => s.trim()).filter(s => s !== ''))} 
-                    className={`min-h-[50px] font-sans text-sm ${getErrorClass(currentMV.artist)}`}
+                    value={currentMV.creators?.map((a: any) => a.name || a).join('\n') || ''} 
+                    onChange={(e) => updateField('creators', e.target.value.split('\n').map(s => s.trim()).filter(s => s !== '').map(name => ({ name })))} 
+                    className={`min-h-[50px] font-sans text-sm ${getErrorClass(currentMV.creators)}`}
                   />
                 </div>
               </div>
@@ -3018,253 +3019,29 @@ const currentMV = data[activeIndex];
             </section>
             
             <section className="space-y-4">
-              <div className="flex items-start gap-2 border-b-2 border-black pb-2">
-                <div className="flex flex-col gap-1">
-                  <h3 className="text-sm font-black uppercase bg-main text-main-foreground px-2 py-1">01 專輯日期</h3>
-                  <span className="text-[10px] font-bold opacity-50 font-mono normal-case ml-2">01_Album_Dates</span>
+              <div className="flex flex-col gap-2 border-2 border-black p-4 bg-card shadow-neo-sm">
+                <span className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
+                  <i className="hn hn-link" /> 其他管理頁面
+                </span>
+                <div className="flex gap-4 mt-2">
+                  <Button variant="neutral" onClick={() => window.open('/admin/albums', '_blank')} className="border-2 border-black bg-white">
+                    前往專輯管理 <i className="hn hn-arrow-right ml-2" />
+                  </Button>
+                  <Button variant="neutral" onClick={() => window.open('/admin/artists', '_blank')} className="border-2 border-black bg-white">
+                    前往畫師管理 <i className="hn hn-arrow-right ml-2" />
+                  </Button>
+                  <Button variant="neutral" onClick={() => window.open('/admin/dicts', '_blank')} className="border-2 border-black bg-white">
+                    前往字典管理 <i className="hn hn-arrow-right ml-2" />
+                  </Button>
                 </div>
-                <span className="text-[10px] font-bold opacity-50">手動覆蓋專輯發布日期</span>
-              </div>
-
-              <div className="space-y-2">
-                <div className="text-[10px] font-bold uppercase opacity-50">現有專輯</div>
-                <div className="max-h-40 overflow-y-auto border-2 border-black/10 bg-black/5 p-2">
-                  <div className="flex flex-wrap gap-2">
-                    {Array.from(new Set(availableAlbums)).filter(a => typeof a === 'string').sort((a, b) => a.localeCompare(b)).map((album) => (
-                      <Button
-                        key={album}
-                        variant="neutral"
-                        size="sm"
-                        className="h-7 px-2 text-[10px] font-bold bg-white"
-                        onClick={() => {
-                          setLocalMetadata((prev) => {
-                            if (Object.prototype.hasOwnProperty.call(prev.albumMeta || {}, album)) return prev;
-                            return {
-                              ...prev,
-                              albumMeta: {
-                                ...(prev.albumMeta || {}),
-                                [album]: { date: albumDefaultDateMap[album] || "", hideDate: false },
-                              },
-                            };
-                          });
-                        }}
-                      >
-                        <span className="truncate max-w-[180px]">{album}</span>
-                        <span className="ml-2 font-mono opacity-60 shrink-0">
-                          {albumDefaultDateMap[album] || "--"}
-                        </span>
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Object.entries(localMetadata.albumMeta || {}).map(([album, meta], idx) => (
-                  <div key={idx} className="flex flex-col gap-2 border-2 border-black p-3 bg-card shadow-neo-sm relative group">
-                    <Input 
-                      value={album} 
-                      onChange={(e) => {
-                        const newKey = e.target.value;
-                        setLocalMetadata(prev => {
-                          const newAlbumMeta = { ...prev.albumMeta };
-                          const oldVal = newAlbumMeta[album];
-                          delete newAlbumMeta[album];
-                          newAlbumMeta[newKey] = oldVal;
-                          return { ...prev, albumMeta: newAlbumMeta };
-                        });
-                      }} 
-                      placeholder="專輯名稱" 
-                      className="w-full h-8 text-xs font-bold border-2 border-transparent hover:border-black/20 focus:border-black bg-black/5 rounded-none"
-                    />
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 flex items-center bg-black/5 px-2">
-                        <span className="text-[10px] font-bold opacity-50 shrink-0 mr-2">發布</span>
-                        <Input 
-                          value={meta?.date || ""} 
-                          onChange={(e) => {
-                            const newVal = e.target.value;
-                            setLocalMetadata(prev => ({
-                              ...prev,
-                              albumMeta: { ...prev.albumMeta, [album]: { ...(prev.albumMeta?.[album] || {}), date: newVal } }
-                            }));
-                          }} 
-                          placeholder="YYYY/MM/DD (可空)" 
-                          className="w-full h-8 text-xs font-mono text-center border-none bg-transparent shadow-none px-0"
-                        />
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0 bg-black/5 px-2 h-8" title="隱藏日期">
-                        <Switch
-                          checked={!!meta?.hideDate}
-                          onCheckedChange={(checked) => {
-                            setLocalMetadata((prev) => ({
-                              ...prev,
-                              albumMeta: { ...prev.albumMeta, [album]: { ...(prev.albumMeta?.[album] || {}), hideDate: checked } },
-                            }));
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <Button 
-                      variant="neutral" 
-                      size="icon" 
-                      className="absolute -top-3 -right-3 h-6 w-6 rounded-full border-2 border-black bg-red-500 text-white hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                      onClick={() => {
-                        setLocalMetadata(prev => {
-                          const newAlbumMeta = { ...prev.albumMeta };
-                          delete newAlbumMeta[album];
-                          return { ...prev, albumMeta: newAlbumMeta };
-                        });
-                      }}
-                    >
-                      <i className="hn hn-trash text-[10px]" />
-                    </Button>
-                  </div>
-                ))}
-                
-                <Button 
-                  variant="neutral" 
-                  className="h-full min-h-[88px] border-2 border-dashed border-black/30 opacity-50 hover:opacity-100 flex flex-col items-center justify-center gap-2 bg-transparent"
-                  onClick={() => {
-                    const newKey = `新專輯_${Object.keys(localMetadata.albumMeta || {}).length + 1}`;
-                    setLocalMetadata(prev => ({
-                      ...prev,
-                      albumMeta: { ...prev.albumMeta, [newKey]: { date: new Date().getFullYear().toString(), hideDate: false } }
-                    }));
-                  }}
-                >
-                  <i className="hn hn-plus text-xl" /> 
-                  <span className="text-xs font-bold">新增專輯發布日期</span>
-                </Button>
               </div>
             </section>
-
-            {/* 畫師 ID 設定 */}
-            <div className="space-y-4">
-              <div className="flex items-start gap-2 border-b-2 border-black pb-2">
-                <div className="flex flex-col gap-1">
-                  <h3 className="text-sm font-black uppercase bg-main text-main-foreground px-2 py-1">02 畫師 ID</h3>
-                  <span className="text-[10px] font-bold opacity-50 font-mono normal-case ml-2">02_Artist_IDs</span>
-                </div>
-                <span className="text-[10px] font-bold opacity-50">管理畫師關聯帳號/ID</span>
-              </div>
-
-              <div className="space-y-2">
-                <div className="text-[10px] font-bold uppercase opacity-50">現有畫師</div>
-                <div className="max-h-40 overflow-y-auto border-2 border-black/10 bg-black/5 p-2">
-                  <div className="flex flex-wrap gap-2">
-                    {Array.from(new Set(availableArtists)).filter(a => typeof a === 'string').sort((a, b) => a.localeCompare(b)).map((artist) => (
-                      <Button
-                        key={artist}
-                        variant="neutral"
-                        size="sm"
-                        className="h-7 px-2 text-[10px] font-bold bg-white"
-                        onClick={() => {
-                          setLocalMetadata((prev) => {
-                            if (Object.prototype.hasOwnProperty.call(prev.artistMeta || {}, artist)) return prev;
-                            return {
-                              ...prev,
-                              artistMeta: {
-                                ...(prev.artistMeta || {}),
-                                [artist]: { id: "", hideId: false },
-                              },
-                            };
-                          });
-                        }}
-                      >
-                        <span className="truncate max-w-[220px]">{artist}</span>
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Object.entries(localMetadata.artistMeta || {}).map(([artist, meta], idx) => (
-                  <div key={idx} className="flex flex-col gap-2 border-2 border-black p-3 bg-card shadow-neo-sm relative group">
-                    <Input 
-                      value={artist} 
-                      onChange={(e) => {
-                        const newKey = e.target.value;
-                        setLocalMetadata(prev => {
-                          const newArtistMeta = { ...prev.artistMeta };
-                          const oldVal = newArtistMeta[artist];
-                          delete newArtistMeta[artist];
-                          newArtistMeta[newKey] = oldVal;
-                          return { ...prev, artistMeta: newArtistMeta };
-                        });
-                      }} 
-                      placeholder="畫師名稱" 
-                      className="w-full h-8 text-xs font-bold border-2 border-transparent hover:border-black/20 focus:border-black bg-black/5 rounded-none"
-                    />
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 flex items-center bg-black/5 px-2">
-                        <span className="text-[10px] font-bold opacity-50 shrink-0 mr-2"><i className="hn hn-twitter" /></span>
-                        <Input 
-                          value={meta?.id || ""} 
-                          onChange={(e) => {
-                            const newVal = e.target.value;
-                            setLocalMetadata(prev => ({
-                              ...prev,
-                              artistMeta: { ...prev.artistMeta, [artist]: { ...(prev.artistMeta?.[artist] || {}), id: newVal } }
-                            }));
-                          }} 
-                          placeholder="社群 ID" 
-                          className="w-full h-8 text-xs font-mono text-left border-none bg-transparent shadow-none px-0"
-                        />
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0 bg-black/5 px-2 h-8" title="隱藏社群 ID">
-                        <Switch
-                          checked={!!meta?.hideId}
-                          onCheckedChange={(checked) => {
-                            setLocalMetadata((prev) => ({
-                              ...prev,
-                              artistMeta: { ...prev.artistMeta, [artist]: { ...(prev.artistMeta?.[artist] || {}), hideId: checked } },
-                            }));
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <Button 
-                      variant="neutral" 
-                      size="icon" 
-                      className="absolute -top-3 -right-3 h-6 w-6 rounded-full border-2 border-black bg-red-500 text-white hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                      onClick={() => {
-                        setLocalMetadata(prev => {
-                          const newArtistMeta = { ...prev.artistMeta };
-                          delete newArtistMeta[artist];
-                          return { ...prev, artistMeta: newArtistMeta };
-                        });
-                      }}
-                    >
-                      <i className="hn hn-trash text-[10px]" />
-                    </Button>
-                  </div>
-                ))}
-                
-                <Button 
-                  variant="neutral" 
-                  className="h-full min-h-[88px] border-2 border-dashed border-black/30 opacity-50 hover:opacity-100 flex flex-col items-center justify-center gap-2 bg-transparent"
-                  onClick={() => {
-                    const newKey = `新畫師_${Object.keys(localMetadata.artistMeta || {}).length + 1}`;
-                    setLocalMetadata(prev => ({
-                      ...prev,
-                      artistMeta: { ...prev.artistMeta, [newKey]: { id: "", hideId: false } }
-                    }));
-                  }}
-                >
-                  <i className="hn hn-plus text-xl" /> 
-                  <span className="text-xs font-bold">新增畫師 ID</span>
-                </Button>
-              </div>
-            </div>
-
-            {/* Passkeys 設定 */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b-2 border-black pb-2">
-                <div className="flex items-center gap-2">
+          </div>
+            <div className="space-y-4 pt-4 border-t-2 border-black">
+              <div className="flex items-start justify-between border-b-2 border-black pb-2">
+                <div className="flex items-start gap-2">
                   <div className="flex flex-col gap-1">
-                    <h3 className="text-sm font-black uppercase bg-main text-main-foreground px-2 py-1">03 登入裝置（Passkey）</h3>
+                    <h3 className="text-sm font-black uppercase bg-main text-main-foreground px-2 py-1">03 Passkeys</h3>
                     <span className="text-[10px] font-bold opacity-50 font-mono normal-case ml-2">03_Passkeys</span>
                   </div>
                   <span className="text-[10px] font-bold opacity-50">生物辨識 / 設備登入管理</span>
@@ -3300,7 +3077,6 @@ const currentMV = data[activeIndex];
               </div>
             </div>
 
-          </div>
 
           <DialogFooter className="p-4 bg-secondary-background border-t-4 border-black flex gap-4 sm:justify-end">
             <Button 

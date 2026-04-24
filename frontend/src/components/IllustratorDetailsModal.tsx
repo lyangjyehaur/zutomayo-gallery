@@ -13,7 +13,7 @@ import { MVItem, ArtistMeta } from '@/lib/types';
 import FancyboxViewer from '@/components/FancyboxViewer';
 
 interface IllustratorDetailsModalProps {
-  illustrator: { name: string; snsId?: string; mvs: MVItem[]; meta?: ArtistMeta } | null;
+  illustrator: { name: string; twitter?: string; mvs: MVItem[]; meta?: ArtistMeta } | null;
   onClose: () => void;
 }
 
@@ -131,15 +131,15 @@ export function IllustratorDetailsModal({ illustrator, onClose }: IllustratorDet
               
               {/* 社群與網站連結 */}
               <div className="flex items-center gap-2 flex-wrap">
-                {illustrator.snsId && (
+                {illustrator.twitter && (
                   <a 
-                    href={`https://x.com/${illustrator.snsId.replace('@', '')}`}
+                    href={`https://x.com/${illustrator.twitter.replace('@', '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 bg-black text-white px-3 py-2 text-xs font-bold hover:bg-main hover:text-black transition-colors border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none"
                   >
                     <i className="hn hn-x text-sm"></i>
-                    <span>{illustrator.snsId}</span>
+                    <span>{illustrator.twitter}</span>
                   </a>
                 )}
                 {illustrator.meta?.instagram && (

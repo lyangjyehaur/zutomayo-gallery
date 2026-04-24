@@ -1,4 +1,4 @@
-import { ArtistModel, AlbumModel, SysConfigModel, SysAnnouncementModel } from '../models/index.js';
+import { ArtistModel, AlbumModel, SysConfigModel, SysAnnouncementModel, MediaModel, ArtistMediaModel } from '../models/index.js';
 import { sequelize } from '../models/index.js';
 import { ArtistMeta } from '../types.js';
 
@@ -113,12 +113,29 @@ const normalizeMetadata = (raw: unknown): MetadataResponse => {
 export const getMetadata = async (): Promise<MetadataResponse> => {
   // 1. 取得畫師資料 (從 V2 ArtistModel)
   const artists = await ArtistModel.findAll();
+  const artistMediaList = await ArtistMediaModel.findAll();
+  const mediaList = await MediaModel.findAll({ where: { type: 'collaboration' } });
+  
   const artistMeta: Record<string, ArtistMeta> = {};
   for (const row of artists) {
     const data = row.toJSON() as any;
+    
+    // Find collaborations for this artist
+    const mediaIds = artistMediaList.filter(am => (am as any).artist_id === data.id).map(am => (am as any).media_id);
+    const artistCollaborations = mediaList.filter(m => mediaIds.includes((m as any).id)).map(m => {
+      const media = m.toJSON() as any;
+      return {
+        url: media.url,
+        thumbnail: media.thumbnail_url || undefined,
+        width: media.width,
+        height: media.height,
+        type: media.media_type,
+        tweetUrl: media.original_url,
+      };
+    });
+
     artistMeta[data.name] = { 
       ...(data.twitter ? { twitter: data.twitter } : {}), 
-      // bio, profile_url, etc.
       ...(data.profile_url ? { profileUrl: data.profile_url } : {}),
       ...(data.bio ? { bio: data.bio } : {}),
       ...(data.instagram ? { instagram: data.instagram } : {}),
@@ -126,6 +143,7 @@ export const getMetadata = async (): Promise<MetadataResponse> => {
       ...(data.pixiv ? { pixiv: data.pixiv } : {}),
       ...(data.tiktok ? { tiktok: data.tiktok } : {}),
       ...(data.website ? { website: data.website } : {}),
+      ...(artistCollaborations.length > 0 ? { collaborations: artistCollaborations } : {})
     };
   }
 
@@ -166,8 +184,7 @@ export const saveMetadata = async (data: MetadataResponse): Promise<void> => {
     if (data.artistMeta) {
       for (const [name, rawMeta] of Object.entries(data.artistMeta)) {
         const meta = rawMeta as ArtistMeta;
-        await ArtistModel.upsert({
-          id: meta.id, // we might not have id, findOrCreate first? Artist name is unique. Wait, ArtistModel name is unique.
+        const artistData = {
           name,
           twitter: meta.twitter || meta.id || '',
           profile_url: meta.profileUrl || '',
@@ -177,18 +194,62 @@ export const saveMetadata = async (data: MetadataResponse): Promise<void> => {
           pixiv: meta.pixiv || '',
           tiktok: meta.tiktok || '',
           website: meta.website || '',
-        }, { transaction: t });
+        };
+        const artist = await ArtistModel.findOne({ where: { name }, transaction: t });
+        let artistId: string;
+        if (artist) {
+          await artist.update(artistData, { transaction: t });
+          artistId = (artist as any).id;
+        } else {
+          const newArtist = await ArtistModel.create(artistData, { transaction: t });
+          artistId = (newArtist as any).id;
+        }
+
+        // Save collaborations
+        if (meta.collaborations) {
+          // Delete existing collaborations
+          const existingLinks = await ArtistMediaModel.findAll({ where: { artist_id: artistId }, transaction: t });
+          if (existingLinks.length > 0) {
+            const mediaIds = existingLinks.map(l => (l as any).media_id);
+            await ArtistMediaModel.destroy({ where: { artist_id: artistId }, transaction: t });
+            await MediaModel.destroy({ where: { id: mediaIds }, transaction: t });
+          }
+
+          // Insert new ones
+          for (const collab of meta.collaborations) {
+            const mediaData = {
+              type: 'collaboration',
+              media_type: collab.type || 'image',
+              url: collab.url,
+              original_url: collab.tweetUrl || collab.url,
+              thumbnail_url: collab.thumbnail || null,
+              width: collab.width || null,
+              height: collab.height || null,
+            };
+            const newMedia = await MediaModel.create(mediaData, { transaction: t });
+            await ArtistMediaModel.create({
+              artist_id: artistId,
+              media_id: (newMedia as any).id
+            }, { transaction: t });
+          }
+        }
       }
     }
 
     if (data.albumMeta) {
       for (const [name, rawMeta] of Object.entries(data.albumMeta)) {
         const meta = rawMeta as AlbumMeta;
-        await AlbumModel.upsert({
+        const albumData = {
           name,
           release_date: meta.date ? new Date(meta.date.replace(/\//g, '-')) : null,
           hide_date: meta.hideDate || false,
-        }, { transaction: t });
+        };
+        const album = await AlbumModel.findOne({ where: { name }, transaction: t });
+        if (album) {
+          await album.update(albumData, { transaction: t });
+        } else {
+          await AlbumModel.create(albumData, { transaction: t });
+        }
       }
     }
 

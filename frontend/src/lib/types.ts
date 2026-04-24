@@ -1,18 +1,45 @@
-export interface MVImage {
+export interface MVMedia {
+  id?: string;
+  type: string;
+  media_type?: string;
   url: string;
-  caption: string;
-  richText?: string;
-  alt?: string;
+  original_url?: string;
+  thumbnail_url?: string;
+  caption?: string;
   width?: number;
   height?: number;
-  tweetUrl?: string;
-  thumbnail?: string;
-  groupId?: string;
+  group?: {
+    id?: string;
+    title?: string;
+    source_url?: string;
+    source_text?: string;
+    author_name?: string;
+    author_handle?: string;
+    post_date?: string;
+    status?: string;
+  };
+  MVMedia?: {
+    usage: string;
+    order_index: number;
+  };
+  [key: string]: any;
+}
+
+export interface MVCreator {
+  id?: string;
+  name: string;
+  [key: string]: any;
+}
+
+export interface MVAlbum {
+  id?: string;
+  name: string;
   [key: string]: any;
 }
 
 export interface MVKeyword {
-  text: string;
+  id?: string;
+  name: string;
   lang?: string;
   [key: string]: any;
 }
@@ -22,20 +49,20 @@ export interface MVItem {
   title: string;
   year: string;
   date: string;
-  album: string[];
-  artist: string[]; // 支援多畫師
   youtube: string;
   bilibili: string;
   description: string;
   autoLoadMore?: boolean; // 是否開啟自動載入下一頁 (前台用)
-  images: MVImage[];
-  coverImages: string[];
+  creators: MVCreator[];
+  albums: MVAlbum[];
   keywords: MVKeyword[];
+  images: MVMedia[];
   [key: string]: any;
 }
 
 export interface ArtistMeta {
   id?: string; // 通常用作 Twitter/X 帳號
+  twitter?: string;
   hideId?: boolean;
   displayName?: string;
   profileUrl?: string; // 個人網站 (舊)
@@ -46,5 +73,5 @@ export interface ArtistMeta {
   tiktok?: string;
   bio?: string;
   dataId?: string;
-  collaborations?: MVImage[];
+  collaborations?: MVMedia[];
 }
