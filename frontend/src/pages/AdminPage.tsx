@@ -1922,8 +1922,8 @@ const currentMV = data[activeIndex];
         </div>
 
         {/* 右側表單 */}
-        <div className="flex-1 h-full overflow-y-auto p-12 custom-scrollbar bg-card/50">
-          <div className="max-w-4xl mx-auto space-y-12 pb-24">
+        <div className="flex-1 h-full overflow-y-auto p-4 md:p-12 custom-scrollbar bg-card/50">
+          <div className="max-w-6xl mx-auto space-y-12 pb-24">
             
             {/* 分頁導航列 */}
             <div className="flex gap-2 mb-8 border-b-4 border-black/20 pb-4 overflow-x-auto sticky top-0 z-20 bg-background/80 backdrop-blur pt-2">
@@ -2611,7 +2611,8 @@ const currentMV = data[activeIndex];
                                     />
                                   )}
                                 </div>
-                              )})}
+                              );
+                              })}
                               
                               <div className="pt-2 border-t-2 border-dashed border-black/10">
                                 <Button 
@@ -2704,51 +2705,53 @@ const currentMV = data[activeIndex];
                   Tip: 點擊「批量推文解析」可一次貼上多行 Twitter 網址，並自動分為同一個群組
                 </p>
               </div>
+              </div>
             </section>
             </div>
-                        {/* 數據架構維護工具 (Schema Maintenance) */}
+
+            {/* 數據架構維護工具 (Schema Maintenance) */}
             <div className={activeSection !== 'schema' ? 'hidden' : ''}>
-            <section className="p-6 border-4 border-dashed border-black bg-main/5 space-y-4">
-              <div className="flex items-start gap-2">
-                <div className="flex flex-col gap-1">
-                  <h3 className="text-sm font-black uppercase text-white bg-black px-2">00 資料架構維護</h3>
-                  <span className="text-[10px] font-bold opacity-50 text-black font-mono normal-case ml-2">00_Schema_Maintenance</span>
+              <section className="p-6 border-4 border-dashed border-black bg-main/5 space-y-4">
+                <div className="flex items-start gap-2">
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-sm font-black uppercase text-white bg-black px-2">00 資料架構維護</h3>
+                    <span className="text-[10px] font-bold opacity-50 text-black font-mono normal-case ml-2">00_Schema_Maintenance</span>
+                  </div>
+                  <span className="text-[10px] font-bold opacity-50 text-black">自動為前端表單擴充新欄位</span>
                 </div>
-                <span className="text-[10px] font-bold opacity-50 text-black">自動為前端表單擴充新欄位</span>
-              </div>
-              <p className="text-xs font-bold text-black/70 mb-2">
-                提示：後端資料庫已支援自動擴充，此處操作僅用於在前端編輯器中為所有 MV 條目預設一個空值，以方便你進行編輯。
-                如果需要新增資料庫實體欄位，請前往 <code>backend/src/services/db.service.ts</code> 的 <code>expectedColumns</code> 陣列中新增。
-              </p>
-              <div className="flex flex-wrap md:flex-nowrap gap-4 items-end">
-                <div className="flex-1 space-y-2">
-                  <label className="text-[10px] font-black uppercase flex flex-col leading-tight">
-                    <span className="opacity-70">新欄位鍵名（例如：director）</span>
-                    <span className="font-mono opacity-50 normal-case">New_Field_Key</span>
-                  </label>
-                  <Input 
-                    value={newFieldName} 
-                    onChange={(e) => setNewFieldName(e.target.value)} 
-                    placeholder="欄位鍵名" 
-                    className="bg-white"
-                  />
+                <p className="text-xs font-bold text-black/70 mb-2">
+                  提示：後端資料庫已支援自動擴充，此處操作僅用於在前端編輯器中為所有 MV 條目預設一個空值，以方便你進行編輯。
+                  如果需要新增資料庫實體欄位，請前往 <code>backend/src/services/db.service.ts</code> 的 <code>expectedColumns</code> 陣列中新增。
+                </p>
+                <div className="flex flex-wrap md:flex-nowrap gap-4 items-end">
+                  <div className="flex-1 space-y-2">
+                    <label className="text-[10px] font-black uppercase flex flex-col leading-tight">
+                      <span className="opacity-70">新欄位鍵名（例如：director）</span>
+                      <span className="font-mono opacity-50 normal-case">New_Field_Key</span>
+                    </label>
+                    <Input 
+                      value={newFieldName} 
+                      onChange={(e) => setNewFieldName(e.target.value)} 
+                      placeholder="欄位鍵名" 
+                      className="bg-white"
+                    />
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <label className="text-[10px] font-black uppercase flex flex-col leading-tight">
+                      <span className="opacity-70">預設值</span>
+                      <span className="font-mono opacity-50 normal-case">Default_Value</span>
+                    </label>
+                    <Input 
+                      value={newFieldDefaultValue} 
+                      onChange={(e) => setNewFieldDefaultValue(e.target.value)} 
+                      placeholder="默認值" 
+                      className="bg-white"
+                    />
+                  </div>
+                  <Button variant="default" onClick={handleSyncNewField} className="bg-black text-white shrink-0">
+                    <i className="hn hn-refresh text-base" /> 執行全局同步
+                  </Button>
                 </div>
-                <div className="flex-1 space-y-2">
-                  <label className="text-[10px] font-black uppercase flex flex-col leading-tight">
-                    <span className="opacity-70">預設值</span>
-                    <span className="font-mono opacity-50 normal-case">Default_Value</span>
-                  </label>
-                  <Input 
-                    value={newFieldDefaultValue} 
-                    onChange={(e) => setNewFieldDefaultValue(e.target.value)} 
-                    placeholder="默認值" 
-                    className="bg-white"
-                  />
-                </div>
-                <Button variant="default" onClick={handleSyncNewField} className="bg-black text-white shrink-0">
-                  <i className="hn hn-refresh text-base" /> 執行全局同步
-                </Button>
-              </div>
               </section>
             </div>
           </div>
@@ -3131,7 +3134,7 @@ const currentMV = data[activeIndex];
             </section>
 
             {/* 畫師 ID 設定 */}
-            <section className="space-y-4">
+            <div className="space-y-4">
               <div className="flex items-start gap-2 border-b-2 border-black pb-2">
                 <div className="flex flex-col gap-1">
                   <h3 className="text-sm font-black uppercase bg-main text-main-foreground px-2 py-1">02 畫師 ID</h3>
@@ -3248,10 +3251,10 @@ const currentMV = data[activeIndex];
                   <span className="text-xs font-bold">新增畫師 ID</span>
                 </Button>
               </div>
-            </section>
+            </div>
 
             {/* Passkeys 設定 */}
-            <section className="space-y-4">
+            <div className="space-y-4">
               <div className="flex items-center justify-between border-b-2 border-black pb-2">
                 <div className="flex items-center gap-2">
                   <div className="flex flex-col gap-1">
@@ -3289,7 +3292,7 @@ const currentMV = data[activeIndex];
                   </div>
                 ))}
               </div>
-            </section>
+            </div>
 
           </div>
 
@@ -3313,7 +3316,5 @@ const currentMV = data[activeIndex];
         </DialogContent>
       </Dialog>
     </div>
-    
-    
   );
 }
