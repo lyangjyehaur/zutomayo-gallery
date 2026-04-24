@@ -47,7 +47,7 @@ export const syncImagesToR2 = async (req: Request, res: Response): Promise<void>
               newMedia.push(imgObj);
               failCount++;
             }
-          } else {
+          } else if (typeof imgUrl === 'string' && imgUrl.includes('r2.dan.tw')) {
              newMedia.push(imgObj);
              skippedCount++;
           }

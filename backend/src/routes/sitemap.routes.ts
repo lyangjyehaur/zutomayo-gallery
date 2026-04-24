@@ -59,7 +59,13 @@ router.get('/sitemap.xml', async (req, res) => {
         if (mv.images && Array.isArray(mv.images)) {
           mv.images.forEach((img: any) => {
             const rawUrl = typeof img === 'string' ? img : img.url;
-            const imgUrl = rawUrl.replace('https://pbs.twimg.com', 'https://assets.ztmr.club/ti');
+            let imgUrl = rawUrl;
+            if (rawUrl.includes('pbs.twimg.com')) {
+              imgUrl = rawUrl.replace('https://pbs.twimg.com', 'https://assets.ztmr.club/ti');
+            } else if (rawUrl.includes('r2.dan.tw')) {
+              imgUrl = rawUrl.replace('https://r2.dan.tw', 'https://assets.ztmr.club/r2');
+            }
+            
             imageTags += `
     <image:image>
       <image:loc>${imgUrl.replace(/&/g, '&amp;')}</image:loc>
@@ -83,9 +89,18 @@ router.get('/sitemap.xml', async (req, res) => {
       let fanartImages = '';
       fanarts.forEach((row: any) => {
         const fa = row.toJSON();
-        if (fa.images && Array.isArray(fa.images)) {
-          fa.images.forEach((imgUrl: string) => {
-            const proxyUrl = imgUrl.replace('https://pbs.twimg.com', 'https://assets.ztmr.club/ti');
+        if (fa.media && Array.isArray(fa.media)) {
+          fa.media.forEach((imgObj: any) => {
+            const rawUrl = typeof imgObj === 'string' ? imgObj : imgObj.url;
+            if (!rawUrl) return;
+
+            let proxyUrl = rawUrl;
+            if (rawUrl.includes('pbs.twimg.com')) {
+              proxyUrl = rawUrl.replace('https://pbs.twimg.com', 'https://assets.ztmr.club/ti');
+            } else if (rawUrl.includes('r2.dan.tw')) {
+              proxyUrl = rawUrl.replace('https://r2.dan.tw', 'https://assets.ztmr.club/r2');
+            }
+            
             fanartImages += `
     <image:image>
       <image:loc>${proxyUrl.replace(/&/g, '&amp;')}</image:loc>

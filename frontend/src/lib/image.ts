@@ -43,6 +43,9 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
     // 注意：如果是 'raw' (下載原圖) 模式，為了避免前端 CORS 問題以及確保能正確注入自定義檔名，
     // 我們強制所有用戶 (包含海外用戶) 在下載原圖時都走我們的代理伺服器。
     if (isOverseas && mode !== 'raw') {
+      // 如果已經是 R2 連結，直接直連
+      if (targetUrl.includes('r2.dan.tw')) return targetUrl;
+      
       // Twitter 圖片直連，但補上正確的尺寸參數
       if (targetUrl.includes('pbs.twimg.com')) {
         const [cleanUrl, queryString] = targetUrl.split('?');
@@ -95,6 +98,13 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
     if (targetUrl.includes('ytimg.com') || targetUrl.includes('youtube.com')) {
       if (mode !== 'raw') {
         return targetUrl.replace('https://i.ytimg.com', 'https://assets.ztmr.club/yi');
+      }
+    }
+
+    // 處理 R2 圖片代理
+    if (targetUrl.includes('r2.dan.tw')) {
+      if (mode !== 'raw') {
+        return targetUrl.replace('https://r2.dan.tw', 'https://assets.ztmr.club/r2');
       }
     }
 
