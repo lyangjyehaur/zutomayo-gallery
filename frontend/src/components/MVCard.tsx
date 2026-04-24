@@ -354,7 +354,8 @@ export const MVCard = memo(function MVCard({ mv, isFav, onToggleFav, onClick, is
     .filter(a => a !== '未知' && a !== 'Unknown' && a !== 'unknown')
     .join(', ') || t('app.unknown_artist', '未知 (Unknown)');
     
-  const fallbackThumbUrl = mv.coverImages?.[0] ? getProxyImgUrl(mv.coverImages[0], 'thumb') : '';
+  const coverUrls = mv.images?.filter(img => img.MVImage?.usage === 'cover').map(img => img.url) || [];
+  const fallbackThumbUrl = coverUrls[0] ? getProxyImgUrl(coverUrls[0], 'thumb') : '';
   const [containerRef, containerWidth] = useContainerWidth();
   
   const isCompact = containerWidth < 280;
@@ -376,7 +377,7 @@ export const MVCard = memo(function MVCard({ mv, isFav, onToggleFav, onClick, is
         lang="ja"
         className="border-2 bg-card text-foreground transition-all"
         media={
-          <CoverCarousel coverImages={mv.coverImages ?? []} title={mv.title} isPaused={isPaused} />
+          <CoverCarousel coverImages={coverUrls} title={mv.title} isPaused={isPaused} />
         }
       >
         <div className={`flex flex-col ${!isVeryCompact ? 'gap-3 px-4 py-3 text-xs' : 'gap-2 px-3 py-2 text-[10px]'} bg-main text-main-foreground uppercase transition-all duration-300`}>

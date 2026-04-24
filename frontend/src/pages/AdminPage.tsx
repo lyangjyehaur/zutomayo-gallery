@@ -1672,7 +1672,8 @@ const currentMV = data[activeIndex];
       bilibili: "",
       description: "",
       images: [],
-      coverImages: [],
+      creators: [],
+      albums: [],
       keywords: []
     };
     // 標記所有字段為變動（新項目需要全部保存）
@@ -2148,9 +2149,14 @@ const currentMV = data[activeIndex];
                     </span>
                   </label>
                   <Textarea 
-                    value={currentMV.coverImages?.join('\n')} 
-                    onChange={(e) => updateField('coverImages', e.target.value.split('\n').map(s => s.trim()).filter(s => s !== ''))} 
-                    className={`min-h-[100px] font-sans text-sm ${getErrorClass(currentMV.coverImages)}`}
+                    value={(currentMV.images?.filter(img => img.MVImage?.usage === 'cover').map(img => img.url) || []).join('\n')} 
+                    onChange={(e) => {
+                      const newUrls = e.target.value.split('\n').map(s => s.trim()).filter(s => s !== '');
+                      const otherImages = currentMV.images?.filter(img => img.MVImage?.usage !== 'cover') || [];
+                      const newCovers = newUrls.map((url, i) => ({ url, type: 'cover', MVImage: { usage: 'cover', order_index: i } }));
+                      updateField('images', [...newCovers, ...otherImages]);
+                    }} 
+                    className={`min-h-[100px] font-sans text-sm ${getErrorClass(currentMV.images)}`}
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
