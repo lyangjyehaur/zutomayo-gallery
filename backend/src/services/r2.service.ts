@@ -53,65 +53,75 @@ export const checkImageExists = async (fileName: string): Promise<boolean> => {
  * @param folder 儲存的資料夾名稱 (如 fanarts, mvs)
  * @returns 成功上傳後的 R2 公開網址
  */
-export const backupImageToR2 = async (url: string, folder: string = 'images'): Promise<string | null> => {
+export const backupImageToR2 = async (url: string, folder: string = 'images', retryCount: number = 3): Promise<string | null> => {
   if (!s3Client) return null;
 
-  try {
-    // 1. 產生唯一檔名 (根據 URL 的 Hash，避免重複下載)
-    // 取得原本的副檔名 (例如 .jpg)
-    const extMatch = url.match(/\.(jpg|jpeg|png|gif|webp|avif)/i);
-    let ext = extMatch ? extMatch[1] : 'jpg';
-    if (url.includes('format=png')) ext = 'png';
-    if (url.includes('format=webp')) ext = 'webp';
+  let attempt = 0;
+  while (attempt < retryCount) {
+    try {
+      // 1. 產生唯一檔名 (根據 URL 的 Hash，避免重複下載)
+      // 取得原本的副檔名 (例如 .jpg)
+      const extMatch = url.match(/\.(jpg|jpeg|png|gif|webp|avif)/i);
+      let ext = extMatch ? extMatch[1] : 'jpg';
+      if (url.includes('format=png')) ext = 'png';
+      if (url.includes('format=webp')) ext = 'webp';
 
-    const hash = crypto.createHash('md5').update(url).digest('hex');
-    const fileName = `${folder}/${hash}.${ext}`;
+      const hash = crypto.createHash('md5').update(url).digest('hex');
+      const fileName = `${folder}/${hash}.${ext}`;
 
-    // 2. 檢查是否已經備份過
-    const exists = await checkImageExists(fileName);
-    if (exists) {
-      console.log(`[R2] Image already backed up: ${fileName}`);
+      // 2. 檢查是否已經備份過
+      const exists = await checkImageExists(fileName);
+      if (exists) {
+        console.log(`[R2] Image already backed up: ${fileName}`);
+        return `${R2_PUBLIC_DOMAIN}/${fileName}`;
+      }
+
+      // 3. 下載原圖
+      // 如果是推特圖，加上 name=orig 來抓取最大畫質
+      let fetchUrl = url;
+      if (fetchUrl.includes('pbs.twimg.com')) {
+        // 移除現有的格式參數，確保我們能附加 orig
+        fetchUrl = fetchUrl.replace(/&name=[a-z0-9]+/i, '');
+        fetchUrl = fetchUrl.replace(/\?name=[a-z0-9]+/i, '?');
+        
+        // 確保加上 name=orig
+        fetchUrl = fetchUrl.includes('?') ? `${fetchUrl}&name=orig` : `${fetchUrl}?name=orig`;
+        // 清理可能出現的 ?& 狀況
+        fetchUrl = fetchUrl.replace('?&', '?');
+      }
+      console.log(`[R2] Downloading image (Attempt ${attempt + 1}/${retryCount}): ${fetchUrl}`);
+
+      const response = await fetch(fetchUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image, status: ${response.status}`);
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const contentType = response.headers.get('content-type') || `image/${ext}`;
+
+      // 4. 上傳到 R2
+      console.log(`[R2] Uploading to R2: ${fileName} (${(buffer.length / 1024).toFixed(2)} KB)`);
+      await s3Client.send(new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: fileName,
+        Body: buffer,
+        ContentType: contentType,
+        // 快取設定：讓 Cloudflare 邊緣節點快取 1 年
+        CacheControl: 'public, max-age=31536000, immutable'
+      }));
+
       return `${R2_PUBLIC_DOMAIN}/${fileName}`;
+    } catch (error) {
+      attempt++;
+      console.error(`[R2] Error backing up image ${url} (Attempt ${attempt}/${retryCount}):`, error);
+      if (attempt >= retryCount) {
+        console.error(`[R2] Max retries reached for ${url}. Giving up.`);
+        return null;
+      }
+      // 等待一段時間後重試 (1s, 2s, 3s...)
+      await new Promise(resolve => setTimeout(resolve, attempt * 1000));
     }
-
-    // 3. 下載原圖
-    // 如果是推特圖，加上 name=orig 來抓取最大畫質
-    let fetchUrl = url;
-    if (fetchUrl.includes('pbs.twimg.com')) {
-      // 移除現有的格式參數，確保我們能附加 orig
-      fetchUrl = fetchUrl.replace(/&name=[a-z0-9]+/i, '');
-      fetchUrl = fetchUrl.replace(/\?name=[a-z0-9]+/i, '?');
-      
-      // 確保加上 name=orig
-      fetchUrl = fetchUrl.includes('?') ? `${fetchUrl}&name=orig` : `${fetchUrl}?name=orig`;
-      // 清理可能出現的 ?& 狀況
-      fetchUrl = fetchUrl.replace('?&', '?');
-    }
-    console.log(`[R2] Downloading image: ${fetchUrl}`);
-
-    const response = await fetch(fetchUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch image, status: ${response.status}`);
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const contentType = response.headers.get('content-type') || `image/${ext}`;
-
-    // 4. 上傳到 R2
-    console.log(`[R2] Uploading to R2: ${fileName} (${(buffer.length / 1024).toFixed(2)} KB)`);
-    await s3Client.send(new PutObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: fileName,
-      Body: buffer,
-      ContentType: contentType,
-      // 快取設定：讓 Cloudflare 邊緣節點快取 1 年
-      CacheControl: 'public, max-age=31536000, immutable'
-    }));
-
-    return `${R2_PUBLIC_DOMAIN}/${fileName}`;
-  } catch (error) {
-    console.error(`[R2] Error backing up image ${url}:`, error);
-    return null;
   }
+  return null;
 };
