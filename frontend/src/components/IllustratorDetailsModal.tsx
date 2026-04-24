@@ -33,7 +33,7 @@ const MasonryImage = ({ item, index, mvTitle }: { item: any, index: number, mvTi
       {shouldLoad ? (
         <>
           <img 
-            src={item.thumbnail || item.url} 
+            src={getProxyImgUrl(item.thumbnail || item.url, 'thumb')} 
             alt={item.caption || item.alt || mvTitle} 
             className="w-full h-auto object-cover border-b-4 border-black bg-white"
             loading="lazy"

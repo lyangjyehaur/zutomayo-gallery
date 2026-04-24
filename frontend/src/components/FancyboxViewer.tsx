@@ -485,10 +485,18 @@ export default function FancyboxViewer({
       // 直接回傳圖片資料，不進行 Promise.all 預先下載
       // 尺寸會先交給 null，然後依賴後端的備用尺寸或等圖片實際載入後自己撐開
       return filteredImages.map((img, index) => {
+        // 判斷是否為影片 (透過副檔名、網址特徵，或是 img.type === 'video')
+        const isVideo = !!(
+          img.type === 'video' ||
+          img.url.match(/\.(mp4|webm|mov|m4v|m3u8)$/i) ||
+          img.url.includes('video.twimg.com') ||
+          (img.thumbnail && img.thumbnail !== img.url && !img.url.match(/\.gif$/i))
+        );
+        const isGif = !!(img.url.match(/\.gif$/i) || img.url.includes('tweet_video_thumb'));
+        
+        // 產生縮圖與完整圖網址
         const thumbUrl = img.thumbnail ? getProxyImgUrl(img.thumbnail, 'thumb') : getProxyImgUrl(img.url, 'thumb');
-        const isVideo = img.url.match(/\.(mp4|webm)$/i) || img.url.includes('video.twimg.com') || (img.thumbnail && img.thumbnail !== img.url && !img.url.match(/\.gif$/i));
-        const isGif = img.url.match(/\.gif$/i) || img.url.includes('tweet_video_thumb');
-        const fullUrl = isVideo ? img.url : getProxyImgUrl(img.url, 'full');
+        const fullUrl = isVideo ? getProxyImgUrl(img.url, 'raw') : getProxyImgUrl(img.url, 'full');
 
         const caption = img.caption || `${mvTitle}_${index}`;
 
@@ -499,7 +507,7 @@ export default function FancyboxViewer({
         return {
           src: thumbUrl,
           full: fullUrl,
-          raw: isVideo ? getProxyImgUrl(img.url, 'raw', fullFilename) : getProxyImgUrl(img.url, 'raw', fullFilename),
+          raw: getProxyImgUrl(img.url, 'raw', fullFilename),
           caption,
           richText: img.richText || '',
           width: img.width, // 將由後端 API 獲取的尺寸傳給元件

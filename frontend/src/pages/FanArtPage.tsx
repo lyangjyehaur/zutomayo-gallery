@@ -291,7 +291,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
               >
                 <a href={art.tweetUrl || art.url} target="_blank" rel="noopener noreferrer" className="block relative overflow-hidden">
                   <img 
-                    src={art.thumbnail || art.url} 
+                    src={getProxyImgUrl(art.thumbnail || art.url, 'thumb')} 
                     alt={art.caption || 'FanArt'} 
                     className="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-500" 
                     loading="lazy"
