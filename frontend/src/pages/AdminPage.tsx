@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
 import { MVItem } from '@/lib/types';
-import { getProxyImgUrl } from '@/lib/image';
+import { getProxyImgUrl, isMediaVideo } from '@/lib/image';
 import Editor from '@monaco-editor/react';
 import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
 import {
@@ -2299,7 +2299,7 @@ const currentMV = data[activeIndex];
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                   {visibleImages.map(({ img, originalIndex: imgIdx }) => {
                     const isGif = img.url?.match(/\.gif$/i) || img.url?.includes('tweet_video_thumb');
-                    const isVideo = (img.url?.match(/\.(mp4|webm)$/i) || img.url?.includes('video.twimg.com') || (img.thumbnail && img.thumbnail !== img.url)) && !isGif;
+                    const isVideo = isMediaVideo(img.url, img.type);
                     return (
                       <div
                         key={imgIdx}

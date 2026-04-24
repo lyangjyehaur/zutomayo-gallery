@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { MVItem, ArtistMeta } from '@/lib/types';
 import { useLazyImage } from '@/hooks/useLazyImage';
 import FancyboxViewer from '@/components/FancyboxViewer';
+import { getProxyImgUrl, isMediaVideo } from '@/lib/image';
 
 interface IllustratorDetailsModalProps {
   illustrator: { name: string; snsId?: string; mvs: MVItem[]; meta?: ArtistMeta } | null;
@@ -325,7 +326,7 @@ export function IllustratorDetailsModal({ illustrator, onClose }: IllustratorDet
                 >
                   <div className="columns-1 sm:columns-2 xl:columns-3 2xl:columns-4 gap-4 md:gap-6">
                     {activeTab === 'mv' ? currentDisplayImages.slice(0, visibleCount).map((art, idx) => {
-                      const isVideo = art.item.url?.match(/\.(mp4|webm)$/i) || art.item.url?.includes('video.twimg.com') || (art.item.thumbnail && art.item.thumbnail !== art.item.url && !art.item.url.match(/\.gif$/i));
+                      const isVideo = isMediaVideo(art.item.url, art.item.type);
                       return (
                       <div key={`${art.item.url}-${idx}`} className="block break-inside-avoid mb-4 md:mb-6 h-max relative group cursor-pointer">
                         <a 
@@ -349,7 +350,7 @@ export function IllustratorDetailsModal({ illustrator, onClose }: IllustratorDet
                         </div>
                       </div>
                     )}) : currentDisplayImages.slice(0, visibleCount).map((img: any, idx) => {
-                      const isVideo = img.url?.match(/\.(mp4|webm)$/i) || img.url?.includes('video.twimg.com') || (img.thumbnail && img.thumbnail !== img.url && !img.url.match(/\.gif$/i));
+                      const isVideo = isMediaVideo(img.url, img.type);
                       return (
                       <div key={`${img.url}-${idx}`} className="block break-inside-avoid mb-4 md:mb-6 h-max relative group cursor-pointer">
                         <a 

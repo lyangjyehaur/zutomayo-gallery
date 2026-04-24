@@ -10,7 +10,7 @@ if (typeof window !== 'undefined') {
 }
 
 import { MVImage } from '@/lib/types';
-import { getProxyImgUrl } from '@/lib/image';
+import { getProxyImgUrl, isMediaVideo } from '@/lib/image';
 import { GALLERY_BREAKPOINTS } from '@/components/galleryBreakpoints';
 export { GALLERY_BREAKPOINTS } from '@/components/galleryBreakpoints';
 import { useTranslation } from 'react-i18next';
@@ -485,13 +485,8 @@ export default function FancyboxViewer({
       // 直接回傳圖片資料，不進行 Promise.all 預先下載
       // 尺寸會先交給 null，然後依賴後端的備用尺寸或等圖片實際載入後自己撐開
       return filteredImages.map((img, index) => {
-        // 判斷是否為影片 (透過副檔名、網址特徵，或是 img.type === 'video')
-        const isVideo = !!(
-          img.type === 'video' ||
-          img.url.match(/\.(mp4|webm|mov|m4v|m3u8)$/i) ||
-          img.url.includes('video.twimg.com') ||
-          (img.thumbnail && img.thumbnail !== img.url && !img.url.match(/\.gif$/i))
-        );
+        // 判斷是否為影片
+        const isVideo = isMediaVideo(img.url, img.type);
         const isGif = !!(img.url.match(/\.gif$/i) || img.url.includes('tweet_video_thumb'));
         
         // 產生縮圖與完整圖網址

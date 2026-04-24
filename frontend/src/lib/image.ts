@@ -15,6 +15,19 @@ import { getGeoInfo } from './geo';
 export type ProxyMode = 'thumb' | 'full' | 'small' | 'raw';
 
 /**
+ * 判斷該媒體是否為影片
+ */
+export const isMediaVideo = (url?: string, type?: string): boolean => {
+  if (!url) return false;
+  if (type === 'video') return true;
+  return !!(
+    url.match(/\.(mp4|webm|mov|m4v|m3u8)$/i) || 
+    url.includes('video.twimg.com') || 
+    (url.includes('/videos/') && !url.match(/\.(jpg|jpeg|png|gif|webp|avif)$/i))
+  );
+};
+
+/**
  * 圖片代理工具邏輯
  * @param rawUrl 原始圖片連結
  * @param mode 模式：thumb (200px), full (Large WebP), small (400px), raw (下載)
@@ -40,7 +53,7 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
     }
 
     // 1. 影片處理 (因為 imgproxy 不支援處理影片，所以影片永遠不過 imgproxy)
-    const isVideo = targetUrl.match(/\.(mp4|webm|mov|m4v|m3u8)$/i) || targetUrl.includes('video.twimg.com');
+    const isVideo = isMediaVideo(targetUrl);
     if (isVideo) {
       if (targetUrl.includes('r2.dan.tw')) {
         return targetUrl.replace('https://r2.dan.tw', 'https://assets.ztmr.club/r2');
