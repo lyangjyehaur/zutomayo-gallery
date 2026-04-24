@@ -21,12 +21,13 @@ import { MVItem, MVMedia } from '../types.js';
 export async function getMVsFromDB(): Promise<MVItem[]> {
   const mvs = await MVModel.findAll({
     include: [
-      { model: ArtistModel, as: 'creators' },
-      { model: AlbumModel, as: 'albums' },
-      { model: KeywordModel, as: 'keywords' },
+      { model: ArtistModel, as: 'creators', through: { attributes: ['role'] } },
+      { model: AlbumModel, as: 'albums', through: { attributes: ['track_number'] } },
+      { model: KeywordModel, as: 'keywords', through: { attributes: [] } },
       { 
         model: MediaModel, 
         as: 'images',
+        through: { attributes: ['usage', 'order_index'] },
         include: [{ model: MediaGroupModel, as: 'group' }]
       }
     ],
@@ -36,7 +37,36 @@ export async function getMVsFromDB(): Promise<MVItem[]> {
     ]
   });
 
-  return mvs.map((mvRecord) => mvRecord.toJSON() as MVItem);
+  return mvs.map((mvRecord) => {
+    const mv = mvRecord.toJSON() as any;
+
+    // Flatten creators role
+    if (mv.creators) {
+      mv.creators = mv.creators.map((c: any) => ({
+        ...c,
+        role: c.MVArtist?.role || c.role || 'unknown'
+      }));
+    }
+
+    // Flatten keywords text (for frontend compatibility)
+    if (mv.keywords) {
+      mv.keywords = mv.keywords.map((k: any) => ({
+        ...k,
+        text: k.name // provide text for frontend
+      }));
+    }
+
+    // Flatten images usage and order_index
+    if (mv.images) {
+      mv.images = mv.images.map((img: any) => ({
+        ...img,
+        usage: img.MVMedia?.usage || img.usage || 'gallery',
+        order_index: img.MVMedia?.order_index ?? img.order_index ?? 0
+      }));
+    }
+
+    return mv as MVItem;
+  });
 }
 
 export async function saveMVsToDB(mvs: MVItem[], transaction?: any): Promise<void> {
@@ -118,7 +148,9 @@ export async function saveMVsToDB(mvs: MVItem[], transaction?: any): Promise<voi
       // 5. Rebuild Keywords
       const keywords = Array.isArray(mv.keywords) ? mv.keywords : [];
       for (const keyword of keywords) {
-        const keywordId = await getOrCreateKeyword(keyword.name);
+        const keywordName = typeof keyword === 'object' ? (keyword.name || keyword.text) : keyword;
+        if (!keywordName) continue;
+        const keywordId = await getOrCreateKeyword(keywordName);
         if (keywordId) {
           await MVKeywordModel.create({ mv_id: mv.id, keyword_id: keywordId }, { transaction: t });
         }

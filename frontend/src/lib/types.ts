@@ -39,7 +39,8 @@ export interface MVAlbum {
 
 export interface MVKeyword {
   id?: string;
-  name: string;
+  name?: string;
+  text?: string;
   lang?: string;
   [key: string]: any;
 }

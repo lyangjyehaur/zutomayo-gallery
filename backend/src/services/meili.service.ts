@@ -94,15 +94,17 @@ export const syncDataToMeili = async () => {
     // 2. 處理 Fanarts (已經整合到 V2，這裡可以從 images 表中篩選 type=fanart，但通常 Fanart 不直接建獨立文件，而是跟著 MV)
     // 為了相容前端 /api/search?type=fanart，我們直接從 MVs 裡拆出 fanart
     const fanartDocs = mvs.flatMap(mv => {
-      const fanarts = mv.images?.filter(img => img.type === 'fanart') || [];
-      return fanarts.map(fa => ({
-        id: fa.id,
-        mv_id: mv.id,
-        tweet_text: fa.group?.source_text || '',
-        author_name: fa.group?.author_name || '',
-        author_handle: fa.group?.author_handle || '',
-      }));
-    });
+    const fanarts = mv.images?.filter(img => img.type === 'fanart') || [];
+    return fanarts.map(fa => ({
+      id: fa.id,
+      mv_id: mv.id,
+      tweetText: fa.group?.source_text || '',
+      tweetAuthor: fa.group?.author_name || '',
+      tweetHandle: fa.group?.author_handle || '',
+      status: fa.group?.status || 'pending',
+      tweetDate: fa.group?.post_date ? new Date(fa.group.post_date).getTime() : null,
+    }));
+  });
 
     if (fanartDocs.length > 0) {
       const response = await meiliClient.index('fanarts').addDocuments(fanartDocs);

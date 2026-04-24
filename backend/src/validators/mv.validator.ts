@@ -52,7 +52,9 @@ export const mvItemSchema = z.object({
   keywords: z.array(
     z.object({
       id: z.string().optional(),
-      name: z.string()
+      name: z.string().optional(),
+      text: z.string().optional(),
+      lang: z.string().optional(),
     }).passthrough()
   ).optional().default([]),
   images: z.array(
