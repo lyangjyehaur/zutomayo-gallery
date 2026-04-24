@@ -39,73 +39,76 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
       return targetUrl;
     }
 
-    // ==== 針對海外用戶的直連優化 ====
+    // 1. 影片處理 (因為 imgproxy 不支援處理影片，所以影片永遠不過 imgproxy)
+    const isVideo = targetUrl.match(/\.(mp4|webm|mov|m4v|m3u8)$/i) || targetUrl.includes('video.twimg.com');
+    if (isVideo) {
+      if (targetUrl.includes('r2.dan.tw')) {
+        return targetUrl.replace('https://r2.dan.tw', 'https://assets.ztmr.club/r2');
+      }
+      if (targetUrl.includes('video.twimg.com')) {
+        return isOverseas ? targetUrl : targetUrl.replace('https://video.twimg.com', 'https://assets.ztmr.club/tv');
+      }
+      return targetUrl;
+    }
+
+    // 2. 針對海外用戶的直連優化 (僅限圖片)
     if (isOverseas && mode !== 'raw') {
-      // 如果已經是 R2 連結，統一走 Nginx 代理，避免 CORS 或 Referer 擋掉 localhost 開發環境
-      if (targetUrl.includes('r2.dan.tw')) return targetUrl.replace('https://r2.dan.tw', 'https://assets.ztmr.club/r2');
-      
       // Twitter 圖片直連，但補上正確的尺寸參數
       if (targetUrl.includes('pbs.twimg.com')) {
         const [cleanUrl, queryString] = targetUrl.split('?');
         const params = new URLSearchParams(queryString || '');
         
-        let format = params.get('format');
-        if (!format) {
-          const match = cleanUrl.match(/\.([a-zA-Z0-9]+)$/);
-          format = match ? match[1].toLowerCase() : 'jpg';
-        }
-        
+        let format = params.get('format') || cleanUrl.match(/\.([a-zA-Z0-9]+)$/)?.[1]?.toLowerCase() || 'jpg';
         const name = mode === 'full' ? 'large' : 'small';
         return `${cleanUrl}?format=${format}&name=${name}`;
       }
       
-      // Youtube 與 Twitter 影片直連
-      if (targetUrl.includes('ytimg.com') || targetUrl.includes('youtube.com') || targetUrl.includes('video.twimg.com')) {
+      // Youtube 圖片直連
+      if (targetUrl.includes('ytimg.com') || targetUrl.includes('youtube.com')) {
         return targetUrl;
+      }
+      
+      // R2 圖片放大 (full) 時，直接透過 Nginx 載入原圖
+      // 注意：如果 mode 是 thumb/small，海外用戶依然需要往下走 imgproxy 產生縮圖，否則瀑布流會載入 10MB 的 MD5 原圖
+      if (targetUrl.includes('r2.dan.tw') && mode === 'full') {
+        return targetUrl.replace('https://r2.dan.tw', 'https://assets.ztmr.club/r2');
       }
     }
     
-    // ==== 中國大陸用戶（或需要代理的圖片）的處理 ====
+    // ==== 中國大陸用戶（或需要代理縮圖的圖片）的處理 ====
 
-    // 處理 R2 圖片/影片代理
-    if (targetUrl.includes('r2.dan.tw')) {
-      // 即使是 raw 模式，R2 檔案也支援直接下載與 CORS，不應該過 imgproxy (它會壞掉，特別是影片)
-      return targetUrl.replace('https://r2.dan.tw', 'https://assets.ztmr.club/r2');
-    }
-
-    // 處理 Twitter 影片連結 (video.twimg.com)
-    if (targetUrl.includes('video.twimg.com')) {
-      return targetUrl.replace('https://video.twimg.com', 'https://assets.ztmr.club/tv');
-    }
-
-    // 處理 Twitter 圖片連結
+    // 3. Twitter 圖片與 YouTube 圖片處理
     if (targetUrl.includes('pbs.twimg.com')) {
       const [cleanUrl, queryString] = targetUrl.split('?');
       const params = new URLSearchParams(queryString || '');
       
-      let format = params.get('format');
-      if (!format) {
-        const match = cleanUrl.match(/\.([a-zA-Z0-9]+)$/);
-        format = match ? match[1].toLowerCase() : 'jpg';
-      }
-      
+      let format = params.get('format') || cleanUrl.match(/\.([a-zA-Z0-9]+)$/)?.[1]?.toLowerCase() || 'jpg';
       const name = mode === 'raw' ? 'orig' : (mode === 'full' ? 'large' : 'small');
       targetUrl = `${cleanUrl}?format=${format}&name=${name}`;
       
-      // 非 raw 模式走 assets 代理，raw 模式交給下方的 imgproxy 處理下載與自訂檔名
-      if (mode !== 'raw') {
+      // 非 raw 模式：直接走 Nginx 代理，利用推特原生的 ?name=small 縮圖，節省 imgproxy 的運算
+      if (!isOverseas && mode !== 'raw') {
         return targetUrl.replace('https://pbs.twimg.com', 'https://assets.ztmr.club/ti');
       }
     }
 
-    // 處理 YouTube 圖片連結
     if (targetUrl.includes('ytimg.com') || targetUrl.includes('youtube.com')) {
-      if (mode !== 'raw') {
+      if (!isOverseas && mode !== 'raw') {
         return targetUrl.replace('https://i.ytimg.com', 'https://assets.ztmr.club/yi');
       }
     }
 
-    // 其他圖片，預設使用 img.ztmr.club 代理
+    // 4. R2 圖片處理
+    if (targetUrl.includes('r2.dan.tw')) {
+      if (mode === 'full') {
+        // full 模式直接透過 Nginx 下載，避免 imgproxy 處理超大圖片時耗費 CPU
+        return targetUrl.replace('https://r2.dan.tw', 'https://assets.ztmr.club/r2');
+      }
+      // 如果是 raw 模式：必須走下方的 imgproxy 注入 filename 標頭，讓訪客下載時有正確的檔名 (而非 MD5 Hash)。
+      // 如果是 thumb/small 模式：必須走下方的 imgproxy 進行壓縮，避免瀑布流載入原圖。
+    }
+
+    // 5. 統一交給 imgproxy 處理 (縮小、轉 WebP、或注入下載檔名)
     const base64Url = safeBase64(targetUrl);
     let paramsArr: string[] = [];
     if (mode === 'raw') {
@@ -116,7 +119,7 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
     } else if (mode === 'small') {
       paramsArr.push('rs:fit:600', 'f:webp');
     } else {
-      paramsArr.push('rs:fit:400', 'f:webp');
+      paramsArr.push('rs:fit:400', 'f:webp'); // thumb
     }
     const imgProxyDomain = import.meta.env.VITE_TWITTER_IMG_PROXY || 'https://img.ztmr.club';
     return `${imgProxyDomain}/${paramsArr.join('/')}/${base64Url}`;
