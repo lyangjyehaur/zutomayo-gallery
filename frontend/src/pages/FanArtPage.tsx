@@ -54,21 +54,24 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
 
   // 提取所有 FanArt 圖片並去重
   const allFanArts = useMemo(() => {
-    const fanArtMap = new Map<string, MVImage & { mvIds: string[], mvTitles: string[] }>();
+    const fanArtMap = new Map<string, any>();
     
     mvData.forEach(mv => {
       if (mv.images && Array.isArray(mv.images)) {
         mv.images.forEach(img => {
           // 只抓取明確標記為 fanart 的圖片
           if (img.type === 'fanart') {
-            if (fanArtMap.has(img.url)) {
-              const existing = fanArtMap.get(img.url)!;
+            // 使用 url + tweetUrl 組合或只用 url 作為 key
+            const key = img.url;
+            
+            if (fanArtMap.has(key)) {
+              const existing = fanArtMap.get(key)!;
               if (!existing.mvIds.includes(mv.id)) {
                 existing.mvIds.push(mv.id);
                 existing.mvTitles.push(mv.title);
               }
             } else {
-              fanArtMap.set(img.url, {
+              fanArtMap.set(key, {
                 ...img,
                 mvIds: [mv.id],
                 mvTitles: [mv.title]

@@ -499,6 +499,7 @@ export default function FancyboxViewer({
         const ext = getExtensionFromUrl(img.url);
         const fullFilename = `${mvTitle}_${caption.replace(/[^a-zA-Z0-9_\-\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff]/g, '_')}.${ext}`;
 
+        // 我們使用原始 img.url 或 fullUrl 當作判斷重複的依據，而非縮圖
         return {
           src: thumbUrl,
           full: fullUrl,
@@ -512,6 +513,7 @@ export default function FancyboxViewer({
           isGif,   // 加入 isGif 標記
           groupId: img.groupId,
           tweetUrl: img.tweetUrl,
+          originalUrl: img.url, // 加入原始網址供去重判斷
           ...img // 保留其他可能的新增欄位
         };
       });
@@ -528,8 +530,16 @@ export default function FancyboxViewer({
     getPhotosFromRange(0, itemsPerPage).then((firstPagePhotos) => {
       lastBatchStartRef.current = 0;
       
-      // 直接設定資料，不使用延遲隱藏
-      setDisplayedPhotos(firstPagePhotos);
+      // 直接設定資料，不使用延遲隱藏，加入去重防護
+      const existingKeys = new Set();
+      const uniquePhotos = firstPagePhotos.filter(p => {
+        const key = p.originalUrl || p.full;
+        if (existingKeys.has(key)) return false;
+        existingKeys.add(key);
+        return true;
+      });
+
+      setDisplayedPhotos(uniquePhotos);
       setCurrentPage(1);
       setHasMore(firstPagePhotos.length < processedImages.length);
     });
@@ -547,10 +557,11 @@ export default function FancyboxViewer({
         lastBatchStartRef.current = displayedCountRef.current;
         
         setDisplayedPhotos((prev) => {
-          const existingUrls = new Set(prev.map(p => p.src));
-      const uniqueNewPhotos = newPhotos.filter(p => !existingUrls.has(p.src));
-      if (uniqueNewPhotos.length === 0) return prev;
-      return [...prev, ...uniqueNewPhotos];
+          // 使用 originalUrl 或 full 網址作為去重依據，避免不同 MV 產生相同的 src 但其實是同一張原圖
+          const existingKeys = new Set(prev.map(p => p.originalUrl || p.full));
+          const uniqueNewPhotos = newPhotos.filter(p => !existingKeys.has(p.originalUrl || p.full));
+          if (uniqueNewPhotos.length === 0) return prev;
+          return [...prev, ...uniqueNewPhotos];
         });
 
         setCurrentPage((prev) => prev + 1);
