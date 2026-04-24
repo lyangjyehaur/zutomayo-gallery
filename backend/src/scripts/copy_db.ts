@@ -1,16 +1,16 @@
 import { Sequelize, DataTypes } from 'sequelize';
 
-const OLD_DB_HOST = '45.147.26.57';
+const OLD_DB_HOST = '127.0.0.1';
 const OLD_DB_PORT = 5432;
 const OLD_DB_NAME = 'zutomayo_gallery';
 const OLD_DB_USER = 'zutomayo_gallery';
 const OLD_DB_PASS = 'FBZNYC3HSJExdHX3';
 
-const NEW_DB_HOST = '45.147.26.57';
+const NEW_DB_HOST = '127.0.0.1';
 const NEW_DB_PORT = 5432;
 const NEW_DB_NAME = 'zutomayo_gallery_test';
-const NEW_DB_USER = 'zutomayo_gallery_test';
-const NEW_DB_PASS = 'XCFHbZQyn33KeY66';
+const NEW_DB_USER = 'zutomayo_gallery';
+const NEW_DB_PASS = 'FBZNYC3HSJExdHX3';
 
 const oldDb = new Sequelize(OLD_DB_NAME, OLD_DB_USER, OLD_DB_PASS, {
   host: OLD_DB_HOST,
@@ -111,8 +111,8 @@ async function copyData() {
     await newDb.authenticate();
     console.log('Connected to new test DB');
 
-    // Sync new DB tables
-    await newDb.sync({ force: true }); // Warning: this drops existing tables in the test DB
+    // Create new DB tables only if they don't exist
+    await newDb.sync();
     console.log('New DB schema synced');
 
     const models = [
