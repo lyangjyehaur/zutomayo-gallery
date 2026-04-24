@@ -53,6 +53,7 @@ export const checkImageExists = async (fileName: string): Promise<boolean> => {
 export interface R2UploadOptions {
   retryCount?: number;
   metadata?: Record<string, string>; // 自訂的物件 Metadata (S3 規範)
+  forceUpdate?: boolean; // 是否強制覆蓋更新
 }
 
 /**
@@ -83,11 +84,13 @@ export const backupImageToR2 = async (
       const hash = crypto.createHash('md5').update(url).digest('hex');
       const fileName = `${folder}/${hash}.${ext}`;
 
-      // 2. 檢查是否已經備份過
-      const exists = await checkImageExists(fileName);
-      if (exists) {
-        console.log(`[R2] Image already backed up: ${fileName}`);
-        return `${R2_PUBLIC_DOMAIN}/${fileName}`;
+      // 2. 檢查是否已經備份過 (除非設定 forceUpdate=true)
+      if (!options?.forceUpdate) {
+        const exists = await checkImageExists(fileName);
+        if (exists) {
+          console.log(`[R2] Image already backed up: ${fileName}`);
+          return `${R2_PUBLIC_DOMAIN}/${fileName}`;
+        }
       }
 
       // 3. 下載原圖
