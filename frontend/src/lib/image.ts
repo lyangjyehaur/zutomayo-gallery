@@ -40,11 +40,9 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
     }
 
     // ==== 針對海外用戶的直連優化 ====
-    // 注意：如果是 'raw' (下載原圖) 模式，為了避免前端 CORS 問題以及確保能正確注入自定義檔名，
-    // 我們強制所有用戶 (包含海外用戶) 在下載原圖時都走我們的代理伺服器。
     if (isOverseas && mode !== 'raw') {
-      // 如果已經是 R2 連結，直接直連
-      if (targetUrl.includes('r2.dan.tw')) return targetUrl;
+      // 如果已經是 R2 連結，統一走 Nginx 代理，避免 CORS 或 Referer 擋掉 localhost 開發環境
+      if (targetUrl.includes('r2.dan.tw')) return targetUrl.replace('https://r2.dan.tw', 'https://assets.ztmr.club/r2');
       
       // Twitter 圖片直連，但補上正確的尺寸參數
       if (targetUrl.includes('pbs.twimg.com')) {
