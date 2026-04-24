@@ -31,13 +31,13 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
   const availableAlbums = useMemo(() => {
     const albums = new Set<string>();
     availableMVs.forEach(mv => {
-      if (mv.album && Array.isArray(mv.album)) {
-        mv.album.forEach(a => {
+      if (mv.albums && Array.isArray(mv.albums)) {
+        mv.albums.forEach(a => {
           if (a) albums.add(a.trim());
         });
-      } else if (mv.album && typeof mv.album === 'string') {
-        const albumList = (mv.album as string).split(',').map(a => a.trim()).filter(Boolean);
-        albumList.forEach(a => albums.add(a));
+      } else if (mv.albums && typeof mv.albums === 'string') {
+        const albumList = (mv.albums as string).split(',').map(a => a.trim()).filter(Boolean);
+        albumList.forEach(a => albums.add(a.name));
       }
     });
     return Array.from(albums).sort();
@@ -98,12 +98,12 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
       // 處理多專輯匹配邏輯
       let matchAlbum = true;
       if (filterAlbum !== 'all') {
-        if (!mv.album) {
+        if (!mv.albums) {
           matchAlbum = false;
-        } else if (Array.isArray(mv.album)) {
-          matchAlbum = mv.album.map(a => a.trim()).includes(filterAlbum);
-        } else if (typeof mv.album === 'string') {
-          const albumList = (mv.album as string).split(',').map(a => a.trim());
+        } else if (Array.isArray(mv.albums)) {
+          matchAlbum = mv.albums.map(a => a.trim()).includes(filterAlbum);
+        } else if (typeof mv.albums === 'string') {
+          const albumList = (mv.albums as string).split(',').map(a => a.trim());
           matchAlbum = albumList.includes(filterAlbum);
         }
       }

@@ -22,8 +22,8 @@ export function IllustratorsPage({ mvData, metadata }: IllustratorsPageProps) {
     const artistsMap = new Map<string, { name: string; snsId?: string; mvs: MVItem[]; meta?: any }>();
     
     mvData.forEach((mv) => {
-      if (mv.artist) {
-        mv.artist.forEach((a) => {
+      if (mv.creators) {
+        mv.creators.forEach((a) => {
           if (!a || a.trim() === '') return;
           if (!artistsMap.has(a)) {
             const meta = metadata?.artistMeta?.[a];

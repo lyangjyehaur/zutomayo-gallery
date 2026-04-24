@@ -490,7 +490,7 @@ export default function FancyboxViewer({
         const isGif = !!(img.url.match(/\.gif$/i) || img.url.includes('tweet_video_thumb'));
         
         // 產生縮圖與完整圖網址
-        const thumbUrl = img.thumbnail ? getProxyImgUrl(img.thumbnail, 'thumb') : getProxyImgUrl(img.url, 'thumb');
+        const thumbUrl = img.thumbnail_url ? getProxyImgUrl(img.thumbnail_url, 'thumb') : getProxyImgUrl(img.url, 'thumb');
         const fullUrl = isVideo ? getProxyImgUrl(img.url, 'raw') : getProxyImgUrl(img.url, 'full');
 
         const caption = img.caption || `${mvTitle}_${index}`;
@@ -512,7 +512,7 @@ export default function FancyboxViewer({
           isVideo, // 加入 isVideo 標記
           isGif,   // 加入 isGif 標記
           groupId: img.groupId,
-          tweetUrl: img.tweetUrl,
+          tweetUrl: img.fanart_meta?.tweet_url,
           originalUrl: img.url, // 加入原始網址供去重判斷
           ...img // 保留其他可能的新增欄位
         };

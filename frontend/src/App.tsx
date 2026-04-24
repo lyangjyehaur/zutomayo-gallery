@@ -409,13 +409,13 @@ function App({
 
     mvData.forEach((mv) => {
       if (mv.year) years.add(mv.year);
-      mv.album?.forEach((a) => {
-        albums.add(a);
-        if (mv.date && (!computedDateMap[a] || mv.date < computedDateMap[a])) {
-          computedDateMap[a] = mv.date.replace(/\//g, "/"); // 保持原始日期格式
+      mv.albums?.forEach((a) => {
+        albums.add(a.name);
+        if (mv.date && (!computedDateMap[a.name] || mv.date < computedDateMap[a.name])) {
+          computedDateMap[a.name] = mv.date.replace(/\//g, "/"); // 保持原始日期格式
         }
       });
-      mv.artist?.forEach((a) => artists.add(a));
+      mv.creators?.forEach((a) => artists.add(a.name));
     });
 
     const albumList = Array.from(albums).sort();
@@ -471,7 +471,7 @@ function App({
         !search ||
         mv.title.toLowerCase().includes(searchLower) ||
         (mv.keywords &&
-          mv.keywords.some((k) => k.text.toLowerCase().includes(searchLower))) ||
+          mv.keywords.some((k) => k.name.toLowerCase().includes(searchLower))) ||
         (mv.description && mv.description.toLowerCase().includes(searchLower));
 
       const matchesYear =
@@ -482,11 +482,11 @@ function App({
 
       const matchesAlbum =
         albumFilter.length === 0 ||
-        (mv.album && mv.album.some((a) => albumFilter.includes(a)));
+        (mv.albums && mv.albums.some((a) => albumFilter.includes(a.name)));
 
       const matchesArtist =
         artistFilter.length === 0 ||
-        (mv.artist && mv.artist.some((a) => artistFilter.includes(a)));
+        (mv.creators && mv.creators.some((a) => artistFilter.includes(a.name)));
 
       const matchesFav = !showFavOnly || favorites.includes(mv.id);
 
@@ -1155,6 +1155,7 @@ function App({
                         const snsId = metadata?.artistMeta?.[artist]?.hideId
                           ? undefined
                           : metadata?.artistMeta?.[artist]?.id;
+                        
                         return (
                           <CommandItem
                             key={artist}

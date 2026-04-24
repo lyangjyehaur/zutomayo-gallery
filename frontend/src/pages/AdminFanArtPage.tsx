@@ -226,7 +226,7 @@ export function AdminFanArtPage() {
               <div className="grid grid-cols-2 gap-4">
                 {parsedImages.map((img, idx) => (
                   <div key={idx} className="border-2 border-black p-2 relative group bg-background">
-                    <img src={img.thumbnail || img.url} alt="preview" className="w-full h-32 object-cover" />
+                    <img src={img.thumbnail_url || img.url} alt="preview" className="w-full h-32 object-cover" />
                     <button 
                       onClick={() => setParsedImages(prev => prev.filter((_, i) => i !== idx))}
                       className="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 flex items-center justify-center border-2 border-black opacity-0 group-hover:opacity-100 transition-opacity"
@@ -272,7 +272,7 @@ export function AdminFanArtPage() {
                     />
                     <div className="flex flex-col flex-1 min-w-0">
                       <span className="font-bold truncate text-sm">{mv.title}</span>
-                      <span className="text-[10px] opacity-50 font-mono truncate">{mv.date} | {Array.isArray(mv.artist) ? mv.artist.join(', ') : mv.artist}</span>
+                      <span className="text-[10px] opacity-50 font-mono truncate">{mv.date} | {Array.isArray(mv.creators) ? mv.creators.join(', ') : mv.creators}</span>
                     </div>
                     {fanartCount > 0 && (
                       <span className="text-[10px] bg-ztmy-green text-black border border-black px-2 py-0.5 rounded-full font-bold">

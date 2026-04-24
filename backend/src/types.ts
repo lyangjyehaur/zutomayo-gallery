@@ -1,16 +1,41 @@
 export interface MVImage {
+  id?: string;
+  type: string;
   url: string;
-  caption: string;
-  richText?: string;
-  alt?: string;
+  original_url?: string;
+  thumbnail_url?: string;
+  caption?: string;
   width?: number;
   height?: number;
-  [key: string]: any; // 允許動態新增欄位
+  fanart_meta?: {
+    tweet_url?: string;
+    tweet_text?: string;
+    tweet_author?: string;
+    tweet_handle?: string;
+    tweet_date?: string;
+  };
+  MVImage?: {
+    usage: string;
+    order_index: number;
+  };
+  [key: string]: any;
+}
+
+export interface MVCreator {
+  id?: string;
+  name: string;
+  [key: string]: any;
+}
+
+export interface MVAlbum {
+  id?: string;
+  name: string;
+  [key: string]: any;
 }
 
 export interface MVKeyword {
-  text: string;
-  lang?: string;
+  id?: string;
+  name: string;
   [key: string]: any;
 }
 
@@ -19,13 +44,12 @@ export interface MVItem {
   title: string;
   year: string;
   date: string;
-  album: string[];
-  artist: string[]; // 支援多畫師
   youtube: string;
   bilibili: string;
   description: string;
-  images: MVImage[];
-  coverImages: string[];
+  creators: MVCreator[];
+  albums: MVAlbum[];
   keywords: MVKeyword[];
-  [key: string]: any; // 允許動態新增欄位
+  images: MVImage[];
+  [key: string]: any;
 }

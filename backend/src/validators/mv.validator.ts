@@ -50,33 +50,35 @@ export const mvItemSchema = z.object({
   youtube: z.string().optional().or(z.literal('')),
   bilibili: z.string().optional().or(z.literal('')),
   keywords: z.array(
-    z.union([
-      z.string(),
-      z.object({
-        text: z.string(),
-        lang: z.string().optional().or(z.literal(''))
-      }).passthrough()
-    ])
-  ).optional().transform(arr => arr?.map(k => typeof k === 'string' ? { text: k } : k) || []),
+    z.object({
+      id: z.string().optional(),
+      name: z.string()
+    }).passthrough()
+  ).optional().default([]),
   images: z.array(
-    z.union([
-      z.null(),
-      z.object({
-        url: z.string().optional().or(z.literal('')),
-        src: z.string().optional().or(z.literal('')),
-        full: z.string().optional().or(z.literal('')),
-        raw: z.string().optional().or(z.literal('')),
-        caption: z.string().optional().or(z.literal('')),
-        richText: z.string().optional().or(z.literal('')),
-        alt: z.string().optional().or(z.literal('')),
-        width: z.number().optional().or(z.literal(0)).or(z.literal(null)),
-        height: z.number().optional().or(z.literal(0)).or(z.literal(null)),
-      }).passthrough() // 允許圖片物件內有未定義的新欄位
-    ])
-  ).optional().transform(arr => arr?.filter(item => item !== null) || []),
-  coverImages: z.array(z.string()).optional(),
-  album: z.array(z.string()).optional(),
-  artist: z.array(z.string()).optional(),
+    z.object({
+      id: z.string().optional(),
+      type: z.string(),
+      url: z.string(),
+      original_url: z.string().optional(),
+      thumbnail_url: z.string().optional(),
+      caption: z.string().optional().or(z.literal('')),
+      width: z.number().optional().or(z.literal(0)).or(z.literal(null)),
+      height: z.number().optional().or(z.literal(0)).or(z.literal(null)),
+    }).passthrough()
+  ).optional().default([]),
+  albums: z.array(
+    z.object({
+      id: z.string().optional(),
+      name: z.string()
+    }).passthrough()
+  ).optional().default([]),
+  creators: z.array(
+    z.object({
+      id: z.string().optional(),
+      name: z.string()
+    }).passthrough()
+  ).optional().default([]),
 }).passthrough(); // 允許 MV 物件內有未定義的新欄位
 
 export const mvArraySchema = z.array(mvItemSchema);
