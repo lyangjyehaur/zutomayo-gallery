@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MVItem } from '@/lib/types';
+import { getProxyImgUrl } from '@/lib/image';
 import { Label } from '@/components/ui/label';
 import { WalineComments } from '@/components/WalineComments';
 
