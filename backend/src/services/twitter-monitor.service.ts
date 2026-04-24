@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import Parser from 'rss-parser';
 import { Fanart } from './pg.service.js';
 import { TwitterService } from './twitter.service.js';
+import { backupImageToR2 } from './r2.service.js';
 import fetch from 'node-fetch';
 
 const parser = new Parser();
@@ -53,6 +54,17 @@ export const TwitterMonitorService = {
             const tweetHandle = firstMedia.user_screen_name || '';
             const tweetDate = firstMedia.date || item.isoDate || new Date().toISOString();
 
+            // 背景上傳到 R2
+            const updatedMediaList = await Promise.all(mediaList.map(async (media) => {
+              if (media.type === 'image' && media.url.includes('pbs.twimg.com')) {
+                const r2Url = await backupImageToR2(media.url, 'fanarts');
+                if (r2Url) {
+                  return { ...media, url: r2Url, original_url: media.url };
+                }
+              }
+              return media;
+            }));
+
             await Fanart.create({
               id,
               tweetUrl: item.link,
@@ -60,7 +72,7 @@ export const TwitterMonitorService = {
               tweetAuthor,
               tweetHandle,
               tweetDate: new Date(tweetDate),
-              media: mediaList,
+              media: updatedMediaList,
               status: 'unorganized',
               createdAt: new Date()
             });
