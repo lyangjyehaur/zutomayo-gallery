@@ -69,7 +69,13 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
     
     // ==== 中國大陸用戶（或需要代理的圖片）的處理 ====
 
-    // 處理 Twitter 影片連結
+    // 處理 R2 圖片/影片代理
+    if (targetUrl.includes('r2.dan.tw')) {
+      // 即使是 raw 模式，R2 檔案也支援直接下載與 CORS，不應該過 imgproxy (它會壞掉，特別是影片)
+      return targetUrl.replace('https://r2.dan.tw', 'https://assets.ztmr.club/r2');
+    }
+
+    // 處理 Twitter 影片連結 (video.twimg.com)
     if (targetUrl.includes('video.twimg.com')) {
       return targetUrl.replace('https://video.twimg.com', 'https://assets.ztmr.club/tv');
     }
@@ -98,13 +104,6 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
     if (targetUrl.includes('ytimg.com') || targetUrl.includes('youtube.com')) {
       if (mode !== 'raw') {
         return targetUrl.replace('https://i.ytimg.com', 'https://assets.ztmr.club/yi');
-      }
-    }
-
-    // 處理 R2 圖片代理
-    if (targetUrl.includes('r2.dan.tw')) {
-      if (mode !== 'raw') {
-        return targetUrl.replace('https://r2.dan.tw', 'https://assets.ztmr.club/r2');
       }
     }
 

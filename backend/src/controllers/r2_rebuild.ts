@@ -103,11 +103,22 @@ export const rebuildR2 = async (req: any, res: any) => {
                   'source-tweet': fa.tweetUrl || 'unknown'
                 }
               });
+
+              let r2ThumbnailUrl = imgObj.thumbnail;
+              const originalThumbnail = imgObj.original_thumbnail || imgObj.thumbnail;
+              if (originalThumbnail && originalThumbnail.includes('pbs.twimg.com')) {
+                const thumbRes = await backupImageToR2(originalThumbnail, 'fanarts/videos/thumbs', {
+                  forceUpdate: true,
+                  metadata: { 'fanart-id': fa.id }
+                });
+                if (thumbRes) r2ThumbnailUrl = thumbRes;
+              }
+
               if (r2Url) {
                 if (typeof imgObj === 'string') {
                   newMedia.push(r2Url);
                 } else {
-                  newMedia.push({ ...imgObj, url: r2Url, original_url: originalUrl });
+                  newMedia.push({ ...imgObj, url: r2Url, original_url: originalUrl, thumbnail: r2ThumbnailUrl, original_thumbnail: originalThumbnail });
                 }
                 updated = true;
               } else {

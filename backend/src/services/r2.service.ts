@@ -75,11 +75,12 @@ export const backupImageToR2 = async (
   while (attempt < retryCount) {
     try {
       // 1. 產生唯一檔名 (根據 URL 的 Hash，避免重複下載)
-      // 取得原本的副檔名 (例如 .jpg)
-      const extMatch = url.match(/\.(jpg|jpeg|png|gif|webp|avif)/i);
-      let ext = extMatch ? extMatch[1] : 'jpg';
+      // 取得原本的副檔名 (例如 .jpg, .mp4)
+      const extMatch = url.match(/\.(jpg|jpeg|png|gif|webp|avif|mp4|m4v|mov|m3u8)/i);
+      let ext = extMatch ? extMatch[1].toLowerCase() : 'jpg';
       if (url.includes('format=png')) ext = 'png';
       if (url.includes('format=webp')) ext = 'webp';
+      if (url.includes('format=mp4')) ext = 'mp4';
 
       const hash = crypto.createHash('md5').update(url).digest('hex');
       const fileName = `${folder}/${hash}.${ext}`;
@@ -115,7 +116,15 @@ export const backupImageToR2 = async (
 
       const arrayBuffer = await response.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
-      const contentType = response.headers.get('content-type') || `image/${ext}`;
+      let contentType = response.headers.get('content-type');
+      if (!contentType || contentType.includes('text/plain') || contentType.includes('application/octet-stream')) {
+        const mimeTypes: Record<string, string> = {
+          'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'gif': 'image/gif',
+          'webp': 'image/webp', 'avif': 'image/avif', 'mp4': 'video/mp4', 'm4v': 'video/mp4',
+          'mov': 'video/quicktime', 'm3u8': 'application/vnd.apple.mpegurl'
+        };
+        contentType = mimeTypes[ext] || `image/${ext}`;
+      }
       
       // ===== R2 特性與前瞻性擴展 (Metadata) =====
       // 將原始來源與專案資訊作為 Metadata 存入 R2，方便未來管理與遷移

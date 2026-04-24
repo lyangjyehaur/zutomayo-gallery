@@ -62,11 +62,21 @@ export const syncImagesToR2 = async (req: Request, res: Response): Promise<void>
                 'source-tweet': fa.tweetUrl || 'unknown'
               }
             });
+
+            let r2ThumbnailUrl = imgObj.thumbnail;
+            const originalThumbnail = imgObj.original_thumbnail || imgObj.thumbnail;
+            if (originalThumbnail && originalThumbnail.includes('pbs.twimg.com')) {
+              const thumbRes = await backupImageToR2(originalThumbnail, 'fanarts/videos/thumbs', {
+                metadata: { 'fanart-id': fa.id }
+              });
+              if (thumbRes) r2ThumbnailUrl = thumbRes;
+            }
+
             if (r2Url) {
               if (isString) {
                 newMedia.push(r2Url);
               } else {
-                newMedia.push({ ...imgObj, url: r2Url, original_url: imgUrl });
+                newMedia.push({ ...imgObj, url: r2Url, original_url: imgUrl, thumbnail: r2ThumbnailUrl, original_thumbnail: originalThumbnail });
               }
               if (r2Url !== imgUrl) updated = true;
               successCount++;

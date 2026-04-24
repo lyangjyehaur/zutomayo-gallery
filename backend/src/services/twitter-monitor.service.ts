@@ -75,8 +75,18 @@ export const TwitterMonitorService = {
                     'source-tweet': item.link || 'unknown'
                   }
                 });
+                
+                // 同時備份影片的預覽圖 (thumbnail)
+                let r2ThumbnailUrl = media.thumbnail;
+                if (media.thumbnail && media.thumbnail.includes('pbs.twimg.com')) {
+                  const thumbRes = await backupImageToR2(media.thumbnail, 'fanarts/videos/thumbs', {
+                    metadata: { 'fanart-id': id }
+                  });
+                  if (thumbRes) r2ThumbnailUrl = thumbRes;
+                }
+
                 if (r2Url) {
-                  return { ...media, url: r2Url, original_url: media.url };
+                  return { ...media, url: r2Url, original_url: media.url, thumbnail: r2ThumbnailUrl, original_thumbnail: media.thumbnail };
                 }
               }
               return media;
