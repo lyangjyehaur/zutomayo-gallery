@@ -93,6 +93,26 @@ export const rebuildR2 = async (req: any, res: any) => {
               } else {
                 newMedia.push(imgObj);
               }
+            } else if (originalUrl && originalUrl.includes('video.twimg.com')) {
+              console.log(`[R2 Rebuild] Fanart video: ${originalUrl}`);
+              const r2Url = await backupImageToR2(originalUrl, 'fanarts/videos', {
+                forceUpdate: true,
+                metadata: {
+                  'fanart-id': fa.id,
+                  'author-handle': fa.tweetHandle || 'unknown',
+                  'source-tweet': fa.tweetUrl || 'unknown'
+                }
+              });
+              if (r2Url) {
+                if (typeof imgObj === 'string') {
+                  newMedia.push(r2Url);
+                } else {
+                  newMedia.push({ ...imgObj, url: r2Url, original_url: originalUrl });
+                }
+                updated = true;
+              } else {
+                newMedia.push(imgObj);
+              }
             } else {
               newMedia.push(imgObj);
             }

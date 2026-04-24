@@ -67,6 +67,17 @@ export const TwitterMonitorService = {
                 if (r2Url) {
                   return { ...media, url: r2Url, original_url: media.url };
                 }
+              } else if (media.type === 'video' && media.url.includes('video.twimg.com')) {
+                const r2Url = await backupImageToR2(media.url, 'fanarts/videos', {
+                  metadata: {
+                    'fanart-id': id,
+                    'author-handle': tweetHandle || 'unknown',
+                    'source-tweet': item.link || 'unknown'
+                  }
+                });
+                if (r2Url) {
+                  return { ...media, url: r2Url, original_url: media.url };
+                }
               }
               return media;
             }));

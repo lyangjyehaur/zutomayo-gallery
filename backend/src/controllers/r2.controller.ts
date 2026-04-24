@@ -53,6 +53,27 @@ export const syncImagesToR2 = async (req: Request, res: Response): Promise<void>
               newMedia.push(imgObj);
               failCount++;
             }
+          } else if (imgUrl && imgUrl.includes('video.twimg.com')) {
+            // 同步影片 (MP4) 到 R2
+            const r2Url = await backupImageToR2(imgUrl, 'fanarts/videos', {
+              metadata: {
+                'fanart-id': fa.id,
+                'author-handle': fa.tweetHandle || 'unknown',
+                'source-tweet': fa.tweetUrl || 'unknown'
+              }
+            });
+            if (r2Url) {
+              if (isString) {
+                newMedia.push(r2Url);
+              } else {
+                newMedia.push({ ...imgObj, url: r2Url, original_url: imgUrl });
+              }
+              if (r2Url !== imgUrl) updated = true;
+              successCount++;
+            } else {
+              newMedia.push(imgObj);
+              failCount++;
+            }
           } else if (typeof imgUrl === 'string' && imgUrl.includes('r2.dan.tw')) {
              newMedia.push(imgObj);
              skippedCount++;
