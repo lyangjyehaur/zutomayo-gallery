@@ -92,21 +92,28 @@
 | `usage` | `VARCHAR(50)` | `NOT NULL` | 該圖片在此 MV 的用途：`'cover'` (封面), `'gallery'` (相簿/設定圖) |
 | `order_index` | `INTEGER` | `DEFAULT 0` | 在該用途中的顯示順序 (數字越小越前面) |
 
-### 3.2. `mv_artists` (MV 與畫師的關聯)
+### 3.2. `artist_images` (畫師與特定圖片的關聯)
+用於將特定的圖片（如某張官方宣傳圖、或某張 FanArt）直接歸屬於特定的畫師。這對於擁有多位畫師參與的大型 MV（每位畫師負責不同場景）特別重要。
+| 欄位名稱 | 型別 | 約束 | 說明 |
+| :--- | :--- | :--- | :--- |
+| `artist_id` | `UUID` | `PK`, `FK` | 關聯至 `artists.id` |
+| `image_id` | `UUID` | `PK`, `FK` | 關聯至 `images.id` |
+
+### 3.3. `mv_artists` (MV 與畫師的關聯)
 | 欄位名稱 | 型別 | 約束 | 說明 |
 | :--- | :--- | :--- | :--- |
 | `mv_id` | `VARCHAR(255)` | `PK`, `FK` | 關聯至 `mvs.id` |
 | `artist_id` | `UUID` | `PK`, `FK` | 關聯至 `artists.id` |
 | `role` | `VARCHAR(100)` | `DEFAULT 'unknown'` | 畫師在該 MV 中的職位 (如 `'Animator'`, `'Character Design'`) |
 
-### 3.3. `mv_albums` (MV 與專輯的關聯)
+### 3.4. `mv_albums` (MV 與專輯的關聯)
 | 欄位名稱 | 型別 | 約束 | 說明 |
 | :--- | :--- | :--- | :--- |
 | `mv_id` | `VARCHAR(255)` | `PK`, `FK` | 關聯至 `mvs.id` |
 | `album_id` | `UUID` | `PK`, `FK` | 關聯至 `albums.id` |
 | `track_number`| `INTEGER` | `DEFAULT 0` | 該歌曲在專輯中的音軌編號 |
 
-### 3.4. `mv_keywords` (MV 與關鍵字的關聯)
+### 3.5. `mv_keywords` (MV 與關鍵字的關聯)
 | 欄位名稱 | 型別 | 約束 | 說明 |
 | :--- | :--- | :--- | :--- |
 | `mv_id` | `VARCHAR(255)` | `PK`, `FK` | 關聯至 `mvs.id` |

@@ -28,6 +28,7 @@
 - **`mv_images`**: 關聯 `mvs` 與 `images`。
   - `usage`: `'cover'` (封面圖) | `'gallery'` (相簿/設定資料/二創圖)。
   - `order_index`: 控制圖片在前端顯示的排序。
+- **`artist_images`**: 關聯 `artists` 與 `images` (用於標記單張圖片的具體畫師，例如多畫師合作 MV 中的特定場景圖或二創圖)。
 - **`mv_artists`**: 關聯 `mvs` 與 `artists`。
 - **`mv_albums`**: 關聯 `mvs` 與 `albums`。
 - **`mv_keywords`**: 關聯 `mvs` 與 `keywords`。
