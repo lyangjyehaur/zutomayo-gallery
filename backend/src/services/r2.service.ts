@@ -48,14 +48,28 @@ export const checkImageExists = async (fileName: string): Promise<boolean> => {
 };
 
 /**
+ * R2 上傳設定選項
+ */
+export interface R2UploadOptions {
+  retryCount?: number;
+  metadata?: Record<string, string>; // 自訂的物件 Metadata (S3 規範)
+}
+
+/**
  * 下載網路圖片並上傳到 R2
  * @param url 原始圖片網址 (如推特 pbs.twimg.com)
- * @param folder 儲存的資料夾名稱 (如 fanarts, mvs)
+ * @param folder 儲存的資料夾名稱 (如 fanarts, mvs/ID)
+ * @param options 上傳選項 (重試次數、Metadata)
  * @returns 成功上傳後的 R2 公開網址
  */
-export const backupImageToR2 = async (url: string, folder: string = 'images', retryCount: number = 3): Promise<string | null> => {
+export const backupImageToR2 = async (
+  url: string, 
+  folder: string = 'images', 
+  options?: R2UploadOptions
+): Promise<string | null> => {
   if (!s3Client) return null;
 
+  const retryCount = options?.retryCount ?? 3;
   let attempt = 0;
   while (attempt < retryCount) {
     try {
@@ -99,6 +113,19 @@ export const backupImageToR2 = async (url: string, folder: string = 'images', re
       const arrayBuffer = await response.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
       const contentType = response.headers.get('content-type') || `image/${ext}`;
+      
+      // ===== R2 特性與前瞻性擴展 (Metadata) =====
+      // 將原始來源與專案資訊作為 Metadata 存入 R2，方便未來管理與遷移
+      const metadata: Record<string, string> = {
+        'original-url': url,
+        'uploaded-by': 'ztmy-gallery-backend',
+        'upload-timestamp': new Date().toISOString()
+      };
+      
+      // 如果有額外的 metadata (例如 MV ID, 繪師推特)，也一併存入
+      if (options?.metadata) {
+        Object.assign(metadata, options.metadata);
+      }
 
       // 4. 上傳到 R2
       console.log(`[R2] Uploading to R2: ${fileName} (${(buffer.length / 1024).toFixed(2)} KB)`);
@@ -108,7 +135,8 @@ export const backupImageToR2 = async (url: string, folder: string = 'images', re
         Body: buffer,
         ContentType: contentType,
         // 快取設定：讓 Cloudflare 邊緣節點快取 1 年
-        CacheControl: 'public, max-age=31536000, immutable'
+        CacheControl: 'public, max-age=31536000, immutable',
+        Metadata: metadata
       }));
 
       return `${R2_PUBLIC_DOMAIN}/${fileName}`;

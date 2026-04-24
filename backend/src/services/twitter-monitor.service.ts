@@ -57,7 +57,13 @@ export const TwitterMonitorService = {
             // 背景上傳到 R2
             const updatedMediaList = await Promise.all(mediaList.map(async (media) => {
               if (media.type === 'image' && media.url.includes('pbs.twimg.com')) {
-                const r2Url = await backupImageToR2(media.url, 'fanarts');
+                const r2Url = await backupImageToR2(media.url, 'fanarts', {
+                  metadata: {
+                    'fanart-id': id,
+                    'author-handle': tweetHandle || 'unknown',
+                    'source-tweet': item.link || 'unknown'
+                  }
+                });
                 if (r2Url) {
                   return { ...media, url: r2Url, original_url: media.url };
                 }

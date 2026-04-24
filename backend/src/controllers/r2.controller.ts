@@ -34,7 +34,13 @@ export const syncImagesToR2 = async (req: Request, res: Response): Promise<void>
           const imgUrl = isString ? imgObj : imgObj.url;
           
           if (imgUrl && imgUrl.includes('pbs.twimg.com')) {
-            const r2Url = await backupImageToR2(imgUrl, 'fanarts');
+            const r2Url = await backupImageToR2(imgUrl, 'fanarts', {
+              metadata: {
+                'fanart-id': fa.id,
+                'author-handle': fa.tweetHandle || 'unknown',
+                'source-tweet': fa.tweetUrl || 'unknown'
+              }
+            });
             if (r2Url) {
               if (isString) {
                 newMedia.push(r2Url);
@@ -74,7 +80,12 @@ export const syncImagesToR2 = async (req: Request, res: Response): Promise<void>
           
           if (imgUrl && imgUrl.includes('pbs.twimg.com')) {
             // 將 MV 圖片分類至其獨立的資料夾
-            const r2Url = await backupImageToR2(imgUrl, `mvs/${mv.id}`);
+            const r2Url = await backupImageToR2(imgUrl, `mvs/${mv.id}`, {
+              metadata: {
+                'mv-id': mv.id,
+                'mv-title': Buffer.from(mv.title || 'unknown').toString('base64') // 標題可能有非 ASCII 字元，轉 Base64 避免 S3 標頭報錯
+              }
+            });
             if (r2Url) {
               if (isString) {
                 newImages.push(r2Url);
