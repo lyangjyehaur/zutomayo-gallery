@@ -2,9 +2,9 @@ import { Sequelize, DataTypes, Model } from 'sequelize';
 
 const DB_HOST = process.env.DB_HOST || '45.147.26.57';
 const DB_PORT = parseInt(process.env.DB_PORT || '5432', 10);
-const DB_NAME = process.env.DB_NAME || 'zutomayo_gallery';
-const DB_USER = process.env.DB_USER || 'zutomayo_gallery';
-const DB_PASS = process.env.DB_PASS || 'FBZNYC3HSJExdHX3';
+const DB_NAME = process.env.DB_NAME || 'zutomayo_gallery_test';
+const DB_USER = process.env.DB_USER || 'zutomayo_gallery_test';
+const DB_PASS = process.env.DB_PASS || 'XCFHbZQyn33KeY66';
 
 export const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASS, {
   host: DB_HOST,
