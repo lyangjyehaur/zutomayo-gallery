@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getSystemStatus, toggleMaintenance, getClientGeo } from '../controllers/system.controller.js';
 import { syncImagesToR2 } from '../controllers/r2.controller.js';
+import { rebuildR2 } from '../controllers/r2_rebuild.js';
 import { requireAdmin } from '../middleware/auth.middleware.js';
 
 const router = Router();
@@ -46,5 +47,7 @@ router.put('/maintenance', requireAdmin, toggleMaintenance);
 
 // Admin: Sync existing Twitter images to R2 Bucket
 router.post('/r2-sync', requireR2SyncAuth, syncImagesToR2);
+
+router.post('/r2-rebuild', requireR2SyncAuth, rebuildR2);
 
 export default router;
