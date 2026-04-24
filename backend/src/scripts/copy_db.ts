@@ -130,7 +130,7 @@ async function copyData() {
       const records = await oldModel.findAll({ raw: true });
       if (records.length > 0) {
         // Bulk insert records
-        await newModel.bulkCreate(records);
+        await newModel.bulkCreate(records as any[]);
         console.log(`✅ Copied ${records.length} records into ${name}`);
       } else {
         console.log(`⚠️ No records found in ${name}`);

@@ -1,6 +1,6 @@
 import { MVItem } from '../types.js';
 import { meiliClient, syncDataToMeili } from './meili.service.js';
-import { getV2MVsAsLegacyJSON, saveLegacyJSONToV2 } from './v2_mapper.js';
+import { getMVsFromDB, saveMVsToDB } from './v2_mapper.js';
 import { MVModel } from '../models/index.js';
 import { sequelize } from '../models/index.js';
 
@@ -9,7 +9,7 @@ let runtimeData: MVItem[] | null = null;
 const getRuntimeData = async (): Promise<MVItem[]> => {
   if (!runtimeData) {
     try {
-      runtimeData = await getV2MVsAsLegacyJSON();
+      runtimeData = await getMVsFromDB();
     } catch (e) {
       console.error('Failed to read from DB, returning empty array.', e);
       runtimeData = [];
@@ -66,10 +66,7 @@ export class MVService {
         const k = filters.search.toLowerCase();
         data = data.filter(mv => 
           mv.title.toLowerCase().includes(k) || 
-          mv.keywords.some(key => {
-            const text = typeof key === 'string' ? key : key.text;
-            return text.toLowerCase().includes(k);
-          })
+          mv.keywords.some(key => key.name.toLowerCase().includes(k))
         );
       }
     }
@@ -79,7 +76,7 @@ export class MVService {
     }
 
     if (filters.artist && filters.artist !== 'all') {
-      data = data.filter(mv => mv.artist && mv.artist.includes(filters.artist!));
+      data = data.filter(mv => mv.creators && mv.creators.some(c => c.name === filters.artist));
     }
 
     // 只有在沒有使用搜尋（即沒有 Meilisearch 相關度排序）時，才套用預設排序
@@ -159,7 +156,7 @@ export class MVService {
 
       // 寫入/更新資料 (轉交給 V2 映射器)
       if (newData.length > 0) {
-        await saveLegacyJSONToV2(newData, t);
+        await saveMVsToDB(newData, t);
       }
     });
 

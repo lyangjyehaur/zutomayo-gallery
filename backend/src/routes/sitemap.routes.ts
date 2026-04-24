@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { MV, Fanart } from '../services/pg.service.js';
 
-import { getV2MVsAsLegacyJSON } from '../services/v2_mapper.js';
+import { getMVsFromDB } from '../services/v2_mapper.js';
 
 const router = Router();
 const BASE_URL = 'https://gallery.ztmr.club';
@@ -9,7 +9,7 @@ const BASE_URL = 'https://gallery.ztmr.club';
 router.get('/sitemap.xml', async (req, res) => {
   try {
     const [mvs, fanarts] = await Promise.all([
-      getV2MVsAsLegacyJSON(),
+      getMVsFromDB(),
       Fanart.findAll({ where: { status: 'organized' } })
     ]);
 

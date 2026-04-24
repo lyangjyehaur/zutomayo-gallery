@@ -1,6 +1,6 @@
 import { Meilisearch } from 'meilisearch';
 import { Fanart } from './pg.service.js';
-import { getV2MVsAsLegacyJSON } from './v2_mapper.js';
+import { getMVsFromDB } from './v2_mapper.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const MEILI_HOST = process.env.MEILI_HOST || 'http://localhost:7700';
@@ -67,20 +67,20 @@ export const syncDataToMeili = async () => {
     console.log('[Meilisearch] Starting data sync...');
 
     // 1. 處理 MVs
-    const mvs = await getV2MVsAsLegacyJSON();
+    const mvs = await getMVsFromDB();
     const mvDocs = mvs.map(mv => {
       // 處理 keywords 為純文字以便搜尋
-      let keywords_text = [];
+      let keywords_text: string[] = [];
       if (Array.isArray(mv.keywords)) {
-        keywords_text = mv.keywords.map((k: any) => typeof k === 'string' ? k : k.text);
+        keywords_text = mv.keywords.map(k => k.name);
       }
       
       return {
         id: mv.id,
         title: mv.title,
         description: mv.description,
-        artist: Array.isArray(mv.artist) ? mv.artist : [mv.artist],
-        album: Array.isArray(mv.album) ? mv.album : [mv.album],
+        artist: Array.isArray(mv.creators) ? mv.creators.map(c => c.name) : [],
+        album: Array.isArray(mv.albums) ? mv.albums.map(a => a.name) : [],
         keywords_text,
         year: mv.year,
         date: mv.date ? new Date(mv.date).getTime() : null,

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { Fanart } from '../services/pg.service.js';
-import { getV2MVsAsLegacyJSON, saveLegacyJSONToV2 } from '../services/v2_mapper.js';
+import { getMVsFromDB, saveMVsToDB } from '../services/v2_mapper.js';
 import { backupImageToR2 } from '../services/r2.service.js';
 
 // 防止多個同步任務同時執行
@@ -102,7 +102,7 @@ export const syncImagesToR2 = async (req: Request, res: Response): Promise<void>
     }
 
     // 2. 同步 MVs 的推特圖片
-    const mvs = await getV2MVsAsLegacyJSON();
+    const mvs = await getMVsFromDB();
     for (const mv of mvs) {
       let updated = false;
       const newImages = [];
@@ -141,7 +141,7 @@ export const syncImagesToR2 = async (req: Request, res: Response): Promise<void>
 
       if (updated) {
           mv.images = newImages as any;
-          await saveLegacyJSONToV2([mv]);
+          await saveMVsToDB([mv]);
         console.log(`[R2 Sync] Updated MV ${mv.id} image links to R2.`);
       }
     }

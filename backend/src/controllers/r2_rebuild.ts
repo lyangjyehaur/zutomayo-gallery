@@ -1,5 +1,5 @@
 import { S3Client, ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
-import { getV2MVsAsLegacyJSON, saveLegacyJSONToV2 } from '../services/v2_mapper.js';
+import { getMVsFromDB, saveMVsToDB } from '../services/v2_mapper.js';
 import { Fanart } from '../services/pg.service.js';
 import { backupImageToR2 } from '../services/r2.service.js';
 
@@ -22,7 +22,7 @@ export const rebuildR2 = async (req: any, res: any) => {
       console.log('[R2 Rebuild] Starting...');
       
       // 1. 同步 MVs
-      const mvs = await getV2MVsAsLegacyJSON();
+      const mvs = await getMVsFromDB();
       console.log(`[R2 Rebuild] Found ${mvs.length} MVs to rebuild.`);
       for (const mv of mvs) {
         let updated = false;
@@ -59,7 +59,7 @@ export const rebuildR2 = async (req: any, res: any) => {
 
         if (updated) {
           mv.images = newImages as any;
-          await saveLegacyJSONToV2([mv]);
+          await saveMVsToDB([mv]);
           console.log(`[R2 Rebuild] Updated MV ${mv.id}`);
         }
       }
