@@ -4,7 +4,7 @@ import { MVItem } from '@/lib/types';
 import { getProxyImgUrl } from '@/lib/image';
 import { Label } from '@/components/ui/label';
 import { WalineComments } from '@/components/WalineComments';
-import { ResponsiveMasonry } from '@/components/FancyboxViewer';
+import FancyboxViewer from '@/components/FancyboxViewer';
 
 interface FanArtPageProps {
   mvData: MVItem[];
