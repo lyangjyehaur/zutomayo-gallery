@@ -25,21 +25,21 @@
 儲存系統中所有的媒體資源，包含 MV 封面圖、官方設定資料圖、以及社群二創影片/圖片 (FanArt)。
 | 欄位名稱 | 型別 | 約束 | 說明 |
 | :--- | :--- | :--- | :--- |
-| `id` | `UUID` | `PRIMARY KEY` | 媒體的唯一識別碼 |
+| `id` | `VARCHAR(36)` | `PRIMARY KEY` | 媒體的唯一識別碼 (使用 NanoID) |
 | `type` | `VARCHAR(50)` | `NOT NULL` | 媒體分類：`'cover'` (封面), `'official'` (官方圖), `'fanart'` (二創圖) |
 | `media_type`| `VARCHAR(20)` | `DEFAULT 'image'`| 媒體格式類型：`'image'` (圖片), `'video'` (影片), `'gif'` (動圖) |
 | `original_url`| `TEXT` | `UNIQUE`, `NOT NULL`| 媒體的原始來源網址 (例如 Twitter 原圖網址) |
 | `url` | `TEXT` | `NOT NULL` | 系統內實際使用的網址 (備份至 Cloudflare R2 後的網址) |
 | `thumbnail_url`| `TEXT`| `NULL` | 縮圖網址 (供影片使用) |
 | `caption` | `TEXT` | `NULL` | 描述或圖說 |
-| `group_id` | `UUID` | `FK`, `NULL` | 關聯至 `media_groups.id`，用於將來自同一個來源 (如推文) 的多張媒體分組 |
+| `group_id` | `VARCHAR(36)` | `FK`, `NULL` | 關聯至 `media_groups.id`，用於將來自同一個來源 (如推文) 的多張媒體分組 |
 | `created_at` | `TIMESTAMP` | | 建立時間 |
 
 ### 1.3. `artists` (畫師/創作者表)
 儲存參與 MV 製作或繪製二創圖的創作者資訊。
 | 欄位名稱 | 型別 | 約束 | 說明 |
 | :--- | :--- | :--- | :--- |
-| `id` | `UUID` | `PRIMARY KEY` | 畫師唯一識別碼 |
+| `id` | `VARCHAR(36)` | `PRIMARY KEY` | 畫師唯一識別碼 (使用 NanoID) |
 | `name` | `VARCHAR(255)` | `UNIQUE`, `NOT NULL`| 畫師名稱 |
 | `twitter` | `VARCHAR(255)` | `NULL` | 推特用戶名 (不含 @，原 sns_id) |
 | `profile_url`| `VARCHAR(255)` | `NULL` | 頭像網址 |
@@ -48,7 +48,7 @@
 儲存 MV 收錄的實體或數位專輯資訊。
 | 欄位名稱 | 型別 | 約束 | 說明 |
 | :--- | :--- | :--- | :--- |
-| `id` | `UUID` | `PRIMARY KEY` | 專輯唯一識別碼 |
+| `id` | `VARCHAR(36)` | `PRIMARY KEY` | 專輯唯一識別碼 (使用 NanoID) |
 | `name` | `VARCHAR(255)` | `UNIQUE`, `NOT NULL`| 專輯名稱 |
 | `type` | `VARCHAR(50)` | `NULL` | 專輯類別 (參考 sys_dictionaries: album_type) |
 | `release_date`| `TIMESTAMP` | `NULL` | 發行日期 |
@@ -57,7 +57,7 @@
 儲存用於搜尋與分類的標籤/關鍵字。
 | 欄位名稱 | 型別 | 約束 | 說明 |
 | :--- | :--- | :--- | :--- |
-| `id` | `UUID` | `PRIMARY KEY` | 關鍵字唯一識別碼 |
+| `id` | `VARCHAR(36)` | `PRIMARY KEY` | 關鍵字唯一識別碼 (使用 NanoID) |
 | `name` | `VARCHAR(255)` | `UNIQUE`, `NOT NULL`| 關鍵字內容 |
 | `lang` | `VARCHAR(20)` | `DEFAULT 'zh-Hant'` | 關鍵字所屬語言 |
 
@@ -69,7 +69,7 @@
 用於將來自同一個來源 (例如同一篇 Twitter 推文) 的多張圖片/影片進行分組，並共享來源詮釋資料。取代了原本只跟單張圖綁定的 `fanart_metadata`。
 | 欄位名稱 | 型別 | 約束 | 說明 |
 | :--- | :--- | :--- | :--- |
-| `id` | `UUID` | `PRIMARY KEY` | 分組唯一識別碼 |
+| `id` | `VARCHAR(36)` | `PRIMARY KEY` | 分組唯一識別碼 (使用 NanoID) |
 | `title` | `VARCHAR(255)` | `NULL` | 分組標題 (供官方相簿等使用) |
 | `source_url` | `TEXT` | `NULL` | 來源網址 (如推文連結) |
 | `source_text` | `TEXT` | `NULL` | 來源內容 (如推文內文) |
@@ -89,7 +89,7 @@
 | 欄位名稱 | 型別 | 約束 | 說明 |
 | :--- | :--- | :--- | :--- |
 | `mv_id` | `VARCHAR(255)` | `PK`, `FK` | 關聯至 `mvs.id` |
-| `media_id` | `UUID` | `PK`, `FK` | 關聯至 `media.id` |
+| `media_id` | `VARCHAR(36)` | `PK`, `FK` | 關聯至 `media.id` |
 | `usage` | `VARCHAR(50)` | `NOT NULL` | 該圖片/影片在此 MV 的用途：`'cover'` (封面), `'gallery'` (相簿/設定圖) |
 | `order_index` | `INTEGER` | `DEFAULT 0` | 在該用途中的顯示順序 (數字越小越前面) |
 
@@ -97,28 +97,28 @@
 用於將特定的圖片/影片直接歸屬於特定的畫師。
 | 欄位名稱 | 型別 | 約束 | 說明 |
 | :--- | :--- | :--- | :--- |
-| `artist_id` | `UUID` | `PK`, `FK` | 關聯至 `artists.id` |
-| `media_id` | `UUID` | `PK`, `FK` | 關聯至 `media.id` |
+| `artist_id` | `VARCHAR(36)` | `PK`, `FK` | 關聯至 `artists.id` |
+| `media_id` | `VARCHAR(36)` | `PK`, `FK` | 關聯至 `media.id` |
 
 ### 3.3. `mv_artists` (MV 與畫師的關聯)
 | 欄位名稱 | 型別 | 約束 | 說明 |
 | :--- | :--- | :--- | :--- |
 | `mv_id` | `VARCHAR(255)` | `PK`, `FK` | 關聯至 `mvs.id` |
-| `artist_id` | `UUID` | `PK`, `FK` | 關聯至 `artists.id` |
+| `artist_id` | `VARCHAR(36)` | `PK`, `FK` | 關聯至 `artists.id` |
 | `role` | `VARCHAR(100)` | `DEFAULT 'unknown'` | 畫師在該 MV 中的職位 (如 `'Animator'`, `'Character Design'`) |
 
 ### 3.4. `mv_albums` (MV 與專輯的關聯)
 | 欄位名稱 | 型別 | 約束 | 說明 |
 | :--- | :--- | :--- | :--- |
 | `mv_id` | `VARCHAR(255)` | `PK`, `FK` | 關聯至 `mvs.id` |
-| `album_id` | `UUID` | `PK`, `FK` | 關聯至 `albums.id` |
+| `album_id` | `VARCHAR(36)` | `PK`, `FK` | 關聯至 `albums.id` |
 | `track_number`| `INTEGER` | `DEFAULT 0` | 該歌曲在專輯中的音軌編號 |
 
 ### 3.5. `mv_keywords` (MV 與關鍵字的關聯)
 | 欄位名稱 | 型別 | 約束 | 說明 |
 | :--- | :--- | :--- | :--- |
 | `mv_id` | `VARCHAR(255)` | `PK`, `FK` | 關聯至 `mvs.id` |
-| `keyword_id` | `UUID` | `PK`, `FK` | 關聯至 `keywords.id` |
+| `keyword_id` | `VARCHAR(36)` | `PK`, `FK` | 關聯至 `keywords.id` |
 
 ---
 
@@ -150,7 +150,7 @@
 獨立存放系統首頁公告，便於維護多筆公告與啟用狀態。
 | 欄位名稱 | 型別 | 約束 | 說明 |
 | :--- | :--- | :--- | :--- |
-| `id` | `UUID` | `PRIMARY KEY` | 公告唯一識別碼 |
+| `id` | `VARCHAR(36)` | `PRIMARY KEY` | 公告唯一識別碼 (使用 NanoID) |
 | `content` | `TEXT` | `NOT NULL` | 公告內容 (支援純文字或 Markdown) |
 | `is_active` | `BOOLEAN` | `DEFAULT true`| 是否顯示於前台 |
 | `created_at` | `TIMESTAMP` | | 建立時間 |

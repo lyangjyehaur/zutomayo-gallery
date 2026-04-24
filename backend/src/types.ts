@@ -1,20 +1,24 @@
-export interface MVImage {
+export interface MVMedia {
   id?: string;
   type: string;
+  media_type?: string;
   url: string;
   original_url?: string;
   thumbnail_url?: string;
   caption?: string;
   width?: number;
   height?: number;
-  fanart_meta?: {
-    tweet_url?: string;
-    tweet_text?: string;
-    tweet_author?: string;
-    tweet_handle?: string;
-    tweet_date?: string;
+  group?: {
+    id?: string;
+    title?: string;
+    source_url?: string;
+    source_text?: string;
+    author_name?: string;
+    author_handle?: string;
+    post_date?: string;
+    status?: string;
   };
-  MVImage?: {
+  MVMedia?: {
     usage: string;
     order_index: number;
   };
@@ -50,6 +54,21 @@ export interface MVItem {
   creators: MVCreator[];
   albums: MVAlbum[];
   keywords: MVKeyword[];
-  images: MVImage[];
+  images: MVMedia[];
   [key: string]: any;
+}
+
+export interface ArtistMeta {
+  id?: string; // fallback for older format
+  twitter?: string;
+  hideId?: boolean;
+  displayName?: string;
+  profileUrl?: string;
+  bio?: string;
+  collaborations?: string[];
+  instagram?: string;
+  youtube?: string;
+  pixiv?: string;
+  tiktok?: string;
+  website?: string;
 }

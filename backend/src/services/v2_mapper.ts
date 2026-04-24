@@ -1,18 +1,19 @@
 import {
   MVModel,
-  ImageModel,
+  MediaModel,
   ArtistModel,
   AlbumModel,
   KeywordModel,
-  FanartMetadataModel,
-  MVImageModel,
+  MediaGroupModel,
+  MVMediaModel,
   MVArtistModel,
   MVAlbumModel,
   MVKeywordModel,
   sequelize
 } from '../models/index.js';
-import { v4 as uuidv4 } from 'uuid';
-import { MVItem, MVImage } from '../types.js';
+import { nanoid } from 'nanoid';
+const generateShortId = () => nanoid(16);
+import { MVItem, MVMedia } from '../types.js';
 
 /**
  * 讀取 V2 關聯式資料庫，並轉換回前端期望的 V1 JSONB 結構
@@ -24,18 +25,18 @@ export async function getMVsFromDB(): Promise<MVItem[]> {
       { model: AlbumModel, as: 'albums' },
       { model: KeywordModel, as: 'keywords' },
       { 
-        model: ImageModel, 
+        model: MediaModel, 
         as: 'images',
-        include: [{ model: FanartMetadataModel, as: 'fanart_meta' }]
+        include: [{ model: MediaGroupModel, as: 'group' }]
       }
     ],
     order: [
       ['date', 'DESC'],
-      [{ model: ImageModel, as: 'images' }, MVImageModel, 'order_index', 'ASC']
+      [{ model: MediaModel, as: 'images' }, MVMediaModel, 'order_index', 'ASC']
     ]
   });
 
-  return mvs.map(mvRecord => mvRecord.toJSON() as MVItem);
+  return mvs.map((mvRecord) => mvRecord.toJSON() as MVItem);
 }
 
 export async function saveMVsToDB(mvs: MVItem[], transaction?: any): Promise<void> {
@@ -94,7 +95,7 @@ export async function saveMVsToDB(mvs: MVItem[], transaction?: any): Promise<voi
       await MVArtistModel.destroy({ where: { mv_id: mv.id }, transaction: t });
       await MVAlbumModel.destroy({ where: { mv_id: mv.id }, transaction: t });
       await MVKeywordModel.destroy({ where: { mv_id: mv.id }, transaction: t });
-      await MVImageModel.destroy({ where: { mv_id: mv.id }, transaction: t });
+      await MVMediaModel.destroy({ where: { mv_id: mv.id }, transaction: t });
 
       // 3. Rebuild Artists
       const creators = Array.isArray(mv.creators) ? mv.creators : [];
@@ -130,15 +131,15 @@ export async function saveMVsToDB(mvs: MVItem[], transaction?: any): Promise<voi
           const url = img.url;
           if (!url) continue;
 
-          const isFanart = img.type === 'fanart';
           const originalUrl = img.original_url || url;
-          const usage = img.MVImage?.usage || 'gallery';
+          const usage = img.MVMedia?.usage || img.usage || 'gallery';
 
-          let [image] = await ImageModel.findOrCreate({
+          let [image] = await MediaModel.findOrCreate({
             where: { original_url: originalUrl },
             defaults: {
-              id: img.id || uuidv4(),
+              id: img.id || generateShortId(),
               type: img.type || 'official',
+              media_type: 'image', // 預設為圖片，後續可擴充
               url: url,
               thumbnail_url: img.thumbnail_url || null,
               caption: img.caption || null,
@@ -150,23 +151,39 @@ export async function saveMVsToDB(mvs: MVItem[], transaction?: any): Promise<voi
 
           const imageId = image.get('id');
 
-          if (isFanart && img.fanart_meta) {
-            await FanartMetadataModel.upsert({
-              image_id: imageId,
-              tweet_url: img.fanart_meta.tweet_url,
-              tweet_text: img.fanart_meta.tweet_text,
-              tweet_author: img.fanart_meta.tweet_author,
-              tweet_handle: img.fanart_meta.tweet_handle,
-              tweet_date: img.fanart_meta.tweet_date ? new Date(img.fanart_meta.tweet_date) : new Date(),
-              status: 'organized'
+          if (img.group) {
+            let groupId = img.group.id;
+            
+            // Try to find by source_url if we don't have a specific ID but have a URL
+            if (!groupId && img.group.source_url) {
+              const existingGroup = await MediaGroupModel.findOne({
+                where: { source_url: img.group.source_url },
+                transaction: t
+              });
+              if (existingGroup) {
+                groupId = existingGroup.get('id') as string;
+              }
+            }
+
+            const [group] = await MediaGroupModel.upsert({
+              id: groupId || generateShortId(),
+              title: img.group.title || null,
+              source_url: img.group.source_url || null,
+              source_text: img.group.source_text || null,
+              author_name: img.group.author_name || null,
+              author_handle: img.group.author_handle || null,
+              post_date: img.group.post_date ? new Date(img.group.post_date) : null,
+              status: img.group.status || 'organized'
             }, { transaction: t });
+
+            await image.update({ group_id: group.get('id') }, { transaction: t });
           }
 
-          await MVImageModel.create({ 
+          await MVMediaModel.create({ 
             mv_id: mv.id, 
-            image_id: imageId, 
+            media_id: imageId, 
             usage: usage, 
-            order_index: img.MVImage?.order_index ?? i 
+            order_index: img.MVMedia?.order_index ?? img.order_index ?? i
           }, { transaction: t });
         }
       }

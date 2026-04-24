@@ -1,6 +1,8 @@
 import cron from 'node-cron';
 import Parser from 'rss-parser';
-import { Fanart } from './pg.service.js';
+import { MediaGroupModel, MediaModel, SysConfigModel } from '../models/index.js';
+import { nanoid } from 'nanoid';
+const generateShortId = () => nanoid(16);
 import { TwitterService } from './twitter.service.js';
 import { backupImageToR2 } from './r2.service.js';
 import fetch from 'node-fetch';
@@ -31,7 +33,7 @@ export const TwitterMonitorService = {
           if (!item.link) continue;
           
           // 檢查是否已經處理過
-          const existing = await Fanart.findOne({ where: { tweetUrl: item.link } });
+          const existing = await MediaGroupModel.findOne({ where: { source_url: item.link } });
           if (existing) continue;
 
           console.log(`[Twitter Monitor] New tweet found: ${item.link}`);
@@ -92,17 +94,28 @@ export const TwitterMonitorService = {
               return media;
             }));
 
-            await Fanart.create({
-              id,
-              tweetUrl: item.link,
-              tweetText,
-              tweetAuthor,
-              tweetHandle,
-              tweetDate: new Date(tweetDate),
-              media: updatedMediaList,
+            const groupId = generateShortId();
+            await MediaGroupModel.create({
+              id: groupId,
+              source_url: item.link,
+              source_text: tweetText,
+              author_name: tweetAuthor,
+              author_handle: tweetHandle,
+              post_date: new Date(tweetDate),
               status: 'unorganized',
-              createdAt: new Date()
             });
+
+            for (const media of updatedMediaList) {
+              await MediaModel.create({
+                id: generateShortId(),
+                type: 'fanart',
+                media_type: media.type === 'video' ? 'video' : (media.type === 'animated_gif' ? 'gif' : 'image'),
+                url: media.url,
+                original_url: media.original_url || media.url,
+                thumbnail_url: media.thumbnail || null,
+                group_id: groupId
+              });
+            }
 
             console.log(`[Twitter Monitor] Saved new fanart: ${item.link}`);
 

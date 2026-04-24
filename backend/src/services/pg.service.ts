@@ -32,35 +32,8 @@ export const MV = sequelize.define('MV', {
   images: DataTypes.JSONB,
 }, { tableName: 'mvs', timestamps: false });
 
-// 專輯中繼資料
-export const MetaAlbum = sequelize.define('MetaAlbum', {
-  name: { type: DataTypes.STRING, primaryKey: true, comment: '專輯名稱 (對應 albums.name)' },
-  date: { type: DataTypes.STRING, comment: '發行日期' }, // 原本是字串，先保留相容性
-  hideDate: { type: DataTypes.BOOLEAN, comment: '是否隱藏日期' },
-}, { tableName: 'meta_albums', timestamps: false, comment: '專輯的舊版全域元資料表' });
+// 舊版 MetaAlbum 等表已移除，改由 V2 Models 接管
 
-// 藝術家中繼資料
-export const MetaArtist = sequelize.define('MetaArtist', {
-  name: { type: DataTypes.STRING, primaryKey: true, comment: '畫師名稱 (對應 artists.name)' },
-  snsId: { type: DataTypes.STRING, comment: '社群帳號 ID (如 Twitter)' },
-  hideId: { type: DataTypes.BOOLEAN, comment: '是否隱藏社群 ID' },
-  displayName: { type: DataTypes.STRING, comment: '顯示名稱 (別名)' },
-  profileUrl: { type: DataTypes.STRING, comment: '頭像網址' },
-  bio: { type: DataTypes.TEXT, comment: '畫師簡介' },
-  dataId: DataTypes.STRING,
-  collaborations: { type: DataTypes.JSONB, comment: '合作過的畫師列表或相關資訊' },
-  instagram: { type: DataTypes.STRING, comment: 'Instagram 帳號' },
-  youtube: { type: DataTypes.STRING, comment: 'YouTube 頻道' },
-  pixiv: { type: DataTypes.STRING, comment: 'Pixiv ID' },
-  tiktok: { type: DataTypes.STRING, comment: 'TikTok 帳號' },
-  website: { type: DataTypes.STRING, comment: '個人網站' },
-}, { tableName: 'meta_artists', timestamps: false, comment: '畫師的舊版全域元資料表' });
-
-// 系統設定
-export const MetaSetting = sequelize.define('MetaSetting', {
-  key: { type: DataTypes.STRING, primaryKey: true, comment: '設定鍵名' },
-  value: { type: DataTypes.TEXT, comment: '設定內容 (JSON 字串)' },
-}, { tableName: 'meta_settings', timestamps: false, comment: '系統全域設定表' });
 
 // Auth 相關
 export const AuthPasskey = sequelize.define('AuthPasskey', {

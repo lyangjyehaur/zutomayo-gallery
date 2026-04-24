@@ -1,71 +1,47 @@
-import { MetaAlbum, MetaArtist, MetaSetting, sequelize } from './pg.service.js';
+import { ArtistModel, AlbumModel, SysConfigModel, SysAnnouncementModel } from '../models/index.js';
+import { sequelize } from '../models/index.js';
+import { ArtistMeta } from '../types.js';
 
 export interface AlbumMeta {
   date?: string;
   hideDate?: boolean;
 }
 
-export interface ArtistMeta {
-  id?: string;
-  hideId?: boolean;
-  displayName?: string;
-  profileUrl?: string;
-  bio?: string;
-  dataId?: string;
-  collaborations?: any[];
-  instagram?: string;
-  youtube?: string;
-  pixiv?: string;
-  tiktok?: string;
-  website?: string;
-}
-
-export interface MetadataSettings {
-  showAutoAlbumDate: boolean;
-  announcements?: string[] | Record<string, string[]>;
-}
-
-export interface Metadata {
+export interface MetadataResponse {
   albumMeta: Record<string, AlbumMeta>;
   artistMeta: Record<string, ArtistMeta>;
-  settings: MetadataSettings;
+  announcements?: string[] | Record<string, string[]>;
+  [key: string]: any;
 }
 
-const defaultMetadata: Metadata = {
+const defaultMetadata: MetadataResponse = {
   albumMeta: {},
   artistMeta: {},
-  settings: {
-    showAutoAlbumDate: false,
-    announcements: [],
-  },
+  announcements: [],
+  showAutoAlbumDate: false,
 };
 
-let runtimeMetadata: Metadata | null = null;
+let runtimeMetadata: MetadataResponse | null = null;
 
-const normalizeMetadata = (raw: unknown): Metadata => {
-  const base: Metadata = JSON.parse(JSON.stringify(defaultMetadata));
+const normalizeMetadata = (raw: unknown): MetadataResponse => {
+  const base: MetadataResponse = JSON.parse(JSON.stringify(defaultMetadata));
   if (!raw || typeof raw !== 'object') return base;
 
   const r = raw as any;
 
-  if (r.settings && typeof r.settings === 'object') {
-    if (typeof r.settings.showAutoAlbumDate === 'boolean') {
-      base.settings.showAutoAlbumDate = r.settings.showAutoAlbumDate;
-    } else if (typeof r.settings.showAutoAlbumYear === 'boolean') {
-      // 相容舊版 showAutoAlbumYear
-      base.settings.showAutoAlbumDate = r.settings.showAutoAlbumYear;
-    }
-    if (Array.isArray(r.settings.announcements)) {
-      base.settings.announcements = r.settings.announcements.filter((a: any) => typeof a === 'string');
-    } else if (r.settings.announcements && typeof r.settings.announcements === 'object') {
-      const obj: Record<string, string[]> = {};
-      for (const [lang, arr] of Object.entries(r.settings.announcements)) {
-        if (Array.isArray(arr)) {
-          obj[lang] = arr.filter((a: any) => typeof a === 'string');
-        }
+  if (typeof r.showAutoAlbumDate === 'boolean') {
+    base.showAutoAlbumDate = r.showAutoAlbumDate;
+  }
+  if (Array.isArray(r.announcements)) {
+    base.announcements = r.announcements.filter((a: any) => typeof a === 'string');
+  } else if (r.announcements && typeof r.announcements === 'object') {
+    const obj: Record<string, string[]> = {};
+    for (const [lang, arr] of Object.entries(r.announcements)) {
+      if (Array.isArray(arr)) {
+        obj[lang] = arr.filter((a: any) => typeof a === 'string');
       }
-      base.settings.announcements = obj;
     }
+    base.announcements = obj;
   }
 
   const trySetAlbumMeta = (src: any) => {
@@ -89,11 +65,13 @@ const normalizeMetadata = (raw: unknown): Metadata => {
     for (const [k, v] of Object.entries(src)) {
       if (!k) continue;
       if (typeof v === 'string') {
-        base.artistMeta[k] = { id: v };
+        base.artistMeta[k] = { twitter: v };
         continue;
       }
       if (!v || typeof v !== 'object') continue;
+
       const id = typeof (v as any).id === 'string' ? (v as any).id : undefined;
+      const twitter = typeof (v as any).twitter === 'string' ? (v as any).twitter : id;
       const hideId = typeof (v as any).hideId === 'boolean' ? (v as any).hideId : undefined;
       const displayName = typeof (v as any).displayName === 'string' ? (v as any).displayName : undefined;
       const profileUrl = typeof (v as any).profileUrl === 'string' ? (v as any).profileUrl : undefined;
@@ -107,7 +85,7 @@ const normalizeMetadata = (raw: unknown): Metadata => {
       const website = typeof (v as any).website === 'string' ? (v as any).website : undefined;
 
       base.artistMeta[k] = { 
-        ...(id ? { id } : {}), 
+        ...(twitter ? { twitter } : {}), 
         ...(hideId !== undefined ? { hideId } : {}),
         ...(displayName ? { displayName } : {}),
         ...(profileUrl ? { profileUrl } : {}),
@@ -132,107 +110,99 @@ const normalizeMetadata = (raw: unknown): Metadata => {
   return base;
 };
 
-export const getMetadata = async (): Promise<Metadata> => {
-  if (runtimeMetadata) return runtimeMetadata;
-  
-  const albums = await MetaAlbum.findAll();
-  const artists = await MetaArtist.findAll();
-  const settingsRows = await MetaSetting.findAll();
-
-  const albumMeta: Record<string, AlbumMeta> = {};
-  for (const row of albums) {
-    const data = row.toJSON() as any;
-    albumMeta[data.name] = { 
-      ...(data.date ? { date: data.date } : {}), 
-      ...(data.hideDate !== null && data.hideDate !== undefined ? { hideDate: Boolean(data.hideDate) } : {})
-    };
-  }
-
+export const getMetadata = async (): Promise<MetadataResponse> => {
+  // 1. 取得畫師資料 (從 V2 ArtistModel)
+  const artists = await ArtistModel.findAll();
   const artistMeta: Record<string, ArtistMeta> = {};
   for (const row of artists) {
     const data = row.toJSON() as any;
     artistMeta[data.name] = { 
-      ...(data.snsId ? { id: data.snsId } : {}), 
-      ...(data.hideId !== null && data.hideId !== undefined ? { hideId: Boolean(data.hideId) } : {}),
-      ...(data.displayName ? { displayName: data.displayName } : {}),
-      ...(data.profileUrl ? { profileUrl: data.profileUrl } : {}),
+      ...(data.twitter ? { twitter: data.twitter } : {}), 
+      // bio, profile_url, etc.
+      ...(data.profile_url ? { profileUrl: data.profile_url } : {}),
       ...(data.bio ? { bio: data.bio } : {}),
-      ...(data.dataId ? { dataId: data.dataId } : {}),
       ...(data.instagram ? { instagram: data.instagram } : {}),
       ...(data.youtube ? { youtube: data.youtube } : {}),
       ...(data.pixiv ? { pixiv: data.pixiv } : {}),
       ...(data.tiktok ? { tiktok: data.tiktok } : {}),
       ...(data.website ? { website: data.website } : {}),
     };
-    if (data.collaborations) {
-      try {
-        artistMeta[data.name].collaborations = typeof data.collaborations === 'string' ? JSON.parse(data.collaborations) : data.collaborations;
-      } catch(e) {}
-    }
   }
 
-  const settings: MetadataSettings = { showAutoAlbumDate: false, announcements: [] };
-  for (const row of settingsRows) {
+  // 2. 取得專輯資料 (從 V2 AlbumModel)
+  const albums = await AlbumModel.findAll();
+  const albumMeta: Record<string, AlbumMeta> = {};
+  for (const row of albums) {
     const data = row.toJSON() as any;
-    if (data.key === 'showAutoAlbumDate') settings.showAutoAlbumDate = data.value === 'true';
-    if (data.key === 'announcements') {
-      try {
-        settings.announcements = JSON.parse(data.value);
-      } catch (e) {
-        settings.announcements = [];
-      }
-    }
+    albumMeta[data.name] = {
+      ...(data.release_date ? { date: new Date(data.release_date).toISOString().split('T')[0].replace(/-/g, '/') } : {}),
+      ...(data.hide_date ? { hideDate: data.hide_date } : {}),
+    };
   }
 
-  runtimeMetadata = { albumMeta, artistMeta, settings };
-  return runtimeMetadata;
+  // 3. 取得系統設定
+  const settings = await SysConfigModel.findAll();
+  const configMap: Record<string, any> = {};
+  for (const row of settings) {
+    const data = row.toJSON() as any;
+    configMap[data.key] = data.value;
+  }
+
+  // 4. 取得公告
+  const announcements = await SysAnnouncementModel.findAll({ where: { is_active: true } });
+  const announcementTexts = announcements.map(a => (a.toJSON() as any).content);
+
+  return {
+    artistMeta,
+    albumMeta,
+    announcements: announcementTexts,
+    ...configMap
+  };
 };
 
-export const updateMetadata = async (data: Partial<Metadata>): Promise<Metadata> => {
-  const current = await getMetadata();
-  
-  await sequelize.transaction(async (t) => {
-    if (data.albumMeta) {
-      current.albumMeta = data.albumMeta;
-      await MetaAlbum.destroy({ where: {}, transaction: t });
-      for (const [name, meta] of Object.entries(data.albumMeta)) {
-        await MetaAlbum.create({
-          name,
-          date: meta.date || '',
-          hideDate: meta.hideDate ? true : false
-        }, { transaction: t });
-      }
-    }
-
+export const saveMetadata = async (data: MetadataResponse): Promise<void> => {
+  const t = await sequelize.transaction();
+  try {
     if (data.artistMeta) {
-      current.artistMeta = data.artistMeta;
-      await MetaArtist.destroy({ where: {}, transaction: t });
-      for (const [name, meta] of Object.entries(data.artistMeta)) {
-        await MetaArtist.create({
+      for (const [name, rawMeta] of Object.entries(data.artistMeta)) {
+        const meta = rawMeta as ArtistMeta;
+        await ArtistModel.upsert({
+          id: meta.id, // we might not have id, findOrCreate first? Artist name is unique. Wait, ArtistModel name is unique.
           name,
-          snsId: meta.id || '',
-          hideId: meta.hideId ? true : false,
-          displayName: meta.displayName || '',
-          profileUrl: meta.profileUrl || '',
+          twitter: meta.twitter || meta.id || '',
+          profile_url: meta.profileUrl || '',
           bio: meta.bio || '',
-          dataId: meta.dataId || '',
-          collaborations: meta.collaborations ? meta.collaborations : [],
           instagram: meta.instagram || '',
           youtube: meta.youtube || '',
           pixiv: meta.pixiv || '',
           tiktok: meta.tiktok || '',
-          website: meta.website || ''
+          website: meta.website || '',
         }, { transaction: t });
       }
     }
 
-    if (data.settings) {
-      current.settings = { ...current.settings, ...data.settings };
-      await MetaSetting.upsert({ key: 'showAutoAlbumDate', value: current.settings.showAutoAlbumDate ? 'true' : 'false' }, { transaction: t });
-      await MetaSetting.upsert({ key: 'announcements', value: JSON.stringify(current.settings.announcements || []) }, { transaction: t });
+    if (data.albumMeta) {
+      for (const [name, rawMeta] of Object.entries(data.albumMeta)) {
+        const meta = rawMeta as AlbumMeta;
+        await AlbumModel.upsert({
+          name,
+          release_date: meta.date ? new Date(meta.date.replace(/\//g, '-')) : null,
+          hide_date: meta.hideDate || false,
+        }, { transaction: t });
+      }
     }
-  });
 
-  runtimeMetadata = normalizeMetadata(current);
-  return runtimeMetadata;
+    if (data.showAutoAlbumDate !== undefined) {
+      await SysConfigModel.upsert({
+        key: 'showAutoAlbumDate',
+        value: data.showAutoAlbumDate,
+        description: '自動計算專輯日期'
+      }, { transaction: t });
+    }
+
+    await t.commit();
+  } catch (error) {
+    await t.rollback();
+    throw error;
+  }
 };

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { MetaSetting, sequelize } from '../services/pg.service.js';
+import { SysConfigModel, sequelize } from '../models/index.js';
 import fs from 'fs';
 import path from 'path';
 import { getCountryCode, getFullGeoInfo } from '../services/geo.service.js';
@@ -38,13 +38,13 @@ try {
 
 export const getSystemStatus = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const row = await MetaSetting.findByPk('maintenance_mode');
-    const maintenance = row ? (row.toJSON() as any).value === 'true' : true;
+    const row = await SysConfigModel.findByPk('maintenance_mode');
+    const maintenance = row ? (row.toJSON() as any).value === true || (row.toJSON() as any).value === 'true' : true;
     
-    const typeRow = await MetaSetting.findByPk('maintenance_type');
+    const typeRow = await SysConfigModel.findByPk('maintenance_type');
     const type = typeRow ? (typeRow.toJSON() as any).value : 'ui';
 
-    const etaRow = await MetaSetting.findByPk('maintenance_eta');
+    const etaRow = await SysConfigModel.findByPk('maintenance_eta');
     const eta = etaRow ? (etaRow.toJSON() as any).value : null;
 
     res.json({ 
@@ -127,15 +127,15 @@ export const toggleMaintenance = async (req: Request, res: Response, next: NextF
       return;
     }
 
-    await sequelize.transaction(async (t) => {
-      await MetaSetting.upsert({ key: 'maintenance_mode', value: maintenance ? 'true' : 'false' }, { transaction: t });
+    await sequelize.transaction(async (t: any) => {
+      await SysConfigModel.upsert({ key: 'maintenance_mode', value: maintenance }, { transaction: t });
 
       if (type) {
-        await MetaSetting.upsert({ key: 'maintenance_type', value: type }, { transaction: t });
+        await SysConfigModel.upsert({ key: 'maintenance_type', value: type }, { transaction: t });
       }
 
       if (eta !== undefined) {
-        await MetaSetting.upsert({ key: 'maintenance_eta', value: eta ? String(eta) : '' }, { transaction: t });
+        await SysConfigModel.upsert({ key: 'maintenance_eta', value: eta ? String(eta) : '' }, { transaction: t });
       }
     });
 

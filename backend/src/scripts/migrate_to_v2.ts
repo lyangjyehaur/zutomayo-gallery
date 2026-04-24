@@ -3,19 +3,20 @@ import { sequelize as oldDb, MV, Fanart } from '../services/pg.service.js';
 import {
   sequelize as newDb,
   MVModel,
-  ImageModel,
+  MediaModel,
   ArtistModel,
   AlbumModel,
   KeywordModel,
-  FanartMetadataModel,
-  MVImageModel,
-  ArtistImageModel,
+  MediaGroupModel,
+  MVMediaModel,
+  ArtistMediaModel,
   MVArtistModel,
   MVAlbumModel,
   MVKeywordModel,
   syncModels
 } from '../models/index.js';
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
+const generateShortId = () => nanoid(16);
 
 async function migrate() {
   console.log('Starting database migration to V2...');
@@ -113,16 +114,17 @@ async function migrate() {
 
           let imageId = imageMap.get(url);
           if (!imageId) {
-            imageId = uuidv4();
-            await ImageModel.create({
+            imageId = generateShortId();
+            await MediaModel.create({
               id: imageId,
               type: 'cover',
+              media_type: 'image',
               url: url,
               original_url: url,
             });
             imageMap.set(url, imageId);
           }
-          await MVImageModel.findOrCreate({ where: { mv_id: mv.id, image_id: imageId, usage: 'cover', order_index: i } });
+          await MVMediaModel.findOrCreate({ where: { mv_id: mv.id, media_id: imageId, usage: 'cover', order_index: i } });
         }
       }
 
@@ -138,10 +140,11 @@ async function migrate() {
           const imgType = isFanart ? 'fanart' : 'official';
 
           if (!imageId) {
-            imageId = uuidv4();
-            await ImageModel.create({
+            imageId = generateShortId();
+            await MediaModel.create({
               id: imageId,
               type: imgType,
+              media_type: 'image',
               url: url,
               original_url: typeof img === 'string' ? url : (img.original_url || url),
               thumbnail_url: typeof img === 'string' ? null : img.thumbnail,
@@ -151,21 +154,24 @@ async function migrate() {
 
             // If it's fanart, also try to save metadata if available
             if (isFanart) {
-              await FanartMetadataModel.findOrCreate({
-                where: { image_id: imageId },
+              let groupId = generateShortId();
+              await MediaGroupModel.findOrCreate({
+                where: { source_url: img.tweetUrl || '' },
                 defaults: {
-                  tweet_url: img.tweetUrl,
-                  tweet_text: img.tweetText,
-                  tweet_author: img.tweetAuthor,
-                  tweet_handle: img.tweetHandle,
-                  tweet_date: img.tweetDate ? new Date(img.tweetDate) : new Date(),
+                  id: groupId,
+                  source_url: img.tweetUrl,
+                  source_text: img.tweetText,
+                  author_name: img.tweetAuthor,
+                  author_handle: img.tweetHandle,
+                  post_date: img.tweetDate ? new Date(img.tweetDate) : new Date(),
                   status: 'organized'
                 }
               });
+              await MediaModel.update({ group_id: groupId }, { where: { id: imageId } });
             }
           }
 
-          await MVImageModel.findOrCreate({ where: { mv_id: mv.id, image_id: imageId, usage: 'gallery', order_index: i } });
+          await MVMediaModel.findOrCreate({ where: { mv_id: mv.id, media_id: imageId, usage: 'gallery', order_index: i } });
         }
       }
     }
@@ -183,10 +189,11 @@ async function migrate() {
 
         let imageId = imageMap.get(url);
         if (!imageId) {
-          imageId = uuidv4();
-          await ImageModel.create({
+          imageId = generateShortId();
+          await MediaModel.create({
             id: imageId,
             type: 'fanart',
+            media_type: 'image',
             url: url,
             original_url: typeof media === 'string' ? url : (media.original_url || url),
             thumbnail_url: typeof media === 'string' ? null : media.thumbnail,
@@ -194,15 +201,24 @@ async function migrate() {
           imageMap.set(url, imageId);
         }
 
-        await FanartMetadataModel.upsert({
-          image_id: imageId,
-          tweet_url: fa.tweetUrl,
-          tweet_text: fa.tweetText,
-          tweet_author: fa.tweetAuthor,
-          tweet_handle: fa.tweetHandle,
-          tweet_date: fa.tweetDate,
-          status: fa.status
+        let groupId = generateShortId();
+        await MediaGroupModel.findOrCreate({
+          where: { source_url: fa.tweetUrl || '' },
+          defaults: {
+            id: groupId,
+            source_url: fa.tweetUrl,
+            source_text: fa.tweetText,
+            author_name: fa.tweetAuthor,
+            author_handle: fa.tweetHandle,
+            post_date: fa.tweetDate ? new Date(fa.tweetDate) : new Date(),
+            status: fa.status || 'pending'
+          }
         });
+        await MediaModel.update({ group_id: groupId }, { where: { id: imageId } });
+
+        if (fa.mv_id) {
+          await MVMediaModel.findOrCreate({ where: { mv_id: fa.mv_id, media_id: imageId, usage: 'gallery', order_index: 999 } });
+        }
       }
     }
 

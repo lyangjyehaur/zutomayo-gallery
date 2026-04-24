@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { MV, Fanart } from '../services/pg.service.js';
+import { MVModel, MediaGroupModel } from '../models/index.js';
 
 import { getMVsFromDB } from '../services/v2_mapper.js';
 
@@ -10,7 +10,7 @@ router.get('/sitemap.xml', async (req, res) => {
   try {
     const [mvs, fanarts] = await Promise.all([
       getMVsFromDB(),
-      Fanart.findAll({ where: { status: 'organized' } })
+      MediaGroupModel.findAll({ where: { status: 'organized' } })
     ]);
 
     const urls: string[] = [];

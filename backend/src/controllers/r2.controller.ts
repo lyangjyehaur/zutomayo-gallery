@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Fanart } from '../services/pg.service.js';
+import { MediaGroupModel, MediaModel } from '../models/index.js';
 import { getMVsFromDB, saveMVsToDB } from '../services/v2_mapper.js';
 import { backupImageToR2 } from '../services/r2.service.js';
 
@@ -22,82 +22,47 @@ export const syncImagesToR2 = async (req: Request, res: Response): Promise<void>
     let skippedCount = 0;
 
     // 1. 同步 Fanarts (僅針對已整理/公開的，且網址為 twitter 的圖片)
-    const fanarts = await Fanart.findAll({ where: { status: 'organized' } });
-    for (const row of fanarts) {
-      const fa = row.toJSON() as any;
-      let updated = false;
-      const newMedia = [];
-
-      if (Array.isArray(fa.media)) {
-        for (const imgObj of fa.media) {
-          // 支援舊版字串陣列或是新版物件陣列
-          const isString = typeof imgObj === 'string';
-          const imgUrl = isString ? imgObj : imgObj.url;
-          
-          if (imgUrl && imgUrl.includes('pbs.twimg.com')) {
-            const r2Url = await backupImageToR2(imgUrl, 'fanarts', {
-              metadata: {
-                'fanart-id': fa.id,
-                'author-handle': fa.tweetHandle || 'unknown',
-                'source-tweet': fa.tweetUrl || 'unknown'
-              }
-            });
-            if (r2Url) {
-              if (isString) {
-                newMedia.push(r2Url);
-              } else {
-                newMedia.push({ ...imgObj, url: r2Url, original_url: imgUrl });
-              }
-              if (r2Url !== imgUrl) updated = true;
-              successCount++;
-            } else {
-              newMedia.push(imgObj);
-              failCount++;
-            }
-          } else if (imgUrl && imgUrl.includes('video.twimg.com')) {
-            // 同步影片 (MP4) 到 R2
-            const r2Url = await backupImageToR2(imgUrl, 'fanarts/videos', {
-              metadata: {
-                'fanart-id': fa.id,
-                'author-handle': fa.tweetHandle || 'unknown',
-                'source-tweet': fa.tweetUrl || 'unknown'
-              }
-            });
-
-            let r2ThumbnailUrl = imgObj.thumbnail;
-            const originalThumbnail = imgObj.original_thumbnail || imgObj.thumbnail;
-            if (originalThumbnail && originalThumbnail.includes('pbs.twimg.com')) {
-              const thumbRes = await backupImageToR2(originalThumbnail, 'fanarts/videos/thumbs', {
-                metadata: { 'fanart-id': fa.id }
-              });
-              if (thumbRes) r2ThumbnailUrl = thumbRes;
-            }
-
-            if (r2Url) {
-              if (isString) {
-                newMedia.push(r2Url);
-              } else {
-                newMedia.push({ ...imgObj, url: r2Url, original_url: imgUrl, thumbnail: r2ThumbnailUrl, original_thumbnail: originalThumbnail });
-              }
-              if (r2Url !== imgUrl) updated = true;
-              successCount++;
-            } else {
-              newMedia.push(imgObj);
-              failCount++;
-            }
-          } else if (typeof imgUrl === 'string' && imgUrl.includes('r2.dan.tw')) {
-             newMedia.push(imgObj);
-             skippedCount++;
-          } else {
-             newMedia.push(imgObj);
-             skippedCount++;
-          }
+    const fanarts = await MediaGroupModel.findAll({ where: { status: 'organized' }, include: [{ model: MediaModel, as: 'images' }] });
+    for (const faGroup of fanarts) {
+      const data = faGroup.toJSON() as any;
+      if (!data.images) continue;
+      
+      for (const media of data.images) {
+        if (!media.url || !(media.url.includes('pbs.twimg.com') || media.url.includes('video.twimg.com'))) {
+          skippedCount++;
+          continue;
         }
-      }
-
-      if (updated) {
-        await row.update({ media: newMedia });
-        console.log(`[R2 Sync] Updated Fanart ${fa.id} media links to R2.`);
+        
+        try {
+          const typePath = media.media_type === 'video' ? 'videos' : 'images';
+          const r2Url = await backupImageToR2(media.url, `fanarts/${typePath}`, {
+            metadata: {
+              'fanart-id': data.id,
+              'author-handle': data.author_handle || 'unknown',
+              'source-tweet': data.source_url || 'unknown'
+            }
+          });
+          
+          if (r2Url) {
+            await MediaModel.update({ url: r2Url }, { where: { id: media.id } });
+            successCount++;
+            
+            // Backup thumbnail if video
+            if (media.media_type === 'video' && media.thumbnail_url && media.thumbnail_url.includes('pbs.twimg.com')) {
+              const r2ThumbUrl = await backupImageToR2(media.thumbnail_url, `fanarts/videos/thumbs`, {
+                metadata: { 'fanart-id': data.id }
+              });
+              if (r2ThumbUrl) {
+                await MediaModel.update({ thumbnail_url: r2ThumbUrl }, { where: { id: media.id } });
+              }
+            }
+          } else {
+            failCount++;
+          }
+        } catch (e: any) {
+          failCount++;
+          console.error(`FanArt ${data.id} - ${media.url}: ${e.message}`);
+        }
       }
     }
 

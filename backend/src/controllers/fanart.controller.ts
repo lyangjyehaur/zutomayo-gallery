@@ -1,19 +1,20 @@
 import { Request, Response } from 'express';
-import { Fanart } from '../services/pg.service.js';
+import { MediaModel, MediaGroupModel } from '../models/index.js';
 
 export const getUnorganizedFanarts = async (req: Request, res: Response) => {
   try {
-    const rows = await Fanart.findAll({
+    const rows = await MediaGroupModel.findAll({
       where: { status: 'unorganized' },
+      include: [{ model: MediaModel, as: 'images' }],
       order: [['createdAt', 'DESC']]
     });
     
-    // 解析 media JSON
+    // 格式化資料以相容前端
     const data = rows.map((row) => {
-      const json = row.toJSON() as any;
+      const group = row.toJSON() as any;
       return {
-        ...json,
-        media: typeof json.media === 'string' ? JSON.parse(json.media) : json.media
+        ...group,
+        media: group.images || []
       };
     });
 
@@ -29,9 +30,9 @@ export const updateFanartStatus = async (req: Request, res: Response) => {
     const { status } = req.body; // 'organized' or 'unorganized' or 'deleted'
 
     if (status === 'deleted') {
-      await Fanart.destroy({ where: { id } });
+      await MediaGroupModel.destroy({ where: { id } });
     } else {
-      await Fanart.update({ status }, { where: { id } });
+      await MediaGroupModel.update({ status }, { where: { id } });
     }
 
     res.json({ success: true });

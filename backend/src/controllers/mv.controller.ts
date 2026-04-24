@@ -9,7 +9,7 @@ import {
   validateMVs 
 } from '../validators/mv.validator.js';
 import { ZodError } from 'zod';
-import { getMetadata as getMeta, updateMetadata as updateMeta } from '../services/metadata.service.js';
+import { getMetadata as getMeta, saveMetadata as saveMeta } from '../services/metadata.service.js';
 
 import { TwitterService } from '../services/twitter.service.js';
 
@@ -170,8 +170,9 @@ export const getMetadata = async (req: Request, res: Response) => {
 
 export const updateMetadata = async (req: Request, res: Response) => {
   try {
-    const newMeta = await updateMeta(req.body);
-    res.json({ success: true, metadata: newMeta });
+    await saveMeta(req.body);
+    const updated = await getMeta();
+    res.json({ success: true, metadata: updated });
   } catch (error: any) {
     res.status(500).json({ error: error.message || '無法更新 Metadata' });
   }
