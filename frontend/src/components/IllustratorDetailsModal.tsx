@@ -11,7 +11,7 @@ import { MODAL_THEME } from '@/lib/theme';
 import { useTranslation } from 'react-i18next';
 import { MVItem, ArtistMeta } from '@/lib/types';
 import { useLazyImage } from '@/hooks/useLazyImage';
-import FancyboxViewer from '@/components/FancyboxViewer';
+import FancyboxViewer, { ResponsiveMasonry } from '@/components/FancyboxViewer';
 import { getProxyImgUrl, isMediaVideo } from '@/lib/image';
 
 interface IllustratorDetailsModalProps {
@@ -113,26 +113,6 @@ export function IllustratorDetailsModal({ illustrator, onClose }: IllustratorDet
   useEffect(() => {
     setVisibleCount(20);
   }, [activeTab, illustrator]);
-
-  // 滾動加載更多
-  useEffect(() => {
-    const scrollViewport = document.querySelector('#illustrator-scroll-area [data-radix-scroll-area-viewport]');
-    if (!scrollViewport) return;
-
-    const handleScroll = (e: Event) => {
-      const target = e.target as HTMLElement;
-      const { scrollTop, scrollHeight, clientHeight } = target;
-      if (scrollHeight - scrollTop - clientHeight < 400) {
-        setVisibleCount(prev => {
-          const next = prev + 20;
-          return next > currentDisplayImages.length ? currentDisplayImages.length : next;
-        });
-      }
-    };
-
-    scrollViewport.addEventListener('scroll', handleScroll, { passive: true });
-    return () => scrollViewport.removeEventListener('scroll', handleScroll);
-  }, [currentDisplayImages.length]);
 
   // 判斷是否為 macOS (排除 iOS 與觸控裝置，讓手機端統一顯示右上角叉叉)
   const isMac = useMemo(() => {
@@ -324,11 +304,11 @@ export function IllustratorDetailsModal({ illustrator, onClose }: IllustratorDet
                   images={EMPTY_IMAGES}
                   options={FANCYBOX_OPTIONS}
                 >
-                  <div className="columns-1 sm:columns-2 xl:columns-3 2xl:columns-4 gap-4 md:gap-6">
+                  <ResponsiveMasonry breakpointColumns={{ default: 1, 640: 2, 1280: 3, 1536: 4 }} className="w-full">
                     {activeTab === 'mv' ? currentDisplayImages.slice(0, visibleCount).map((art, idx) => {
                       const isVideo = isMediaVideo(art.item.url, art.item.type);
                       return (
-                      <div key={`${art.item.url}-${idx}`} className="block break-inside-avoid mb-4 md:mb-6 h-max relative group cursor-pointer">
+                      <div key={`${art.item.url}-${idx}`} className="block break-inside-avoid h-max relative group cursor-pointer w-full">
                         <a 
                           href={art.item.url} 
                           data-fancybox="illustrator-gallery"
@@ -352,7 +332,7 @@ export function IllustratorDetailsModal({ illustrator, onClose }: IllustratorDet
                     )}) : currentDisplayImages.slice(0, visibleCount).map((img: any, idx) => {
                       const isVideo = isMediaVideo(img.url, img.type);
                       return (
-                      <div key={`${img.url}-${idx}`} className="block break-inside-avoid mb-4 md:mb-6 h-max relative group cursor-pointer">
+                      <div key={`${img.url}-${idx}`} className="block break-inside-avoid h-max relative group cursor-pointer w-full">
                         <a 
                           href={img.url} 
                           data-fancybox="illustrator-gallery"
@@ -374,7 +354,7 @@ export function IllustratorDetailsModal({ illustrator, onClose }: IllustratorDet
                         </div>
                       </div>
                     )})}
-                  </div>
+                  </ResponsiveMasonry>
                   
                   {visibleCount < currentDisplayImages.length && (
                     <div className="w-full py-8 flex justify-center">

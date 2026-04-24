@@ -58,7 +58,7 @@ const getColumnCount = (breakpointColumns: any) => {
   return breakpointColumns.default ?? 2;
 };
 
-function ResponsiveMasonry({
+export function ResponsiveMasonry({
   children,
   breakpointColumns = GALLERY_BREAKPOINTS,
   className = '',

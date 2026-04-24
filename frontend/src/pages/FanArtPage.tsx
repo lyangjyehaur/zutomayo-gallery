@@ -4,6 +4,7 @@ import { MVItem } from '@/lib/types';
 import { getProxyImgUrl } from '@/lib/image';
 import { Label } from '@/components/ui/label';
 import { WalineComments } from '@/components/WalineComments';
+import { ResponsiveMasonry } from '@/components/FancyboxViewer';
 
 interface FanArtPageProps {
   mvData: MVItem[];
@@ -135,7 +136,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
   };
 
   // 根據篩選條件過濾最終要顯示的 FanArt
-  const displayedFanArts = useMemo(() => {
+  const filteredFanArts = useMemo(() => {
     return allFanArts.filter(art => {
       const isCollab = art.mvIds.length > 1;
       
@@ -149,6 +150,17 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
       return art.mvIds.some(id => selectedMvs.includes(id));
     });
   }, [allFanArts, includeCollab, selectedMvs]);
+
+  const [visibleCount, setVisibleCount] = useState(20);
+
+  // 處理切換篩選條件時重置載入數量
+  React.useEffect(() => {
+    setVisibleCount(20);
+  }, [selectedMvs, includeCollab, filterYear, filterAlbum]);
+
+  const displayedFanArts = useMemo(() => {
+    return filteredFanArts.slice(0, visibleCount);
+  }, [filteredFanArts, visibleCount]);
 
   return (
     <div className="w-full pb-16">
@@ -275,7 +287,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
               onClick={() => setIsFilterExpanded(false)}
               className="bg-black text-white px-6 py-2 font-black uppercase tracking-widest border-2 border-black hover:bg-main hover:text-black transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-y-1 hover:translate-x-1"
             >
-              {t('fanart.apply_filters', `套用並收起 (${displayedFanArts.length} 張作品)`)}
+              {t('fanart.apply_filters', `套用並收起 (${filteredFanArts.length} 張作品)`)}
             </button>
           </div>
         </div>
@@ -284,11 +296,11 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
       {/* FanArt 畫廊區塊 */}
       {displayedFanArts.length > 0 ? (
         <div className="max-w-[1600px] mx-auto px-4 md:px-8 pb-12">
-          <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
+          <ResponsiveMasonry breakpointColumns={{ default: 1, 640: 2, 1024: 3, 1280: 4 }}>
             {displayedFanArts.map((art, idx) => (
               <div 
                 key={idx} 
-                className="break-inside-avoid border-4 border-black bg-card shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all group overflow-hidden"
+                className="break-inside-avoid border-4 border-black bg-card shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all group overflow-hidden w-full"
               >
                 <a href={art.tweetUrl || art.url} target="_blank" rel="noopener noreferrer" className="block relative overflow-hidden">
                   <img 
@@ -319,7 +331,25 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
                 )}
               </div>
             ))}
-          </div>
+          </ResponsiveMasonry>
+
+          {visibleCount < filteredFanArts.length && (
+            <div className="w-full py-12 flex justify-center">
+              <button 
+                onClick={() => setVisibleCount(prev => Math.min(prev + 20, filteredFanArts.length))}
+                className="group px-6 sm:px-8 py-3 sm:py-4 bg-card border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none active:translate-x-2 active:translate-y-2 transition-all font-black uppercase tracking-tighter text-sm sm:text-lg flex flex-col items-center gap-1 min-w-[200px]"
+              >
+                <span className="flex flex-col items-center leading-tight">
+                  <span className="tracking-normal">
+                    {t('common.load_more', '載入更多')} ({visibleCount} / {filteredFanArts.length})
+                  </span>
+                  <span className="text-[10px] font-mono opacity-60 normal-case">
+                    Load_More_Fanarts
+                  </span>
+                </span>
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="w-full py-10 flex flex-col items-center justify-center opacity-30 text-center px-4">
