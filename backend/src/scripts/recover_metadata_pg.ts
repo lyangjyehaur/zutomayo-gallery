@@ -1,8 +1,15 @@
 import 'dotenv/config';
-import { sequelize as oldDb } from '../services/pg.service.js';
+import { Sequelize } from 'sequelize';
 import { sequelize as newDb, ArtistModel, AlbumModel, SysConfigModel, MediaModel, ArtistMediaModel } from '../models/index.js';
 import { nanoid } from 'nanoid';
 const generateShortId = () => nanoid(16);
+
+const oldDb = new Sequelize('zutomayo_gallery', 'zutomayo_gallery', 'FBZNYC3HSJExdHX3', {
+  host: process.env.DB_HOST || '45.147.26.57',
+  port: parseInt(process.env.DB_PORT || '5432', 10),
+  dialect: 'postgres',
+  logging: false,
+});
 
 async function recover() {
   console.log('Recovering Artists metadata from production V1 DB...');
@@ -53,17 +60,29 @@ async function recover() {
             media = await MediaModel.create({
               id: generateShortId(),
               type: 'collaboration',
-              media_type: 'image',
+              media_type: typeof item === 'object' && item.type ? item.type : 'image',
               url: url,
               original_url: url,
+              thumbnail_url: typeof item === 'object' ? item.thumbnail || null : null,
               width: typeof item === 'object' ? item.width || null : null,
               height: typeof item === 'object' ? item.height || null : null
             });
-          } else if (typeof item === 'object' && (item.width || item.height) && (!media.get('width') || !media.get('height'))) {
-            await media.update({
-              width: item.width || media.get('width'),
-              height: item.height || media.get('height')
-            });
+          } else if (typeof item === 'object') {
+            const updateData: any = {};
+            if ((item.width || item.height) && (!media.get('width') || !media.get('height'))) {
+              updateData.width = item.width || media.get('width');
+              updateData.height = item.height || media.get('height');
+            }
+            if (item.thumbnail && !media.get('thumbnail_url')) {
+              updateData.thumbnail_url = item.thumbnail;
+            }
+            if (item.type && media.get('media_type') !== item.type) {
+              updateData.media_type = item.type;
+            }
+            
+            if (Object.keys(updateData).length > 0) {
+              await media.update(updateData);
+            }
           }
           await ArtistMediaModel.findOrCreate({
             where: { artist_id: (artist as any).id, media_id: (media as any).id }

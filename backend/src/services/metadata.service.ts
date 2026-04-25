@@ -123,16 +123,17 @@ export const getMetadata = async (): Promise<MetadataResponse> => {
     // Find collaborations for this artist
     const mediaIds = artistMediaList.filter(am => (am as any).artist_id === data.id).map(am => (am as any).media_id);
     const artistCollaborations = mediaList.filter(m => mediaIds.includes((m as any).id)).map(m => {
-      const media = m.toJSON() as any;
-      return {
-        url: media.url,
-        thumbnail: media.thumbnail_url || undefined,
-        width: media.width,
-        height: media.height,
-        type: media.media_type,
-        tweetUrl: media.original_url,
-      };
-    });
+        const media = m.toJSON() as any;
+        return {
+          url: media.url,
+          thumbnail_url: media.thumbnail_url || undefined,
+          thumbnail: media.thumbnail_url || undefined, // keep for backward compatibility
+          width: media.width,
+          height: media.height,
+          type: media.media_type,
+          tweetUrl: media.original_url,
+        };
+      });
 
     artistMeta[data.name] = { 
       ...(data.twitter ? { twitter: data.twitter } : {}), 
