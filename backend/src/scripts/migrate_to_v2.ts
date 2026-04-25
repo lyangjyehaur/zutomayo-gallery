@@ -184,20 +184,34 @@ async function migrate() {
 
             // If it's fanart, also try to save metadata if available
             if (isFanart) {
-              let groupId = generateShortId();
-              const [group] = await MediaGroupModel.findOrCreate({
-                where: { source_url: img.tweetUrl || '' },
-                defaults: {
-                  id: groupId,
-                  source_url: img.tweetUrl,
+              let currentGroupId;
+              if (img.tweetUrl) {
+                const [group] = await MediaGroupModel.findOrCreate({
+                  where: { source_url: img.tweetUrl },
+                  defaults: {
+                    id: generateShortId(),
+                    source_url: img.tweetUrl,
+                    source_text: img.tweetText,
+                    author_name: img.tweetAuthor,
+                    author_handle: img.tweetHandle,
+                    post_date: img.tweetDate ? new Date(img.tweetDate) : new Date(),
+                    status: 'organized'
+                  }
+                });
+                currentGroupId = group.get('id');
+              } else {
+                const group = await MediaGroupModel.create({
+                  id: generateShortId(),
+                  source_url: null,
                   source_text: img.tweetText,
                   author_name: img.tweetAuthor,
                   author_handle: img.tweetHandle,
                   post_date: img.tweetDate ? new Date(img.tweetDate) : new Date(),
                   status: 'organized'
-                }
-              });
-              await MediaModel.update({ group_id: (group as any).id }, { where: { id: imageId } });
+                });
+                currentGroupId = group.get('id');
+              }
+              await MediaModel.update({ group_id: currentGroupId }, { where: { id: imageId } });
             }
           }
 
@@ -213,6 +227,35 @@ async function migrate() {
       const fa: any = row.toJSON();
       if (!Array.isArray(fa.media)) continue;
 
+      // --- [修正] 針對這個 Fanart (Gallery) 決定唯一的 Group ---
+      let currentGroupId;
+      if (fa.tweetUrl) {
+        const [group] = await MediaGroupModel.findOrCreate({
+          where: { source_url: fa.tweetUrl },
+          defaults: {
+            id: generateShortId(),
+            source_url: fa.tweetUrl,
+            source_text: fa.tweetText,
+            author_name: fa.tweetAuthor,
+            author_handle: fa.tweetHandle,
+            post_date: fa.tweetDate ? new Date(fa.tweetDate) : new Date(),
+            status: fa.status || 'pending'
+          }
+        });
+        currentGroupId = group.get('id');
+      } else {
+        const group = await MediaGroupModel.create({
+          id: generateShortId(),
+          source_url: null,
+          source_text: fa.tweetText,
+          author_name: fa.tweetAuthor,
+          author_handle: fa.tweetHandle,
+          post_date: fa.tweetDate ? new Date(fa.tweetDate) : new Date(),
+          status: fa.status || 'pending'
+        });
+        currentGroupId = group.get('id');
+      }
+
       for (const media of fa.media) {
         const url = typeof media === 'string' ? media : media.url;
         if (!url) continue;
@@ -220,10 +263,10 @@ async function migrate() {
         let imageId = imageMap.get(url);
         if (!imageId) {
           imageId = generateShortId();
-          let media = await MediaModel.findOne({ where: { original_url: typeof media === 'string' ? url : (media.original_url || url) } })
+          let mediaObj = await MediaModel.findOne({ where: { original_url: typeof media === 'string' ? url : (media.original_url || url) } })
                    || await MediaModel.findOne({ where: { url: url } });
 
-          if (!media) {
+          if (!mediaObj) {
             await MediaModel.create({
               id: imageId,
               type: 'fanart',
@@ -235,31 +278,18 @@ async function migrate() {
               height: typeof media === 'object' ? media.height || null : null
             });
           } else {
-            imageId = media.get('id');
-            if (typeof media === 'object' && (media.width || media.height) && (!media.get('width') || !media.get('height'))) {
-              await media.update({
-                width: media.width || media.get('width'),
-                height: media.height || media.get('height')
+            imageId = mediaObj.get('id');
+            if (typeof media === 'object' && (media.width || media.height) && (!mediaObj.get('width') || !mediaObj.get('height'))) {
+              await mediaObj.update({
+                width: media.width || mediaObj.get('width'),
+                height: media.height || mediaObj.get('height')
               });
             }
           }
           imageMap.set(url, imageId);
         }
 
-        let groupId = generateShortId();
-        const [group] = await MediaGroupModel.findOrCreate({
-          where: { source_url: fa.tweetUrl || '' },
-          defaults: {
-            id: groupId,
-            source_url: fa.tweetUrl,
-            source_text: fa.tweetText,
-            author_name: fa.tweetAuthor,
-            author_handle: fa.tweetHandle,
-            post_date: fa.tweetDate ? new Date(fa.tweetDate) : new Date(),
-            status: fa.status || 'pending'
-          }
-        });
-        await MediaModel.update({ group_id: (group as any).id }, { where: { id: imageId } });
+        await MediaModel.update({ group_id: currentGroupId }, { where: { id: imageId } });
 
         if (fa.mv_id) {
           await MVMediaModel.findOrCreate({ where: { mv_id: fa.mv_id, media_id: imageId, usage: 'gallery', order_index: 999 } });
