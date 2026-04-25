@@ -141,15 +141,30 @@ async function migrate() {
 
           if (!imageId) {
             imageId = generateShortId();
-            await MediaModel.create({
-              id: imageId,
-              type: imgType,
-              media_type: 'image',
-              url: url,
-              original_url: typeof img === 'string' ? url : (img.original_url || url),
-              thumbnail_url: typeof img === 'string' ? null : img.thumbnail,
-              caption: typeof img === 'string' ? null : img.caption,
-            });
+            let media = await MediaModel.findOne({ where: { original_url: typeof img === 'string' ? url : (img.original_url || url) } })
+                     || await MediaModel.findOne({ where: { url: url } });
+
+            if (!media) {
+              await MediaModel.create({
+                id: imageId,
+                type: imgType,
+                media_type: 'image',
+                url: url,
+                original_url: typeof img === 'string' ? url : (img.original_url || url),
+                thumbnail_url: typeof img === 'string' ? null : img.thumbnail,
+                caption: typeof img === 'string' ? null : img.caption,
+                width: typeof img === 'object' ? img.width || null : null,
+                height: typeof img === 'object' ? img.height || null : null
+              });
+            } else {
+              imageId = media.get('id');
+              if (typeof img === 'object' && (img.width || img.height) && (!media.get('width') || !media.get('height'))) {
+                await media.update({
+                  width: img.width || media.get('width'),
+                  height: img.height || media.get('height')
+                });
+              }
+            }
             imageMap.set(url, imageId);
 
             // If it's fanart, also try to save metadata if available
@@ -190,14 +205,29 @@ async function migrate() {
         let imageId = imageMap.get(url);
         if (!imageId) {
           imageId = generateShortId();
-          await MediaModel.create({
-            id: imageId,
-            type: 'fanart',
-            media_type: 'image',
-            url: url,
-            original_url: typeof media === 'string' ? url : (media.original_url || url),
-            thumbnail_url: typeof media === 'string' ? null : media.thumbnail,
-          });
+          let media = await MediaModel.findOne({ where: { original_url: typeof media === 'string' ? url : (media.original_url || url) } })
+                   || await MediaModel.findOne({ where: { url: url } });
+
+          if (!media) {
+            await MediaModel.create({
+              id: imageId,
+              type: 'fanart',
+              media_type: 'image',
+              url: url,
+              original_url: typeof media === 'string' ? url : (media.original_url || url),
+              thumbnail_url: typeof media === 'string' ? null : media.thumbnail,
+              width: typeof media === 'object' ? media.width || null : null,
+              height: typeof media === 'object' ? media.height || null : null
+            });
+          } else {
+            imageId = media.get('id');
+            if (typeof media === 'object' && (media.width || media.height) && (!media.get('width') || !media.get('height'))) {
+              await media.update({
+                width: media.width || media.get('width'),
+                height: media.height || media.get('height')
+              });
+            }
+          }
           imageMap.set(url, imageId);
         }
 

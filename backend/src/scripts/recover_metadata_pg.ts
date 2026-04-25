@@ -55,7 +55,14 @@ async function recover() {
               type: 'official',
               media_type: 'image',
               url: url,
-              original_url: url
+              original_url: url,
+              width: typeof item === 'object' ? item.width || null : null,
+              height: typeof item === 'object' ? item.height || null : null
+            });
+          } else if (typeof item === 'object' && (item.width || item.height) && (!media.get('width') || !media.get('height'))) {
+            await media.update({
+              width: item.width || media.get('width'),
+              height: item.height || media.get('height')
             });
           }
           await ArtistMediaModel.findOrCreate({
