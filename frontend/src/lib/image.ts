@@ -21,9 +21,11 @@ export const isMediaVideo = (url?: string, type?: string): boolean => {
   if (!url) return false;
   if (type === 'video') return true;
   return !!(
-    url.match(/\.(mp4|webm|mov|m4v|m3u8)$/i) || 
-    url.includes('video.twimg.com') || 
-    (url.includes('/videos/') && !url.match(/\.(jpg|jpeg|png|gif|webp|avif)$/i))
+    url.match(/\.(mp4|webm|mov|m4v|m3u8)(\?.*)?$/i) || 
+    (
+      (url.includes('video.twimg.com') || url.includes('/videos/')) && 
+      !url.match(/\.(jpg|jpeg|png|gif|webp|avif)(\?.*)?$/i)
+    )
   );
 };
 
@@ -68,10 +70,19 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
     if (isOverseas && mode !== 'raw') {
       // Twitter 圖片直連，但補上正確的尺寸參數
       if (targetUrl.includes('pbs.twimg.com')) {
+        // 影片縮圖不支援 name=small 等參數，直接直連
+        if (targetUrl.includes('tweet_video_thumb')) {
+          return targetUrl;
+        }
+
         const [cleanUrl, queryString] = targetUrl.split('?');
         const params = new URLSearchParams(queryString || '');
         
         let format = params.get('format') || cleanUrl.match(/\.([a-zA-Z0-9]+)$/)?.[1]?.toLowerCase() || 'jpg';
+        
+        // 如果是 webp 或 twimg 預設不支援的格式，強制轉為 jpg
+        if (format === 'webp') format = 'jpg';
+        
         const name = mode === 'full' ? 'large' : 'small';
         return `${cleanUrl}?format=${format}&name=${name}`;
       }
@@ -92,16 +103,27 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
 
     // 3. Twitter 圖片與 YouTube 圖片處理
     if (targetUrl.includes('pbs.twimg.com')) {
-      const [cleanUrl, queryString] = targetUrl.split('?');
-      const params = new URLSearchParams(queryString || '');
-      
-      let format = params.get('format') || cleanUrl.match(/\.([a-zA-Z0-9]+)$/)?.[1]?.toLowerCase() || 'jpg';
-      const name = mode === 'raw' ? 'orig' : (mode === 'full' ? 'large' : 'small');
-      targetUrl = `${cleanUrl}?format=${format}&name=${name}`;
-      
-      // 非 raw 模式：直接走 Nginx 代理，利用推特原生的 ?name=small 縮圖，節省 imgproxy 的運算
-      if (!isOverseas && mode !== 'raw') {
-        return targetUrl.replace('https://pbs.twimg.com', 'https://assets.ztmr.club/ti');
+      if (targetUrl.includes('tweet_video_thumb')) {
+        // 影片縮圖不支援 name=small 等參數，非 raw 模式直接代理
+        if (!isOverseas && mode !== 'raw') {
+          return targetUrl.replace('https://pbs.twimg.com', 'https://assets.ztmr.club/ti');
+        }
+      } else {
+        const [cleanUrl, queryString] = targetUrl.split('?');
+        const params = new URLSearchParams(queryString || '');
+        
+        let format = params.get('format') || cleanUrl.match(/\.([a-zA-Z0-9]+)$/)?.[1]?.toLowerCase() || 'jpg';
+        
+        // 如果是 webp 或 twimg 預設不支援的格式，強制轉為 jpg
+        if (format === 'webp') format = 'jpg';
+
+        const name = mode === 'raw' ? 'orig' : (mode === 'full' ? 'large' : 'small');
+        targetUrl = `${cleanUrl}?format=${format}&name=${name}`;
+        
+        // 非 raw 模式：直接走 Nginx 代理，利用推特原生的 ?name=small 縮圖，節省 imgproxy 的運算
+        if (!isOverseas && mode !== 'raw') {
+          return targetUrl.replace('https://pbs.twimg.com', 'https://assets.ztmr.club/ti');
+        }
       }
     }
 
