@@ -3,8 +3,10 @@
   "version": "3.5.0",
   "type": "module",
   "scripts": {
+    "predev": "npm install",
     "dev": "tsx watch src/index.ts",
     "build": "NODE_OPTIONS=--max-old-space-size=4096 tsc",
+    "prestart": "npm install",
     "start": "node dist/index.js",
     "reset-password": "tsx src/scripts/reset-password.ts"
   },
