@@ -1,0 +1,96 @@
+# Zutomayo Gallery - 後端 API 說明文檔
+
+這份文件詳細記錄了 `zutomayo-gallery` 後端系統 (基於 Express.js + PostgreSQL) 的所有 API 路由與功能。
+
+## 目錄 (Table of Contents)
+1. [系統與基礎設定 (System & Core)](#1-系統與基礎設定-system--core)
+2. [身份驗證 (Authentication)](#2-身份驗證-authentication)
+3. [音樂錄影帶 (MVs)](#3-音樂錄影帶-mvs)
+4. [專輯管理 (Albums)](#4-專輯管理-albums)
+5. [二創與社群 (Fanarts & Webhooks)](#5-二創與社群-fanarts--webhooks)
+6. [SEO 與網站地圖 (Sitemap)](#6-seo-與網站地圖-sitemap)
+
+## 通用說明
+- **Base URL**: `/api`
+- **Request Format**: `application/json`
+- **Response Format**: 預設返回 `application/json` (Sitemap 除外)
+- **資料壓縮**: 所有大型 JSON 回應皆預設啟用 Gzip/Brotli 壓縮。
+- **認證方式**: 標示為 **[管理員]** 的 API，請求時必須攜帶有效的 Auth Cookie/Token (由 Auth API 登入後簽發)。
+
+---
+
+## 1. 系統與基礎設定 (System & Core)
+*(路徑: `/api/system`)*
+
+| 請求方法 | 端點路徑 | 權限 | 功能說明 |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/status` | 公開 | 取得目前系統狀態（例如是否處於維護模式 `maintenance`）。 |
+| **GET** | `/geo` | 公開 | 根據客戶端 IP 取得地理位置資訊 (GeoIP)，用於多語系或地區限制。 |
+| **PUT** | `/maintenance` | 管理員 | 切換系統的維護模式狀態。<br>Body: `{ "enabled": true/false }` |
+| **GET** | `/dicts` | 公開 | 取得系統設定字典檔 (例如過濾清單、關鍵字列表等)。 |
+| **POST** | `/dicts` | 管理員 | 更新系統設定字典檔。 |
+| **POST** | `/r2-sync` | 管理員/Token | 觸發將推特圖片同步至 Cloudflare R2 儲存桶的背景任務。可接受 `x-r2-sync-token` 作為自動化腳本的驗證。 |
+| **POST** | `/r2-rebuild` | 管理員/Token | 重建 Cloudflare R2 圖片緩存庫。 |
+
+---
+
+## 2. 身份驗證 (Authentication)
+*(路徑: `/api/auth`)*  
+*系統採用 WebAuthn (Passkey) 無密碼登入機制，並保留一組密碼作為備用登入手段。*
+
+| 請求方法 | 端點路徑 | 權限 | 功能說明 |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/generate-auth-options` | 公開 | 產生 Passkey 登入驗證所需的挑戰碼 (Challenge)。 |
+| **POST** | `/verify-auth` | 公開 | 驗證 Passkey 登入簽章或傳統密碼，成功後伺服器會寫入 `Set-Cookie` 發送驗證憑證。 |
+| **GET** | `/generate-reg-options` | 管理員 | 產生註冊新 Passkey (新裝置/指紋) 所需的挑戰碼。 |
+| **POST** | `/verify-reg` | 管理員 | 驗證並綁定新的 Passkey 裝置至伺服器。 |
+| **GET** | `/passkeys` | 管理員 | 列出所有已綁定的 Passkey 裝置清單與資訊。 |
+| **DELETE** | `/passkeys/:id` | 管理員 | 刪除指定的 Passkey 裝置。 |
+| **POST** | `/change-password` | 管理員 | 更改備用的傳統登入密碼。 |
+
+---
+
+## 3. 音樂錄影帶 (MVs)
+*(路徑: `/api/mvs`)*
+
+| 請求方法 | 端點路徑 | 權限 | 功能說明 |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/` | 公開 | 取得所有 MV 的完整列表 (包含封面、畫廊圖片、畫師、專輯與關鍵字等)。回傳資料會扁平化處理以相容前端。 |
+| **GET** | `/:id` | 公開 | 根據 MV ID 取得單一 MV 的詳細資料。 |
+| **POST** | `/update` | 管理員 | 批次更新或新增 MV 資料 (包含關聯的圖片與 metadata)。<br>Body: `{ "data": MVItem[] }` |
+| **GET** | `/metadata` | 公開 | 取得全域的元資料 (例如所有獨立畫師清單等)。 |
+| **POST** | `/metadata` | 管理員 | 更新全域的元資料。 |
+| **POST** | `/probe` | 管理員 | 探測指定圖片網址的原始尺寸 (`width` 與 `height`)。<br>Body: `{ "url": "https://..." }` |
+| **POST** | `/twitter-resolve` | 管理員 | 解析 Twitter 貼文網址，自動提取出推文內的圖片直連網址與畫師文字資訊。<br>Body: `{ "url": "https://x.com/..." }` |
+| **POST** | `/verify-admin` | 管理員 | 檢查目前登入的管理員是否仍在使用不安全的系統預設密碼。 |
+| **POST** | `/db/query` | 管理員 | 直接執行原生 SQL 語句 (除錯與進階資料庫管理用途)。 |
+
+---
+
+## 4. 專輯管理 (Albums)
+*(路徑: `/api/album`)*
+
+| 請求方法 | 端點路徑 | 權限 | 功能說明 |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/` | 公開 | 取得所有專輯的清單與發行日期等資訊。 |
+| **POST** | `/` | 管理員 | 批次更新或新增專輯資料。 |
+
+---
+
+## 5. 二創與社群 (Fanarts & Webhooks)
+*(路徑: `/api/fanarts` 及 `/api/webhook`)*
+
+| 請求方法 | 端點路徑 | 權限 | 功能說明 |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/api/fanarts/unorganized` | 管理員 | 取得爬蟲抓取但尚未被分類或整理的 Twitter 二創圖片 (Fanart) 列表。 |
+| **POST** | `/api/fanarts/:id/status` | 管理員 | 更新指定二創圖片的狀態 (例如標記為 `organized` 或 `rejected`)。<br>Body: `{ "status": "organized" }` |
+| **POST** | `/api/webhook/waline` | 公開 | 接收 Waline 留言系統的 Webhook 推播，可用於觸發網站快取更新或社群通知。 |
+
+---
+
+## 6. SEO 與網站地圖 (Sitemap)
+*(路徑: `/api/sitemap.xml`)*
+
+| 請求方法 | 端點路徑 | 權限 | 功能說明 |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/api/sitemap.xml` | 公開 | 動態產生 XML 格式的 Sitemap。包含所有 MV 詳細頁、Fanart 頁面以及**圖片節點 (`<image:image>`)**。並支援多語系 (zh, ja, en) 索引，專供 Googlebot 等搜尋引擎爬蟲抓取以提升 SEO 排名。 |
