@@ -661,9 +661,9 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
                     <div className="space-y-4">
                     <h4 className="font-bold border-b-3 border-black pb-2 flex items-center gap-2 uppercase tracking-widest">
                       <i className="hn hn-image text-xl text-ztmy-green"></i>{t("app.reference_art", "設定資料圖")}</h4>
-                    {mv?.images && mv.images.filter(img => img.usage !== 'cover').length > 0 ? (
+                    {mv?.images && mv.images.filter(img => img.usage !== 'cover' && img.type !== 'fanart').length > 0 ? (
                       <GalleryViewer
-                        images={mv.images.filter(img => img.usage !== 'cover')}
+                        images={mv.images.filter(img => img.usage !== 'cover' && img.type !== 'fanart')}
                         mvTitle={mv.title}
                         mvId={mv.id}
                         itemsPerPage={12}
