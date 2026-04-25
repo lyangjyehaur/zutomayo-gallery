@@ -1,0 +1,375 @@
+{
+  "info": {
+    "name": "Zutomayo Gallery API",
+    "description": "Zutomayo Gallery 後端 API 說明文檔，基於 Express.js + PostgreSQL",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5010/api",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. 系統與基礎設定 (System & Core)",
+      "item": [
+        {
+          "name": "取得系統狀態 (Status)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/system/status",
+            "description": "取得目前系統狀態（例如是否處於維護模式 maintenance）"
+          }
+        },
+        {
+          "name": "取得客戶端 GeoIP (Geo)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/system/geo",
+            "description": "根據客戶端 IP 取得地理位置資訊 (GeoIP)，用於多語系或地區限制"
+          }
+        },
+        {
+          "name": "[管理員] 切換維護模式 (Maintenance)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/system/maintenance",
+            "description": "切換系統的維護模式狀態",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"enabled\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "取得字典檔 (Dicts)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/system/dicts",
+            "description": "取得系統設定字典檔 (例如過濾清單、關鍵字列表等)"
+          }
+        },
+        {
+          "name": "[管理員] 更新字典檔 (Dicts)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/system/dicts",
+            "description": "更新系統設定字典檔",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filterList\": []\n}"
+            }
+          }
+        },
+        {
+          "name": "[管理員] 同步圖片至 R2 (R2 Sync)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/system/r2-sync",
+            "description": "觸發將推特圖片同步至 Cloudflare R2 儲存桶的背景任務。可接受 x-r2-sync-token 作為自動化腳本的驗證。",
+            "header": [
+              { "key": "x-r2-sync-token", "value": "your_token_here", "type": "text" }
+            ]
+          }
+        },
+        {
+          "name": "[管理員] 重建 R2 緩存 (R2 Rebuild)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/system/r2-rebuild",
+            "description": "重建 Cloudflare R2 圖片緩存庫",
+            "header": [
+              { "key": "x-r2-sync-token", "value": "your_token_here", "type": "text" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. 身份驗證 (Authentication)",
+      "item": [
+        {
+          "name": "產生登入選項 (Generate Auth Options)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/generate-auth-options",
+            "description": "產生 Passkey 登入驗證所需的挑戰碼 (Challenge)"
+          }
+        },
+        {
+          "name": "驗證登入 (Verify Auth)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/verify-auth",
+            "description": "驗證 Passkey 登入簽章或傳統密碼，成功後伺服器會寫入 Set-Cookie 發送驗證憑證",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"your_password\"\n}"
+            }
+          }
+        },
+        {
+          "name": "[管理員] 產生註冊選項 (Generate Reg Options)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/generate-reg-options",
+            "description": "產生註冊新 Passkey (新裝置/指紋) 所需的挑戰碼"
+          }
+        },
+        {
+          "name": "[管理員] 驗證註冊 (Verify Reg)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/verify-reg",
+            "description": "驗證並綁定新的 Passkey 裝置至伺服器",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My iPhone\"\n}"
+            }
+          }
+        },
+        {
+          "name": "[管理員] 列出 Passkeys",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/passkeys",
+            "description": "列出所有已綁定的 Passkey 裝置清單與資訊"
+          }
+        },
+        {
+          "name": "[管理員] 刪除 Passkey",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/auth/passkeys/:id",
+            "description": "刪除指定的 Passkey 裝置"
+          }
+        },
+        {
+          "name": "[管理員] 更改密碼 (Change Password)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/change-password",
+            "description": "更改備用的傳統登入密碼",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newPassword\": \"new_secure_password\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. 音樂錄影帶 (MVs)",
+      "item": [
+        {
+          "name": "取得所有 MVs",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/mvs",
+            "description": "取得所有 MV 的完整列表 (包含封面、畫廊圖片、畫師、專輯與關鍵字等)。回傳資料會扁平化處理以相容前端。"
+          }
+        },
+        {
+          "name": "取得單一 MV (ByID)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/mvs/:id",
+            "description": "根據 MV ID 取得單一 MV 的詳細資料"
+          }
+        },
+        {
+          "name": "[管理員] 批次更新 MVs",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/mvs/update",
+            "description": "批次更新或新增 MV 資料 (包含關聯的圖片與 metadata)",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": []\n}"
+            }
+          }
+        },
+        {
+          "name": "取得全域 Metadata",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/mvs/metadata",
+            "description": "取得全域的元資料 (例如所有獨立畫師清單等)"
+          }
+        },
+        {
+          "name": "[管理員] 更新全域 Metadata",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/mvs/metadata",
+            "description": "更新全域的元資料",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"artists\": []\n}"
+            }
+          }
+        },
+        {
+          "name": "[管理員] 探測圖片尺寸 (Probe)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/mvs/probe",
+            "description": "探測指定圖片網址的原始尺寸 (width 與 height)",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://example.com/image.jpg\"\n}"
+            }
+          }
+        },
+        {
+          "name": "[管理員] 解析 Twitter 網址 (Twitter Resolve)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/mvs/twitter-resolve",
+            "description": "解析 Twitter 貼文網址，自動提取出推文內的圖片直連網址與畫師文字資訊",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://x.com/...\"\n}"
+            }
+          }
+        },
+        {
+          "name": "[管理員] 驗證預設密碼 (Verify Admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/mvs/verify-admin",
+            "description": "檢查目前登入的管理員是否仍在使用不安全的系統預設密碼"
+          }
+        },
+        {
+          "name": "[管理員] 執行原生 SQL (DB Query)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/mvs/db/query",
+            "description": "直接執行原生 SQL 語句 (除錯與進階資料庫管理用途)",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sql\": \"SELECT * FROM mvs LIMIT 10;\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. 專輯管理 (Albums)",
+      "item": [
+        {
+          "name": "取得所有專輯",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/album",
+            "description": "取得所有專輯的清單與發行日期等資訊"
+          }
+        },
+        {
+          "name": "[管理員] 批次更新專輯",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/album",
+            "description": "批次更新或新增專輯資料",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": []\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. 二創與社群 (Fanarts & Webhooks)",
+      "item": [
+        {
+          "name": "[管理員] 取得未整理 Fanarts",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/fanarts/unorganized",
+            "description": "取得爬蟲抓取但尚未被分類或整理的 Twitter 二創圖片 (Fanart) 列表"
+          }
+        },
+        {
+          "name": "[管理員] 更新 Fanart 狀態",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/fanarts/:id/status",
+            "description": "更新指定二創圖片的狀態 (例如標記為 organized 或 rejected)",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"organized\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Waline Webhook",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/webhook/waline",
+            "description": "接收 Waline 留言系統的 Webhook 推播，可用於觸發網站快取更新或社群通知",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"new_comment\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. SEO 與網站地圖 (Sitemap)",
+      "item": [
+        {
+          "name": "取得 Sitemap (XML)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/sitemap.xml",
+            "description": "動態產生 XML 格式的 Sitemap。包含所有 MV 詳細頁、Fanart 頁面以及圖片節點 (<image:image>)。並支援多語系 (zh, ja, en) 索引，專供 Googlebot 等搜尋引擎爬蟲抓取以提升 SEO 排名。"
+          }
+        }
+      ]
+    }
+  ]
+}
