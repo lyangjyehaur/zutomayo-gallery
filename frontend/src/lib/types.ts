@@ -18,10 +18,8 @@ export interface MVMedia {
     post_date?: string;
     status?: string;
   };
-  MVMedia?: {
-    usage: string;
-    order_index: number;
-  };
+  usage?: string;
+  order_index?: number;
   [key: string]: any;
 }
 

@@ -2150,11 +2150,11 @@ const currentMV = data[activeIndex];
                     </span>
                   </label>
                   <Textarea 
-                    value={(currentMV.images?.filter(img => img.MVMedia?.usage === 'cover').map(img => img.url) || []).join('\n')} 
+                    value={(currentMV.images?.filter(img => img.usage === 'cover').map(img => img.url) || []).join('\n')} 
                     onChange={(e) => {
                       const newUrls = e.target.value.split('\n').map(s => s.trim()).filter(s => s !== '');
-                      const otherImages = currentMV.images?.filter(img => img.MVMedia?.usage !== 'cover') || [];
-                      const newCovers = newUrls.map((url, i) => ({ url, type: 'cover', MVMedia: { usage: 'cover', order_index: i } }));
+                      const otherImages = currentMV.images?.filter(img => img.usage !== 'cover') || [];
+                      const newCovers = newUrls.map((url, i) => ({ url, type: 'cover', usage: 'cover', order_index: i }));
                       updateField('images', [...newCovers, ...otherImages]);
                     }} 
                     className={`min-h-[100px] font-sans text-sm ${getErrorClass(currentMV.images)}`}
