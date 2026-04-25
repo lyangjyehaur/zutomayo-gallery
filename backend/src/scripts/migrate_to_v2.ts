@@ -50,14 +50,29 @@ async function migrate() {
     return albumMap.get(cleanName);
   };
 
-  const getOrCreateKeyword = async (name: any) => {
-    if (!name) return null;
-    const cleanName = String(name).trim();
-    if (!keywordMap.has(cleanName)) {
-      const [keyword] = await KeywordModel.findOrCreate({ where: { name: cleanName } });
-      keywordMap.set(cleanName, keyword.get('id'));
+  const getOrCreateKeyword = async (keywordObj: any) => {
+    if (!keywordObj) return null;
+    let name = '';
+    let lang = 'zh-Hant';
+    
+    if (typeof keywordObj === 'string') {
+      name = keywordObj.trim();
+    } else {
+      name = String(keywordObj.text || keywordObj.name || '').trim();
+      lang = keywordObj.lang || 'zh-Hant';
     }
-    return keywordMap.get(cleanName);
+    
+    if (!name) return null;
+
+    const cacheKey = `${name}_${lang}`;
+    if (!keywordMap.has(cacheKey)) {
+      const [keyword] = await KeywordModel.findOrCreate({ 
+        where: { name, lang },
+        defaults: { name, lang }
+      });
+      keywordMap.set(cacheKey, keyword.get('id'));
+    }
+    return keywordMap.get(cacheKey);
   };
 
   try {
