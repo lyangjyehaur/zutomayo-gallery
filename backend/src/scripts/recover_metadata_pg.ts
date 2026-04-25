@@ -52,7 +52,7 @@ async function recover() {
           if (!media) {
             media = await MediaModel.create({
               id: generateShortId(),
-              type: 'official',
+              type: 'collaboration',
               media_type: 'image',
               url: url,
               original_url: url,
