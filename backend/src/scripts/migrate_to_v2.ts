@@ -155,7 +155,7 @@ async function migrate() {
             // If it's fanart, also try to save metadata if available
             if (isFanart) {
               let groupId = generateShortId();
-              await MediaGroupModel.findOrCreate({
+              const [group] = await MediaGroupModel.findOrCreate({
                 where: { source_url: img.tweetUrl || '' },
                 defaults: {
                   id: groupId,
@@ -167,7 +167,7 @@ async function migrate() {
                   status: 'organized'
                 }
               });
-              await MediaModel.update({ group_id: groupId }, { where: { id: imageId } });
+              await MediaModel.update({ group_id: (group as any).id }, { where: { id: imageId } });
             }
           }
 
@@ -202,7 +202,7 @@ async function migrate() {
         }
 
         let groupId = generateShortId();
-        await MediaGroupModel.findOrCreate({
+        const [group] = await MediaGroupModel.findOrCreate({
           where: { source_url: fa.tweetUrl || '' },
           defaults: {
             id: groupId,
@@ -214,7 +214,7 @@ async function migrate() {
             status: fa.status || 'pending'
           }
         });
-        await MediaModel.update({ group_id: groupId }, { where: { id: imageId } });
+        await MediaModel.update({ group_id: (group as any).id }, { where: { id: imageId } });
 
         if (fa.mv_id) {
           await MVMediaModel.findOrCreate({ where: { mv_id: fa.mv_id, media_id: imageId, usage: 'gallery', order_index: 999 } });
