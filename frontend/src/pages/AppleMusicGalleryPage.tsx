@@ -104,12 +104,11 @@ export function AppleMusicGalleryPage() {
       <div className="flex flex-col items-center justify-center my-12 md:my-16 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
         <h2 className="text-3xl md:text-5xl font-black tracking-tighter mb-4 flex items-center justify-center gap-3 uppercase">
           <span className="bg-black text-main px-4 py-2 inline-flex items-center gap-3 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rotate-1">
-            <Music className="w-8 h-8 md:w-10 md:h-10" />
-            Apple Music Gallery
+            {t('album_page_title', 'Cover Art Timeline')}
           </span>
         </h2>
         <p className="text-sm md:text-base opacity-70 font-bold max-w-2xl px-4 mt-4">
-          High-Resolution Apple Music Cover Art Archive (-999.png/jpg)
+          {t('album_page_desc', 'High-res artwork gallery for all albums and singles, presented as a timeline.')}
         </p>
       </div>
 

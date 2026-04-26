@@ -212,6 +212,8 @@
     "question": "您觉得目前的网页加载速度如何？",
     "hint": "支持半星评分，滑动预览"
   },
+  "album_page_title": "Cover Art Timeline",
+  "album_page_desc": "历年专辑与单曲的高分辨率原图封面，以时间轴形式呈现",
   "album_category_mini": "迷你专辑",
   "album_category_full": "完整专辑",
   "album_category_single": "单曲 / 其他",

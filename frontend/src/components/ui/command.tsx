@@ -138,8 +138,29 @@ function CommandItem({
   className,
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.Item>) {
+  const ref = React.useRef<React.ElementRef<typeof CommandPrimitive.Item>>(null)
+
+  React.useEffect(() => {
+    if (!ref.current) return
+    const el = ref.current
+    // 覆寫 scrollIntoView 避免 cmdk 在清單過短時錯誤地捲動整個網頁 (window)
+    const originalScrollIntoView = el.scrollIntoView
+    el.scrollIntoView = function (options) {
+      const list = el.closest('[data-slot="command-list"]')
+      if (list) {
+        // 只有當 CommandList 真的是可捲動狀態（出現捲動條）時，才允許執行 scrollIntoView
+        if (list.scrollHeight > list.clientHeight) {
+          originalScrollIntoView.call(this, options)
+        }
+      } else {
+        originalScrollIntoView.call(this, options)
+      }
+    }
+  }, [])
+
   return (
     <CommandPrimitive.Item
+      ref={ref}
       data-slot="command-item"
       className={cn(
         "relative flex cursor-default select-none items-center rounded-base px-2 py-1.5 gap-2 text-sm text-main-foreground outline-border outline-0 aria-selected:outline-2 data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",

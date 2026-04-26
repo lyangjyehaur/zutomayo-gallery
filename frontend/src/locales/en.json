@@ -218,6 +218,8 @@
     "question": "How do you feel about the current page loading speed?",
     "hint": "Supports half-star ratings, swipe to preview"
   },
+  "album_page_title": "Cover Art Timeline",
+  "album_page_desc": "High-res artwork gallery for all albums and singles, presented as a timeline.",
   "album_category_mini": "Mini Album",
   "album_category_full": "Full Album",
   "album_category_single": "Single / Others"

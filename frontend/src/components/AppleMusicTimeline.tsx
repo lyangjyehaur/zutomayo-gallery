@@ -239,10 +239,10 @@ const AlbumCard = React.memo(AlbumCardComponent, (prevProps, nextProps) => {
   );
 });
 
-const TimelineOverlay = React.memo(({ timelineData, containerRef }: { timelineData: any[], containerRef: React.RefObject<HTMLDivElement> }) => {
+const TimelineOverlay = React.memo(({ timelineData, containerRef, lineRef }: { timelineData: any[], containerRef: React.RefObject<HTMLDivElement>, lineRef: React.RefObject<HTMLDivElement> }) => {
   const [activeYear, setActiveYear] = useState<number | null>(null);
-  const [scrollProgress, setScrollProgress] = useState(0);
   const [isTimelineVisible, setIsTimelineVisible] = useState(false);
+  const [debugProgress, setDebugProgress] = useState(0);
 
   // 1. 處理主時間軸滾動進度與年份高亮
   useEffect(() => {
@@ -254,24 +254,54 @@ const TimelineOverlay = React.memo(({ timelineData, containerRef }: { timelineDa
         ticking = true;
         frameId = window.requestAnimationFrame(() => {
           // 計算主時間軸進度
-          if (containerRef.current) {
-            const rect = containerRef.current.getBoundingClientRect();
+          if (containerRef.current && lineRef?.current) {
+            const containerRect = containerRef.current.getBoundingClientRect();
+            const lineRect = lineRef.current.getBoundingClientRect();
             const viewportHeight = window.innerHeight;
-            const totalHeight = rect.height;
             
             // 判斷時間軸是否在可視範圍內 (加上一點緩衝區)
-            const isVisible = rect.top <= viewportHeight - 100 && rect.bottom >= 100;
+            const isVisible = containerRect.top <= viewportHeight - 100 && containerRect.bottom >= 100;
             setIsTimelineVisible(isVisible);
         
-            const scrollableDistance = totalHeight;
+            const lineMaxHeight = lineRect.height;
             
-            if (scrollableDistance > 0) {
-              const startOffset = viewportHeight * 0.5;
-              const scrolled = startOffset - rect.top;
-              
-              const progress = Math.max(0, Math.min(1, scrolled / scrollableDistance));
-              setScrollProgress(progress);
-            }
+            if (lineMaxHeight > 0) {
+                // 改為計算整體的滾動比例
+                const maxScroll = lineMaxHeight - viewportHeight;
+                // 這裡的 scrolled 是線條頂部超出版面的距離（即滾動了多少）
+                const scrolled = -lineRect.top;
+                
+                let progress = 0;
+                if (maxScroll > 0) {
+                  progress = scrolled / maxScroll;
+                } else {
+                  progress = 1;
+                }
+                
+                progress = Math.max(0, Math.min(1, progress));
+                // 透過 CSS 變數直接更新，避免頻繁觸發 React 渲染，提升性能
+                containerRef.current.style.setProperty('--scroll-percent', progress.toString());
+                
+                // 計算 fixed 線的高度
+                // 1. 基本高度：就是 viewportHeight * progress
+                let fixedHeight = viewportHeight * progress;
+                
+                // 因為我們現在有外層 overflow-hidden 的保護，不再需要手動算 lineRect.bottom 限制了！
+                // JS 算不準或是有動畫延遲都沒關係，因為 CSS 會完美裁切。
+                
+                // 確保高度不為負數
+                fixedHeight = Math.max(0, fixedHeight);
+                
+                containerRef.current.style.setProperty('--fixed-line-height', `${fixedHeight}px`);
+
+                // 判斷是否應該顯示這條 fixed 的線：
+                // 只要線條進入畫面 (lineRect.top <= 0) 就顯示
+                const shouldShowFixedLine = lineRect.top <= 0 && lineRect.bottom > 0;
+                containerRef.current.style.setProperty('--fixed-line-opacity', shouldShowFixedLine ? '1' : '0');
+                
+                // 僅供 Debug 顯示，實際使用可移除，透過 requestAnimationFrame 確保不會過度阻塞
+                setDebugProgress(Math.round(progress * 100));
+              }
           }
 
           // 計算目前年份
@@ -351,20 +381,42 @@ const TimelineOverlay = React.memo(({ timelineData, containerRef }: { timelineDa
         </div>
       </div>
 
-      {/* 垂直時間軸主線 - 進度填滿色 (主題色) */}
+      {/* 垂直時間軸主線 - 原有的背景色與填滿色，恢復原本的邏輯讓它與節點等高 */}
       <div 
-        className="absolute left-6 lg:left-1/2 top-0 bottom-12 w-1.5 lg:w-2 bg-main lg:-translate-x-1/2 z-10 origin-top will-change-transform pointer-events-none -translate-x-1/2" 
+        className="absolute left-6 lg:left-1/2 top-0 bottom-12 w-1.5 lg:w-2 bg-main z-10 will-change-transform pointer-events-none" 
         style={{ 
-          transform: `scaleY(${scrollProgress})`,
-          transition: 'transform 0.05s linear' 
+          transform: `translateX(-50%) scaleY(var(--scroll-percent, 0))`,
+          transformOrigin: 'top',
         }}
       />
+
+      {/* 獨立的固定視窗進度線 (Sticky Line) - 根據您的新思路實作 */}
+      {/* 我們將它包在一個與背景軌道完全等高的絕對定位容器中，並加上 overflow-hidden */}
+      {/* 這是在不影響外層容器的情況下，利用 CSS 物理限制進度線最完美的解法 */}
+      <div 
+        className="absolute left-6 lg:left-1/2 top-0 bottom-12 w-1.5 lg:w-2 z-[5] pointer-events-none overflow-hidden -translate-x-1/2"
+      >
+        <div 
+          className="fixed top-0 w-full bg-main will-change-transform"
+          style={{
+            height: 'var(--fixed-line-height, 0px)',
+            opacity: 'var(--fixed-line-opacity, 0)',
+            transition: 'height 0.15s ease-out, opacity 0.15s ease-out',
+          }}
+        />
+      </div>
+
+      {/* Debug 百分比顯示 */}
+      <div className="fixed top-24 right-8 bg-black text-main font-black text-xl px-4 py-2 border-4 border-main z-50 shadow-[4px_4px_0px_0px_#bcff00] pointer-events-none">
+        {debugProgress}%
+      </div>
     </>
   );
 });
 
 export function AppleMusicTimeline({ images }: { images: TimelineImage[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const lineRef = useRef<HTMLDivElement>(null);
   const { t, i18n } = useTranslation();
   const currentLocale = i18n.language || 'en';
 
@@ -657,9 +709,9 @@ export function AppleMusicTimeline({ images }: { images: TimelineImage[] }) {
         {/* 時間軸主內容區塊 */}
         <div className="relative flex-1 w-full max-w-7xl mx-auto">
         {/* 中間的垂直進度線 */}
-        <div className="absolute left-6 lg:left-1/2 top-0 bottom-12 w-1.5 lg:w-2 bg-black/20 z-0 -translate-x-1/2" />
+        <div ref={lineRef} className="absolute left-6 lg:left-1/2 top-0 bottom-12 w-1.5 lg:w-2 bg-black/20 z-0 -translate-x-1/2" />
         
-        <TimelineOverlay timelineData={timelineData} containerRef={containerRef} />
+        <TimelineOverlay timelineData={timelineData} containerRef={containerRef} lineRef={lineRef} />
         
         <div className="w-full relative">
             {timelineData.map(({ year, albums }, index) => (
@@ -669,7 +721,7 @@ export function AppleMusicTimeline({ images }: { images: TimelineImage[] }) {
                   className={`absolute left-6 lg:left-1/2 w-4 h-4 bg-black rounded-none border-2 border-main flex items-center justify-center shadow-[2px_2px_0px_0px_#000] z-20 group-hover:scale-125 group-hover:bg-main transition-all duration-300 -translate-x-1/2 ${index === 0 ? 'top-[calc(4.5rem-0.5rem)] lg:top-20' : 'top-4 lg:top-0'}`}
                 />
                 {/* 年份標籤 (Neobrutalism 風格) */}
-              <div className="sticky top-[4.5rem] lg:top-20 z-20 flex justify-start lg:justify-center mb-8 lg:mb-16 ml-[calc(1.5rem-12px)] lg:ml-0 self-start w-full lg:w-full">
+                <div className="sticky top-[4.5rem] lg:top-20 z-20 flex justify-start lg:justify-center mb-8 lg:mb-16 ml-[calc(1.5rem-12px)] lg:ml-0 self-start w-full lg:w-full">
                 <div className="bg-main text-black px-6 py-2 border-2 border-black shadow-[4px_4px_0px_0px_#000] transform -rotate-2 hover:rotate-0 transition-transform cursor-default flex items-center gap-2">
                   <Calendar className="w-5 h-5" />
                   <span className="text-2xl font-black tracking-widest">{year}</span>

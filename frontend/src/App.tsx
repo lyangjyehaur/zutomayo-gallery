@@ -592,15 +592,47 @@ function App({
   const [sentinelEl, setSentinelEl] = useState<HTMLDivElement | null>(null);
   const totalCountRef = useRef<number>(filteredData.length);
   const lastBatchStartRef = useRef<number>(0);
+  const filterAnchorRef = useRef<HTMLDivElement>(null);
+  
+  // 新增一個 Ref 用來記錄最後一次計算出來的過濾列高度（不含活躍標籤區）
+  const filterBarHeightRef = useRef<number>(80);
+
   useEffect(() => {
     totalCountRef.current = filteredData.length;
   }, [filteredData.length]);
 
   // 當過濾條件改變時，重置可見數量
+  const isFirstRender = useRef(true);
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
     lastBatchStartRef.current = 0;
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    
+    // 如果是初次渲染（頁面剛載入），不要執行任何滾動邏輯，避免干擾使用者體驗或影響錨點計算
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    
+    if (filterAnchorRef.current) {
+      // 透過 setTimeout 放棄使用 requestAnimationFrame，因為 React 的狀態更新（活躍標籤展開）
+      // 可能需要更長的時間才能完全反映到 DOM 的 offsetHeight 上
+      setTimeout(() => {
+        if (!filterAnchorRef.current) return;
+        
+        // 取得當前錨點絕對位置
+        const anchorTop = filterAnchorRef.current.getBoundingClientRect().top + window.scrollY;
+        
+        // 為了確保 100% 觸發吸頂，我們直接將滾動位置設定在錨點下方 5px 處
+        const targetScrollY = anchorTop + 5;
+        
+        window.scrollTo({ top: targetScrollY, behavior: "instant" });
+        
+        // 給予瀏覽器足夠時間處理 scroll event，如果原生 event 沒觸發，我們手動補一槍
+        setTimeout(() => {
+          window.dispatchEvent(new Event('scroll'));
+        }, 50);
+      }, 50);
+    }
   }, [
     search,
     yearFilter,
@@ -857,7 +889,7 @@ function App({
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-base font-normal selection:bg-main selection:text-main-foreground relative isolate flex flex-col">
+    <div className="min-h-screen bg-background text-foreground font-base font-normal selection:bg-main selection:text-main-foreground relative isolate flex flex-col overflow-clip">
       {/* 整個首頁的全局背景 CRT 濾鏡層 */}
       <div className="pointer-events-none fixed inset-0 z-[-1] crt-lines-global opacity-100" />
 
@@ -915,7 +947,7 @@ function App({
         <PageNavigation currentRoute={pathnameWithoutLang} basePath={basePath} />
       )}
 
-      <main className={`mx-auto px-4 w-full pt-4 relative flex-1 ${is404Route ? 'flex items-center justify-center' : 'max-w-7xl pb-8 max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-[80%]'}`}>
+      <main className={`mx-auto px-4 w-full pt-4 relative flex-1 overflow-visible ${is404Route ? 'flex items-center justify-center' : 'max-w-7xl pb-8 max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-[80%] min-h-[calc(100vh-100px)]'}`}>
         {isNotFound ? (
           <Navigate to={`${basePath}/404?from=${encodeURIComponent(location.pathname + location.search)}`} replace />
         ) : is404Route ? (
@@ -930,9 +962,88 @@ function App({
           <AppleMusicGalleryPage />
         ) : (
           <>
+            {/* 篩選欄定位錨點（非 sticky），用來計算篩選欄原始位置 */}
+            <div ref={filterAnchorRef} className="w-full h-0 pointer-events-none absolute top-4 left-0" />
+            
             {/* 過濾控制列與活躍標籤 */}
-        <div className="flex flex-col gap-2 mt-4 mb-8 max-[768px]:w-[90vw] max-[768px]:relative max-[768px]:left-1/2 max-[768px]:-translate-x-1/2 max-[768px]:px-0">
-          <div className="flex flex-col md:flex-row gap-4 w-full">
+        <div 
+          className="flex flex-col gap-0 mt-0 mb-0 sticky top-0 z-40 py-4 transition-all duration-200 w-full bg-transparent border-b-2 border-transparent"
+          style={{ top: '0px' }}
+          ref={(el) => {
+            if (!el) return;
+            const handleScroll = () => {
+              if (!filterAnchorRef.current) return;
+              
+              // 記錄目前過濾列的高度，供後續捲動使用
+              filterBarHeightRef.current = el.getBoundingClientRect().height;
+              
+              // 當視窗捲動超過錨點的位置時，就表示篩選列應該吸頂了
+              const anchorTop = filterAnchorRef.current.getBoundingClientRect().top;
+              // 當錨點的絕對位置被捲出視窗上方（小於 0），代表篩選欄已經抵達頂端並觸發了 sticky
+              // 我們容許大範圍的容錯（<= 5），以對抗各種異步渲染與瞬間捲動的未到位問題
+              const isSticky = anchorTop <= 5;
+              
+              // 避免在還沒渲染好之前出現錯誤的座標導致亂吸頂
+              // 我們現在只在沒有吸頂 (isSticky === false) 的時候才重置，
+              // 不再單純依賴 scrollY === 0，因為瞬間跳轉可能會在極短時間內造成狀態不同步
+              if (!isSticky) {
+                // 如果已經移除了，就不用重複執行 DOM 操作，提升效能
+                if (!el.classList.contains('bg-transparent')) {
+                  el.classList.remove(
+                    'bg-background/95', 
+                    'backdrop-blur-md', 
+                    'shadow-sm', 
+                    'border-border'
+                  );
+                  el.classList.add('bg-transparent', 'border-transparent');
+                  
+                  el.style.marginLeft = '';
+                  el.style.marginRight = '';
+                  el.style.paddingLeft = '';
+                  el.style.paddingRight = '';
+                  el.style.width = ''; 
+                  el.style.paddingBottom = '';
+                }
+              } else {
+                // 如果已經加上了，就不用重複執行 DOM 操作，提升效能
+                if (!el.classList.contains('bg-background/95')) {
+                  // 吸頂狀態：添加背景與陰影，利用 padding 和 margin 撐滿螢幕
+                  el.classList.add(
+                    'bg-background/95', 
+                    'backdrop-blur-md', 
+                    'shadow-sm', 
+                    'border-border'
+                  );
+                  el.classList.remove('bg-transparent', 'border-transparent');
+                  
+                  // 根據父層的各種 margin/padding/max-width 來決定寬度補償策略
+                  // 目標：不管在哪個斷點，都要突破 <main> 的限制，讓背景 100vw 滿版
+                  el.style.marginLeft = 'calc(50% - 50vw)';
+                  el.style.marginRight = 'calc(50% - 50vw)';
+                  el.style.paddingLeft = 'calc(50vw - 50%)';
+                  el.style.paddingRight = 'calc(50vw - 50%)';
+                  el.style.width = '100vw';
+                  
+                  // 確保 padding 底部的過渡效果不受干擾
+                  el.style.paddingBottom = '1rem';
+                }
+              }
+            };
+
+            window.addEventListener('scroll', handleScroll, { passive: true });
+            window.addEventListener('resize', handleScroll, { passive: true });
+            
+            // 初始化時也執行一次
+            handleScroll();
+            
+            // 記得清理 event listener
+            return () => {
+              window.removeEventListener('scroll', handleScroll);
+              window.removeEventListener('resize', handleScroll);
+            };
+          }}
+        >
+          <div className="flex flex-col md:flex-row gap-4 w-full mx-auto max-w-[var(--container-width,1280px)]">
             <div className="relative w-full md:flex-[1] min-[1120px]:flex-[1]">
               <i className="hn hn-search text-xl absolute left-3 top-1/2 -translate-y-1/2 opacity-50"></i>
               <Input
@@ -1204,87 +1315,77 @@ function App({
             </Popover>
           </div>
         </div>
-
-        {/* 活躍篩選項標籤顯示區塊（移入同一個父容器中） */}
-          {(yearFilter.length > 0 || albumFilter.length > 0 || artistFilter.length > 0) && (
-            <div className="flex flex-wrap gap-2 items-center mt-2 max-[768px]:px-0">
+        </div>
+        {/* 活躍篩選項標籤顯示區塊 */}
+        {/* 我們將它獨立出來放在原本的錨點與過濾控制列之間，這樣展開時才不會推動控制列 */}
+        <div 
+          className={`grid transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] w-full max-w-[var(--container-width,1280px)] mx-auto relative z-30 ${
+            (yearFilter.length > 0 || albumFilter.length > 0 || artistFilter.length > 0) 
+              ? 'grid-rows-[1fr] opacity-100 mb-6 mt-2' 
+              : 'grid-rows-[0fr] opacity-0 mb-4 mt-0'
+          }`}
+        >
+          <div className="overflow-hidden">
+            <div className="flex flex-wrap gap-2 items-center w-full pt-1 pb-1">
               <span className="text-xs font-bold opacity-50 mr-1 hidden sm:inline-block">{t("app.current_filters", "目前篩選：")}</span>
               
               {yearFilter.map(year => (
-                <div key={`year-${year}`} className="flex items-center bg-card border-2 border-border text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-neo-sm group">
-                  <span className="opacity-50 mr-1 sm:mr-1.5 hidden min-[430px]:inline-block">{t("app.year", "年份")}</span>
-                  <span className="font-bold mr-1">{year}</span>
-                  <button 
-                    onClick={() => setYearFilter(yearFilter.filter(y => y !== year))}
-                    className="opacity-50 hover:opacity-100 transition-opacity ml-1 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 rounded-sm w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center"
-                  >
-                    <i className="hn hn-times text-[8px] sm:text-[10px]"></i>
-                  </button>
-                </div>
-              ))}
-
-              {albumFilter.map(album => (
-                <div key={`album-${album}`} className="flex items-center bg-card border-2 border-border text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-neo-sm group">
-                  <span className="opacity-50 mr-1 sm:mr-1.5 hidden min-[430px]:inline-block">{t("app.album", "專輯")}</span>
-                  <span lang="ja" className="font-bold mr-1 truncate max-w-[100px] sm:max-w-[200px]" title={album}>{album}</span>
-                  <button 
-                    onClick={() => setAlbumFilter(albumFilter.filter(a => a !== album))}
-                    className="opacity-50 hover:opacity-100 transition-opacity ml-1 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 rounded-sm w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center"
-                  >
-                    <i className="hn hn-times text-[8px] sm:text-[10px]"></i>
-                  </button>
-                </div>
-              ))}
-
-              {artistFilter.map(artist => (
-                <div key={`artist-${artist}`} className="flex items-center bg-card border-2 border-border text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-neo-sm group">
-                  <span className="opacity-50 mr-1 sm:mr-1.5 hidden min-[430px]:inline-block">{t("app.creator", "製作")}</span>
-                  <span lang="ja" className="font-bold mr-1 truncate max-w-[80px] sm:max-w-[150px]" title={artist}>{artist}</span>
-                  <button 
-                    onClick={() => setArtistFilter(artistFilter.filter(a => a !== artist))}
-                    className="opacity-50 hover:opacity-100 transition-opacity ml-1 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 rounded-sm w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center"
-                  >
-                    <i className="hn hn-times text-[8px] sm:text-[10px]"></i>
-                  </button>
-                </div>
-              ))}
-
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => {
-                  setYearFilter([]);
-                  setAlbumFilter([]);
-                  setArtistFilter([]);
-                }}
-                className="text-[10px] sm:text-xs h-6 sm:h-7 px-1.5 sm:px-2 hover:bg-red-500/10 hover:text-red-500 opacity-60 hover:opacity-100 ml-1 border border-transparent hover:border-red-500/20"
-                data-umami-event="Z_Clear_All_Filters"
-              >{t("app.clear_all", "清除全部")}</Button>
-            </div>
-          )}
-        </div>
-
-        {/* 收藏模式常駐提示 */}
-        {showFavOnly && (
-          <div className="mb-8 mt-4 max-[768px]:w-[90vw] max-[768px]:relative max-[768px]:left-1/2 max-[768px]:-translate-x-1/2 max-[768px]:px-0">
-            <div className="p-4 bg-yellow-400/10 border-2 border-yellow-500/50 flex items-start gap-3 md:gap-4 rounded-none">
-              <i className="hn hn-exclamation-triangle text-yellow-500 text-xl md:text-2xl shrink-0 mt-1 md:mt-0"></i>
-              <div className="flex flex-col gap-1 md:gap-1.5">
-                <span className="text-xs md:text-sm font-black text-yellow-600 dark:text-yellow-400 flex flex-col md:flex-row md:items-center gap-1 md:gap-2 leading-tight">
-                  <span>{t("app.fav_notice_1", "請注意：收藏功能基於瀏覽器本地存儲實現")}</span>
-                  <span className="text-[10px] font-mono opacity-70 normal-case md:border-l-2 md:border-yellow-500/30 md:pl-2">LOCAL_STORAGE_WARNING</span>
-                </span>
-                <span className="text-[10px] md:text-xs opacity-80 text-yellow-600 dark:text-yellow-400/80 leading-relaxed">
-                  {t("app.fav_notice_2", "若清除瀏覽器數據或更換設備，您的收藏項目將會丟失。")}
-                </span>
+              <div key={`year-${year}`} className="flex items-center bg-card border-2 border-border text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-neo-sm group">
+                <span className="opacity-50 mr-1 sm:mr-1.5 hidden min-[430px]:inline-block">{t("app.year", "年份")}</span>
+                <span className="font-bold mr-1">{year}</span>
+                <button 
+                  onClick={() => setYearFilter(yearFilter.filter(y => y !== year))}
+                  className="opacity-50 hover:opacity-100 transition-opacity ml-1 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 rounded-sm w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center"
+                >
+                  <i className="hn hn-times text-[8px] sm:text-[10px]"></i>
+                </button>
               </div>
-            </div>
-          </div>
-        )}
+            ))}
 
+            {albumFilter.map(album => (
+              <div key={`album-${album}`} className="flex items-center bg-card border-2 border-border text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-neo-sm group">
+                <span className="opacity-50 mr-1 sm:mr-1.5 hidden min-[430px]:inline-block">{t("app.album", "專輯")}</span>
+                <span lang="ja" className="font-bold mr-1 truncate max-w-[100px] sm:max-w-[200px]" title={album}>{album}</span>
+                <button 
+                  onClick={() => setAlbumFilter(albumFilter.filter(a => a !== album))}
+                  className="opacity-50 hover:opacity-100 transition-opacity ml-1 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 rounded-sm w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center"
+                >
+                  <i className="hn hn-times text-[8px] sm:text-[10px]"></i>
+                </button>
+              </div>
+            ))}
+
+            {artistFilter.map(artist => (
+              <div key={`artist-${artist}`} className="flex items-center bg-card border-2 border-border text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-neo-sm group">
+                <span className="opacity-50 mr-1 sm:mr-1.5 hidden min-[430px]:inline-block">{t("app.creator", "製作")}</span>
+                <span lang="ja" className="font-bold mr-1 truncate max-w-[80px] sm:max-w-[150px]" title={artist}>{artist}</span>
+                <button 
+                  onClick={() => setArtistFilter(artistFilter.filter(a => a !== artist))}
+                  className="opacity-50 hover:opacity-100 transition-opacity ml-1 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 rounded-sm w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center"
+                >
+                  <i className="hn hn-times text-[8px] sm:text-[10px]"></i>
+                </button>
+              </div>
+            ))}
+
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => {
+                setYearFilter([]);
+                setAlbumFilter([]);
+                setArtistFilter([]);
+              }}
+              className="text-[10px] sm:text-xs h-6 sm:h-7 px-1.5 sm:px-2 hover:bg-red-500/10 hover:text-red-500 opacity-60 hover:opacity-100 ml-1 border border-transparent hover:border-red-500/20"
+              data-umami-event="Z_Clear_All_Filters"
+            >{t("app.clear_all", "清除全部")}</Button>
+          </div>
+        </div>
+      </div>
+      
         {/* 畫廊網格與空狀態 */}
         {filteredData.length > 0 ? (
-          <div className="grid grid-cols-1 max-[520px]:grid-cols-1 max-[900px]:grid-cols-2 max-[1120px]:grid-cols-3 grid-cols-4 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 max-[520px]:grid-cols-1 max-[900px]:grid-cols-2 max-[1120px]:grid-cols-3 grid-cols-4 gap-4 md:gap-6 items-start">
             {filteredData.slice(0, visibleCount).map((mv, idx) => {
               const batchIdx = Math.max(0, idx - lastBatchStartRef.current);
               return (
@@ -1361,8 +1462,26 @@ function App({
             </div>
           </div>
         )}
-          </>
+
+        {/* 收藏模式常駐提示（放在畫廊列表的最底部） */}
+        {showFavOnly && (
+          <div className="mt-8 mb-12 max-[768px]:w-[90vw] max-[768px]:relative max-[768px]:left-1/2 max-[768px]:-translate-x-1/2 max-[768px]:px-0">
+            <div className="p-4 bg-yellow-400/10 border-2 border-yellow-500/50 flex items-start justify-center gap-3 md:gap-4 rounded-none mx-auto max-w-fit">
+              <i className="hn hn-exclamation-triangle text-yellow-500 text-xl md:text-2xl shrink-0 mt-1 md:mt-0"></i>
+              <div className="flex flex-col gap-1 md:gap-1.5 text-left">
+                <span className="text-xs md:text-sm font-black text-yellow-600 dark:text-yellow-400 flex flex-col md:flex-row md:items-center gap-1 md:gap-2 leading-tight">
+                  <span>{t("app.fav_notice_1", "請注意：收藏功能基於瀏覽器本地存儲實現")}</span>
+                  <span className="text-[10px] font-mono opacity-70 normal-case md:border-l-2 md:border-yellow-500/30 md:pl-2">LOCAL_STORAGE_WARNING</span>
+                </span>
+                <span className="text-[10px] md:text-xs opacity-80 text-yellow-600 dark:text-yellow-400/80 leading-relaxed">
+                  {t("app.fav_notice_2", "若清除瀏覽器數據或更換設備，您的收藏項目將會丟失。")}
+                </span>
+              </div>
+            </div>
+          </div>
         )}
+        </>
+      )}
       </main>
 
       {/* 右下角懸浮控制面板 (Control Hub) */}
@@ -1768,11 +1887,11 @@ function App({
         <div className="z-40 relative">
           <ThemeToggle isIconOnly={true} />
         </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        )}
+      </div>
+    </div>
+  </div>
+</div>
+)}
       </div>
 
       {/* 頁尾 Footer */}
