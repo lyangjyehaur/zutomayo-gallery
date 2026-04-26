@@ -18,6 +18,28 @@ export function AdminFanArtPage() {
   const [selectedMvIds, setSelectedMvIds] = useState<Set<string>>(new Set());
   const [isSaving, setIsSaving] = useState(false);
 
+  const [unorganizedGroups, setUnorganizedGroups] = useState<any[]>([]);
+  const [isLoadingUnorganized, setIsLoadingUnorganized] = useState(false);
+  const [pendingGroupIds, setPendingGroupIds] = useState<Set<string>>(new Set());
+
+  const fetchUnorganized = async () => {
+    setIsLoadingUnorganized(true);
+    try {
+      const baseApiUrl = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, '');
+      const res = await fetch(`${baseApiUrl}/fanarts/unorganized`, {
+        headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUnorganizedGroups(data.data || []);
+      }
+    } catch (e) {
+      console.error('Failed to fetch unorganized fanarts', e);
+    } finally {
+      setIsLoadingUnorganized(false);
+    }
+  };
+
   const fetchData = async () => {
     try {
       const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
@@ -33,10 +55,52 @@ export function AdminFanArtPage() {
     const pwd = localStorage.getItem('ztmy_admin_pwd');
     if (pwd) {
       fetchData();
+      fetchUnorganized();
     } else {
       navigate('/admin');
     }
   }, []);
+
+  const handleSelectUnorganized = (group: any) => {
+    const newImages = (group.media || []).map((m: any) => ({
+      url: m.url,
+      thumbnail: m.thumbnail_url || m.url,
+      tweetUrl: group.source_url || '',
+      tweetText: group.source_text || '',
+      tweetAuthor: group.author_name || '',
+      tweetHandle: group.author_handle || '',
+      tweetDate: group.post_date || '',
+      groupId: group.id,
+      type: 'fanart',
+      width: m.width || 0,
+      height: m.height || 0,
+      caption: '',
+      alt: ''
+    }));
+    setParsedImages(prev => [...prev, ...newImages]);
+    setUnorganizedGroups(prev => prev.filter(g => g.id !== group.id));
+    setPendingGroupIds(prev => new Set(prev).add(group.id));
+  };
+
+  const handleDeleteUnorganized = async (group: any) => {
+    if (!window.confirm('確定要捨棄這篇推文嗎？這將不會保存到畫廊中。')) return;
+    try {
+      const baseApiUrl = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, '');
+      const res = await fetch(`${baseApiUrl}/fanarts/${group.id}/status`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
+        },
+        body: JSON.stringify({ status: 'deleted' })
+      });
+      if (!res.ok) throw new Error('刪除失敗');
+      setUnorganizedGroups(prev => prev.filter(g => g.id !== group.id));
+      toast.success('已捨棄推文');
+    } catch (e) {
+      toast.error('刪除失敗');
+    }
+  };
 
   const handleParse = async () => {
     if (!tweetUrl.trim()) return toast.error('請輸入推文網址');
@@ -142,10 +206,30 @@ export function AdminFanArtPage() {
 
       if (!response.ok) throw new Error('保存失敗');
       
+      // 更新未整理推文的狀態
+      const baseApiUrl = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, '');
+      for (const groupId of pendingGroupIds) {
+        if (!groupId || groupId.startsWith('tweet-')) continue; // 跳過手動解析產生的假 ID
+        try {
+          await fetch(`${baseApiUrl}/fanarts/${groupId}/status`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
+            },
+            body: JSON.stringify({ status: 'organized' })
+          });
+        } catch (err) {
+          console.error('Failed to update group status', err);
+        }
+      }
+      
       toast.success('FanArt 已成功關聯並保存至選擇的 MV 中！');
       setParsedImages([]);
       setSelectedMvIds(new Set());
+      setPendingGroupIds(new Set());
       fetchData(); // 重新拉取資料
+      fetchUnorganized(); // 重新拉取未整理推文
     } catch (e: any) {
       toast.error('保存時發生錯誤: ' + e.message);
     } finally {
@@ -176,6 +260,67 @@ export function AdminFanArtPage() {
         
         {/* 左側：解析推文與圖片預覽 */}
         <div className="space-y-6">
+          
+          {/* 未整理收件匣 */}
+          {unorganizedGroups.length > 0 && (
+            <div className="bg-card border-4 border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+              <h2 className="text-lg font-black uppercase mb-4 flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <i className="hn hn-inbox text-xl" /> 未整理收件匣 ({unorganizedGroups.length})
+                </span>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={fetchUnorganized} 
+                  disabled={isLoadingUnorganized} 
+                  className="border-2 border-black hover:bg-black hover:text-white"
+                >
+                  <i className={`hn hn-refresh ${isLoadingUnorganized ? 'animate-spin' : ''}`} />
+                </Button>
+              </h2>
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                {unorganizedGroups.map(group => (
+                  <div key={group.id} className="border-2 border-black p-3 bg-white flex flex-col gap-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                    <div className="flex items-center justify-between">
+                      <a href={group.source_url} target="_blank" rel="noreferrer" className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1">
+                        <i className="hn hn-twitter" /> @{group.author_handle}
+                      </a>
+                      <span className="text-[10px] opacity-50">{new Date(group.post_date).toLocaleDateString()}</span>
+                    </div>
+                    <p className="text-xs line-clamp-2 opacity-80">{group.source_text}</p>
+                    
+                    {/* 媒體預覽縮圖 */}
+                    <div className="flex gap-2 mt-2 overflow-x-auto pb-2">
+                      {(group.media || []).map((m: any, i: number) => (
+                        <div key={i} className="relative shrink-0">
+                          <img 
+                            src={m.thumbnail_url || m.url} 
+                            alt="media" 
+                            className="w-16 h-16 object-cover border border-black" 
+                          />
+                          {m.media_type === 'video' && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                              <i className="hn hn-play text-white" />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="flex justify-end gap-2 mt-2">
+                      <Button size="sm" variant="destructive" className="h-7 text-xs border-2 border-black rounded-none" onClick={() => handleDeleteUnorganized(group)}>
+                        捨棄
+                      </Button>
+                      <Button size="sm" className="h-7 text-xs bg-ztmy-green text-black hover:bg-black hover:text-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] rounded-none" onClick={() => handleSelectUnorganized(group)}>
+                        <i className="hn hn-arrow-right mr-1" /> 提取圖片
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="bg-card border-4 border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
             <h2 className="text-lg font-black uppercase mb-4 flex items-center gap-2">
               <i className="hn hn-twitter text-xl" /> 解析推文

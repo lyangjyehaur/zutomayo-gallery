@@ -1,10 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
-import { AlbumModel, sequelize } from '../models/index.js';
+import { AlbumModel, AppleMusicAlbumModel, sequelize } from '../models/index.js';
 
-export const getAlbums = async (req: Request, res: Response, next: NextFunction) => {
+export const getAppleMusicAlbums = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const albums = await AlbumModel.findAll({
-      order: [['release_date', 'DESC'], ['name', 'ASC']]
+    const albums = await AppleMusicAlbumModel.findAll({
+      order: [
+        ['release_date', 'DESC'], // 最新的專輯排前面
+        ['album_name', 'ASC']
+      ]
     });
     res.json({ success: true, data: albums });
   } catch (error) {
@@ -12,6 +15,46 @@ export const getAlbums = async (req: Request, res: Response, next: NextFunction)
   }
 };
 
+export const getAlbums = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const albums = await AlbumModel.findAll({
+      order: [['name', 'ASC']]
+    });
+    res.json({ success: true, data: albums });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateAppleMusicAlbums = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { albums } = req.body;
+    
+    await sequelize.transaction(async (t: any) => {
+      if (albums && albums.length > 0) {
+        for (const album of albums) {
+          await AppleMusicAlbumModel.update({
+            is_hidden: album.is_hidden || false
+          }, { 
+            where: { id: album.id },
+            transaction: t 
+          });
+        }
+      }
+    });
+
+    const updatedAlbums = await AppleMusicAlbumModel.findAll({
+      order: [
+        ['release_date', 'DESC'],
+        ['album_name', 'ASC']
+      ]
+    });
+    
+    res.json({ success: true, data: updatedAlbums });
+  } catch (error) {
+    next(error);
+  }
+};
 export const updateAlbums = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { albums, deletedIds } = req.body;
@@ -30,8 +73,7 @@ export const updateAlbums = async (req: Request, res: Response, next: NextFuncti
             id: album.id,
             name: album.name,
             type: album.type || null,
-            release_date: album.release_date ? new Date(album.release_date) : null,
-            cover_image_url: album.cover_image_url || '',
+            apple_music_album_id: album.apple_music_album_id || null,
             hide_date: album.hide_date || false
           }, { transaction: t });
         }
@@ -39,7 +81,7 @@ export const updateAlbums = async (req: Request, res: Response, next: NextFuncti
     });
 
     const updatedAlbums = await AlbumModel.findAll({
-      order: [['release_date', 'DESC'], ['name', 'ASC']]
+      order: [['name', 'ASC']]
     });
     
     res.json({ success: true, data: updatedAlbums });

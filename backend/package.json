@@ -8,6 +8,7 @@
     "build": "NODE_OPTIONS=--max-old-space-size=4096 tsc",
     "prestart": "npm install",
     "start": "node dist/index.js",
+    "fetch-covers": "tsx src/scripts/fetch_zutomayo_covers.ts",
     "reset-password": "tsx src/scripts/reset-password.ts"
   },
   "dependencies": {
@@ -34,6 +35,7 @@
     "redis": "^5.12.1",
     "rss-parser": "^3.13.0",
     "sequelize": "^6.37.8",
+    "wanakana": "^5.3.1",
     "zod": "^3.22.4"
   },
   "devDependencies": {

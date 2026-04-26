@@ -1,4 +1,4 @@
-# ZUTOMAYO MV Gallery - 專案 Code Wiki
+# ZUTOMAYO Gallery - 專案 Code Wiki
 
 這份文件提供了 `zutomayo-gallery` 專案的全面技術解析，涵蓋了整體架構、目錄結構、模組職責、關鍵函數與資料流。
 
@@ -57,7 +57,7 @@ zutomayo-gallery/
     作為應用的主入口，負責獲取資料、管理全局狀態（搜尋關鍵字、過濾條件、排序方式）。透過 `IntersectionObserver` 實作無限滾動 (Infinite Scroll) 來渲染 MV 卡片。
 *   **畫廊與燈箱展示 (`FancyboxViewer.tsx`, `MVDetailsModal.tsx`)**:
     *   `MVDetailsModal`: 點擊 MV 卡片後彈出的 Modal，整合了 YouTube / Bilibili 雙平台的影片 iframe 播放器，並能根據客戶端 IP (中國大陸與否) 自動切換預設播放源。
-    *   `FancyboxViewer` / `LightGalleryViewer`: 負責將 MV 的「設定圖/插畫」以瀑布流 (Masonry) 佈局呈現，點擊圖片會啟動全螢幕燈箱。
+    *   `FancyboxViewer`: 負責將 MV 的「設定圖/插畫」以瀑布流 (Masonry) 佈局呈現，點擊圖片會啟動全螢幕燈箱。
 *   **特效元件 (`CoverCarousel` in `MVCard.tsx`)**:
     為了解決列表圖片單調的問題，實作了包含 Glitch (故障)、VHS、Scan-wipe (掃描線擦除) 等隨機過場特效的圖片輪播元件。
 *   **資料獲取與快取**: 

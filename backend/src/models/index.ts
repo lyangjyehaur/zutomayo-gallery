@@ -4,7 +4,7 @@ import { nanoid } from 'nanoid';
 // 自定義 16 碼短 ID 生成器 (兼具高安全性與短字元優勢)
 const generateShortId = () => nanoid(16);
 
-const DB_HOST = process.env.DB_HOST || '45.147.26.57';
+const DB_HOST = process.env.DB_HOST || '127.0.0.1';
 const DB_PORT = parseInt(process.env.DB_PORT || '5432', 10);
 const DB_NAME = process.env.DB_NAME || 'zutomayo_gallery_test';
 const DB_USER = process.env.DB_USER || 'zutomayo_gallery_test';
@@ -20,6 +20,8 @@ export const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASS, {
 
 // ==========================================
 // Core Entities
+// ⚠️ 警告：每次修改此檔案中的任何表結構 (新增/修改/刪除欄位或表)，
+// 都必須同步更新對應的資料庫文件 (例如 docs/DB_SCHEMA.md 或相關的說明文檔)！
 // ==========================================
 
 export const MVModel = sequelize.define('MV', {
@@ -63,8 +65,7 @@ export const AlbumModel = sequelize.define('Album', {
   id: { type: DataTypes.STRING(36), primaryKey: true, defaultValue: generateShortId, comment: '專輯唯一識別碼' },
   name: { type: DataTypes.STRING, comment: '專輯名稱' },
   type: { type: DataTypes.STRING, comment: '專輯類別 (參考 sys_dictionaries: album_type)' },
-  release_date: { type: DataTypes.DATE, comment: '發行日期' },
-  cover_image_url: { type: DataTypes.STRING, comment: '專輯封面圖' },
+  apple_music_album_id: { type: DataTypes.STRING(36), comment: '關聯至 apple_music_albums.id' },
   hide_date: { type: DataTypes.BOOLEAN, comment: '是否隱藏日期' },
 }, { tableName: 'albums', timestamps: false, comment: '儲存 MV 收錄的實體或數位專輯資訊' });
 
@@ -79,8 +80,35 @@ export const KeywordModel = sequelize.define('Keyword', {
   indexes: [{ unique: true, fields: ['name', 'lang'] }]
 });
 
+export const AppleMusicAlbumModel = sequelize.define('AppleMusicAlbum', {
+  id: { type: DataTypes.STRING(36), primaryKey: true, defaultValue: generateShortId, comment: '唯一識別碼' },
+  collection_id: { type: DataTypes.STRING, comment: 'Apple Music Collection ID' },
+  album_name: { type: DataTypes.STRING, comment: '專輯名稱' },
+  artist_name: { type: DataTypes.STRING, comment: '歌手名稱' },
+  release_date: { type: DataTypes.DATE, comment: '發行日期' },
+  track_count: { type: DataTypes.INTEGER, comment: '收錄曲目數量' },
+  collection_type: { type: DataTypes.STRING, comment: '集合類型 (Album/Single/EP)' },
+  genre: { type: DataTypes.STRING, comment: '音樂類型' },
+  apple_region: { type: DataTypes.STRING, comment: '來源區域代碼' },
+  source_url: { type: DataTypes.STRING, comment: 'Apple Music 原始高畫質圖片網址' },
+  r2_url: { type: DataTypes.STRING, comment: 'R2 儲存桶中的圖片網址' },
+  is_lossless: { type: DataTypes.BOOLEAN, defaultValue: false, comment: '是否為極致無損版本 (-999)' },
+  is_hidden: { type: DataTypes.BOOLEAN, defaultValue: false, comment: '是否在時間軸中隱藏' },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '建立時間' },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '更新時間' }
+}, { 
+  tableName: 'apple_music_albums', 
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+  comment: '儲存從 Apple Music 抓取的高清封面與專輯元資料',
+  indexes: [{ unique: true, fields: ['collection_id'] }]
+});
+
 // ==========================================
 // Metadata & Extensions
+// ⚠️ 警告：每次修改此檔案中的任何表結構 (新增/修改/刪除欄位或表)，
+// 都必須同步更新對應的資料庫文件 (例如 docs/DB_SCHEMA.md 或相關的說明文檔)！
 // ==========================================
 
 export const MediaGroupModel = sequelize.define('MediaGroup', {
@@ -125,6 +153,8 @@ export const SysAnnouncementModel = sequelize.define('SysAnnouncement', {
 
 // ==========================================
 // Many-to-Many Relationships
+// ⚠️ 警告：每次修改此檔案中的任何表結構 (新增/修改/刪除欄位或表)，
+// 都必須同步更新對應的資料庫文件 (例如 docs/DB_SCHEMA.md 或相關的說明文檔)！
 // ==========================================
 
 export const MVMediaModel = sequelize.define('MVMedia', {
@@ -183,6 +213,10 @@ KeywordModel.belongsToMany(MVModel, { through: MVKeywordModel, foreignKey: 'keyw
 // Media <-> MediaGroup
 MediaGroupModel.hasMany(MediaModel, { foreignKey: 'group_id', as: 'images' }); // Keep alias 'images' for frontend compatibility
 MediaModel.belongsTo(MediaGroupModel, { foreignKey: 'group_id', as: 'group' });
+
+// Album <-> AppleMusicAlbum
+AlbumModel.belongsTo(AppleMusicAlbumModel, { foreignKey: 'apple_music_album_id', as: 'appleMusicAlbum' });
+AppleMusicAlbumModel.hasMany(AlbumModel, { foreignKey: 'apple_music_album_id', as: 'albums' });
 
 export const syncModels = async () => {
   await sequelize.sync({ alter: true });

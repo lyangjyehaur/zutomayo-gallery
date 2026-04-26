@@ -51,7 +51,8 @@
 | `id` | `VARCHAR(36)` | `PRIMARY KEY` | 專輯唯一識別碼 (使用 NanoID) |
 | `name` | `VARCHAR(255)` | `UNIQUE`, `NOT NULL`| 專輯名稱 |
 | `type` | `VARCHAR(50)` | `NULL` | 專輯類別 (參考 sys_dictionaries: album_type) |
-| `release_date`| `TIMESTAMP` | `NULL` | 發行日期 |
+| `apple_music_album_id`| `VARCHAR(36)`| `FK`, `NULL` | 關聯至 `apple_music_albums.id`，用於取得專輯封面圖與發行日期等詳細資訊 |
+| `hide_date`| `BOOLEAN` | `NULL` | 是否隱藏發行日期 |
 
 ### 1.5. `keywords` (關鍵字表)
 儲存用於搜尋與分類的標籤/關鍵字。
@@ -153,5 +154,24 @@
 | `id` | `VARCHAR(36)` | `PRIMARY KEY` | 公告唯一識別碼 (使用 NanoID) |
 | `content` | `TEXT` | `NOT NULL` | 公告內容 (支援純文字或 Markdown) |
 | `is_active` | `BOOLEAN` | `DEFAULT true`| 是否顯示於前台 |
+| `created_at` | `TIMESTAMP` | | 建立時間 |
+| `updated_at` | `TIMESTAMP` | | 更新時間 |
+
+### 4.4. `apple_music_albums` (Apple Music 高清封面庫)
+儲存從 Apple Music 抓取的高清封面與專輯元資料。
+| 欄位名稱 | 型別 | 約束 | 說明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `VARCHAR(36)` | `PRIMARY KEY` | 唯一識別碼 (使用 NanoID) |
+| `collection_id` | `VARCHAR(255)` | `UNIQUE`, `NOT NULL` | Apple Music 的 Collection ID |
+| `album_name` | `VARCHAR(255)` | `NULL` | 專輯名稱 |
+| `artist_name` | `VARCHAR(255)` | `NULL` | 歌手名稱 |
+| `release_date` | `TIMESTAMP` | `NULL` | 發行日期 |
+| `track_count` | `INTEGER` | `NULL` | 收錄曲目數量 |
+| `collection_type` | `VARCHAR(50)` | `NULL` | 集合類型 (如 Album, Single, EP) |
+| `genre` | `VARCHAR(100)` | `NULL` | 音樂類型 (如 J-Pop, Rock) |
+| `apple_region` | `VARCHAR(10)` | `NULL` | 來源區域代碼 (如 jp, tw, us) |
+| `source_url` | `VARCHAR(1024)` | `NULL` | Apple Music 原始高畫質圖片網址 (-999.jpg) |
+| `r2_url` | `VARCHAR(1024)` | `NULL` | R2 儲存桶中的備份圖片網址 |
+| `is_lossless` | `BOOLEAN` | `DEFAULT false` | 是否成功抓取到極致無損版本 (-999.jpg) |
 | `created_at` | `TIMESTAMP` | | 建立時間 |
 | `updated_at` | `TIMESTAMP` | | 更新時間 |

@@ -3,7 +3,7 @@ chcp 65001 >nul
 cd /d "%~dp0"
 
 echo ========================================
-echo   ZUTOMAYO MV Gallery 一鍵啟動
+echo   ZUTOMAYO Gallery 一鍵啟動
 echo ========================================
 echo.
 

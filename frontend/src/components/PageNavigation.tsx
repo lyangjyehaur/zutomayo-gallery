@@ -12,13 +12,14 @@ export function PageNavigation({ currentRoute, basePath }: PageNavigationProps) 
   const navigate = useNavigate();
 
   const tabs = [
-    { id: '/', label: t('nav.gallery', 'MV 畫廊'), icon: 'hn-video-camera' },
-    { id: '/illustrators', label: t('nav.illustrators', '畫師專欄'), icon: 'hn-user' },
-    { id: '/fanart', label: t('nav.fanart', 'FanArt 專欄'), icon: 'hn-image' },
+    { id: '/', label: t('nav.gallery', 'MV'), icon: 'hn-video-camera' },
+    { id: '/albums', label: t('nav.appleMusicGallery', '專輯'), icon: 'hn-music' },
+    { id: '/illustrators', label: t('nav.illustrators', '畫師'), icon: 'hn-user' },
+    { id: '/fanart', label: t('nav.fanart', 'FANART'), icon: 'hn-image' },
   ];
 
   // We consider /favorites and /mv/:id as part of the MV Gallery
-  const activeTab = currentRoute === '/illustrators' || currentRoute === '/fanart' 
+  const activeTab = currentRoute === '/illustrators' || currentRoute === '/fanart' || currentRoute === '/albums'
     ? currentRoute 
     : '/';
 

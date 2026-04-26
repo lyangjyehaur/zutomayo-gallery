@@ -53,19 +53,23 @@ graph TD
     Start([前端請求 getProxyImgUrl]) --> CheckVideo{1. 是影片嗎?}
     
     CheckVideo -- 是 (mp4/video.twimg.com) --> HandleVideo[影片處理邏輯]
-    HandleVideo -->|R2 影片| NginxR2[回傳 assets.ztmr.club/r2/...]
-    HandleVideo -->|Twitter 影片| NginxTV[回傳 assets.ztmr.club/tv/...]
+    HandleVideo -->|R2 影片 (大陸)| NginxR2[回傳 assets.ztmr.club/r2/...]
+    HandleVideo -->|R2 影片 (海外)| DirectR2[直連 r2.dan.tw]
+    HandleVideo -->|Twitter 影片 (大陸)| NginxTV[回傳 assets.ztmr.club/tv/...]
+    HandleVideo -->|Twitter 影片 (海外)| DirectTV[直連 video.twimg.com]
     NginxR2 --> EndVideo([結束: 影片不過 imgproxy])
+    DirectR2 --> EndVideo
     NginxTV --> EndVideo
+    DirectTV --> EndVideo
     
     CheckVideo -- 否 (靜態圖片) --> CheckOverseas{2. 是海外用戶且非下載模式?}
     
     CheckOverseas -- 是 --> HandleOverseas[海外直連優化]
     HandleOverseas -->|推特圖片| TwimgDirect[補上 name=small/large 直連 pbs.twimg.com]
-    HandleOverseas -->|R2 大圖 (full)| NginxR2_2[回傳 assets.ztmr.club/r2/...]
+    HandleOverseas -->|R2 大圖 (full)| DirectR2_2[直連 r2.dan.tw 節省流量]
     HandleOverseas -->|R2 縮圖 (thumb)| CheckMainland[進入大陸代理邏輯]
     TwimgDirect --> EndOverseas([結束: 圖片直連])
-    NginxR2_2 --> EndOverseas
+    DirectR2_2 --> EndOverseas
     
     CheckOverseas -- 否 (大陸用戶/需要代理/下載模式) --> CheckMainland{3. 國內代理邏輯}
     
@@ -98,6 +102,7 @@ graph TD
 專注於處理需要耗費 CPU 計算的圖片操作：
 *   將 R2 中的 10MB 高畫質原圖，即時壓縮成 400px 的 WebP 縮圖，供瀑布流使用。
 *   在 `raw` 下載模式時，不改變圖片畫質，但透過參數（如 `filename:XXX`）在 HTTP 回應中注入 `Content-Disposition: attachment; filename="XXX.jpg"`，讓瀏覽器下載時自動使用正確的自訂檔名。
+*   **安全機制**：可透過設定 `IMGPROXY_KEY` 與 `IMGPROXY_SALT` 啟用簽名機制。若啟用，前端會透過後端的 `/api/system/image/proxy` 路由動態生成已簽名的 URL，並透過 302 導向至 imgproxy，避免被惡意呼叫與節省前端效能。
 
 ---
 

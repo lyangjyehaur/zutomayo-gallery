@@ -8,7 +8,7 @@
     "load_more": "載入更多"
   },
   "app": {
-    "title": "ZUTOMAYO MV Gallery",
+    "title": "ZUTOMAYO Gallery",
     "subtitle": "日々研磨爆裂中！",
     "syncing_visual": "同步視覺中...",
     "image": "圖片 (image)",
@@ -131,7 +131,9 @@
     "page_not_found": "找不到頁面",
     "page_not_found_desc": "您尋找的訊號似乎已經消失在午夜之中",
     "back_to_home": "返回首頁",
-    "back": "返回上一頁"
+    "back": "返回上一頁",
+    "appleMusic": "Apple Music 高清封面",
+    "appleMusicGallery": "Apple Music 封面畫廊"
   },
   "waline": {
     "mailPlaceholder": "留信箱可免登入顯示頭像",
@@ -214,5 +216,19 @@
   },
   "album_category_mini": "迷你專輯",
   "album_category_full": "完整專輯",
-  "album_category_single": "單曲 / 其他"
+  "album_category_single": "單曲 / 其他",
+  "timeline": {
+    "gallery_hint": "高畫質原圖資源擷取自 Apple Music",
+    "fetcher_title": "Apple Music 封面抓取工具",
+    "fetcher_desc": "貼上任何 Apple Music 專輯或單曲連結，即可直接從 Apple 伺服器提取最高解析度、無壓縮的原始封面圖。",
+    "fetcher_placeholder": "例如：https://music.apple.com/jp/album/hunch-gray-single/1551139414",
+    "fetcher_btn": "提取",
+    "fetcher_download": "下載原始圖",
+    "fetcher_download_res": "下載",
+    "fetcher_fallback_hint": "如果原始圖片載入失敗，將自動降級顯示高畫質壓縮版。",
+    "fetcher_err_invalid_url": "無效的 Apple Music 連結，找不到對應的 ID。",
+    "fetcher_err_no_artwork": "找不到該項目的封面圖片。",
+    "fetcher_err_not_found": "在 Apple Music 上找不到該項目。",
+    "fetcher_err_failed": "解析連結失敗。"
+  }
 }

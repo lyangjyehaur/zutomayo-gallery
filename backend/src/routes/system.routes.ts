@@ -56,4 +56,56 @@ router.post('/r2-sync', requireR2SyncAuth, syncImagesToR2);
 
 router.post('/r2-rebuild', requireR2SyncAuth, rebuildR2);
 
+// Public: Get signed image proxy URL and redirect
+router.get('/image/proxy', (req, res) => {
+  const { url, mode, filename } = req.query;
+  if (!url || typeof url !== 'string') {
+    return res.status(400).json({ error: 'url is required' });
+  }
+  
+  const salt = process.env.IMGPROXY_SALT;
+  const key = process.env.IMGPROXY_KEY;
+  const imgProxyDomain = (process.env.IMGPROXY_URL || 'https://img.ztmr.club').replace(/\/$/, '');
+  
+  const safeBase64 = (str: string) => Buffer.from(str).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const base64Url = safeBase64(url);
+  
+  let paramsArr: string[] = [];
+  if (mode === 'raw') {
+    paramsArr.push('raw:1', 'return_attachment:1');
+    if (filename && typeof filename === 'string') {
+      // imgproxy 會自動補上副檔名，所以這裡也要將前端可能傳來的副檔名拔掉，避免重複 (.jpg.jpg)
+      const safeFilename = filename.replace(/\.(jpg|jpeg|png|gif|webp|mp4)$/i, '');
+      paramsArr.push(`filename:${safeBase64(safeFilename)}:1`);
+    }
+  } else if (mode === 'full') {
+    paramsArr.push('w:1002', 'f:webp');
+  } else if (mode === 'small') {
+    paramsArr.push('w:602', 'f:webp');
+  } else if (mode === 'thumb_general') {
+    paramsArr.push('w:402', 'f:webp'); // General gallery thumb
+  } else {
+    // 瀑布流小圖，預設 mode === 'thumb' (for Apple Music)
+    paramsArr.push('w:302', 'f:webp');
+  }
+
+  const path = `/${paramsArr.join('/')}/${base64Url}`;
+  
+  if (salt && key) {
+    import('crypto').then((crypto) => {
+      const hmac = crypto.createHmac('sha256', Buffer.from(key, 'hex'));
+      const saltBuf = Buffer.from(salt, 'hex');
+      hmac.update(saltBuf);
+      hmac.update(path);
+      const signature = hmac.digest('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      res.redirect(302, `${imgProxyDomain}/${signature}${path}`);
+    }).catch(err => {
+      res.status(500).json({ error: 'crypto error' });
+    });
+  } else {
+    const baseUrl = imgProxyDomain.endsWith('/insecure') ? imgProxyDomain : `${imgProxyDomain}/insecure`;
+    res.redirect(302, `${baseUrl}${path}`);
+  }
+});
+
 export default router;

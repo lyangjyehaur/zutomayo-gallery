@@ -56,11 +56,20 @@ async function recover() {
           if (!url) continue;
           let media = await MediaModel.findOne({ where: { original_url: url } })
                    || await MediaModel.findOne({ where: { url: url } });
+          let mediaType = 'image';
+          if (typeof item === 'object' && item.type) {
+            mediaType = item.type === 'video' || item.type === 'animated_gif' ? 'video' : 'image';
+          } else if (url.includes('.mp4') || url.includes('video.twimg.com')) {
+            mediaType = 'video';
+          } else if (url.includes('.gif')) {
+            mediaType = 'gif';
+          }
+
           if (!media) {
             media = await MediaModel.create({
               id: generateShortId(),
               type: 'collaboration',
-              media_type: typeof item === 'object' && item.type ? item.type : 'image',
+              media_type: mediaType,
               url: url,
               original_url: url,
               thumbnail_url: typeof item === 'object' ? item.thumbnail || null : null,
@@ -76,8 +85,19 @@ async function recover() {
             if (item.thumbnail && !media.get('thumbnail_url')) {
               updateData.thumbnail_url = item.thumbnail;
             }
-            if (item.type && media.get('media_type') !== item.type) {
-              updateData.media_type = item.type;
+            
+            // 修復：正確判斷並更新 media_type
+            let updatedMediaType = media.get('media_type');
+            if (item.type) {
+              updatedMediaType = item.type === 'video' || item.type === 'animated_gif' ? 'video' : 'image';
+            } else if (url.includes('.mp4') || url.includes('video.twimg.com')) {
+              updatedMediaType = 'video';
+            } else if (url.includes('.gif')) {
+              updatedMediaType = 'gif';
+            }
+            
+            if (updatedMediaType !== media.get('media_type')) {
+              updateData.media_type = updatedMediaType;
             }
             
             if (Object.keys(updateData).length > 0) {

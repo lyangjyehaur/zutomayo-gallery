@@ -55,15 +55,29 @@ async function recover() {
                 let media = await MediaModel.findOne({ where: { original_url: c.url } }) 
                          || await MediaModel.findOne({ where: { url: c.url } });
                 
+                // 判斷媒體類型
+                let currentMediaType = 'image';
+                if (typeof c === 'object' && c.type) {
+                  currentMediaType = c.type === 'video' || c.type === 'animated_gif' ? 'video' : 'image';
+                } else if (c.url.includes('.mp4') || c.url.includes('video.twimg.com')) {
+                  currentMediaType = 'video';
+                } else if (c.url.includes('.gif')) {
+                  currentMediaType = 'gif';
+                }
+
                 if (!media) {
                   media = await MediaModel.create({
                     id: generateShortId(),
                     type: 'official',
-                    media_type: 'image',
+                    media_type: currentMediaType,
                     url: c.url,
                     original_url: c.url,
                     caption: c.caption || c.title || ''
                   });
+                } else {
+                  if (currentMediaType !== media.get('media_type')) {
+                    await media.update({ media_type: currentMediaType });
+                  }
                 }
                 
                 await ArtistMediaModel.findOrCreate({

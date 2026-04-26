@@ -100,7 +100,7 @@ export function ResponsiveMasonry({
       columns[columnIndex].push(
         <div key={key} className={`w-full ${columnClassName}`}>
           {child}
-        </div>,
+        </div>
       );
     });
 
@@ -321,7 +321,7 @@ const PhotoItem = React.memo(function PhotoItem({ photo, index, onPhotoClick, de
 
   const aspectRatio = actualDimensions && actualDimensions.width && actualDimensions.height
     ? `${actualDimensions.width} / ${actualDimensions.height}` 
-    : undefined;
+    : '1 / 1'; // 如果還不知道尺寸，預設使用 1:1 的骨架比例，這對於 Apple Music 封面畫廊來說是完美的
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -345,7 +345,7 @@ const PhotoItem = React.memo(function PhotoItem({ photo, index, onPhotoClick, de
         onClick={handleClick}
       >
         <div className="border-3 border-black bg-card overflow-hidden w-full h-full">
-          <div className="relative bg-secondary-background overflow-hidden w-full" style={aspectRatio ? { aspectRatio } : {}}>
+          <div className="relative bg-secondary-background overflow-hidden w-full" style={{ aspectRatio }}>
             {/* Loading 佔位符：在圖片尚未載入完成時顯示，且這時我們已經用 aspectRatio 撐開了空間 */}
             <div
               className={`absolute inset-0 animate-pulse bg-main/10 flex flex-col items-center justify-center gap-2 transition-opacity duration-700 pointer-events-none z-0 ${
@@ -362,30 +362,37 @@ const PhotoItem = React.memo(function PhotoItem({ photo, index, onPhotoClick, de
 
             <img
               alt={photo.caption}
-              src={photo.src}
+              src={photo.thumb}
               className={`w-full h-auto object-cover relative z-10`}
               loading="lazy"
               decoding="async"
               style={{
-                ...(aspectRatio ? { position: 'absolute', inset: 0, height: '100%' } : {}),
+                position: 'absolute', 
+                inset: 0, 
+                height: '100%',
                 opacity: isLoaded ? 1 : 0,
                 transition: 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
                 willChange: 'opacity'
               }}
               onLoad={(e) => {
-                loadedImagesCache.add(photo.src);
+                loadedImagesCache.add(photo.thumb);
                 setIsLoaded(true);
                 const target = e.target as HTMLImageElement;
                 if (!actualDimensions && target.naturalWidth) {
                   const dims = { width: target.naturalWidth, height: target.naturalHeight };
-                  dimensionCache.set(photo.src, dims);
+                  dimensionCache.set(photo.thumb, dims);
                   setActualDimensions(dims);
                 }
               }}
               onError={(e) => {
-                (e.target as HTMLImageElement).src =
-                  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"%3E%3C/svg%3E';
-                setIsLoaded(true);
+                const target = e.target as HTMLImageElement;
+                // 若優先載入的 originalUrl 失敗 (例如推文已被刪除)，降級回傳 R2 備份的圖
+                if (photo.fallbackThumb && target.src !== photo.fallbackThumb) {
+                  target.src = photo.fallbackThumb;
+                } else {
+                  target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"%3E%3C/svg%3E';
+                  setIsLoaded(true);
+                }
               }}
             />
             
@@ -486,24 +493,54 @@ export default function FancyboxViewer({
       // 尺寸會先交給 null，然後依賴後端的備用尺寸或等圖片實際載入後自己撐開
       return filteredImages.map((img, index) => {
         // 判斷是否為影片
-        const isVideo = isMediaVideo(img.url, img.type);
-        const isGif = !!(img.url.match(/\.gif$/i) || img.url.includes('tweet_video_thumb'));
+        // 優先使用資料庫中正確的 media_type ('video')，若無則依賴 isMediaVideo(url) 來降級判斷
+        const isVideo = img.media_type === 'video' || isMediaVideo(img.url, img.type);
+        const isGif = img.media_type === 'gif' || !!(img.url.match(/\.gif$/i) || img.url.includes('tweet_video_thumb'));
         
         // 產生縮圖與完整圖網址
-        const thumbUrl = img.thumbnail_url ? getProxyImgUrl(img.thumbnail_url, 'thumb') : getProxyImgUrl(img.url, 'thumb');
-        const fullUrl = isVideo ? getProxyImgUrl(img.url, 'raw') : getProxyImgUrl(img.url, 'full');
+        // 決定基礎的縮圖來源 (如果是影片，必須用 thumbnail_url，否則無法在 <img> 顯示)
+        const baseThumbUrl = img.thumbnail_url || img.url;
+        // 決定基礎的原圖來源
+        const baseFullUrl = img.url;
 
+        // ==== 全局優先載入原圖策略 (Global Direct First Strategy) ====
+        // 注意：影片的 original_url 是 .mp4，不能拿來當縮圖的 original_url！
+        const originalThumbUrl = isVideo ? (img.original_thumbnail_url || img.thumbnail_url) : img.original_url;
+        const hasOriginalThumb = originalThumbUrl && (originalThumbUrl.includes('twimg.com') || originalThumbUrl.includes('ytimg.com'));
+        const preferredThumbUrl = hasOriginalThumb ? originalThumbUrl : baseThumbUrl;
+        
+        const hasOriginalFull = img.original_url && (img.original_url.includes('twimg.com') || img.original_url.includes('ytimg.com'));
+        const preferredFullUrl = hasOriginalFull ? img.original_url : baseFullUrl;
+
+        // 產生各種尺寸的網址 (優先網址與降級網址)
+        const thumbUrl = img.thumb ? img.thumb : getProxyImgUrl(preferredThumbUrl, 'thumb');
+        const fallbackThumbUrl = img.thumb ? img.thumb : getProxyImgUrl(baseThumbUrl, 'thumb');
+
+        const fullUrl = img.full ? img.full : (isVideo ? getProxyImgUrl(preferredFullUrl, 'raw') : getProxyImgUrl(preferredFullUrl, 'full'));
+        const fallbackFullUrl = img.full ? img.full : (isVideo ? getProxyImgUrl(baseFullUrl, 'raw') : getProxyImgUrl(baseFullUrl, 'full'));
+
+        const srcUrl = img.src ? img.src : fullUrl;
         const caption = img.caption || `${mvTitle}_${index}`;
 
         // 擷取原始副檔名，並組合出包含副檔名的完整下載檔名
         const ext = getExtensionFromUrl(img.url);
-        const fullFilename = `${mvTitle}_${caption.replace(/[^a-zA-Z0-9_\-\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff]/g, '_')}.${ext}`;
-
-        // 我們使用原始 img.url 或 fullUrl 當作判斷重複的依據，而非縮圖
+        // 如果 customFilename 已經包含了相同的副檔名，就不要重複添加
+        let fullFilename = `${mvTitle}_${caption.replace(/[^a-zA-Z0-9_\-\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff]/g, '_')}`;
+        if (!fullFilename.toLowerCase().endsWith(`.${ext}`)) {
+          fullFilename += `.${ext}`;
+        }
+        
+        // ==== 下載檔名注入策略 (Download Filename Strategy) ====
+        const targetRawUrl = hasOriginalFull ? img.original_url : img.url;
+        const rawDownloadUrl = img.raw ? img.raw : getProxyImgUrl(targetRawUrl!, 'raw', fullFilename);
+        
         return {
-          src: thumbUrl,
+          src: srcUrl,
+          thumb: thumbUrl,
+          fallbackThumb: fallbackThumbUrl,
           full: fullUrl,
-          raw: getProxyImgUrl(img.url, 'raw', fullFilename),
+          fallbackFull: fallbackFullUrl,
+          raw: rawDownloadUrl,
           caption,
           richText: img.richText || '',
           width: img.width, // 將由後端 API 獲取的尺寸傳給元件
@@ -525,11 +562,26 @@ export default function FancyboxViewer({
     [processedImages, mvTitle],
   );
 
+  const datasetKey = useMemo(() => {
+    if (processedImages.length === 0) return 'empty';
+    const first = processedImages[0].url || '';
+    const last = processedImages[processedImages.length - 1].url || '';
+    return `${processedImages.length}_${first}_${last}`;
+  }, [processedImages]);
+
+  const prevDatasetKeyRef = useRef<string>('');
+
   useEffect(() => {
     if (processedImages.length === 0) {
       setHasMore(false);
       return;
     }
+
+    // 避免因 React useMemo 緩存失效導致的意外重置
+    if (prevDatasetKeyRef.current === datasetKey && displayedCountRef.current > 0) {
+      return;
+    }
+    prevDatasetKeyRef.current = datasetKey;
 
     getPhotosFromRange(0, itemsPerPage).then((firstPagePhotos) => {
       lastBatchStartRef.current = 0;
@@ -547,7 +599,7 @@ export default function FancyboxViewer({
       setCurrentPage(1);
       setHasMore(firstPagePhotos.length < processedImages.length);
     });
-  }, [processedImages, itemsPerPage, getPhotosFromRange]);
+  }, [processedImages, itemsPerPage, getPhotosFromRange, datasetKey]);
 
   const loadMore = useCallback(() => {
     if (loadingMore || !hasMore) return;
@@ -589,7 +641,7 @@ export default function FancyboxViewer({
       },
       {
         root: null,
-        rootMargin: '400px', // 提早 400px 觸發載入，讓使用者感覺不到延遲
+        rootMargin: '1200px', // 從 400px 提早到 1200px，讓載入更平滑
         threshold: 0.1,
       }
     );
@@ -635,9 +687,10 @@ export default function FancyboxViewer({
       const currentPhotos = displayedPhotosRef.current;
       const slides = currentPhotos.map((photo, i) => {
         const thumbEl = thumbMap.get(i);
+        
         return {
           src: photo.full,
-          thumb: photo.src,
+          thumb: photo.thumb, // 如果沒有特別傳入 thumb，就使用 src 作為 Fancybox 下方縮圖預覽
           triggerEl: thumbEl,
           thumbEl: thumbEl,
           $thumb: thumbEl,
@@ -672,6 +725,21 @@ export default function FancyboxViewer({
         // Disable native caption by unbinding the default plugin/template entirely
         Caption: false,
         on: {
+          // 當燈箱圖片載入失敗時觸發降級
+          'Carousel.ready Carousel.change': (fancybox: any) => {
+            const slide = fancybox.getSlide();
+            if (!slide || !slide.el) return;
+            const img = slide.el.querySelector('.f-panzoom__content');
+            if (img && img.tagName === 'IMG') {
+              img.onerror = () => {
+                const originalFull = currentPhotos[slide.index]?.fallbackFull;
+                // 若當前圖片網址載入失敗，且備用網址存在，則替換回 R2
+                if (originalFull && img.src !== originalFull) {
+                  img.src = originalFull;
+                }
+              };
+            }
+          },
           ready: (api) => {
             handleAfterOpen();
             const container = api?.getContainer?.() as HTMLElement | undefined;

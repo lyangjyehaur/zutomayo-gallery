@@ -22,18 +22,17 @@ interface DictItem {
   sort_order: number;
 }
 
-interface AlbumItem {
+export interface Album {
   id: string;
   name: string;
   type: string;
-  release_date: string;
-  cover_image_url: string;
+  apple_music_album_id?: string;
   hide_date: boolean;
 }
 
 export function AdminAlbumsPage() {
   const navigate = useNavigate();
-  const [albums, setAlbums] = useState<AlbumItem[]>([]);
+  const [albums, setAlbums] = useState<Album[]>([]);
   const [dicts, setDicts] = useState<DictItem[]>([]);
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -105,7 +104,7 @@ export function AdminAlbumsPage() {
 
   const handleAdd = () => {
     const newId = `album-${Date.now()}`;
-    setAlbums([...albums, { id: newId, name: '', type: '', release_date: '', cover_image_url: '', hide_date: false }]);
+    setAlbums([...albums, { id: newId, name: '', type: '', hide_date: false }]);
   };
 
   const handleDelete = (id: string, index: number) => {
@@ -117,7 +116,7 @@ export function AdminAlbumsPage() {
     setAlbums(newAlbums);
   };
 
-  const handleChange = (index: number, field: keyof AlbumItem, value: any) => {
+  const handleChange = (index: number, field: keyof Album, value: any) => {
     const newAlbums = [...albums];
     newAlbums[index] = { ...newAlbums[index], [field]: value };
     setAlbums(newAlbums);
@@ -156,10 +155,6 @@ export function AdminAlbumsPage() {
                       <Input value={album.name} onChange={e => handleChange(idx, 'name', e.target.value)} className="border-2 border-black font-bold h-8" placeholder="e.g. 潛潛話" />
                     </div>
                     <div className="space-y-1 w-full md:w-1/4">
-                      <label className="text-[10px] font-black uppercase opacity-70">Release Date (發行日期)</label>
-                      <Input type="date" value={album.release_date ? new Date(album.release_date).toISOString().split('T')[0] : ''} onChange={e => handleChange(idx, 'release_date', e.target.value)} className="border-2 border-black font-bold h-8" />
-                    </div>
-                    <div className="space-y-1 w-full md:w-1/4">
                       <label className="text-[10px] font-black uppercase opacity-70">Type (分類)</label>
                       <Select value={album.type || ''} onValueChange={v => handleChange(idx, 'type', v)}>
                         <SelectTrigger className="border-2 border-black font-bold h-8 rounded-none">
@@ -181,8 +176,8 @@ export function AdminAlbumsPage() {
                     </Button>
                   </div>
                   <div className="space-y-1 w-full">
-                    <label className="text-[10px] font-black uppercase opacity-70">Cover Image URL (封面圖片)</label>
-                    <Input value={album.cover_image_url || ''} onChange={e => handleChange(idx, 'cover_image_url', e.target.value)} className="border-2 border-black font-bold h-8" placeholder="https://..." />
+                    <label className="text-[10px] font-black uppercase opacity-70">Apple Music Album ID</label>
+                    <Input value={album.apple_music_album_id || ''} onChange={e => handleChange(idx, 'apple_music_album_id', e.target.value)} className="border-2 border-black font-bold h-8" placeholder="輸入 apple_music_albums 表中的 ID" />
                   </div>
                 </div>
               ))}

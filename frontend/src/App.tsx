@@ -27,10 +27,13 @@ import { AdminPage } from "@/pages/AdminPage";
 import { AdminDBPage } from "@/pages/AdminDBPage";
 import { AdminArtistsPage } from "@/pages/AdminArtistsPage";
 import { AdminAlbumsPage } from "@/pages/AdminAlbumsPage";
+import { AdminAppleMusicAlbumsPage } from "@/pages/AdminAppleMusicAlbumsPage";
 import { AdminDictsPage } from "@/pages/AdminDictsPage";
 import { AdminFanArtPage } from "@/pages/AdminFanArtPage";
+import { AppleMusicGalleryPage } from "@/pages/AppleMusicGalleryPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { Demo3DCardPage } from "@/pages/Demo3DCardPage";
+import { DemoCDCasePage } from "@/pages/DemoCDCasePage";
 import { PageNavigation } from "@/components/PageNavigation";
 import { IllustratorsPage } from "@/pages/IllustratorsPage";
 import { FanArtPage } from "@/pages/FanArtPage";
@@ -293,7 +296,7 @@ function App({
                 toast.dismiss(t_id);
                 runPWARecovery();
               }}
-              className="font-base border-2 text-[15px] h-10 px-4 bg-main text-main-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none"
+              className="font-base border-2 text-[15px] h-10 px-4 bg-main text-main-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[0px_0px_0px_0px_var(--border)]"
             >
               {t("app.pwa_recover_action", "清除並重新載入")}
             </button>
@@ -301,7 +304,7 @@ function App({
               onClick={() => {
                 toast.dismiss(t_id);
               }}
-              className="font-base border-2 text-[15px] h-10 px-4 bg-secondary-background text-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none"
+              className="font-base border-2 text-[15px] h-10 px-4 bg-secondary-background text-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[0px_0px_0px_0px_var(--border)]"
             >
               {t("common.cancel", "取消")}
             </button>
@@ -394,7 +397,8 @@ function App({
   const isDemo3DCard = pathnameWithoutLang === "/demo/3d-card";
   const isIllustratorsRoute = pathnameWithoutLang === "/illustrators" || pathnameWithoutLang.startsWith("/illustrators/");
   const isFanArtRoute = pathnameWithoutLang === "/fanart";
-  const isNotFound = pathnameWithoutLang !== "/" && pathnameWithoutLang !== "/favorites" && !isIllustratorsRoute && !isFanArtRoute && !is404Route && !isDemo3DCard && !mvIdMatch;
+  const isAppleMusicGalleryRoute = pathnameWithoutLang === "/albums";
+  const isNotFound = pathnameWithoutLang !== "/" && pathnameWithoutLang !== "/favorites" && !isIllustratorsRoute && !isFanArtRoute && !isAppleMusicGalleryRoute && !is404Route && !isDemo3DCard && !mvIdMatch;
 
   // 動態獲取唯一的年份、專輯與藝術家清單，並處理分組
   const {
@@ -847,7 +851,7 @@ function App({
           </span>
         </div>
         <p className="text-sm opacity-70 mb-8">{error}</p>
-        <Button onClick={() => window.location.reload()} variant="default" className="hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none" data-umami-event="Z_Retry_Connection">{t("app.retry_connection", "重試連線")}</Button>
+        <Button onClick={() => window.location.reload()} variant="default" className="hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-[0px_0px_0px_0px_var(--border)]" data-umami-event="Z_Retry_Connection">{t("app.retry_connection", "重試連線")}</Button>
       </div>
     );
   }
@@ -873,17 +877,17 @@ function App({
         <h1 className="text-3xl sm:text-4xl md:text-6xl font-black flex flex-col md:flex-row items-center justify-center gap-2 sm:gap-4 px-2">
           <span
             className="ztmy-cyber-title whitespace-nowrap"
-            data-text="ZUTOMAYO MV Gallery"
+            data-text="ZUTOMAYO Gallery"
             style={{ animationPlayState: isGlobalPaused ? "paused" : "running" }}
           >
             <span
               className="ztmy-cyber-text"
-              data-text="ZUTOMAYO MV Gallery"
+              data-text="ZUTOMAYO Gallery"
               style={{
                 animationPlayState: isGlobalPaused ? "paused" : "running",
               }}
             >
-              ZUTOMAYO MV Gallery
+              ZUTOMAYO Gallery
             </span>
           </span>
           <span
@@ -922,6 +926,8 @@ function App({
           <IllustratorsPage mvData={mvData} metadata={metadata} />
         ) : isFanArtRoute ? (
           <FanArtPage mvData={mvData} />
+        ) : isAppleMusicGalleryRoute ? (
+          <AppleMusicGalleryPage />
         ) : (
           <>
             {/* 過濾控制列與活躍標籤 */}
@@ -1375,7 +1381,7 @@ function App({
                 onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
                 variant="neutral"
                 size="icon"
-                className="z-[50] w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:bg-main hover:text-black group hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none"
+                className="z-[50] w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:bg-main hover:text-black group hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-[0px_0px_0px_0px_var(--border)]"
                 data-umami-event="Z_Scroll_To_Top"
               >
                 <i className="hn hn-arrow-up text-xl md:text-2xl group-hover:-translate-y-1 transition-transform"></i>
@@ -1402,7 +1408,7 @@ function App({
                 variant="neutral"
                 size="icon"
                 data-active={sortOrder === "asc"}
-                className={`z-10 w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none ${sortOrder === "asc" ? "bg-main text-black hover:bg-main/80 translate-x-[4px] translate-y-[4px] shadow-none" : "hover:bg-main hover:text-black"}`}
+                className={`z-10 w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-[0px_0px_0px_0px_var(--border)] ${sortOrder === "asc" ? "bg-main text-black hover:bg-main/80 translate-x-[4px] translate-y-[4px] shadow-[0px_0px_0px_0px_var(--border)]" : "hover:bg-main hover:text-black"}`}
                 data-umami-event="Z_Toggle_Sort_Order"
                 data-umami-event-order={sortOrder === "desc" ? "asc" : "desc"}
               >
@@ -1467,7 +1473,7 @@ function App({
                                   });
                                 }
                               }}
-                              className="font-base border-2 text-[15px] h-10 px-4 bg-main text-main-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none"
+                              className="font-base border-2 text-[15px] h-10 px-4 bg-main text-main-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[0px_0px_0px_0px_var(--border)]"
                             >
                               {t("app.install", "確定安裝")}
                             </button>
@@ -1476,7 +1482,7 @@ function App({
                                 toast.dismiss(t_id);
                                 if (window.umami) window.umami.track('Z_PWA_Install_Cancel_Toast');
                               }}
-                              className="font-base border-2 text-[15px] h-10 px-4 bg-secondary-background text-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none"
+                              className="font-base border-2 text-[15px] h-10 px-4 bg-secondary-background text-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[0px_0px_0px_0px_var(--border)]"
                             >
                               {t("common.cancel", "取消")}
                             </button>
@@ -1492,7 +1498,7 @@ function App({
                   }}
                   variant="neutral"
                   size="icon"
-                  className="z-20 w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none hover:bg-main hover:text-black"
+                  className="z-20 w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-[0px_0px_0px_0px_var(--border)] hover:bg-main hover:text-black"
                   data-umami-event="Z_Click_Install_PWA_Btn"
                 >
                   <i className="hn hn-download-alt text-xl md:text-2xl leading-none"></i>
@@ -1520,7 +1526,7 @@ function App({
                 variant="neutral"
                 size="icon"
                 data-active={showFavOnly}
-                className={`z-20 w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none ${showFavOnly ? "bg-main text-black hover:bg-main/80 translate-x-[4px] translate-y-[4px] shadow-none" : "hover:bg-main hover:text-black"}`}
+                className={`z-20 w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-[0px_0px_0px_0px_var(--border)] ${showFavOnly ? "bg-main text-black hover:bg-main/80 translate-x-[4px] translate-y-[4px] shadow-[0px_0px_0px_0px_var(--border)]" : "hover:bg-main hover:text-black"}`}
                 data-umami-event="Z_Toggle_Favorites_View"
                 data-umami-event-view={showFavOnly ? "all" : "favorites"}
               >
@@ -1550,7 +1556,7 @@ function App({
                 <Button
                   variant="neutral"
                   size="icon"
-                  className={`z-30 w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:bg-main hover:text-black group hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none ${isAboutOpen ? 'bg-main text-black translate-x-[4px] translate-y-[4px] shadow-none' : ''}`}
+                  className={`z-30 w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:bg-main hover:text-black group hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-[0px_0px_0px_0px_var(--border)] ${isAboutOpen ? 'bg-main text-black translate-x-[4px] translate-y-[4px] shadow-[0px_0px_0px_0px_var(--border)]' : ''}`}
                   data-umami-event="Z_Click_About"
                 >
                   <i className="hn hn-info-circle text-xl md:text-2xl group-hover:rotate-12 transition-transform"></i>
@@ -1681,7 +1687,7 @@ function App({
                         href="https://zutomayo.net/"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-between p-3 md:p-4 border-2 border-black bg-background hover:bg-main hover:text-black active:bg-main active:text-black transition-all duration-150 group shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none active:translate-x-boxShadowX active:translate-y-boxShadowY active:shadow-none"
+                        className="flex items-center justify-between p-3 md:p-4 border-2 border-black bg-background hover:bg-main hover:text-black active:bg-main active:text-black transition-all duration-150 group shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-[0px_0px_0px_0px_var(--border)] active:translate-x-boxShadowX active:translate-y-boxShadowY active:shadow-[0px_0px_0px_0px_var(--border)]"
                       >
                         <div className="flex flex-col">
                           <span className="font-black text-sm uppercase">Official Site</span>
@@ -1694,7 +1700,7 @@ function App({
                         href="https://github.com/lyangjyehaur/zutomayo-gallery"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-between p-3 md:p-4 border-2 border-black bg-background hover:bg-main hover:text-black active:bg-main active:text-black transition-all duration-150 group shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none active:translate-x-boxShadowX active:translate-y-boxShadowY active:shadow-none"
+                        className="flex items-center justify-between p-3 md:p-4 border-2 border-black bg-background hover:bg-main hover:text-black active:bg-main active:text-black transition-all duration-150 group shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-[0px_0px_0px_0px_var(--border)] active:translate-x-boxShadowX active:translate-y-boxShadowY active:shadow-[0px_0px_0px_0px_var(--border)]"
                       >
                         <div className="flex flex-col">
                           <span className="font-black text-sm uppercase">Source Code</span>
@@ -1715,7 +1721,7 @@ function App({
                 variant="neutral"
                 size="icon"
                 data-active={isFeedbackOpen}
-                className={`z-30 w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none group ${isFeedbackOpen ? "bg-main text-black hover:bg-main/80 translate-x-[4px] translate-y-[4px] shadow-none" : "hover:bg-main hover:text-black"}`}
+                className={`z-30 w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-[0px_0px_0px_0px_var(--border)] group ${isFeedbackOpen ? "bg-main text-black hover:bg-main/80 translate-x-[4px] translate-y-[4px] shadow-[0px_0px_0px_0px_var(--border)]" : "hover:bg-main hover:text-black"}`}
                 data-umami-event="Z_Toggle_Feedback_Drawer"
                 data-umami-event-state={isFeedbackOpen ? "close" : "open"}
               >
@@ -2164,7 +2170,7 @@ function App({
             variant="noShadow"
             size="icon"
             onClick={() => setIsFeedbackOpen(false)}
-            className="absolute top-6 right-8 z-50 bg-background text-foreground border-3 border-foreground shadow-neo-sm hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all w-10 h-10 rounded-none flex items-center justify-center"
+            className="absolute top-6 right-8 z-50 bg-background text-foreground border-3 border-foreground shadow-neo-sm hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[0px_0px_0px_0px_var(--border)] transition-all w-10 h-10 rounded-none flex items-center justify-center"
             data-umami-event="Z_Close_Feedback_Drawer"
           >
             <i className="hn hn-times text-xl leading-none"></i>
@@ -2418,10 +2424,13 @@ export default function RootApp() {
             <Route path="illustrators" element={null} />
             <Route path="illustrators/:artistId" element={null} />
             <Route path="fanart" element={null} />
+            <Route path="albums" element={null} />
             <Route path="mv/:id" element={null} />
             <Route path="404" element={null} />
             <Route path="*" element={null} />
           </Route>
+          <Route path="/demo/3d-card" element={<Demo3DCardPage />} />
+          <Route path="/demo/cd-case" element={<DemoCDCasePage />} />
           <Route path="/admin" element={<AdminLayout />}>
             <Route
               index
@@ -2441,6 +2450,7 @@ export default function RootApp() {
             <Route path="db" element={<AdminDBPage />} />
             <Route path="artists" element={<AdminArtistsPage />} />
             <Route path="albums" element={<AdminAlbumsPage />} />
+            <Route path="apple-music-albums" element={<AdminAppleMusicAlbumsPage />} />
             <Route path="dicts" element={<AdminDictsPage />} />
             <Route path="fanart" element={<AdminFanArtPage />} />
           </Route>

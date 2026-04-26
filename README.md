@@ -1,4 +1,4 @@
-# ZUTOMAYO MV Gallery
+# ZUTOMAYO Gallery
 
 一個 ZUTOMAYO MV 資料庫。
 
@@ -86,7 +86,6 @@ zutomayo-gallery/
 │   │   ├── components/          # React 組件
 │   │   │   ├── ui/              # shadcn/ui 組件
 │   │   │   ├── FancyboxViewer.tsx # Fancybox 燈箱組件
-│   │   │   ├── LightGalleryViewer.tsx # LightGallery 燈箱組件
 │   │   │   ├── MVCard.tsx       # MV 卡片
 │   │   │   ├── MVDetailsModal.tsx # MV 詳情彈窗
 │   │   │   └── WalineComments.tsx # 留言板組件
@@ -212,6 +211,9 @@ cp backend/.env.example backend/.env
 | `ADMIN_PASSWORD` | 管理後台登入密碼 (⚠️**生產環境強烈建議修改**) | `zutomayo` |
 | `EXPECTED_ORIGIN` | WebAuthn (通行密鑰) 驗證的來源域名 (需與前端一致) | `http://localhost:5173` |
 | `RP_ID` | WebAuthn 依賴方 ID (通常為網站主網域，不含 http) | 解析自 `EXPECTED_ORIGIN` |
+| `IMGPROXY_URL` | Imgproxy 伺服器位址 | `https://img.ztmr.club` |
+| `IMGPROXY_KEY` | Imgproxy 簽名用的 Hex 金鑰 | 無 |
+| `IMGPROXY_SALT` | Imgproxy 簽名用的 Hex 鹽值 | 無 |
 
 ---
 

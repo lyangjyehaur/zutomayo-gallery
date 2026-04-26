@@ -73,7 +73,7 @@ export default defineConfig({
         enabled: true
       },
       manifest: {
-        name: 'ZUTOMAYO MV Gallery',
+        name: 'ZUTOMAYO Gallery',
         short_name: 'ZTMY Gallery',
         description: 'ZUTOMAYO (ずっと真夜中でいいのに。) 粉絲自建 MV 設定圖資料庫。',
         theme_color: '#0d0d0f',

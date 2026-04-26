@@ -72,7 +72,7 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
   return (
     <div className="dark min-h-screen bg-background text-foreground font-base flex flex-col items-center justify-center p-6 selection:bg-main selection:text-black crt relative overflow-hidden">
       <Helmet>
-        <title>{type === 'ui' ? t('maintenance.title_ui', '系統升級中') : t('maintenance.title_sys', '系統維護中')} - ZUTOMAYO MV Gallery</title>
+        <title>{type === 'ui' ? t('maintenance.title_ui', '系統升級中') : t('maintenance.title_sys', '系統維護中')} - ZUTOMAYO Gallery</title>
       </Helmet>
       
       {/* 背景格線與掃描線 */}

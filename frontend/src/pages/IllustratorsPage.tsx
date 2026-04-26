@@ -115,8 +115,8 @@ export function IllustratorsPage({ mvData, metadata }: IllustratorsPageProps) {
         </div>
       </div>
 
-      {/* 畫師網格佈局 (Bento Box) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 px-4 max-w-7xl mx-auto">
+      {/* 畫師網格佈局 (Bento Box / Masonry) */}
+      <div className="columns-1 md:columns-2 lg:columns-3 gap-6 md:gap-8 px-4 max-w-7xl mx-auto space-y-6 md:space-y-8">
         {illustrators.map((artist, idx) => {
           const isTVChany = artist.name.toLowerCase() === 'tv♡chany' || artist.name.toLowerCase() === 'tvchany';
           
@@ -133,7 +133,7 @@ export function IllustratorsPage({ mvData, metadata }: IllustratorsPageProps) {
           <div 
             key={idx} 
             onClick={() => isTVChany && handleOpenIllustrator(artist)}
-            className={`group flex flex-col bg-card border-4 border-black p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all relative overflow-hidden ${
+            className={`group flex flex-col bg-card border-4 border-black p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all relative overflow-hidden break-inside-avoid ${
               isTVChany 
                 ? 'hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none cursor-pointer' 
                 : 'opacity-40 grayscale cursor-not-allowed'

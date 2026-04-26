@@ -159,11 +159,21 @@ async function migrate() {
             let media = await MediaModel.findOne({ where: { original_url: typeof img === 'string' ? url : (img.original_url || url) } })
                      || await MediaModel.findOne({ where: { url: url } });
 
+            // 判斷媒體類型
+            let currentMediaType = 'image';
+            if (typeof img === 'object' && img.type) {
+              currentMediaType = img.type === 'video' || img.type === 'animated_gif' ? 'video' : 'image';
+            } else if (url.includes('.mp4') || url.includes('video.twimg.com')) {
+              currentMediaType = 'video';
+            } else if (url.includes('.gif')) {
+              currentMediaType = 'gif';
+            }
+
             if (!media) {
               await MediaModel.create({
                 id: imageId,
                 type: imgType,
-                media_type: 'image',
+                media_type: currentMediaType,
                 url: url,
                 original_url: typeof img === 'string' ? url : (img.original_url || url),
                 thumbnail_url: typeof img === 'string' ? null : img.thumbnail,
@@ -173,11 +183,18 @@ async function migrate() {
               });
             } else {
               imageId = media.get('id');
+              const updateData: any = {};
               if (typeof img === 'object' && (img.width || img.height) && (!media.get('width') || !media.get('height'))) {
-                await media.update({
-                  width: img.width || media.get('width'),
-                  height: img.height || media.get('height')
-                });
+                updateData.width = img.width || media.get('width');
+                updateData.height = img.height || media.get('height');
+              }
+              
+              if (currentMediaType !== media.get('media_type')) {
+                updateData.media_type = currentMediaType;
+              }
+              
+              if (Object.keys(updateData).length > 0) {
+                await media.update(updateData);
               }
             }
             imageMap.set(url, imageId);
@@ -262,30 +279,48 @@ async function migrate() {
 
         let imageId = imageMap.get(url);
         if (!imageId) {
-          imageId = generateShortId();
-          let mediaObj = await MediaModel.findOne({ where: { original_url: typeof media === 'string' ? url : (media.original_url || url) } })
-                   || await MediaModel.findOne({ where: { url: url } });
+            imageId = generateShortId();
+            let mediaObj = await MediaModel.findOne({ where: { original_url: typeof media === 'string' ? url : (media.original_url || url) } })
+                     || await MediaModel.findOne({ where: { url: url } });
 
-          if (!mediaObj) {
-            await MediaModel.create({
-              id: imageId,
-              type: 'fanart',
-              media_type: 'image',
-              url: url,
-              original_url: typeof media === 'string' ? url : (media.original_url || url),
-              thumbnail_url: typeof media === 'string' ? null : media.thumbnail,
-              width: typeof media === 'object' ? media.width || null : null,
-              height: typeof media === 'object' ? media.height || null : null
-            });
-          } else {
-            imageId = mediaObj.get('id');
-            if (typeof media === 'object' && (media.width || media.height) && (!mediaObj.get('width') || !mediaObj.get('height'))) {
-              await mediaObj.update({
-                width: media.width || mediaObj.get('width'),
-                height: media.height || mediaObj.get('height')
-              });
+            // 判斷媒體類型
+            let currentMediaType = 'image';
+            if (typeof media === 'object' && media.type) {
+              currentMediaType = media.type === 'video' || media.type === 'animated_gif' ? 'video' : 'image';
+            } else if (url.includes('.mp4') || url.includes('video.twimg.com')) {
+              currentMediaType = 'video';
+            } else if (url.includes('.gif')) {
+              currentMediaType = 'gif';
             }
-          }
+
+            if (!mediaObj) {
+              await MediaModel.create({
+                id: imageId,
+                type: 'fanart',
+                media_type: currentMediaType,
+                url: url,
+                original_url: typeof media === 'string' ? url : (media.original_url || url),
+                thumbnail_url: typeof media === 'string' ? null : media.thumbnail,
+                width: typeof media === 'object' ? media.width || null : null,
+                height: typeof media === 'object' ? media.height || null : null
+              });
+            } else {
+              imageId = mediaObj.get('id');
+              const updateData: any = {};
+              
+              if (typeof media === 'object' && (media.width || media.height) && (!mediaObj.get('width') || !mediaObj.get('height'))) {
+                updateData.width = media.width || mediaObj.get('width');
+                updateData.height = media.height || mediaObj.get('height');
+              }
+              
+              if (currentMediaType !== mediaObj.get('media_type')) {
+                updateData.media_type = currentMediaType;
+              }
+              
+              if (Object.keys(updateData).length > 0) {
+                await mediaObj.update(updateData);
+              }
+            }
           imageMap.set(url, imageId);
         }
 

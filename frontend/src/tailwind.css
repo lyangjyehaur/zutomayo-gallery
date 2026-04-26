@@ -1158,7 +1158,7 @@ body.cursor-native * {
     mix-blend-mode: overlay;
     translate: var(--shine);
     transition:
-      translate ease-out 400ms,
+      translate var(--ease) 500ms,
       opacity ease-out 400ms;
   }
 
@@ -1171,8 +1171,7 @@ body.cursor-native * {
     scale: 1.05;
   }
 
-  .hover-3d:hover > :first-child::before,
-  .hover-3d:hover > :first-child::after {
+  .hover-3d:hover > :first-child::before {
     opacity: 1;
   }
 

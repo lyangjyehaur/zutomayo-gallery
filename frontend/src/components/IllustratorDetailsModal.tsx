@@ -41,7 +41,7 @@ export function IllustratorDetailsModal({ illustrator, onClose }: IllustratorDet
     const imgs: any[] = [];
     illustrator.mvs.forEach(mv => {
       mv.images?.forEach(img => {
-        if (img.usage === 'cover') return;
+        if (img.usage === 'cover' || img.type === 'fanart') return;
         imgs.push({ 
           ...img, 
           caption: img.caption ? `[${mv.title}] ${img.caption}` : mv.title 

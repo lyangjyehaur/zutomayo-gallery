@@ -3,7 +3,7 @@ chcp 65001 >nul
 cd /d "%~dp0"
 
 echo ========================================
-echo   ZUTOMAYO MV Gallery Launcher
+echo   ZUTOMAYO Gallery Launcher
 echo ========================================
 echo.
 

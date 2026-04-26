@@ -295,6 +295,10 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
     }
   }, [isVideoActivated, videoPlatform, mv?.title]);
 
+  const galleryImages = React.useMemo(() => {
+    return mv?.images ? mv.images.filter(img => img.usage !== 'cover' && img.type !== 'fanart') : [];
+  }, [mv?.images]);
+
   // 判斷是否為 macOS (排除 iOS 與觸控裝置，讓手機端統一顯示右上角叉叉)
   const isMac = React.useMemo(() => {
     if (typeof window === 'undefined') return false;
@@ -307,7 +311,7 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
     <>
       {mv && (
         <Helmet>
-          <title>{`${mv.title} | ZUTOMAYO MV Gallery`}</title>
+          <title>{`${mv.title} | ZUTOMAYO Gallery`}</title>
         </Helmet>
       )}
       <Dialog modal={false} open={!!mv} onOpenChange={(open) => {
@@ -558,7 +562,18 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
                       data-umami-event-title={mv?.title}
                     >
                       <div className="absolute inset-0 z-0">
-                        <CoverCarousel coverImages={mv?.images?.filter(img => img.usage === 'cover').map(img => img.url) || []} title={mv?.title || ''} isPaused={isLightboxOpen} forceLoad={true} hideCrt={true} />
+                        {/* 播放器背景底圖：不需要 full 畫質，這裡傳入 small 即可讓 image.ts 自動降級為 sddefault.jpg */}
+                        <CoverCarousel 
+                          coverImages={
+                            mv?.images
+                              ?.filter(img => img.usage === 'cover')
+                              .map(img => getProxyImgUrl(img.url, 'small')) || []
+                          } 
+                          title={mv?.title || ''} 
+                          isPaused={isLightboxOpen} 
+                          forceLoad={true} 
+                          hideCrt={true} 
+                        />
                       </div>
                       <div className={`absolute inset-0 transition-colors z-10 ${videoPlatform === 'youtube' && isChinaIP ? 'bg-black/60' : 'bg-black/40 group-hover:bg-black/20'}`} />
                       <div className="absolute inset-0 opacity-20 pointer-events-none crt-lines z-15"></div>
@@ -661,9 +676,9 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
                     <div className="space-y-4">
                     <h4 className="font-bold border-b-3 border-black pb-2 flex items-center gap-2 uppercase tracking-widest">
                       <i className="hn hn-image text-xl text-ztmy-green"></i>{t("app.reference_art", "設定資料圖")}</h4>
-                    {mv?.images && mv.images.filter(img => img.usage !== 'cover' && img.type !== 'fanart').length > 0 ? (
+                    {galleryImages.length > 0 ? (
                       <GalleryViewer
-                        images={mv.images.filter(img => img.usage !== 'cover' && img.type !== 'fanart')}
+                        images={galleryImages}
                         mvTitle={mv.title}
                         mvId={mv.id}
                         itemsPerPage={12}

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "========================================"
-echo "  ZUTOMAYO MV Gallery 一鍵啟動腳本"
+echo "  ZUTOMAYO Gallery 一鍵啟動腳本"
 echo "========================================"
 echo
 

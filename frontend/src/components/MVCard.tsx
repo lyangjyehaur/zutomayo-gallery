@@ -48,7 +48,7 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
     return normalized;
   }, [coverImages]);
 
-  const proxied = useMemo(() => urls.map((u) => getProxyImgUrl(u, 'small')), [urls]);
+  const proxied = useMemo(() => urls.map((u) => getProxyImgUrl(u, 'thumb')), [urls]);
   const prefersReducedMotion = useMemo(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;

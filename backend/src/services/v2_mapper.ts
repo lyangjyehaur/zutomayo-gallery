@@ -37,6 +37,11 @@ export async function getMVsFromDB(): Promise<MVItem[]> {
     ]
   });
 
+  // R2 直連優化：不再需要將 r2.dan.tw 轉換為 assets.ztmr.club/r2
+  const formatMediaUrl = (url: string) => {
+    return url;
+  };
+
   return mvs.map((mvRecord) => {
     const mv = mvRecord.toJSON() as any;
 
@@ -56,14 +61,23 @@ export async function getMVsFromDB(): Promise<MVItem[]> {
       }));
     }
 
-    // Flatten images usage and order_index
+    // Flatten images usage, order_index and format url
     if (mv.images) {
       mv.images = mv.images.map((img: any) => ({
         ...img,
+        url: formatMediaUrl(img.url),
+        thumbnail_url: formatMediaUrl(img.thumbnail_url),
         usage: img.MVMedia?.usage || img.usage || 'gallery',
         order_index: img.MVMedia?.order_index ?? img.order_index ?? 0
       }));
     }
+
+    // format direct video and cover urls
+    if (mv.video_url) mv.video_url = formatMediaUrl(mv.video_url);
+    if (mv.cover_url) mv.cover_url = formatMediaUrl(mv.cover_url);
+    if (mv.twitter_cover_url) mv.twitter_cover_url = formatMediaUrl(mv.twitter_cover_url);
+    if (mv.twitter_video_url) mv.twitter_video_url = formatMediaUrl(mv.twitter_video_url);
+    if (mv.youtube_cover_url) mv.youtube_cover_url = formatMediaUrl(mv.youtube_cover_url);
 
     return mv as MVItem;
   });

@@ -106,10 +106,16 @@ export const TwitterMonitorService = {
             });
 
             for (const media of updatedMediaList) {
+              // 確保 MP4/video.twimg.com 正確分類為 video
+              let mediaType = media.type === 'video' ? 'video' : (media.type === 'animated_gif' ? 'gif' : 'image');
+              if (media.url.includes('.mp4') || media.url.includes('video.twimg.com')) {
+                mediaType = 'video';
+              }
+              
               await MediaModel.create({
                 id: generateShortId(),
                 type: 'fanart',
-                media_type: media.type === 'video' ? 'video' : (media.type === 'animated_gif' ? 'gif' : 'image'),
+                media_type: mediaType,
                 url: media.url,
                 original_url: (media as any).original_url || media.url,
                 thumbnail_url: media.thumbnail || null,

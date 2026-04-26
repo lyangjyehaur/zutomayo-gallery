@@ -42,7 +42,7 @@ export function Demo3DCardPage({ basePath }: { basePath: string }) {
                 <img
                   src={src}
                   alt=""
-                  className="block max-h-[40vh] max-w-[min(90vw,320px)] h-auto w-auto"
+                  className="block max-h-[40vh] max-w-[min(90vw,320px)] h-auto w-auto rounded-[inherit]"
                   loading="eager"
                   decoding="async"
                 />

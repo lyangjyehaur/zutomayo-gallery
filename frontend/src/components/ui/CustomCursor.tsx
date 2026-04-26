@@ -90,13 +90,17 @@ export default function CustomCursor() {
       // Dynamic re-parenting if fancybox is open
       // 由於 Fancybox 5 使用了特殊的容器層級或 transform，有時單純的 z-index 無法突破。
       // 我們恢復手動將游標 appendChild 到 Fancybox 容器內的作法，以確保它永遠在最上層。
+      // 同時也要檢查是否有我們的自定義對話框 (如 AppleMusicTimeline 燈箱下載框)
       // 注意：這一步必須放在 setState 之外，避免與 React 渲染衝突
       if (cursorRef.current && e.type !== 'interval') {
+        const customDialog = document.getElementById('ztmy-download-dialog');
         const fancyboxContainer = document.querySelector('.fancybox__container');
-        // 只有當 Fancybox 真正在畫面上的時候，才執行 DOM 搬家
-        if (fancyboxContainer && cursorRef.current.parentElement !== fancyboxContainer) {
+        
+        if (customDialog && cursorRef.current.parentElement !== customDialog) {
+          customDialog.appendChild(cursorRef.current);
+        } else if (!customDialog && fancyboxContainer && cursorRef.current.parentElement !== fancyboxContainer) {
           fancyboxContainer.appendChild(cursorRef.current);
-        } else if (!fancyboxContainer && cursorRef.current.parentElement !== document.body) {
+        } else if (!customDialog && !fancyboxContainer && cursorRef.current.parentElement !== document.body) {
           document.body.appendChild(cursorRef.current);
         }
       }
@@ -109,6 +113,7 @@ export default function CustomCursor() {
                                target.closest('.f-button') !== null ||
                                target.classList.contains('carousel__button') ||
                                target.closest('.carousel__button') !== null ||
+                               target.closest('.dl-btn') !== null ||
                                target.tagName.toLowerCase() === 'svg' && target.closest('.f-button') !== null ||
                                target.tagName.toLowerCase() === 'path' && target.closest('.f-button') !== null;
 

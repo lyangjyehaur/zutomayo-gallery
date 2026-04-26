@@ -4,6 +4,7 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import compression from 'compression';
 import RedisStore from 'rate-limit-redis';
 import mvRoutes from './routes/mv.routes.js';
 import authRoutes from './routes/auth.routes.js';
@@ -13,7 +14,7 @@ import sitemapRoutes from './routes/sitemap.routes.js';
 import webhookRoutes from './routes/webhook.routes.js';
 import albumRoutes from './routes/album.routes.js';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler.js';
-import { sequelize } from './services/pg.service.js';
+import { sequelize, AuthPasskey, AuthSetting } from './services/pg.service.js';
 import { initGeoService } from './services/geo.service.js';
 import { initRedis, redisClient } from './services/redis.service.js';
 import { initMeiliSearch, syncDataToMeili } from './services/meili.service.js';
@@ -39,7 +40,16 @@ try {
   await initRedis();
   
   await sequelize.authenticate();
-  console.log('PostgreSQL Database connected');
+  
+  // 自動同步 Auth 相關表結構 (避免新環境/測試庫缺少表)
+  await AuthPasskey.sync({ alter: true });
+  await AuthSetting.sync({ alter: true });
+  
+  // 同步主資料庫的表結構 (確保 is_hidden 等新欄位被建立)
+  const { syncModels } = await import('./models/index.js');
+  await syncModels();
+  
+  console.log('PostgreSQL Database connected and all tables synced');
   
   // 啟動時初始化並同步 Meilisearch 資料
   await initMeiliSearch();
@@ -124,6 +134,7 @@ app.get('/health', (req, res) => res.json({
 }));
 
 app.use(cors(corsOptions));
+app.use(compression()); // 啟用 gzip/brotli 壓縮，大幅減少大型 JSON 的傳輸體積
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 

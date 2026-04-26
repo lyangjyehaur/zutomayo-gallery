@@ -64,9 +64,10 @@ router.get('/sitemap.xml', async (req, res) => {
             let imgUrl = rawUrl;
             if (rawUrl.includes('pbs.twimg.com')) {
               imgUrl = rawUrl.replace('https://pbs.twimg.com', 'https://assets.ztmr.club/ti');
-            } else if (rawUrl.includes('r2.dan.tw')) {
-              imgUrl = rawUrl.replace('https://r2.dan.tw', 'https://assets.ztmr.club/r2');
+            } else if (rawUrl.includes('i.ytimg.com')) {
+              imgUrl = rawUrl.replace('https://i.ytimg.com', 'https://assets.ztmr.club/yi');
             }
+            // R2 (r2.dan.tw) 直接使用原網址，不走 Nginx 反代
             
             imageTags += `
     <image:image>
@@ -99,9 +100,10 @@ router.get('/sitemap.xml', async (req, res) => {
             let proxyUrl = rawUrl;
             if (rawUrl.includes('pbs.twimg.com')) {
               proxyUrl = rawUrl.replace('https://pbs.twimg.com', 'https://assets.ztmr.club/ti');
-            } else if (rawUrl.includes('r2.dan.tw')) {
-              proxyUrl = rawUrl.replace('https://r2.dan.tw', 'https://assets.ztmr.club/r2');
+            } else if (rawUrl.includes('i.ytimg.com')) {
+              proxyUrl = rawUrl.replace('https://i.ytimg.com', 'https://assets.ztmr.club/yi');
             }
+            // R2 (r2.dan.tw) 直接使用原網址，不走 Nginx 反代
             
             fanartImages += `
     <image:image>

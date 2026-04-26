@@ -154,7 +154,9 @@ export const getMetadata = async (): Promise<MetadataResponse> => {
   for (const row of albums) {
     const data = row.toJSON() as any;
     albumMeta[data.name] = {
-      ...(data.release_date ? { date: new Date(data.release_date).toISOString().split('T')[0].replace(/-/g, '/') } : {}),
+      type: data.type || 'album',
+      // Release date is now managed via apple_music_albums relation
+      ...(data.apple_music_album_id ? { apple_music_album_id: data.apple_music_album_id } : {}),
       ...(data.hide_date ? { hideDate: data.hide_date } : {}),
     };
   }
@@ -242,7 +244,6 @@ export const saveMetadata = async (data: MetadataResponse): Promise<void> => {
         const meta = rawMeta as AlbumMeta;
         const albumData = {
           name,
-          release_date: meta.date ? new Date(meta.date.replace(/\//g, '-')) : null,
           hide_date: meta.hideDate || false,
         };
         const album = await AlbumModel.findOne({ where: { name }, transaction: t });

@@ -8,7 +8,7 @@
     "load_more": "載入更多"
   },
   "app": {
-    "title": "ZUTOMAYO MV Gallery",
+    "title": "ZUTOMAYO Gallery",
     "subtitle": "日々研磨爆裂中！",
     "syncing_visual": "同步緊視覺...",
     "image": "圖片 (image)",
@@ -129,7 +129,9 @@
     "page_not_found": "搵唔到頁面",
     "page_not_found_desc": "你搵緊嘅訊號好似已經消失喺午夜之中",
     "back_to_home": "返去首頁",
-    "back": "返去上一頁"
+    "back": "返去上一頁",
+    "appleMusic": "Apple Music 高清封面",
+    "appleMusicGallery": "Apple Music 封面畫廊"
   },
   "waline": {
     "mailPlaceholder": "留低 Email 就可以免登入顯示頭像",
