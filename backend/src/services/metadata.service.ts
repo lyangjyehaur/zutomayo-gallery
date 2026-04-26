@@ -5,6 +5,8 @@ import { ArtistMeta } from '../types.js';
 export interface AlbumMeta {
   date?: string;
   hideDate?: boolean;
+  type?: string;
+  apple_music_album_id?: string;
 }
 
 export interface MetadataResponse {

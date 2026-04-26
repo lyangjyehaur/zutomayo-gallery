@@ -323,6 +323,8 @@ async function fetchAndUploadCovers() {
               imgRes = await fetch(fallbackUrl);
               currentUrl = fallbackUrl;
               isLossless = false;
+            }
+          }
           if (!imgRes.ok) {
             throw new Error(`無法下載圖片，HTTP 狀態碼: ${imgRes.status}`);
           }

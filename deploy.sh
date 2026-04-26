@@ -117,21 +117,21 @@ if [ "$choice" == "4" ]; then
 fi
 
 # ==========================================
-# 3. 獲取最新程式碼
+# 3. 獲取最新程式碼 (Skip since we are local)
 # ==========================================
-echo -e "\n${YELLOW}[Git] 正在拉取最新程式碼...${NC}"
+# echo -e "\n${YELLOW}[Git] 正在拉取最新程式碼...${NC}"
 
-# 如果有未提交的變更 (如 package-lock.json)，嘗試捨棄它們
-if ! git diff-index --quiet HEAD --; then
-    echo -e "${YELLOW}偵測到伺服器上有本地變更，正在還原至線上最新版本...${NC}"
-    git reset --hard HEAD
-    git clean -fd
-fi
+# # 如果有未提交的變更 (如 package-lock.json)，嘗試捨棄它們
+# if ! git diff-index --quiet HEAD --; then
+#     echo -e "${YELLOW}偵測到伺服器上有本地變更，正在還原至線上最新版本...${NC}"
+#     git reset --hard HEAD
+#     git clean -fd
+# fi
 
-git pull origin main || {
-    echo -e "${RED}拉取程式碼失敗，請確認 Git 狀態或是否有衝突！${NC}"
-    exit 1
-}
+# git pull origin main || {
+#     echo -e "${RED}拉取程式碼失敗，請確認 Git 狀態或是否有衝突！${NC}"
+#     exit 1
+# }
 
 # ==========================================
 # 4. 檢查與確認 .env 設定
@@ -153,39 +153,6 @@ check_and_edit_env() {
             touch "$env_file"
         fi
     fi
-    
-    while true; current_content=$(cat "$env_file"); do
-        echo -e "\n當前 $env_file 內容如下："
-        echo -e "----------------------------------------"
-        if [ -z "$current_content" ]; then
-            echo -e "${YELLOW}(檔案為空)${NC}"
-        else
-            echo "$current_content"
-        fi
-        echo -e "----------------------------------------"
-        
-        read -p "內容是否正確？輸入 (y)確認繼續 / (e)開啟 vim 編輯: " env_choice
-        case $env_choice in
-            [Yy]* )
-                echo -e "${GREEN}$env_name 環境變數確認完畢。${NC}"
-                break
-                ;;
-            [Ee]* )
-                echo -e "正在開啟編輯器..."
-                # 優先使用 vim，如果沒有則使用 vi，再沒有則使用 nano
-                if command -v vim &> /dev/null; then
-                    vim "$env_file"
-                elif command -v vi &> /dev/null; then
-                    vi "$env_file"
-                else
-                    nano "$env_file"
-                fi
-                ;;
-            * )
-                echo -e "${RED}無效的輸入，請輸入 y 或 e。${NC}"
-                ;;
-        esac
-    done
 }
 
 if [[ "$choice" == "1" || "$choice" == "2" ]]; then
