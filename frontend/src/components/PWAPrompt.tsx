@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { ModalBackdrop } from '@/components/ModalBackdrop';
+import { VERSION_CONFIG } from '@/config/version';
 
 export function PWAPrompt() {
   const { t } = useTranslation();
@@ -28,6 +29,23 @@ export function PWAPrompt() {
     }
   }, [offlineReady, setOfflineReady, t]);
 
+  const [newVersion, setNewVersion] = useState<{ version: string; buildHash: string } | null>(null);
+
+  useEffect(() => {
+    if (needRefresh) {
+      fetch(`/version.json?t=${Date.now()}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && data.version) {
+            setNewVersion(data);
+          }
+        })
+        .catch(() => {
+          // 忽略錯誤，可能剛好沒有產生此檔案
+        });
+    }
+  }, [needRefresh]);
+
   useEffect(() => {
     if (needRefresh) {
       toast.custom((t_id) => (
@@ -39,11 +57,23 @@ export function PWAPrompt() {
             </h2>
             <div className="w-full font-base">
               <p className="text-[15px] leading-snug">{t('app.pwa_update_desc', '點擊更新以載入最新內容。')}</p>
+              
+              <div className="mt-3 bg-secondary-background/50 p-2.5 rounded-base border-2 border-border text-[11px] sm:text-xs flex flex-col gap-1.5 font-mono">
+                <div className="flex justify-between items-center opacity-70">
+                  <span>Current</span>
+                  <span>v{VERSION_CONFIG.app} ({import.meta.env.VITE_BUILD_HASH || 'dev'})</span>
+                </div>
+                <div className="flex justify-between items-center font-bold text-main">
+                  <span>Latest 🚀</span>
+                  <span>v{newVersion?.version || '?'} ({newVersion?.buildHash || '?'})</span>
+                </div>
+              </div>
             </div>
             <div className="flex flex-col gap-2 w-full mt-2">
               <button
                 onClick={() => {
                   toast.dismiss(t_id);
+                  if (window.umami) window.umami.track('Z_PWA_Update_Accepted');
                   updateServiceWorker(true);
                 }}
                 className="font-base border-2 text-[15px] h-10 px-4 bg-main text-main-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none"
@@ -53,6 +83,7 @@ export function PWAPrompt() {
               <button
                 onClick={() => {
                   toast.dismiss(t_id);
+                  if (window.umami) window.umami.track('Z_PWA_Update_Dismissed');
                   setNeedRefresh(false);
                 }}
                 className="font-base border-2 text-[15px] h-10 px-4 bg-secondary-background text-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none"
@@ -69,7 +100,7 @@ export function PWAPrompt() {
         className: '!bg-transparent !border-0 !shadow-none !p-0 !w-auto !max-w-none',
       });
     }
-  }, [needRefresh, setNeedRefresh, t, updateServiceWorker]);
+  }, [needRefresh, setNeedRefresh, t, updateServiceWorker, newVersion]);
 
   // Network status listeners
   useEffect(() => {
