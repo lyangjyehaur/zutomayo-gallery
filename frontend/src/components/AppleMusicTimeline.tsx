@@ -1,4 +1,5 @@
 import React, { useMemo, useEffect, useRef, useState, Suspense } from 'react';
+import { createPortal } from 'react-dom';
 import { Fancybox as NativeFancybox } from '@fancyapps/ui';
 import '@fancyapps/ui/dist/fancybox/fancybox.css';
 import { Disc3, Calendar, Play } from 'lucide-react';
@@ -321,49 +322,52 @@ const TimelineOverlay = React.memo(({ timelineData, containerRef, lineRef }: { t
   return (
     <>
       {/* 年份快速跳轉導航 (所有裝置) - 緊貼主要內容區 */}
-      <div className="fixed inset-y-0 left-0 pointer-events-none z-[50] flex justify-center w-full h-full">
-        <div className="w-full max-w-7xl max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-[80%] relative px-4 h-full">
-          <div className={`absolute bottom-0 left-4 max-[768px]:left-0 -translate-x-[calc(100%+1rem)] max-[768px]:translate-x-0 pb-[calc(1.5rem+env(safe-area-inset-bottom))] max-[768px]:pb-[calc(4.5rem+env(safe-area-inset-bottom))] flex flex-col items-end max-[768px]:items-start pr-2 md:pr-4 max-[768px]:pl-2 max-[768px]:pr-0 group/nav transition-all duration-300 pointer-events-none ${
-            isTimelineVisible ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-8 pointer-events-none'
-          }`}>
-            <div className="relative pointer-events-auto overflow-visible max-[768px]:-translate-x-[calc(100%+1rem)]">
-              {/* 最底層：共用的靜態黑色陰影塊。增加 4px 的偏移量 */}
-              <div className="absolute top-[4px] left-[4px] bottom-[-4px] right-[-4px] bg-black pointer-events-none z-0" />
-              
-              <div className="flex flex-col-reverse relative z-10">
-                {/* 因為 flex-col-reverse 會把渲染順序反過來顯示，所以我們先 reverse 陣列，這樣畫面上的「年份順序（大到小）」才會保持正確 */}
-                {[...timelineData].reverse().map(({ year }, index) => {
-                  // 現在的 index 0 其實是畫面最上面的按鈕，index 最大的是畫面最下面的按鈕
-                  const isTopButton = index === timelineData.length - 1;
-                  
-                  return (
-                    <Button
-                      key={year}
-                      variant="noShadow"
-                      size="icon"
-                      data-active={activeYear === year}
-                      onClick={() => {
-                        const el = document.getElementById(`year-${year}`);
-                        if (el) {
-                          const y = el.getBoundingClientRect().top + window.scrollY - 100;
-                          window.scrollTo({ top: y, behavior: 'smooth' });
-                        }
-                      }}
-                      style={{ zIndex: timelineData.length - index }}
-                      className={`w-10 h-10 md:w-12 md:h-12 text-xs md:text-sm rounded-none transition-transform duration-150 relative ${
-                        !isTopButton ? 'mt-[-2px]' : ''
-                      } bg-[#1A1A1A] text-white hover:bg-main hover:text-black data-[active=true]:bg-main data-[active=true]:text-black active:bg-main active:text-black border-2 border-border hover:translate-x-[4px] hover:translate-y-[4px] active:translate-x-[4px] active:translate-y-[4px] data-[active=true]:translate-x-[4px] data-[active=true]:translate-y-[4px]`}
-                      aria-label={`Scroll to year ${year}`}
-                    >
-                      {year.toString().slice(2)}
-                    </Button>
-                  );
-                })}
+      {typeof document !== 'undefined' ? createPortal(
+        <div className="fixed inset-y-0 left-0 pointer-events-none z-[50] flex justify-center w-full h-full">
+          <div className="w-full max-w-7xl max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-[80%] relative px-4 h-full">
+            <div className={`absolute bottom-0 left-4 max-[768px]:left-0 -translate-x-[calc(100%+1rem)] max-[768px]:translate-x-0 pb-[calc(1.5rem+env(safe-area-inset-bottom))] max-[768px]:pb-[calc(4.5rem+env(safe-area-inset-bottom))] flex flex-col items-end max-[768px]:items-start pr-2 md:pr-4 max-[768px]:pl-2 max-[768px]:pr-0 group/nav transition-all duration-300 pointer-events-none ${
+              isTimelineVisible ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-8 pointer-events-none'
+            }`}>
+              <div className="relative pointer-events-auto overflow-visible max-[768px]:-translate-x-[calc(100%+1rem)]">
+                {/* 最底層：共用的靜態黑色陰影塊。增加 4px 的偏移量 */}
+                <div className="absolute top-[4px] left-[4px] bottom-[-4px] right-[-4px] bg-black pointer-events-none z-0" />
+                
+                <div className="flex flex-col-reverse relative z-10">
+                  {/* 因為 flex-col-reverse 會把渲染順序反過來顯示，所以我們先 reverse 陣列，這樣畫面上的「年份順序（大到小）」才會保持正確 */}
+                  {[...timelineData].reverse().map(({ year }, index) => {
+                    // 現在的 index 0 其實是畫面最上面的按鈕，index 最大的是畫面最下面的按鈕
+                    const isTopButton = index === timelineData.length - 1;
+                    
+                    return (
+                      <Button
+                        key={year}
+                        variant="noShadow"
+                        size="icon"
+                        data-active={activeYear === year}
+                        onClick={() => {
+                          const el = document.getElementById(`year-${year}`);
+                          if (el) {
+                            const y = el.getBoundingClientRect().top + window.scrollY - 100;
+                            window.scrollTo({ top: y, behavior: 'smooth' });
+                          }
+                        }}
+                        style={{ zIndex: timelineData.length - index }}
+                        className={`w-10 h-10 md:w-12 md:h-12 text-xs md:text-sm rounded-none transition-transform duration-150 relative ${
+                          !isTopButton ? 'mt-[-2px]' : ''
+                        } bg-[#1A1A1A] text-white hover:bg-main hover:text-black data-[active=true]:bg-main data-[active=true]:text-black active:bg-main active:text-black border-2 border-border hover:translate-x-[4px] hover:translate-y-[4px] active:translate-x-[4px] active:translate-y-[4px] data-[active=true]:translate-x-[4px] data-[active=true]:translate-y-[4px]`}
+                        aria-label={`Scroll to year ${year}`}
+                      >
+                        {year.toString().slice(2)}
+                      </Button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </div>,
+        document.body
+      ) : null}
 
       {/* 垂直時間軸主線 - 原有的背景色與填滿色，恢復原本的邏輯讓它與節點等高 */}
       <div 
