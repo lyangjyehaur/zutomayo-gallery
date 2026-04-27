@@ -1622,3 +1622,4 @@ body.cursor-native * {
 .fancybox__container .f-thumbs img {
   border-radius: 0px !important;
 }
+body { overflow-x: hidden; }
