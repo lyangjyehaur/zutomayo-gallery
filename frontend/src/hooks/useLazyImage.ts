@@ -22,9 +22,14 @@ export function useLazyImage(options: UseLazyImageOptions = {}) {
   const [isError, setIsError] = useState(false);
   const elementRef = useRef<HTMLDivElement | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const [element, setElement] = useState<HTMLDivElement | null>(null);
+
+  const setRef = useCallback((node: HTMLDivElement | null) => {
+    elementRef.current = node;
+    setElement(node);
+  }, []);
 
   useEffect(() => {
-    const element = elementRef.current;
     if (!element) return;
 
     // 如果已經觸發過且設置了 triggerOnce，不再觀察
@@ -52,7 +57,7 @@ export function useLazyImage(options: UseLazyImageOptions = {}) {
     return () => {
       observerRef.current?.disconnect();
     };
-  }, [rootMargin, threshold, triggerOnce, shouldLoad]);
+  }, [element, rootMargin, threshold, triggerOnce, shouldLoad]);
 
   const handleLoad = useCallback(() => {
     setIsLoaded(true);
@@ -65,7 +70,8 @@ export function useLazyImage(options: UseLazyImageOptions = {}) {
   }, []);
 
   return {
-    elementRef,
+    elementRef: setRef, // 回傳一個 callback ref
+    element, // 可以用來綁定其他需要實際 DOM 的 hook
     shouldLoad,
     isLoaded,
     isError,

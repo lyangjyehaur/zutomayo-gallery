@@ -720,6 +720,71 @@ function App({
     return () => observer.disconnect();
   }, [handleIntersect, sentinelEl]);
 
+  const filterBarRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    const el = filterBarRef.current;
+    if (!el || !filterAnchorRef.current) return;
+
+    const handleScroll = () => {
+      if (!filterAnchorRef.current) return;
+      
+      // 記錄目前過濾列的高度，供後續捲動使用
+      filterBarHeightRef.current = el.getBoundingClientRect().height;
+      
+      // 當視窗捲動超過錨點的位置時，就表示篩選列應該吸頂了
+      const anchorTop = filterAnchorRef.current.getBoundingClientRect().top;
+      const isSticky = anchorTop <= 5;
+      
+      if (!isSticky) {
+        if (!el.classList.contains('bg-transparent')) {
+          el.classList.remove(
+            'bg-background/95', 
+            'backdrop-blur-md', 
+            'shadow-sm', 
+            'border-border'
+          );
+          el.classList.add('bg-transparent', 'border-transparent');
+          
+          el.style.marginLeft = '';
+          el.style.marginRight = '';
+          el.style.paddingLeft = '';
+          el.style.paddingRight = '';
+          el.style.width = ''; 
+          el.style.paddingBottom = '';
+        }
+      } else {
+        if (!el.classList.contains('bg-background/95')) {
+          el.classList.add(
+            'bg-background/95', 
+            'backdrop-blur-md', 
+            'shadow-sm', 
+            'border-border'
+          );
+          el.classList.remove('bg-transparent', 'border-transparent');
+          
+          el.style.marginLeft = 'calc(50% - 50vw)';
+          el.style.marginRight = 'calc(50% - 50vw)';
+          el.style.paddingLeft = 'calc(50vw - 50%)';
+          el.style.paddingRight = 'calc(50vw - 50%)';
+          el.style.width = '100vw';
+          el.style.paddingBottom = '1rem';
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll, { passive: true });
+    
+    // 初始化時也執行一次
+    handleScroll();
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
+  }, [search, yearFilter, albumFilter, artistFilter]); // Dependency 確保過濾條件改變時重新綁定或觸發
+
   // 獲取當前選中的 MV 對象
   const selectedMv = useMemo(
     () => mvData.find((m) => m.id === selectedMvId) || null,
@@ -1010,79 +1075,7 @@ function App({
         <div 
           className="flex flex-col gap-0 mt-0 mb-0 sticky top-0 z-40 py-4 transition-all duration-200 w-full bg-transparent border-b-2 border-transparent"
           style={{ top: '0px' }}
-          ref={(el) => {
-            if (!el) return;
-            const handleScroll = () => {
-              if (!filterAnchorRef.current) return;
-              
-              // 記錄目前過濾列的高度，供後續捲動使用
-              filterBarHeightRef.current = el.getBoundingClientRect().height;
-              
-              // 當視窗捲動超過錨點的位置時，就表示篩選列應該吸頂了
-              const anchorTop = filterAnchorRef.current.getBoundingClientRect().top;
-              // 當錨點的絕對位置被捲出視窗上方（小於 0），代表篩選欄已經抵達頂端並觸發了 sticky
-              // 我們容許大範圍的容錯（<= 5），以對抗各種異步渲染與瞬間捲動的未到位問題
-              const isSticky = anchorTop <= 5;
-              
-              // 避免在還沒渲染好之前出現錯誤的座標導致亂吸頂
-              // 我們現在只在沒有吸頂 (isSticky === false) 的時候才重置，
-              // 不再單純依賴 scrollY === 0，因為瞬間跳轉可能會在極短時間內造成狀態不同步
-              if (!isSticky) {
-                // 如果已經移除了，就不用重複執行 DOM 操作，提升效能
-                if (!el.classList.contains('bg-transparent')) {
-                  el.classList.remove(
-                    'bg-background/95', 
-                    'backdrop-blur-md', 
-                    'shadow-sm', 
-                    'border-border'
-                  );
-                  el.classList.add('bg-transparent', 'border-transparent');
-                  
-                  el.style.marginLeft = '';
-                  el.style.marginRight = '';
-                  el.style.paddingLeft = '';
-                  el.style.paddingRight = '';
-                  el.style.width = ''; 
-                  el.style.paddingBottom = '';
-                }
-              } else {
-                // 如果已經加上了，就不用重複執行 DOM 操作，提升效能
-                if (!el.classList.contains('bg-background/95')) {
-                  // 吸頂狀態：添加背景與陰影，利用 padding 和 margin 撐滿螢幕
-                  el.classList.add(
-                    'bg-background/95', 
-                    'backdrop-blur-md', 
-                    'shadow-sm', 
-                    'border-border'
-                  );
-                  el.classList.remove('bg-transparent', 'border-transparent');
-                  
-                  // 根據父層的各種 margin/padding/max-width 來決定寬度補償策略
-                  // 目標：不管在哪個斷點，都要突破 <main> 的限制，讓背景 100vw 滿版
-                  el.style.marginLeft = 'calc(50% - 50vw)';
-                  el.style.marginRight = 'calc(50% - 50vw)';
-                  el.style.paddingLeft = 'calc(50vw - 50%)';
-                  el.style.paddingRight = 'calc(50vw - 50%)';
-                  el.style.width = '100vw';
-                  
-                  // 確保 padding 底部的過渡效果不受干擾
-                  el.style.paddingBottom = '1rem';
-                }
-              }
-            };
-
-            window.addEventListener('scroll', handleScroll, { passive: true });
-            window.addEventListener('resize', handleScroll, { passive: true });
-            
-            // 初始化時也執行一次
-            handleScroll();
-            
-            // 記得清理 event listener
-            return () => {
-              window.removeEventListener('scroll', handleScroll);
-              window.removeEventListener('resize', handleScroll);
-            };
-          }}
+          ref={filterBarRef}
         >
           <div className="flex flex-col md:flex-row gap-4 w-full mx-auto max-w-[var(--container-width,1280px)]">
             <div className="relative w-full md:flex-[1] min-[1120px]:flex-[1]">
