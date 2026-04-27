@@ -819,7 +819,7 @@ body.cursor-native * {
   }
 
   /* 內層文字：負責靜態色像差與局部橫向撕裂 */
-  .ztmy-cyber-title-crt .ztmy-cyber-text {
+  .ztmy-cyber-text-aberration {
     position: relative;
     display: inline-block;
     /* 輕微的靜態色像差 */
@@ -889,7 +889,7 @@ body.cursor-native * {
   }
 
   /* 局部橫向錯位撕裂層 1 */
-  .ztmy-cyber-title-crt .ztmy-cyber-text::before {
+  .ztmy-cyber-text::before {
     content: attr(data-text);
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -904,7 +904,7 @@ body.cursor-native * {
   }
   
   /* 局部橫向錯位撕裂層 2 */
-  .ztmy-cyber-title-crt .ztmy-cyber-text::after {
+  .ztmy-cyber-text::after {
     content: attr(data-text);
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -957,7 +957,6 @@ body.cursor-native * {
       calc(var(--glitch-random, 1) * 4px) 0 0 blue;
     clip-path: polygon(0 -5%, 100% -5%, 100% 0%, 0 0%); /* 變細 */
     animation: cyber-scan-fast var(--scan-fast-dur, 3.2s) infinite cubic-bezier(0.4, 0, 0.2, 1); /* 加快頻率 */
-    animation-play-state: var(--anim-state, running);
     pointer-events: none;
     mix-blend-mode: hard-light;
     opacity: 0;
@@ -978,7 +977,6 @@ body.cursor-native * {
       calc(var(--glitch-random, 1) * -5px) 0 0 magenta;
     clip-path: polygon(0 -2%, 100% -2%, 100% 0%, 0 0%); /* 變細 */
     animation: cyber-scan-slow var(--scan-slow-dur, 5.5s) infinite cubic-bezier(0.1, 0.7, 1.0, 0.1); /* 加快頻率 */
-    animation-play-state: var(--anim-state, running);
     pointer-events: none;
     mix-blend-mode: overlay;
     filter: contrast(1.5) brightness(1.5);

@@ -733,10 +733,7 @@ function App({
     const observer = new IntersectionObserver(
       ([entry]) => {
         const titleEl = document.querySelector(
-          ".ztmy-cyber-title-crt",
-        ) as HTMLElement;
-        const textEl = document.querySelector(
-          ".ztmy-cyber-text-aberration",
+          ".ztmy-cyber-title",
         ) as HTMLElement;
         const pulseEl = document.querySelector(
           "header .animate-pulse",
@@ -748,13 +745,6 @@ function App({
         if (titleEl) {
           titleEl.style.animationPlayState = isPaused ? "paused" : "running";
           titleEl.style.setProperty(
-            "--anim-state",
-            isPaused ? "paused" : "running",
-          );
-        }
-        if (textEl) {
-          textEl.style.animationPlayState = isPaused ? "paused" : "running";
-          textEl.style.setProperty(
             "--anim-state",
             isPaused ? "paused" : "running",
           );
@@ -771,9 +761,8 @@ function App({
     } else {
       // 確保即使 IntersectionObserver 沒觸發，只要 modal 開啟就強制暫停
       const titleEl = document.querySelector(
-        ".ztmy-cyber-title-crt",
+        ".ztmy-cyber-title",
       ) as HTMLElement;
-      const textEl = document.querySelector(".ztmy-cyber-text-aberration") as HTMLElement;
       const pulseEl = document.querySelector(
         "header .animate-pulse",
       ) as HTMLElement;
@@ -783,13 +772,6 @@ function App({
       if (titleEl) {
         titleEl.style.animationPlayState = isPaused ? "paused" : "running";
         titleEl.style.setProperty(
-          "--anim-state",
-          isPaused ? "paused" : "running",
-        );
-      }
-      if (textEl) {
-        textEl.style.animationPlayState = isPaused ? "paused" : "running";
-        textEl.style.setProperty(
           "--anim-state",
           isPaused ? "paused" : "running",
         );
@@ -951,7 +933,7 @@ function App({
             } as React.CSSProperties}
           >
             <span className="ztmy-cyber-title-scan will-change-transform" data-text="ZUTOMAYO Gallery"></span>
-            <span className="ztmy-cyber-text will-change-transform" data-text="ZUTOMAYO Gallery">
+            <span className="ztmy-cyber-text-aberration will-change-transform" data-text="ZUTOMAYO Gallery">
               ZUTOMAYO Gallery
             </span>
           </span>
