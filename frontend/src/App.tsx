@@ -318,7 +318,7 @@ function App({
     }
 
     toast.custom((t_id) => (
-      <div className="fixed inset-0 z-[10000] flex items-end justify-center pb-8 md:pb-12 pointer-events-none !m-0 !p-0">
+      <div className="flex items-end justify-center w-full h-full pb-8 md:pb-12 pointer-events-none">
         <ModalBackdrop zIndex="z-[9999]" />
         <div className="bg-background text-foreground border-border border-2 font-heading shadow-shadow rounded-base flex flex-col gap-4 p-5 w-[356px] md:w-[400px] relative z-[10000] pointer-events-auto mx-auto animate-in slide-in-from-bottom-8 duration-300">
           <h2 className="text-lg font-bold w-full leading-tight">
@@ -359,7 +359,11 @@ function App({
       duration: Infinity,
       position: "bottom-center",
       unstyled: true,
-      className: "!bg-transparent !border-0 !shadow-none !p-0 !w-auto !max-w-none",
+      className: "!fixed !inset-0 !m-0 !p-0 !w-screen !h-[100dvh] !max-w-none !bg-transparent !border-none !shadow-none !transform-none !pointer-events-none",
+      style: {
+        "--mobile-offset": "0px",
+        "--offset": "0px",
+      } as React.CSSProperties,
     });
   }, [runPWARecovery, t]);
   const [isMobile, setIsMobile] = useState(
@@ -1728,7 +1732,7 @@ function App({
                 <Button
                   onClick={() => {
                     toast.custom((t_id) => (
-                      <div className="fixed inset-0 z-[10000] flex items-end justify-center pb-8 md:pb-12 pointer-events-none !m-0 !p-0">
+                      <div className="flex items-end justify-center w-full h-full pb-8 md:pb-12 pointer-events-none">
                         <ModalBackdrop zIndex="z-[9999]" />
                         <div className="bg-background text-foreground border-border border-2 font-heading shadow-shadow rounded-base flex flex-col gap-4 p-5 w-[356px] md:w-[400px] relative z-[10000] pointer-events-auto mx-auto animate-in slide-in-from-bottom-8 duration-300">
                           <h2 className="text-lg font-bold w-full leading-tight">
@@ -1786,7 +1790,11 @@ function App({
                       duration: Infinity,
                       position: "bottom-center",
                       unstyled: true,
-                      className: "!bg-transparent !border-0 !shadow-none !p-0 !w-auto !max-w-none",
+                      className: "!fixed !inset-0 !m-0 !p-0 !w-screen !h-[100dvh] !max-w-none !bg-transparent !border-none !shadow-none !transform-none !pointer-events-none",
+                      style: {
+                        "--mobile-offset": "0px",
+                        "--offset": "0px",
+                      } as React.CSSProperties,
                     });
                   }}
                   variant="neutral"
