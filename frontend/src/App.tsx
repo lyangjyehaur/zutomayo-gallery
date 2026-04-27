@@ -723,21 +723,21 @@ function App({
   const filterBarRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
-    const el = filterBarRef.current;
-    if (!el || !filterAnchorRef.current) return;
-
     const handleScroll = () => {
-      if (!filterAnchorRef.current) return;
+      const el = filterBarRef.current;
+      if (!el || !filterAnchorRef.current) return;
       
       // 記錄目前過濾列的高度，供後續捲動使用
       filterBarHeightRef.current = el.getBoundingClientRect().height;
       
       // 當視窗捲動超過錨點的位置時，就表示篩選列應該吸頂了
-      const anchorTop = filterAnchorRef.current.getBoundingClientRect().top;
-      const isSticky = anchorTop <= 5;
+      // 使用 Math.round(filterAnchorRef.current.getBoundingClientRect().top) 來判斷相對視窗頂部的距離
+      // 只要小於等於 0，就代表錨點已經碰到或超過視窗頂部，這時就該吸頂
+      const anchorTop = Math.round(filterAnchorRef.current.getBoundingClientRect().top);
+      const isSticky = anchorTop <= 0;
       
       if (!isSticky) {
-        if (!el.classList.contains('bg-transparent')) {
+        if (el.classList.contains('bg-background/95') || el.style.marginLeft !== '') {
           el.classList.remove(
             'bg-background/95', 
             'backdrop-blur-md', 
@@ -746,15 +746,11 @@ function App({
           );
           el.classList.add('bg-transparent', 'border-transparent');
           
-          el.style.marginLeft = '';
-          el.style.marginRight = '';
-          el.style.paddingLeft = '';
-          el.style.paddingRight = '';
-          el.style.width = ''; 
-          el.style.paddingBottom = '';
+          // 重置 style，強制觸發重繪 (repaint) 避免畫面更新不完全
+          el.style.cssText = 'top: 0px;';
         }
       } else {
-        if (!el.classList.contains('bg-background/95')) {
+        if (!el.classList.contains('bg-background/95') || el.style.marginLeft === '') {
           el.classList.add(
             'bg-background/95', 
             'backdrop-blur-md', 
@@ -763,25 +759,43 @@ function App({
           );
           el.classList.remove('bg-transparent', 'border-transparent');
           
-          el.style.marginLeft = 'calc(50% - 50vw)';
-          el.style.marginRight = 'calc(50% - 50vw)';
-          el.style.paddingLeft = 'calc(50vw - 50%)';
-          el.style.paddingRight = 'calc(50vw - 50%)';
-          el.style.width = '100vw';
-          el.style.paddingBottom = '1rem';
+          // 一次性設置所有需要的樣式，避免多次 layout recalculation
+          el.style.cssText = `
+            top: 0px;
+            margin-left: calc(50% - 50vw);
+            margin-right: calc(50% - 50vw);
+            padding-left: calc(50vw - 50%);
+            padding-right: calc(50vw - 50%);
+            width: 100vw;
+            padding-bottom: 1rem;
+          `;
         }
       }
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('resize', handleScroll, { passive: true });
+    // 使用 requestAnimationFrame 確保在每一幀渲染後都能檢查狀態，解決初始載入時的吸頂計算延遲
+    let rafId: number;
+    const scrollHandlerWithRaf = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(handleScroll);
+    };
+
+    window.addEventListener('scroll', scrollHandlerWithRaf, { passive: true });
+    window.addEventListener('resize', scrollHandlerWithRaf, { passive: true });
     
-    // 初始化時也執行一次
-    handleScroll();
+    // 延遲初始化，等待 DOM 完全渲染，避免初次計算高度或位置出錯
+    setTimeout(() => scrollHandlerWithRaf(), 50);
+    setTimeout(() => scrollHandlerWithRaf(), 300); // 再加一個更晚的保險機制
+    
+    // 使用 ResizeObserver 來監聽容器尺寸變化，確保剛載入或資料變化時也能觸發
+    const observer = new ResizeObserver(() => scrollHandlerWithRaf());
+    if (filterBarRef.current) observer.observe(filterBarRef.current);
     
     return () => {
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleScroll);
+      window.removeEventListener('scroll', scrollHandlerWithRaf);
+      window.removeEventListener('resize', scrollHandlerWithRaf);
+      cancelAnimationFrame(rafId);
+      observer.disconnect();
     };
   }, [search, yearFilter, albumFilter, artistFilter]); // Dependency 確保過濾條件改變時重新綁定或觸發
 
@@ -1069,11 +1083,11 @@ function App({
         ) : (
           <>
             {/* 篩選欄定位錨點（非 sticky），用來計算篩選欄原始位置 */}
-            <div ref={filterAnchorRef} className="w-full h-0 pointer-events-none absolute top-4 left-0" />
+            <div ref={filterAnchorRef} className="w-full h-0 pointer-events-none absolute" style={{ top: '-1rem' }} />
             
             {/* 過濾控制列與活躍標籤 */}
         <div 
-          className="flex flex-col gap-0 mt-0 mb-0 sticky top-0 z-40 py-4 transition-all duration-200 w-full bg-transparent border-b-2 border-transparent"
+          className="flex flex-col gap-0 mt-0 mb-0 sticky z-40 py-4 transition-all duration-200 w-full bg-transparent border-b-2 border-transparent"
           style={{ top: '0px' }}
           ref={filterBarRef}
         >
