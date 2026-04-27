@@ -136,9 +136,6 @@ const AnimatedMVCardItem = memo(function AnimatedMVCardItem({
   // 偵測是否離開可視範圍來暫停動畫
   const [isInView, setIsInView] = useState(true);
 
-  const [isInstallPromptOpen, setIsInstallPromptOpen] = useState(false);
-  const [isRecoverPromptOpen, setIsRecoverPromptOpen] = useState(false);
-
   useEffect(() => {
     if (!containerRef.current) return;
     const observer = new IntersectionObserver(
@@ -337,6 +334,7 @@ function App({
   const geoInfo = useGeoLabel();
 
   const [isInstallPromptOpen, setIsInstallPromptOpen] = useState(false);
+  const [isRecoverPromptOpen, setIsRecoverPromptOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
