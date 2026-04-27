@@ -1,0 +1,31 @@
+# Tasks
+- [x] Task 1: 專案初始化與基礎設施建置
+  - [x] SubTask 1.1: 初始化前後端專案架構（例如 Next.js、React 或 Vue3 + Node.js 框架，預設使用全端框架如 Next.js）。
+  - [x] SubTask 1.2: 設定 PostgreSQL 資料庫連線，建立用戶、角色組、存儲策略、圖片、相簿等核心 Schema。
+  - [x] SubTask 1.3: 設定 Redis 連線，用於快取存儲策略及實作上傳頻率限制。
+- [x] Task 2: 核心認證與角色組權限管理
+  - [x] SubTask 2.1: 實作使用者註冊、登入與 JWT/Session 認證機制。
+  - [x] SubTask 2.2: 實作高自由度的角色組 CRUD 功能，並綁定多個存儲策略。
+  - [x] SubTask 2.3: 為角色組配置上傳路徑、命名規則、頻率限制及圖片審核等功能設定介面。
+- [x] Task 3: 存儲策略引擎與圖片處理模組
+  - [x] SubTask 3.1: 整合 Cloudflare R2 SDK 並實作上傳、刪除與管理邏輯。
+  - [x] SubTask 3.2: 整合七牛雲 SDK 並實作相應的管理邏輯，支援動態設置策略上傳。
+  - [x] SubTask 3.3: 實作圖片處理模組（如使用 sharp），支援文字/圖片浮水印、平鋪效果、自定義 X/Y 軸偏移量及旋轉角度。
+- [x] Task 4: 圖片上傳與開放 API 介面
+  - [x] SubTask 4.1: 開發支援多圖、拖拽、貼上上傳的後端 API 端點。
+  - [x] SubTask 4.2: 實作對外開放的 API（通過接口上傳、管理圖片、管理相簿）。
+  - [x] SubTask 4.3: 實作與 Waline 評論系統的專屬對接 API 介面。
+- [ ] Task 5: 前端管理介面與圖片廣場開發
+  - [ ] SubTask 5.1: 開發管理後台版面與動態存儲策略、角色組設定頁面。
+  - [ ] SubTask 5.2: 實作圖片管理的瀑布流展示，支援懶加載。
+  - [ ] SubTask 5.3: 實作圖片管理的高階操作（右鍵選單、單選/多選、重命名、複製、一鍵複製連結）。
+  - [ ] SubTask 5.4: 開發圖片廣場頁面，展示公開的已審核圖片。
+- [ ] Task 6: 系統維護與更新機制
+  - [ ] SubTask 6.1: 實作線上增量更新與跨版本更新的基礎框架與腳本。
+
+# Task Dependencies
+- [Task 2] depends on [Task 1]
+- [Task 3] depends on [Task 1]
+- [Task 4] depends on [Task 2], [Task 3]
+- [Task 5] depends on [Task 4]
+- [Task 6] depends on [Task 5]

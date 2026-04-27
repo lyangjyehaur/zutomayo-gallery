@@ -344,6 +344,7 @@ export default function AdminLayout() {
     { path: '/admin/albums', label: '專輯管理', icon: 'hn-disc', subLabel: 'ALBUMS' },
     { path: '/admin/apple-music-albums', label: 'AM 專輯管理', icon: 'hn-music', subLabel: 'APPLE MUSIC' },
     { path: '/admin/fanart', label: 'FanArt', icon: 'hn-image', subLabel: 'FANART' },
+    { path: '/admin/staging-fanarts', label: 'FanArt 審核', icon: 'hn-inbox', subLabel: 'STAGING FANART' },
     { path: '/admin/dicts', label: '字典管理', icon: 'hn-book', subLabel: 'DICTIONARIES' },
     { path: '/admin/db', label: '資料庫', icon: 'hn-table', subLabel: 'DATABASE' }
   ];

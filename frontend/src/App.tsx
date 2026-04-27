@@ -30,6 +30,7 @@ import { AdminAlbumsPage } from "@/pages/AdminAlbumsPage";
 import { AdminAppleMusicAlbumsPage } from "@/pages/AdminAppleMusicAlbumsPage";
 import { AdminDictsPage } from "@/pages/AdminDictsPage";
 import { AdminFanArtPage } from "@/pages/AdminFanArtPage";
+import { AdminStagingFanartPage } from "@/pages/AdminStagingFanartPage";
 import { AppleMusicGalleryPage } from "@/pages/AppleMusicGalleryPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { Demo3DCardPage } from "@/pages/Demo3DCardPage";
@@ -2787,6 +2788,7 @@ export default function RootApp() {
             <Route path="apple-music-albums" element={<AdminAppleMusicAlbumsPage />} />
             <Route path="dicts" element={<AdminDictsPage />} />
             <Route path="fanart" element={<AdminFanArtPage />} />
+            <Route path="staging-fanarts" element={<AdminStagingFanartPage />} />
           </Route>
           <Route path="/debug/fb/:mvid?" element={<DebugFancyboxMasonry />} />
           <Route path="/debug/modal" element={<DebugMVModalLightbox />} />

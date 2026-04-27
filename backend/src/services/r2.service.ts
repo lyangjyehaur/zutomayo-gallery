@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, HeadObjectCommand, CopyObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -55,6 +55,106 @@ export interface R2UploadOptions {
   metadata?: Record<string, string>; // 自訂的物件 Metadata (S3 規範)
   forceUpdate?: boolean; // 是否強制覆蓋更新
 }
+
+/**
+ * 將 Buffer 上傳到 R2
+ * @param buffer 檔案的 Buffer 內容
+ * @param fileName 檔案名稱 (包含資料夾路徑，例如 'fanarts/abc.jpg')
+ * @param contentType 檔案的 Content-Type (例如 'image/jpeg')
+ * @param options 額外的上傳設定選項
+ * @returns 上傳成功後的 R2 公開網址
+ */
+export const uploadBufferToR2 = async (
+  buffer: Buffer,
+  fileName: string,
+  contentType: string,
+  options?: R2UploadOptions
+): Promise<string | null> => {
+  if (!s3Client) return null;
+
+  const retryCount = options?.retryCount ?? 3;
+  let attempt = 0;
+  
+  while (attempt < retryCount) {
+    try {
+      // 1. 檢查是否已經備份過 (除非設定 forceUpdate=true)
+      if (!options?.forceUpdate) {
+        const exists = await checkImageExists(fileName);
+        if (exists) {
+          console.log(`[R2] File already exists: ${fileName}`);
+          return `${R2_PUBLIC_DOMAIN}/${fileName}`;
+        }
+      }
+
+      // 2. 準備 Metadata
+      const metadata: Record<string, string> = {
+        'uploaded-by': 'ztmy-gallery-backend',
+        'upload-timestamp': new Date().toISOString()
+      };
+      
+      if (options?.metadata) {
+        Object.assign(metadata, options.metadata);
+      }
+
+      // 3. 上傳到 R2
+      console.log(`[R2] Uploading buffer to R2 (Attempt ${attempt + 1}/${retryCount}): ${fileName} (${(buffer.length / 1024).toFixed(2)} KB)`);
+      await s3Client.send(new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: fileName,
+        Body: buffer,
+        ContentType: contentType,
+        // 快取設定：讓 Cloudflare 邊緣節點快取 1 年
+        CacheControl: 'public, max-age=31536000, immutable',
+        Metadata: metadata
+      }));
+
+      return `${R2_PUBLIC_DOMAIN}/${fileName}`;
+    } catch (error) {
+      attempt++;
+      console.error(`[R2] Error uploading buffer ${fileName} (Attempt ${attempt}/${retryCount}):`, error);
+      if (attempt >= retryCount) {
+        console.error(`[R2] Max retries reached for ${fileName}. Giving up.`);
+        return null;
+      }
+      // 等待一段時間後重試 (1s, 2s, 3s...)
+      await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+    }
+  }
+  return null;
+};
+
+/**
+ * 在 R2 中移動檔案 (Copy & Delete)
+ * @param oldKey 原本的檔案路徑 (e.g. 'mvs/temp/file.mp4')
+ * @param newKey 新的檔案路徑 (e.g. 'mvs/final/file.mp4')
+ * @returns 成功移動後的 R2 公開網址，失敗則回傳 null
+ */
+export const moveFileInR2 = async (oldKey: string, newKey: string): Promise<string | null> => {
+  if (!s3Client) return null;
+  
+  try {
+    // 1. 複製檔案
+    console.log(`[R2] Copying from ${oldKey} to ${newKey}...`);
+    await s3Client.send(new CopyObjectCommand({
+      Bucket: BUCKET_NAME,
+      CopySource: `${BUCKET_NAME}/${encodeURI(oldKey)}`,
+      Key: newKey,
+    }));
+
+    // 2. 刪除原檔案
+    console.log(`[R2] Deleting original file ${oldKey}...`);
+    await s3Client.send(new DeleteObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: oldKey,
+    }));
+
+    console.log(`[R2] Successfully moved file to ${newKey}.`);
+    return `${R2_PUBLIC_DOMAIN}/${newKey}`;
+  } catch (error) {
+    console.error(`[R2] Error moving file from ${oldKey} to ${newKey}:`, error);
+    return null;
+  }
+};
 
 /**
  * 下載網路圖片並上傳到 R2

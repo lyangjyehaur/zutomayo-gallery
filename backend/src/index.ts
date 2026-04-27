@@ -9,6 +9,7 @@ import RedisStore from 'rate-limit-redis';
 import mvRoutes from './routes/mv.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import fanartRoutes from './routes/fanart.routes.js';
+import stagingFanartRoutes from './routes/staging-fanart.routes.js';
 import systemRoutes from './routes/system.routes.js';
 import sitemapRoutes from './routes/sitemap.routes.js';
 import webhookRoutes from './routes/webhook.routes.js';
@@ -204,6 +205,7 @@ app.use('/api/mvs', mvRoutes);
 app.use('/api/album', albumRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/fanarts', fanartRoutes);
+app.use('/api/staging-fanarts', stagingFanartRoutes);
 app.use('/api/webhook', webhookRoutes);
 
 // 如果 bull-board 初始化成功，掛載可視化介面路由

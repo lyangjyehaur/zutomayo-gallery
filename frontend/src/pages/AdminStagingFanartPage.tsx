@@ -1,0 +1,329 @@
+import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+
+interface StagingFanart {
+  id: string;
+  tweet_id: string;
+  original_url: string;
+  media_url: string;
+  r2_url: string | null;
+  media_type: string;
+  crawled_at: string;
+  status: string;
+  source: string;
+}
+
+interface ProgressData {
+  syncProgress: {
+    total_tweets?: number;
+    processed_tweets?: number;
+    saved_images?: number;
+    saved_videos?: number;
+    last_processed_id?: string;
+  } | null;
+  statusCounts: {
+    pending: number;
+    approved: number;
+    rejected: number;
+  };
+}
+
+export function AdminStagingFanartPage() {
+  const [fanarts, setFanarts] = useState<StagingFanart[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  
+  const [progress, setProgress] = useState<ProgressData | null>(null);
+  const [isProgressLoading, setIsProgressLoading] = useState(false);
+  
+  const [crawlerUsername, setCrawlerUsername] = useState('zutomayo_art');
+  const [isTriggering, setIsTriggering] = useState(false);
+
+  const fetchProgress = async () => {
+    setIsProgressLoading(true);
+    try {
+      const baseApiUrl = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, '');
+      const res = await fetch(`${baseApiUrl}/staging-fanarts/progress?username=${crawlerUsername}`, {
+        headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setProgress(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch progress', error);
+    } finally {
+      setIsProgressLoading(false);
+    }
+  };
+
+  const fetchFanarts = async (p: number) => {
+    setIsLoading(true);
+    try {
+      const baseApiUrl = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, '');
+      const res = await fetch(`${baseApiUrl}/staging-fanarts?page=${p}&limit=20`, {
+        headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFanarts(data.data);
+        setTotalPages(data.meta.totalPages);
+      } else {
+        toast.error(data.error || 'Failed to fetch');
+      }
+    } catch (error) {
+      toast.error('Failed to fetch staging fanarts');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFanarts(page);
+  }, [page]);
+
+  useEffect(() => {
+    fetchProgress();
+  }, []); // eslint-disable-next-line react-hooks/exhaustive-deps
+
+  const handleTriggerCrawler = async () => {
+    if (!crawlerUsername) {
+      toast.error('請輸入 username');
+      return;
+    }
+    
+    setIsTriggering(true);
+    try {
+      const baseApiUrl = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, '');
+      const res = await fetch(`${baseApiUrl}/staging-fanarts/trigger`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' 
+        },
+        body: JSON.stringify({ username: crawlerUsername })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Crawler started');
+        fetchProgress();
+      } else {
+        toast.error(data.error || 'Failed to start crawler');
+      }
+    } catch (error) {
+      toast.error('Failed to trigger crawler');
+    } finally {
+      setIsTriggering(false);
+    }
+  };
+
+  const handleAction = async (id: string, action: 'approve' | 'reject') => {
+    try {
+      const baseApiUrl = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, '');
+      const res = await fetch(`${baseApiUrl}/staging-fanarts/${id}/${action}`, {
+        method: 'POST',
+        headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message);
+        setFanarts(prev => prev.filter(f => f.id !== id));
+        
+        // Update local progress counts
+        setProgress(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            statusCounts: {
+              ...prev.statusCounts,
+              pending: Math.max(0, prev.statusCounts.pending - 1),
+              [action === 'approve' ? 'approved' : 'rejected']: prev.statusCounts[action === 'approve' ? 'approved' : 'rejected'] + 1
+            }
+          };
+        });
+        
+        // If we ran out of items on this page, fetch again to keep UI populated
+        if (fanarts.length <= 1) {
+          fetchFanarts(page);
+        }
+      } else {
+        toast.error(data.error || `Failed to ${action}`);
+      }
+    } catch (error) {
+      toast.error(`Failed to ${action} staging fanart`);
+    }
+  };
+
+  return (
+    <div className="flex-1 flex flex-col h-full bg-secondary-background relative overflow-hidden">
+      <div className="h-20 bg-background border-b-4 border-black flex items-center justify-between px-6 shrink-0 shadow-neo z-10">
+        <h1 className="text-xl font-black uppercase tracking-widest flex items-center gap-3">
+          <i className="hn hn-image" /> Staging FanArts
+        </h1>
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-bold font-mono">Page {page} of {totalPages}</span>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              className="border-2 border-black font-bold shadow-neo-sm"
+              disabled={page === 1}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+            >
+              上一頁
+            </Button>
+            <Button 
+              variant="outline" 
+              className="border-2 border-black font-bold shadow-neo-sm"
+              disabled={page === totalPages || totalPages === 0}
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            >
+              下一頁
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-6 pb-0">
+          <div className="bg-card border-4 border-black shadow-neo p-4 mb-6">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 gap-4">
+              <h2 className="text-lg font-black uppercase tracking-widest flex items-center gap-2 shrink-0">
+                <i className="hn hn-chart-bar" /> 抓取進度與統計
+              </h2>
+              
+              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                <div className="flex items-center gap-2 flex-1 md:flex-none">
+                  <span className="text-sm font-bold uppercase shrink-0">Target:</span>
+                  <Input 
+                    value={crawlerUsername}
+                    onChange={(e) => setCrawlerUsername(e.target.value)}
+                    className="border-2 border-black font-bold shadow-neo-sm h-8 w-32 md:w-40 bg-background"
+                    placeholder="Username"
+                  />
+                </div>
+                <Button 
+                  variant="default" 
+                  size="sm"
+                  className="bg-black text-white hover:bg-black/80 border-2 border-black font-bold shadow-neo-sm h-8"
+                  onClick={handleTriggerCrawler}
+                  disabled={isTriggering}
+                >
+                  <i className={`hn ${isTriggering ? 'hn-refresh animate-spin' : 'hn-play'} mr-2`} /> Start Crawler
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="border-2 border-black font-bold shadow-neo-sm h-8"
+                  onClick={fetchProgress}
+                  disabled={isProgressLoading}
+                >
+                  <i className={`hn hn-refresh ${isProgressLoading ? 'animate-spin' : ''} mr-2`} /> 更新
+                </Button>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Sync Progress */}
+              <div className="border-2 border-black p-3 bg-secondary-background">
+                <div className="text-xs font-bold uppercase opacity-70 mb-1">X/Twitter 抓取進度</div>
+                <div className="text-2xl font-black">
+                  {progress?.syncProgress?.processed_tweets || 0} 
+                  <span className="text-sm font-bold opacity-50 ml-1">/ {progress?.syncProgress?.total_tweets || '?'}</span>
+                </div>
+              </div>
+              
+              {/* Pending */}
+              <div className="border-2 border-black p-3 bg-yellow-200">
+                <div className="text-xs font-bold uppercase opacity-70 mb-1">待審核 (Pending)</div>
+                <div className="text-2xl font-black">{progress?.statusCounts?.pending || 0}</div>
+              </div>
+              
+              {/* Approved */}
+              <div className="border-2 border-black p-3 bg-ztmy-green/50">
+                <div className="text-xs font-bold uppercase opacity-70 mb-1">已核准 (Approved)</div>
+                <div className="text-2xl font-black">{progress?.statusCounts?.approved || 0}</div>
+              </div>
+              
+              {/* Rejected */}
+              <div className="border-2 border-black p-3 bg-red-200">
+                <div className="text-xs font-bold uppercase opacity-70 mb-1">已拒絕 (Rejected)</div>
+                <div className="text-2xl font-black">{progress?.statusCounts?.rejected || 0}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 pt-0">
+          {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <i className="hn hn-refresh animate-spin text-4xl opacity-50" />
+          </div>
+        ) : fanarts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 border-4 border-dashed border-black/20 text-black/50 font-bold text-lg uppercase tracking-widest">
+            <i className="hn hn-inbox text-4xl mb-4" />
+            No pending fanarts
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {fanarts.map(f => (
+              <div key={f.id} className="bg-card border-4 border-black shadow-neo flex flex-col overflow-hidden group">
+                <div className="aspect-square bg-black relative border-b-4 border-black">
+                  {f.media_type === 'video' ? (
+                    <video 
+                      src={f.r2_url || f.media_url} 
+                      className="w-full h-full object-cover"
+                      controls
+                      preload="metadata"
+                    />
+                  ) : (
+                    <img 
+                      src={f.r2_url || f.media_url} 
+                      alt="Fanart" 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  )}
+                  <a 
+                    href={f.original_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="absolute top-2 right-2 size-8 bg-black text-white border-2 border-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-neo-sm z-10"
+                    title="View Original"
+                  >
+                    <i className="hn hn-external-link" />
+                  </a>
+                </div>
+                
+                <div className="p-4 flex flex-col gap-4 flex-1">
+                  <div className="flex flex-col gap-1 text-xs font-mono font-bold opacity-70">
+                    <span className="truncate" title={f.tweet_id}>ID: {f.tweet_id}</span>
+                    <span>Type: {f.media_type}</span>
+                    <span>Date: {new Date(f.crawled_at).toLocaleString()}</span>
+                  </div>
+                  
+                  <div className="mt-auto grid grid-cols-2 gap-2 pt-2">
+                    <Button 
+                      className="w-full bg-red-500 text-white hover:bg-red-600 border-2 border-black shadow-neo-sm font-black uppercase tracking-wider"
+                      onClick={() => handleAction(f.id, 'reject')}
+                    >
+                      <i className="hn hn-trash mr-2" /> 拒絕
+                    </Button>
+                    <Button 
+                      className="w-full bg-ztmy-green text-black hover:bg-[#8aff8a] border-2 border-black shadow-neo-sm font-black uppercase tracking-wider"
+                      onClick={() => handleAction(f.id, 'approve')}
+                    >
+                      <i className="hn hn-check mr-2" /> 核准
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        </div>
+      </div>
+    </div>
+  );
+}

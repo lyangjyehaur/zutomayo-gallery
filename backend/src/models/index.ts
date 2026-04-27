@@ -151,6 +151,39 @@ export const SysAnnouncementModel = sequelize.define('SysAnnouncement', {
   updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '最後更新時間' },
 }, { tableName: 'sys_announcements', timestamps: false, comment: '首頁公告表 (獨立於系統配置)' });
 
+export const StagingFanartModel = sequelize.define('StagingFanart', {
+  id: { type: DataTypes.STRING(36), primaryKey: true, defaultValue: generateShortId, comment: '暫存資料唯一識別碼' },
+  tweet_id: { type: DataTypes.STRING, comment: '推文 ID' },
+  original_url: { type: DataTypes.STRING, comment: '原始來源網址 (如推文連結)' },
+  media_url: { type: DataTypes.STRING, comment: '原始媒體連結' },
+  r2_url: { type: DataTypes.STRING, allowNull: true, comment: 'R2 備份連結' },
+  media_type: { type: DataTypes.STRING, comment: '媒體格式類型 (image/video)' },
+  crawled_at: { type: DataTypes.DATE, comment: '爬取時間' },
+  status: { type: DataTypes.STRING, defaultValue: 'pending', comment: '處理狀態 (pending/approved/rejected)' },
+  source: { type: DataTypes.STRING, comment: '資料來源 (crawler/rss)' },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '建立時間' },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '更新時間' },
+}, { 
+  tableName: 'staging_fanarts', 
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+  comment: '暫存從 Twitter 等來源爬取的二創圖，等待後續處理或人工審核'
+});
+
+export const CrawlerStateModel = sequelize.define('CrawlerState', {
+  username: { type: DataTypes.STRING, primaryKey: true, comment: '爬蟲目標用戶名' },
+  pagination_token: { type: DataTypes.STRING, allowNull: true, comment: '分頁 Token，用於接續爬取' },
+  total_crawled: { type: DataTypes.INTEGER, defaultValue: 0, comment: '已爬取的總數量' },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '最後更新時間' },
+}, { 
+  tableName: 'crawler_states', 
+  timestamps: true,
+  createdAt: false,
+  updatedAt: 'updated_at',
+  comment: '儲存爬蟲的進度狀態，避免重複爬取或中斷後可接續'
+});
+
 // ==========================================
 // Many-to-Many Relationships
 // ⚠️ 警告：每次修改此檔案中的任何表結構 (新增/修改/刪除欄位或表)，
