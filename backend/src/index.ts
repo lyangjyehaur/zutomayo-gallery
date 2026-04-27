@@ -18,7 +18,8 @@ import { sequelize, AuthPasskey, AuthSetting } from './services/pg.service.js';
 import { initGeoService } from './services/geo.service.js';
 import { initRedis, redisClient } from './services/redis.service.js';
 import { initMeiliSearch, syncDataToMeili } from './services/meili.service.js';
-import { TwitterMonitorService } from './services/twitter-monitor.service.js';
+import { initQueues, bullBoardAdapter } from './services/queue.service.js';
+import { requireAdmin } from './middleware/auth.middleware.js';
 
 const app = express();
 const PORT = process.env.PORT || 5010;
@@ -58,7 +59,7 @@ try {
   console.log('IP2Region DB initialized');
   
   // 啟動 Twitter 監聽服務
-  TwitterMonitorService.start();
+  await initQueues();
 } catch (error) {
   console.error('Failed to initialize services:', error);
 }
@@ -204,6 +205,12 @@ app.use('/api/album', albumRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/fanarts', fanartRoutes);
 app.use('/api/webhook', webhookRoutes);
+
+// 如果 bull-board 初始化成功，掛載可視化介面路由
+if (bullBoardAdapter) {
+  app.use('/api/admin/queues', bullBoardAdapter.getRouter());
+  console.log(`BullMQ Dashboard running at http://localhost:${PORT}/api/admin/queues`);
+}
 
 // Sitemap
 app.use('/api', sitemapRoutes);

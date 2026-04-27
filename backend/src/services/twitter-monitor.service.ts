@@ -1,4 +1,3 @@
-import cron from 'node-cron';
 import Parser from 'rss-parser';
 import { MediaGroupModel, MediaModel, SysConfigModel } from '../models/index.js';
 import { nanoid } from 'nanoid';
@@ -10,23 +9,19 @@ import fetch from 'node-fetch';
 const parser = new Parser();
 
 export const TwitterMonitorService = {
-  start: () => {
+  checkRss: async () => {
     // 讀取環境變數
     const TWITTER_RSS_URL = process.env.TWITTER_RSS_URL;
-    const BARK_URL = process.env.BARK_URL; // 例如: https://api.day.app/YOUR_KEY
-    const CRON_SCHEDULE = process.env.TWITTER_MONITOR_CRON || '0 * * * *'; // 預設每小時執行一次
+    const BARK_URL = process.env.BARK_URL;
 
     if (!TWITTER_RSS_URL) {
-      console.log('[Twitter Monitor] TWITTER_RSS_URL is not set. Monitor disabled.');
+      console.log('[Twitter Monitor] TWITTER_RSS_URL is not set. Skipping.');
       return;
     }
 
-    console.log(`[Twitter Monitor] Started. Cron: ${CRON_SCHEDULE}, RSS: ${TWITTER_RSS_URL}`);
-
-    cron.schedule(CRON_SCHEDULE, async () => {
-      console.log('[Twitter Monitor] Running check...');
-      try {
-        const feed = await parser.parseURL(TWITTER_RSS_URL);
+    console.log('[Twitter Monitor] Running check...');
+    try {
+      const feed = await parser.parseURL(TWITTER_RSS_URL);
 
         for (const item of feed.items) {
           // 確保是推文網址
@@ -141,9 +136,8 @@ export const TwitterMonitorService = {
             }
           }
         }
-      } catch (error) {
-        console.error('[Twitter Monitor] Error fetching or parsing RSS:', error);
-      }
-    });
+    } catch (error) {
+      console.error('[Twitter Monitor] Error fetching or parsing RSS:', error);
+    }
   }
 };

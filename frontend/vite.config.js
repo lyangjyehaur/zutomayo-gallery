@@ -142,11 +142,22 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-ui': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-popover', '@radix-ui/react-scroll-area', '@radix-ui/react-select', '@radix-ui/react-tabs', '@radix-ui/react-tooltip'],
-          'vendor-gallery': ['@fancyapps/ui', 'lightgallery', 'react-masonry-css', 'masonry-layout'],
+          'vendor-react': ['react', 'react-dom', 'react-router-dom', 'react-helmet-async'],
+          'vendor-ui': [
+            '@radix-ui/react-alert-dialog', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-popover', '@radix-ui/react-progress', '@radix-ui/react-scroll-area',
+            '@radix-ui/react-select', '@radix-ui/react-slot', '@radix-ui/react-switch',
+            '@radix-ui/react-tabs', '@radix-ui/react-tooltip', 'cmdk', 'vaul'
+          ],
+          'vendor-gallery': ['@fancyapps/ui', 'lightgallery', 'react-masonry-css', 'masonry-layout', 'imagesloaded'],
           'vendor-editor': ['@monaco-editor/react'],
-          'vendor-utils': ['swr', 'sonner', 'clsx', 'tailwind-merge', 'zod']
+          'vendor-utils': ['swr', 'sonner', 'clsx', 'tailwind-merge'],
+          'vendor-icons': ['lucide-react'],
+          'vendor-three': ['three'],
+          'vendor-waline': ['@waline/client'],
+          'vendor-i18n': ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
+          'vendor-auth': ['@simplewebauthn/browser'],
+          'vendor-table': ['@tanstack/react-table']
         }
       }
     },

@@ -67,29 +67,9 @@ export const getAppleMusicImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb'): 
   return rawUrl.replace(/\/\d+x\d+([a-zA-Z0-9-]*)\.(jpg|jpeg|webp|png)$/i, '/300x300$1.webp');
 };
 /**
- * 根據需求建立 imgproxy 請求網址
+ * 根據需求建立 imgproxy 請求網址 (強制走後端 API 產生簽名)
  */
 const buildImgproxyUrl = (targetUrl: string, mode: ProxyMode, customFilename = ''): string => {
-  const base64Url = safeBase64(targetUrl);
-  const paramsArr: string[] = [];
-
-  if (mode === 'raw') {
-    paramsArr.push('raw:1', 'return_attachment:1');
-    if (customFilename) {
-      // 移除常見副檔名，讓 imgproxy 自動推斷並加上副檔名 (避免 .jpg.jpg)
-      const safeFilename = customFilename.replace(/\.(jpg|jpeg|png|gif|webp|mp4)$/i, '');
-      paramsArr.push(`filename:${safeBase64(safeFilename)}:1`);
-    }
-  } else if (mode === 'full') {
-    paramsArr.push('f:webp');
-  } else if (mode === 'small' || mode === 'sd') {
-    paramsArr.push('w:602', 'f:webp');
-  } else {
-    paramsArr.push('w:402', 'f:webp'); // thumb, hq
-  }
-
-  // 前端一律不直連 imgproxy，強制走後端 API 代理產生簽名
-  // 以徹底關閉 insecure 模式
   const apiUrl = (import.meta.env.VITE_API_URL || '/api/mvs').replace(/\/mvs$/, '');
   const proxyMode = mode === 'thumb' ? 'thumb_general' : mode;
   let url = `${apiUrl}/system/image/proxy?url=${encodeURIComponent(targetUrl)}&mode=${proxyMode}`;

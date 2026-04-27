@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getMVs, getMVById, updateMVs, probeImage, getMetadata, updateMetadata, resolveTwitterMedia } from '../controllers/mv.controller.js';
 import { requireAdmin } from '../middleware/auth.middleware.js';
+import { cacheMiddleware } from '../middleware/cache.middleware.js';
 import { authService } from '../services/auth.service.js';
 import { sequelize } from '../services/pg.service.js';
 import bcrypt from 'bcrypt';
@@ -35,8 +36,8 @@ router.post('/verify-admin', requireAdmin, async (req, res) => {
 router.get('/metadata', getMetadata);
 router.post('/metadata', requireAdmin, updateMetadata);
 
-router.get('/', getMVs);
-router.get('/:id', getMVById);
+router.get('/', cacheMiddleware(300), getMVs); // 5分鐘快取
+router.get('/:id', cacheMiddleware(300), getMVById);
 router.post('/update', requireAdmin, updateMVs);
 router.post('/probe', requireAdmin, probeImage);
 router.post('/twitter-resolve', requireAdmin, resolveTwitterMedia);
