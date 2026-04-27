@@ -175,6 +175,9 @@ export const CrawlerStateModel = sequelize.define('CrawlerState', {
   username: { type: DataTypes.STRING, primaryKey: true, comment: '爬蟲目標用戶名' },
   pagination_token: { type: DataTypes.STRING, allowNull: true, comment: '分頁 Token，用於接續爬取' },
   total_crawled: { type: DataTypes.INTEGER, defaultValue: 0, comment: '已爬取的總數量' },
+  status: { type: DataTypes.STRING, defaultValue: 'idle', comment: '爬蟲狀態 (idle, crawling, processing, error)' },
+  current_run_processed: { type: DataTypes.INTEGER, defaultValue: 0, comment: '當次執行已處理數量' },
+  current_run_total: { type: DataTypes.INTEGER, defaultValue: 0, comment: '當次執行總數量' },
   updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '最後更新時間' },
 }, { 
   tableName: 'crawler_states', 

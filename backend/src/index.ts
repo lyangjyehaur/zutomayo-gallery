@@ -51,6 +51,16 @@ try {
   const { syncModels } = await import('./models/index.js');
   await syncModels();
   
+  // 執行跨版本增量更新 (Migrations)
+  try {
+    const { migrator } = await import('./scripts/migrate.js');
+    await migrator.up();
+    console.log('Database migrations executed successfully');
+  } catch (migErr) {
+    console.error('Migration failed during startup:', migErr);
+    // 可根據需求決定是否要拋出錯誤阻斷啟動
+  }
+  
   console.log('PostgreSQL Database connected and all tables synced');
   
   // 啟動時初始化並同步 Meilisearch 資料

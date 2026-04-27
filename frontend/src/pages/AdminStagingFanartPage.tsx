@@ -17,6 +17,10 @@ interface StagingFanart {
 
 interface ProgressData {
   syncProgress: {
+    status?: string;
+    current_run_processed?: number;
+    current_run_total?: number;
+    total_crawled?: number;
     total_tweets?: number;
     processed_tweets?: number;
     saved_images?: number;
@@ -88,6 +92,16 @@ export function AdminStagingFanartPage() {
   useEffect(() => {
     fetchProgress();
   }, []); // eslint-disable-next-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const status = progress?.syncProgress?.status;
+    if (status && status !== 'idle' && status !== 'error') {
+      const timer = setInterval(() => {
+        fetchProgress();
+      }, 3000);
+      return () => clearInterval(timer);
+    }
+  }, [progress?.syncProgress?.status]); // eslint-disable-next-line react-hooks/exhaustive-deps
 
   const handleTriggerCrawler = async () => {
     if (!crawlerUsername) {
@@ -222,6 +236,23 @@ export function AdminStagingFanartPage() {
                 >
                   <i className={`hn hn-refresh ${isProgressLoading ? 'animate-spin' : ''} mr-2`} /> 更新
                 </Button>
+              </div>
+            </div>
+
+            <div className="mb-4 p-3 border-2 border-black bg-blue-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="font-bold uppercase text-sm opacity-70">目前狀態:</span>
+                <span className="font-black text-lg text-blue-900">
+                  {progress?.syncProgress?.status === 'crawling' ? '正在呼叫 Apify 抓取資料...' :
+                   progress?.syncProgress?.status === 'processing' ? `正在處理並上傳媒體 (${progress?.syncProgress?.current_run_processed || 0} / ${progress?.syncProgress?.current_run_total || 0})` :
+                   progress?.syncProgress?.status === 'idle' ? '閒置中' :
+                   progress?.syncProgress?.status === 'error' ? '發生錯誤' :
+                   progress?.syncProgress?.status || '閒置中'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold uppercase text-sm opacity-70">總抓取數:</span>
+                <span className="font-black text-xl">{progress?.syncProgress?.total_crawled || 0}</span>
               </div>
             </div>
             
