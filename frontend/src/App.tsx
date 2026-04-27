@@ -1113,7 +1113,7 @@ function App({
       {/* 整個首頁的全局背景 CRT 濾鏡層 */}
       <div className="pointer-events-none fixed inset-0 z-[-1] crt-lines-global opacity-100" />
 
-      <div className={`flex-1 relative flex flex-col ${isAppleMusicGalleryRoute ? 'overflow-visible' : 'overflow-x-hidden'} transition-opacity duration-[1000ms] ease-out ${isContentFadingIn ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`flex-1 relative flex flex-col transition-opacity duration-[1000ms] ease-out ${isContentFadingIn ? 'opacity-100' : 'opacity-0'}`}>
         {/* 跑馬燈 (置於最頂部) */}
         {!is404Route && !isDemo3DCard && marqueeAnnouncements.length > 0 && (
             <div className="w-full relative z-40 bg-main border-y-4 border-black">
