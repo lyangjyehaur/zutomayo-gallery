@@ -2417,7 +2417,10 @@ function App({
         }}
       />
 
-      <Drawer open={isInstallPromptOpen} onOpenChange={setIsInstallPromptOpen}>
+      <Drawer open={isInstallPromptOpen} onOpenChange={(open) => {
+        if (!open && window.umami) window.umami.track('Z_PWA_Install_Cancel_Swipe');
+        setIsInstallPromptOpen(open);
+      }}>
         <DrawerContent onPointerDownOutside={(e) => e.preventDefault()} className="md:max-w-[400px] md:mx-auto md:p-2">
           <div className="w-full mx-auto max-w-[400px] md:max-w-none">
             <DrawerHeader>
@@ -2517,8 +2520,6 @@ function App({
           </div>
         </DrawerContent>
       </Drawer>
-
-      <PWAPrompt />
     </div>
   );
 }

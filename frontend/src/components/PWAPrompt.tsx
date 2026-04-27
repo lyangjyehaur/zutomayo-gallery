@@ -89,7 +89,10 @@ export function PWAPrompt() {
   }, [needRefresh]);
 
   return (
-    <Drawer open={needRefresh} onOpenChange={setNeedRefresh}>
+    <Drawer open={needRefresh} onOpenChange={(open) => {
+      if (!open && window.umami) window.umami.track('Z_PWA_Update_Dismissed_Swipe');
+      setNeedRefresh(open);
+    }}>
       <DrawerContent onPointerDownOutside={(e) => e.preventDefault()} className="md:max-w-[400px] md:mx-auto md:p-2">
         <div className="w-full mx-auto max-w-[400px] md:max-w-none">
           <DrawerHeader>
