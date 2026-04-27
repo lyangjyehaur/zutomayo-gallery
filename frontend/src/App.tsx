@@ -735,6 +735,9 @@ function App({
         const titleEl = document.querySelector(
           ".ztmy-cyber-title-crt",
         ) as HTMLElement;
+        const textEl = document.querySelector(
+          ".ztmy-cyber-text-aberration",
+        ) as HTMLElement;
         const pulseEl = document.querySelector(
           "header .animate-pulse",
         ) as HTMLElement;
@@ -745,6 +748,13 @@ function App({
         if (titleEl) {
           titleEl.style.animationPlayState = isPaused ? "paused" : "running";
           titleEl.style.setProperty(
+            "--anim-state",
+            isPaused ? "paused" : "running",
+          );
+        }
+        if (textEl) {
+          textEl.style.animationPlayState = isPaused ? "paused" : "running";
+          textEl.style.setProperty(
             "--anim-state",
             isPaused ? "paused" : "running",
           );
@@ -763,6 +773,7 @@ function App({
       const titleEl = document.querySelector(
         ".ztmy-cyber-title-crt",
       ) as HTMLElement;
+      const textEl = document.querySelector(".ztmy-cyber-text-aberration") as HTMLElement;
       const pulseEl = document.querySelector(
         "header .animate-pulse",
       ) as HTMLElement;
@@ -772,6 +783,13 @@ function App({
       if (titleEl) {
         titleEl.style.animationPlayState = isPaused ? "paused" : "running";
         titleEl.style.setProperty(
+          "--anim-state",
+          isPaused ? "paused" : "running",
+        );
+      }
+      if (textEl) {
+        textEl.style.animationPlayState = isPaused ? "paused" : "running";
+        textEl.style.setProperty(
           "--anim-state",
           isPaused ? "paused" : "running",
         );
