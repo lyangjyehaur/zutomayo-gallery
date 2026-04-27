@@ -318,7 +318,7 @@ function App({
     }
 
     toast.custom((t_id) => (
-      <div className="fixed inset-0 z-[10000] flex items-end justify-center pb-8 md:pb-12 pointer-events-none" style={{ width: '100vw', height: '100vh' }}>
+      <div className="fixed inset-0 z-[10000] flex items-end justify-center pb-8 md:pb-12 pointer-events-none" style={{ width: '100dvw', height: '100dvh' }}>
         <ModalBackdrop zIndex="z-[9999]" />
         <div className="bg-background text-foreground border-border border-2 font-heading shadow-shadow rounded-base flex flex-col gap-4 p-5 w-[356px] md:w-[400px] relative z-[10000] pointer-events-auto mx-auto animate-in slide-in-from-bottom-8 duration-300">
           <h2 className="text-lg font-bold w-full leading-tight">
@@ -1728,7 +1728,7 @@ function App({
                 <Button
                   onClick={() => {
                     toast.custom((t_id) => (
-                      <div className="fixed inset-0 z-[10000] flex items-end justify-center pb-8 md:pb-12 pointer-events-none" style={{ width: '100vw', height: '100vh' }}>
+                      <div className="fixed inset-0 z-[10000] flex items-end justify-center pb-8 md:pb-12 pointer-events-none" style={{ width: '100dvw', height: '100dvh' }}>
                         <ModalBackdrop zIndex="z-[9999]" />
                         <div className="bg-background text-foreground border-border border-2 font-heading shadow-shadow rounded-base flex flex-col gap-4 p-5 w-[356px] md:w-[400px] relative z-[10000] pointer-events-auto mx-auto animate-in slide-in-from-bottom-8 duration-300">
                           <h2 className="text-lg font-bold w-full leading-tight">
