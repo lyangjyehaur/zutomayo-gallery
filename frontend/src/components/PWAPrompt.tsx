@@ -2,8 +2,15 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useRegisterSW } from 'virtual:pwa-register/react';
-import { ModalBackdrop } from '@/components/ModalBackdrop';
 import { VERSION_CONFIG } from '@/config/version';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 
 export function PWAPrompt() {
   const { t } = useTranslation();
@@ -71,29 +78,33 @@ export function PWAPrompt() {
     }
   }, [needRefresh]);
 
-  if (needRefresh) {
-    return (
-      <div className="fixed inset-0 z-[10000] flex items-end justify-center pb-8 md:pb-12 pointer-events-none !m-0 !p-0">
-        <ModalBackdrop zIndex="z-[9999]" />
-        <div className="bg-background text-foreground border-border border-2 font-heading shadow-shadow rounded-base flex flex-col gap-4 p-5 w-[356px] md:w-[400px] relative z-[10000] pointer-events-auto mx-auto animate-in slide-in-from-bottom-8 duration-300">
-          <h2 className="text-lg font-bold w-full leading-tight">
-            {t('app.pwa_update_title', '發現新版本！')}
-          </h2>
-          <div className="w-full font-base">
-            <p className="text-[15px] leading-snug">{t('app.pwa_update_desc', '點擊更新以載入最新內容。')}</p>
-            
-            <div className="mt-3 bg-secondary-background/50 p-2.5 rounded-base border-2 border-border text-[11px] sm:text-xs flex flex-col gap-1.5 font-mono">
-                <div className="flex justify-between items-center opacity-70">
-                  <span>{t('app.pwa_current_version', 'Current')}</span>
-                  <span>v{VERSION_CONFIG.app} ({import.meta.env.VITE_BUILD_HASH || 'dev'})</span>
-                </div>
-                <div className="flex justify-between items-center font-bold text-main">
-                  <span>{t('app.pwa_latest_version', 'Latest 🚀')}</span>
-                  <span>v{newVersion?.version || '?'} ({newVersion?.buildHash || '?'})</span>
-                </div>
+  return (
+    <Drawer open={needRefresh} onOpenChange={setNeedRefresh}>
+      <DrawerContent>
+        <div className="mx-auto w-full max-w-[400px]">
+          <DrawerHeader>
+            <DrawerTitle className="text-lg font-bold w-full leading-tight">
+              {t('app.pwa_update_title', '發現新版本！')}
+            </DrawerTitle>
+            <DrawerDescription className="text-[15px] leading-snug">
+              {t('app.pwa_update_desc', '點擊更新以載入最新內容。')}
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <div className="p-4 pb-0 font-base">
+            <div className="bg-secondary-background/50 p-2.5 rounded-base border-2 border-border text-[11px] sm:text-xs flex flex-col gap-1.5 font-mono">
+              <div className="flex justify-between items-center opacity-70">
+                <span>{t('app.pwa_current_version', 'Current')}</span>
+                <span>v{VERSION_CONFIG.app} ({import.meta.env.VITE_BUILD_HASH || 'dev'})</span>
               </div>
+              <div className="flex justify-between items-center font-bold text-main">
+                <span>{t('app.pwa_latest_version', 'Latest 🚀')}</span>
+                <span>v{newVersion?.version || '?'} ({newVersion?.buildHash || '?'})</span>
+              </div>
+            </div>
           </div>
-          <div className="flex flex-col gap-2 w-full mt-2">
+
+          <DrawerFooter className="flex flex-col gap-2 mt-4">
             <button
               onClick={() => {
                 if (window.umami) window.umami.track('Z_PWA_Update_Accepted');
@@ -112,11 +123,9 @@ export function PWAPrompt() {
             >
               {t('app.later', '稍後再說')}
             </button>
-          </div>
+          </DrawerFooter>
         </div>
-      </div>
-    );
-  }
-
-  return null; // This component just manages side-effects and toasts
+      </DrawerContent>
+    </Drawer>
+  );
 }

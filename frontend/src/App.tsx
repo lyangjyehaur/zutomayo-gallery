@@ -40,6 +40,14 @@ import { FanArtPage } from "@/pages/FanArtPage";
 import { PWAPrompt } from "@/components/PWAPrompt";
 import { ModalBackdrop } from "@/components/ModalBackdrop";
 import { Toaster } from "@/components/ui/sonner";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { toast } from "sonner";
 import {
   Popover,
@@ -127,6 +135,9 @@ const AnimatedMVCardItem = memo(function AnimatedMVCardItem({
 
   // 偵測是否離開可視範圍來暫停動畫
   const [isInView, setIsInView] = useState(true);
+
+  const [isInstallPromptOpen, setIsInstallPromptOpen] = useState(false);
+  const [isRecoverPromptOpen, setIsRecoverPromptOpen] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -317,60 +328,15 @@ function App({
       pwaRecoverTapTimerRef.current = null;
     }
 
-    toast.custom((t_id) => (
-      <div className="flex items-end justify-center w-full h-full pb-8 md:pb-12 pointer-events-none">
-        <ModalBackdrop zIndex="z-[9999]" />
-        <div className="bg-background text-foreground border-border border-2 font-heading shadow-shadow rounded-base flex flex-col gap-4 p-5 w-[356px] md:w-[400px] relative z-[10000] pointer-events-auto mx-auto animate-in slide-in-from-bottom-8 duration-300">
-          <h2 className="text-lg font-bold w-full leading-tight">
-            {t("app.pwa_recover_title", "修復更新/清除快取")}
-          </h2>
-          <div className="w-full font-base">
-            <div className="flex flex-col gap-2 mt-2 text-[15px]">
-              <span>{t("app.pwa_recover_desc", "將執行以下操作：")}</span>
-              <ul className="list-disc list-outside ml-5 mt-1 space-y-2 opacity-80 text-left">
-                <li className="leading-snug">{t("app.pwa_recover_step_1", "註銷 Service Worker")}</li>
-                <li className="leading-snug">{t("app.pwa_recover_step_2", "清除站點快取")}</li>
-                <li className="leading-snug">{t("app.pwa_recover_step_3", "重新載入以取得最新版本")}</li>
-              </ul>
-            </div>
-          </div>
-          <div className="flex flex-col gap-2 w-full mt-2">
-            <button
-              onClick={() => {
-                toast.dismiss(t_id);
-                runPWARecovery();
-              }}
-              className="font-base border-2 text-[15px] h-10 px-4 bg-main text-main-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[0px_0px_0px_0px_var(--border)]"
-            >
-              {t("app.pwa_recover_action", "清除並重新載入")}
-            </button>
-            <button
-              onClick={() => {
-                toast.dismiss(t_id);
-              }}
-              className="font-base border-2 text-[15px] h-10 px-4 bg-secondary-background text-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[0px_0px_0px_0px_var(--border)]"
-            >
-              {t("common.cancel", "取消")}
-            </button>
-          </div>
-        </div>
-      </div>
-    ), {
-      duration: Infinity,
-      position: "bottom-center",
-      unstyled: true,
-      className: "!fixed !inset-0 !m-0 !p-0 !w-screen !h-[100dvh] !max-w-none !bg-transparent !border-none !shadow-none !transform-none !pointer-events-none",
-      style: {
-        "--mobile-offset": "0px",
-        "--offset": "0px",
-      } as React.CSSProperties,
-    });
+    setIsRecoverPromptOpen(true);
   }, [runPWARecovery, t]);
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" ? window.innerWidth < 1024 : false,
   );
   
   const geoInfo = useGeoLabel();
+
+  const [isInstallPromptOpen, setIsInstallPromptOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
@@ -1730,73 +1696,7 @@ function App({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  onClick={() => {
-                    toast.custom((t_id) => (
-                      <div className="flex items-end justify-center w-full h-full pb-8 md:pb-12 pointer-events-none">
-                        <ModalBackdrop zIndex="z-[9999]" />
-                        <div className="bg-background text-foreground border-border border-2 font-heading shadow-shadow rounded-base flex flex-col gap-4 p-5 w-[356px] md:w-[400px] relative z-[10000] pointer-events-auto mx-auto animate-in slide-in-from-bottom-8 duration-300">
-                          <h2 className="text-lg font-bold w-full leading-tight">
-                            {t("app.install_pwa_title", "安裝 ZTMY Gallery")}
-                          </h2>
-                          <div className="w-full font-base">
-                            <div className="flex flex-col gap-2 mt-2 text-[15px]">
-                              <span>{t("app.install_pwa_desc", "將網站加入主畫面，獲得最佳體驗：")}</span>
-                              <ul className="list-disc list-outside ml-5 mt-1 space-y-2 opacity-80 text-left">
-                                <li className="leading-snug">{t("app.pwa_feature_1", "無邊框沉浸式全螢幕瀏覽")}</li>
-                                <li className="leading-snug">{t("app.pwa_feature_2", "圖片動態快取，離線也能看")}</li>
-                                <li className="leading-snug">{t("app.pwa_feature_3", "支援桌面長按捷徑快速導覽")}</li>
-                                <li className="leading-snug">{t("app.pwa_feature_4", "與原生 App 相同的順暢體驗")}</li>
-                              </ul>
-                            </div>
-                          </div>
-                          <div className="flex flex-col gap-2 w-full mt-2">
-                            <button
-                              onClick={async () => {
-                                toast.dismiss(t_id);
-                                if (deferredPrompt) {
-                                  deferredPrompt.prompt();
-                                  const { outcome } = await deferredPrompt.userChoice;
-                                  if (outcome === 'accepted') {
-                                    if (window.umami) window.umami.track('Z_PWA_Install_Accepted_Btn');
-                                    globalDeferredPrompt = null;
-                                    setDeferredPrompt(null);
-                                  } else {
-                                    if (window.umami) window.umami.track('Z_PWA_Install_Dismissed_Btn');
-                                  }
-                                } else {
-                                  toast.info("預覽模式：安裝事件尚未觸發", {
-                                    description: "實際環境中必須滿足 PWA 條件才會出現系統安裝提示",
-                                    duration: 3000
-                                  });
-                                }
-                              }}
-                              className="font-base border-2 text-[15px] h-10 px-4 bg-main text-main-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[0px_0px_0px_0px_var(--border)]"
-                            >
-                              {t("app.install", "確定安裝")}
-                            </button>
-                            <button
-                              onClick={() => {
-                                toast.dismiss(t_id);
-                                if (window.umami) window.umami.track('Z_PWA_Install_Cancel_Toast');
-                              }}
-                              className="font-base border-2 text-[15px] h-10 px-4 bg-secondary-background text-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[0px_0px_0px_0px_var(--border)]"
-                            >
-                              {t("common.cancel", "取消")}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ), {
-                      duration: Infinity,
-                      position: "bottom-center",
-                      unstyled: true,
-                      className: "!fixed !inset-0 !m-0 !p-0 !w-screen !h-[100dvh] !max-w-none !bg-transparent !border-none !shadow-none !transform-none !pointer-events-none",
-                      style: {
-                        "--mobile-offset": "0px",
-                        "--offset": "0px",
-                      } as React.CSSProperties,
-                    });
-                  }}
+                  onClick={() => setIsInstallPromptOpen(true)}
                   variant="neutral"
                   size="icon"
                   className="z-20 w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-[0px_0px_0px_0px_var(--border)] hover:bg-main hover:text-black"
@@ -2508,6 +2408,109 @@ function App({
           }
         }}
       />
+
+      <Drawer open={isInstallPromptOpen} onOpenChange={setIsInstallPromptOpen}>
+        <DrawerContent>
+          <div className="mx-auto w-full max-w-[400px]">
+            <DrawerHeader>
+              <DrawerTitle className="text-lg font-bold w-full leading-tight">
+                {t("app.install_pwa_title", "安裝 ZTMY Gallery")}
+              </DrawerTitle>
+              <DrawerDescription className="text-[15px] leading-snug">
+                {t("app.install_pwa_desc", "將網站加入主畫面，獲得最佳體驗：")}
+              </DrawerDescription>
+            </DrawerHeader>
+
+            <div className="p-4 pb-0 font-base">
+              <ul className="list-disc list-outside ml-5 space-y-2 opacity-80 text-left text-[15px]">
+                <li className="leading-snug">{t("app.pwa_feature_1", "無邊框沉浸式全螢幕瀏覽")}</li>
+                <li className="leading-snug">{t("app.pwa_feature_2", "圖片動態快取，離線也能看")}</li>
+                <li className="leading-snug">{t("app.pwa_feature_3", "支援桌面長按捷徑快速導覽")}</li>
+                <li className="leading-snug">{t("app.pwa_feature_4", "與原生 App 相同的順暢體驗")}</li>
+              </ul>
+            </div>
+
+            <DrawerFooter className="flex flex-col gap-2 mt-4">
+              <button
+                onClick={async () => {
+                  setIsInstallPromptOpen(false);
+                  if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                      if (window.umami) window.umami.track('Z_PWA_Install_Accepted_Btn');
+                      globalDeferredPrompt = null;
+                      setDeferredPrompt(null);
+                    } else {
+                      if (window.umami) window.umami.track('Z_PWA_Install_Dismissed_Btn');
+                    }
+                  } else {
+                    toast.info("預覽模式：安裝事件尚未觸發", {
+                      description: "實際環境中必須滿足 PWA 條件才會出現系統安裝提示",
+                      duration: 3000
+                    });
+                  }
+                }}
+                className="font-base border-2 text-[15px] h-10 px-4 bg-main text-main-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[0px_0px_0px_0px_var(--border)]"
+              >
+                {t("app.install", "確定安裝")}
+              </button>
+              <button
+                onClick={() => {
+                  setIsInstallPromptOpen(false);
+                  if (window.umami) window.umami.track('Z_PWA_Install_Cancel_Toast');
+                }}
+                className="font-base border-2 text-[15px] h-10 px-4 bg-secondary-background text-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[0px_0px_0px_0px_var(--border)]"
+              >
+                {t("common.cancel", "取消")}
+              </button>
+            </DrawerFooter>
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      <Drawer open={isRecoverPromptOpen} onOpenChange={setIsRecoverPromptOpen}>
+        <DrawerContent>
+          <div className="mx-auto w-full max-w-[400px]">
+            <DrawerHeader>
+              <DrawerTitle className="text-lg font-bold w-full leading-tight">
+                {t("app.pwa_recover_title", "修復更新/清除快取")}
+              </DrawerTitle>
+              <DrawerDescription className="text-[15px] leading-snug">
+                {t("app.pwa_recover_desc", "將執行以下操作：")}
+              </DrawerDescription>
+            </DrawerHeader>
+
+            <div className="p-4 pb-0 font-base">
+              <ul className="list-disc list-outside ml-5 space-y-2 opacity-80 text-left text-[15px]">
+                <li className="leading-snug">{t("app.pwa_recover_step_1", "註銷 Service Worker")}</li>
+                <li className="leading-snug">{t("app.pwa_recover_step_2", "清除站點快取")}</li>
+                <li className="leading-snug">{t("app.pwa_recover_step_3", "重新載入以取得最新版本")}</li>
+              </ul>
+            </div>
+
+            <DrawerFooter className="flex flex-col gap-2 mt-4">
+              <button
+                onClick={() => {
+                  setIsRecoverPromptOpen(false);
+                  runPWARecovery();
+                }}
+                className="font-base border-2 text-[15px] h-10 px-4 bg-main text-main-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[0px_0px_0px_0px_var(--border)]"
+              >
+                {t("app.pwa_recover_action", "清除並重新載入")}
+              </button>
+              <button
+                onClick={() => setIsRecoverPromptOpen(false)}
+                className="font-base border-2 text-[15px] h-10 px-4 bg-secondary-background text-foreground border-border rounded-base w-full flex items-center justify-center transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[0px_0px_0px_0px_var(--border)]"
+              >
+                {t("common.cancel", "取消")}
+              </button>
+            </DrawerFooter>
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      <PWAPrompt />
     </div>
   );
 }
