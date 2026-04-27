@@ -24,6 +24,14 @@ try {
   process.env.VITE_BUILD_HASH = 'unknown'
 }
 
+// 產生 version.json 到 public 資料夾，讓 PWA 更新時能抓取新版本資訊
+const versionData = {
+  version: process.env.VITE_APP_VERSION,
+  buildDate: process.env.VITE_BUILD_DATE,
+  buildHash: process.env.VITE_BUILD_HASH
+}
+writeFileSync(path.resolve(__dirname, 'public', 'version.json'), JSON.stringify(versionData, null, 2))
+
 // https://vite.dev/config/
 export default defineConfig({
   base: process.env.VITE_BASE || '/',

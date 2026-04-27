@@ -950,6 +950,7 @@ function App({
   const [showWarningScreen, setShowWarningScreen] = useState(false);
   const [isContentReady, setIsContentReady] = useState(false);
   const [isContentFadingIn, setIsContentFadingIn] = useState(false);
+  const [isAnimationComplete, setIsAnimationComplete] = useState(false);
 
   useEffect(() => {
     // 檢查是否有錯誤，如果有則立即中斷過渡，交給錯誤畫面處理
@@ -974,7 +975,8 @@ function App({
       const timer = setTimeout(() => {
         setShowLoadingScreen(false);
         setShowWarningScreen(true);
-        setIsTransitioningOut(false);
+        // 設定一點點延遲，讓 warning 畫面可以執行進場 fade-in 動畫
+        setTimeout(() => setIsTransitioningOut(false), 50);
       }, 500); // 動畫時間 500ms
       return () => clearTimeout(timer);
     } else if (showLoadingScreen) {
@@ -983,10 +985,12 @@ function App({
       const timer = setTimeout(() => {
         setShowLoadingScreen(false);
         setIsContentReady(true);
-        setIsTransitioningOut(false);
-        
-        // 延遲一點點觸發首頁淡入動畫，讓瀏覽器有時間渲染 DOM
-        setTimeout(() => setIsContentFadingIn(true), 50);
+        // 設定一點點延遲，讓首頁 DOM 掛載完畢後再執行進場 fade-in 動畫
+        setTimeout(() => {
+          setIsTransitioningOut(false);
+          setIsContentFadingIn(true);
+          setTimeout(() => setIsAnimationComplete(true), 1000);
+        }, 50);
       }, 500); // 動畫時間 500ms
       return () => clearTimeout(timer);
     }
@@ -1010,10 +1014,12 @@ function App({
       setNetworkAlertAcknowledged(true);
       setShowWarningScreen(false);
       setIsContentReady(true);
-      setIsTransitioningOut(false);
-      
-      // 延遲一點點觸發首頁淡入動畫，讓瀏覽器有時間渲染 DOM
-      setTimeout(() => setIsContentFadingIn(true), 50);
+      // 設定一點點延遲，讓首頁 DOM 掛載完畢後再執行進場 fade-in 動畫
+      setTimeout(() => {
+        setIsTransitioningOut(false);
+        setIsContentFadingIn(true);
+        setTimeout(() => setIsAnimationComplete(true), 1000);
+      }, 50);
     }, 500);
   };
 
@@ -1080,7 +1086,11 @@ function App({
 
   // 防止畫面在動畫期間閃爍
   if (!isContentReady && !error) {
-    return null; // 在過渡期間保持背景空白（或可以回傳一個純色背景）
+    return (
+      <div className="min-h-screen bg-background relative isolate">
+        <div className="pointer-events-none fixed inset-0 z-[-1] crt-lines-global opacity-100" />
+      </div>
+    );
   }
 
   if (error && mvData.length === 0) {
@@ -1099,11 +1109,11 @@ function App({
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-base font-normal selection:bg-main selection:text-main-foreground relative isolate flex flex-col">
+    <div className={`min-h-screen bg-background text-foreground font-base font-normal selection:bg-main selection:text-main-foreground relative isolate flex flex-col`}>
       {/* 整個首頁的全局背景 CRT 濾鏡層 */}
       <div className="pointer-events-none fixed inset-0 z-[-1] crt-lines-global opacity-100" />
 
-      <div className={`flex-1 relative flex flex-col transition-all duration-700 ease-out ${isContentFadingIn ? 'opacity-100' : 'opacity-0 translate-y-8'}`}>
+      <div className={`flex-1 relative flex flex-col ${isAppleMusicGalleryRoute ? 'overflow-visible' : 'overflow-x-hidden'} transition-opacity duration-[1000ms] ease-out ${isContentFadingIn ? 'opacity-100' : 'opacity-0'}`}>
         {/* 跑馬燈 (置於最頂部) */}
         {!is404Route && !isDemo3DCard && marqueeAnnouncements.length > 0 && (
             <div className="w-full relative z-40 bg-main border-y-4 border-black">
@@ -1160,7 +1170,7 @@ function App({
         <PageNavigation currentRoute={pathnameWithoutLang} basePath={basePath} />
       )}
 
-      <main className={`mx-auto px-4 w-full pt-4 relative flex-1 overflow-visible ${is404Route ? 'flex items-center justify-center' : 'max-w-7xl pb-8 max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-[80%] min-h-[calc(100vh-100px)]'}`}>
+      <main className={`mx-auto px-4 w-full pt-4 relative flex-1 transition-all duration-[1000ms] ease-out ${isAnimationComplete ? '' : (isContentFadingIn ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0')} ${is404Route ? 'flex items-center justify-center' : 'max-w-7xl pb-8 max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-[80%] min-h-[calc(100vh-100px)]'} ${isAppleMusicGalleryRoute ? 'overflow-visible' : ''}`}>
         {isNotFound ? (
           <Navigate to={`${basePath}/404?from=${encodeURIComponent(location.pathname + location.search)}`} replace />
         ) : is404Route ? (
@@ -1631,7 +1641,7 @@ function App({
       <div className="fixed inset-x-0 bottom-0 pointer-events-none z-[60] flex justify-center">
         <div className="w-full max-w-7xl max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-[80%] relative px-4">
           <div className="absolute bottom-0 right-4 translate-x-full pb-[calc(1.5rem+env(safe-area-inset-bottom))] max-[768px]:pb-[calc(4.5rem+env(safe-area-inset-bottom))] pointer-events-none flex flex-col justify-end items-start pl-2 md:pl-4">
-            <div className="flex flex-col items-center -space-y-[2px] pointer-events-auto">
+            <div className={`flex flex-col items-center -space-y-[2px] pointer-events-auto transition-all duration-[1000ms] ease-out ${isAnimationComplete ? '' : (isContentFadingIn ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6')}`}>
               {/* 返回頂部按鈕 - 僅在向下滾動後顯示 */}
               <div
                 className={`transition-all duration-300 ${scrolled ? "h-10 md:h-12 opacity-100 mb-[8px]" : "h-0 opacity-0 mb-0 pointer-events-none"}`}
@@ -2408,8 +2418,8 @@ function App({
       />
 
       <Drawer open={isInstallPromptOpen} onOpenChange={setIsInstallPromptOpen}>
-        <DrawerContent>
-          <div className="mx-auto w-full max-w-[400px]">
+        <DrawerContent onPointerDownOutside={(e) => e.preventDefault()} className="md:max-w-[400px] md:mx-auto md:p-2">
+          <div className="w-full mx-auto max-w-[400px] md:max-w-none">
             <DrawerHeader>
               <DrawerTitle className="text-lg font-bold w-full leading-tight">
                 {t("app.install_pwa_title", "安裝 ZTMY Gallery")}
@@ -2468,8 +2478,8 @@ function App({
       </Drawer>
 
       <Drawer open={isRecoverPromptOpen} onOpenChange={setIsRecoverPromptOpen}>
-        <DrawerContent>
-          <div className="mx-auto w-full max-w-[400px]">
+        <DrawerContent onPointerDownOutside={(e) => e.preventDefault()} className="md:max-w-[400px] md:mx-auto md:p-2">
+          <div className="w-full mx-auto max-w-[400px] md:max-w-none">
             <DrawerHeader>
               <DrawerTitle className="text-lg font-bold w-full leading-tight">
                 {t("app.pwa_recover_title", "修復更新/清除快取")}

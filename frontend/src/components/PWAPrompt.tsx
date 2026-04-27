@@ -36,7 +36,17 @@ export function PWAPrompt() {
     }
   }, [offlineReady, setOfflineReady, t]);
 
-  const [newVersion, setNewVersion] = useState<{ version: string; buildHash: string } | null>(null);
+ const [newVersion, setNewVersion] = useState<{ version: string; buildHash: string } | null>(null);
+
+  // 開發環境除錯按鈕 (強制觸發 PWA 更新提示)
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      (window as any).__TRIGGER_PWA_UPDATE__ = () => {
+        console.log("Mocking PWA update prompt...");
+        setNeedRefresh(true);
+      };
+    }
+  }, [setNeedRefresh]);
 
   // Network status listeners
   useEffect(() => {
@@ -80,8 +90,8 @@ export function PWAPrompt() {
 
   return (
     <Drawer open={needRefresh} onOpenChange={setNeedRefresh}>
-      <DrawerContent>
-        <div className="mx-auto w-full max-w-[400px]">
+      <DrawerContent onPointerDownOutside={(e) => e.preventDefault()} className="md:max-w-[400px] md:mx-auto md:p-2">
+        <div className="w-full mx-auto max-w-[400px] md:max-w-none">
           <DrawerHeader>
             <DrawerTitle className="text-lg font-bold w-full leading-tight">
               {t('app.pwa_update_title', '發現新版本！')}
@@ -92,14 +102,14 @@ export function PWAPrompt() {
           </DrawerHeader>
 
           <div className="p-4 pb-0 font-base">
-            <div className="bg-secondary-background/50 p-2.5 rounded-base border-2 border-border text-[11px] sm:text-xs flex flex-col gap-1.5 font-mono">
+            <div className="bg-secondary-background/50 p-2.5 rounded-base border-2 border-border text-[11px] sm:text-xs flex flex-col gap-1.5">
               <div className="flex justify-between items-center opacity-70">
-                <span>{t('app.pwa_current_version', 'Current')}</span>
-                <span>v{VERSION_CONFIG.app} ({import.meta.env.VITE_BUILD_HASH || 'dev'})</span>
+                <span className="font-base">{t('app.pwa_current_version', 'Current')}</span>
+                <span className="font-mono">V{VERSION_CONFIG.app} ({import.meta.env.VITE_BUILD_HASH || 'dev'})</span>
               </div>
               <div className="flex justify-between items-center font-bold text-main">
-                <span>{t('app.pwa_latest_version', 'Latest 🚀')}</span>
-                <span>v{newVersion?.version || '?'} ({newVersion?.buildHash || '?'})</span>
+                <span className="font-base">{t('app.pwa_latest_version', 'Latest 🚀')}</span>
+                <span className="font-mono">V{newVersion?.version || '?'} ({newVersion?.buildHash || '?'})</span>
               </div>
             </div>
           </div>

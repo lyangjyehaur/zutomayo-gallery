@@ -53,6 +53,7 @@
     "swr": "^2.4.1",
     "tailwind-merge": "^2.6.1",
     "three": "^0.160.0",
+    "vaul": "^1.1.2",
     "workbox-window": "^7.3.0"
   },
   "devDependencies": {

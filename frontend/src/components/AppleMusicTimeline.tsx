@@ -258,8 +258,8 @@ const TimelineOverlay = React.memo(({ timelineData, containerRef, lineRef }: { t
             const lineRect = lineRef.current.getBoundingClientRect();
             const viewportHeight = window.innerHeight;
             
-            // 判斷時間軸是否在可視範圍內 (加上一點緩衝區)
-            const isVisible = containerRect.top <= viewportHeight - 100 && containerRect.bottom >= 100;
+            // 判斷時間軸是否在可視範圍內 (加上一點緩衝區，確保不會太早消失)
+            const isVisible = containerRect.top <= viewportHeight && containerRect.bottom >= 0;
             setIsTimelineVisible(isVisible);
         
             const lineMaxHeight = lineRect.height;
@@ -321,12 +321,12 @@ const TimelineOverlay = React.memo(({ timelineData, containerRef, lineRef }: { t
   return (
     <>
       {/* 年份快速跳轉導航 (所有裝置) - 緊貼主要內容區 */}
-      <div className="fixed inset-x-0 bottom-0 pointer-events-none z-[60] flex justify-center">
-        <div className="w-full max-w-7xl max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-[80%] relative px-4">
-          <div className={`absolute bottom-0 left-4 -translate-x-full pb-[calc(1.5rem+env(safe-area-inset-bottom))] max-[768px]:pb-[calc(4.5rem+env(safe-area-inset-bottom))] flex flex-col items-end pr-2 md:pr-4 group/nav transition-all duration-300 pointer-events-none ${
+      <div className="fixed inset-y-0 left-0 pointer-events-none z-[50] flex justify-center w-full h-full">
+        <div className="w-full max-w-7xl max-[1430px]:max-w-[calc(100%-12rem)] max-[1024px]:max-w-[calc(100%-10rem)] max-[768px]:max-w-[80%] relative px-4 h-full">
+          <div className={`absolute bottom-0 left-4 max-[768px]:left-0 -translate-x-[calc(100%+1rem)] max-[768px]:translate-x-0 pb-[calc(1.5rem+env(safe-area-inset-bottom))] max-[768px]:pb-[calc(4.5rem+env(safe-area-inset-bottom))] flex flex-col items-end max-[768px]:items-start pr-2 md:pr-4 max-[768px]:pl-2 max-[768px]:pr-0 group/nav transition-all duration-300 pointer-events-none ${
             isTimelineVisible ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-8 pointer-events-none'
           }`}>
-            <div className="relative pointer-events-auto">
+            <div className="relative pointer-events-auto overflow-visible max-[768px]:-translate-x-[calc(100%+1rem)]">
               {/* 最底層：共用的靜態黑色陰影塊。增加 4px 的偏移量 */}
               <div className="absolute top-[4px] left-[4px] bottom-[-4px] right-[-4px] bg-black pointer-events-none z-0" />
               
