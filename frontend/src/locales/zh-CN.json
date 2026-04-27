@@ -25,7 +25,10 @@
     "undo": "撤销",
     "favorited": "已加入收藏",
     "feedback": "意见反馈",
+    "cellular_network_warning": "您正在使用移动数据或省数据模式，加载大量图片可能会消耗较多流量。",
+    "ios_network_warning": "为保护您的数据流量，若您目前使用移动网络，加载大量图片可能会消耗较多流量。",
     "connecting_db": "连接数据库中...",
+
     "weak_signal": "信号微弱... 请稍候",
     "db_sync_failed": "数据库同步失败",
     "retry_connection": "重试连接",

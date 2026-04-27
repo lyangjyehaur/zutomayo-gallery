@@ -8,6 +8,8 @@
     "load_more": "載入更多"
   },
   "app": {
+    "cellular_network_warning": "你而家用緊流動數據或慳數據模式，載入大量圖片可能會用多啲數據。",
+    "ios_network_warning": "為咗保護你嘅數據，如果你而家用緊流動網絡，載入大量圖片可能會用多啲數據。",
     "title": "ZUTOMAYO Gallery",
     "subtitle": "日々研磨爆裂中！",
     "syncing_visual": "同步緊視覺...",

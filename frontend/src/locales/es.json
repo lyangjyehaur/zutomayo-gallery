@@ -23,6 +23,8 @@
     "undo": "Deshacer",
     "favorited": "Añadido a favoritos",
     "feedback": "Comentarios",
+    "cellular_network_warning": "Estás usando datos móviles o el modo de ahorro de datos. Cargar muchas imágenes puede consumir una gran cantidad de datos.",
+    "ios_network_warning": "Para proteger tu consumo de datos, si estás utilizando una red móvil, cargar una gran cantidad de imágenes puede consumir muchos datos.",
     "connecting_db": "Conectando a la base de datos...",
     "weak_signal": "Señal débil... por favor espere",
     "db_sync_failed": "Falló la sincronización de la base de datos",

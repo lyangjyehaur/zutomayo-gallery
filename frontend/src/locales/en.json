@@ -25,6 +25,8 @@
     "undo": "Undo",
     "favorited": "Added to favorites",
     "feedback": "Feedback",
+    "cellular_network_warning": "You are currently using cellular data or data saver mode. Loading large amount of images may consume significant data.",
+    "ios_network_warning": "To protect your data usage, if you are currently using a cellular network, loading a large number of images may consume significant data.",
     "connecting_db": "Connecting to Database...",
     "weak_signal": "Weak signal... please wait",
     "db_sync_failed": "Database sync failed",

@@ -98,6 +98,7 @@ import { MODAL_THEME } from "@/lib/theme";
 import { MaintenancePage } from "@/pages/MaintenancePage";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { useTranslation } from 'react-i18next';
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { isSupportedLang, normalizeLang } from "@/i18n";
 
 
@@ -276,6 +277,12 @@ function App({
   const [shouldRenderFeedback, setShouldRenderFeedback] = useState(false);
   const [isSurveyForceOpen, setIsSurveyForceOpen] = useState(false);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const { type: networkType, saveData: networkSaveData, isIosMobileSafari } = useNetworkStatus();
+  const [isTransitioningOut, setIsTransitioningOut] = useState(false);
+  const [networkAlertAcknowledged, setNetworkAlertAcknowledged] = useState(() => {
+    return sessionStorage.getItem('ztmy_network_alerted') === 'true';
+  });
+
   const runPWARecovery = useCallback(async () => {
     try {
       if ("serviceWorker" in navigator) {
@@ -969,9 +976,81 @@ function App({
     }
   }, [filteredData.length, search, yearFilter, albumFilter, artistFilter, showFavOnly, isLoading, error]);
 
-  if (isLoading) {
+  // 初始載入及過渡動畫的狀態管理
+  const [showLoadingScreen, setShowLoadingScreen] = useState(true);
+  const [showWarningScreen, setShowWarningScreen] = useState(false);
+  const [isContentReady, setIsContentReady] = useState(false);
+  const [isContentFadingIn, setIsContentFadingIn] = useState(false);
+
+  useEffect(() => {
+    // 檢查是否有錯誤，如果有則立即中斷過渡，交給錯誤畫面處理
+    if (error && mvData.length === 0) {
+      setShowLoadingScreen(false);
+      setShowWarningScreen(false);
+      setIsTransitioningOut(false);
+      return;
+    }
+
+    if (isLoading) {
+      setShowLoadingScreen(true);
+      return;
+    }
+
+    // isLoading 結束，開始判斷是否需要攔截
+    const needsWarning = !networkAlertAcknowledged && (networkType === 'cellular' || networkSaveData || isIosMobileSafari);
+
+    if (needsWarning) {
+      // 如果需要攔截，從 loading 轉場到 warning
+      setIsTransitioningOut(true);
+      const timer = setTimeout(() => {
+        setShowLoadingScreen(false);
+        setShowWarningScreen(true);
+        setIsTransitioningOut(false);
+      }, 500); // 動畫時間 500ms
+      return () => clearTimeout(timer);
+    } else if (showLoadingScreen) {
+      // 不需要攔截，直接從 loading 轉場到首頁
+      setIsTransitioningOut(true);
+      const timer = setTimeout(() => {
+        setShowLoadingScreen(false);
+        setIsContentReady(true);
+        setIsTransitioningOut(false);
+        
+        // 延遲一點點觸發首頁淡入動畫，讓瀏覽器有時間渲染 DOM
+        setTimeout(() => setIsContentFadingIn(true), 50);
+      }, 500); // 動畫時間 500ms
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, error, networkAlertAcknowledged, networkType, networkSaveData, isIosMobileSafari, mvData.length]);
+
+  const handleWarningConfirm = () => {
+    sessionStorage.setItem('ztmy_network_alerted', 'true');
+    
+    // 傳送追蹤事件給 umami
+    if (window.umami && typeof window.umami.track === 'function') {
+      window.umami.track('Z_Network_Warning_Accepted', {
+        is_ios_safari: isIosMobileSafari ? 'true' : 'false',
+        network_type: networkType || 'unknown',
+        save_data: networkSaveData ? 'true' : 'false'
+      });
+    }
+
+    // 觸發從 warning 轉場到首頁的動畫
+    setIsTransitioningOut(true);
+    setTimeout(() => {
+      setNetworkAlertAcknowledged(true);
+      setShowWarningScreen(false);
+      setIsContentReady(true);
+      setIsTransitioningOut(false);
+      
+      // 延遲一點點觸發首頁淡入動畫，讓瀏覽器有時間渲染 DOM
+      setTimeout(() => setIsContentFadingIn(true), 50);
+    }, 500);
+  };
+
+  if (showLoadingScreen) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center font-base text-foreground crt-lines">
+      <div className={`min-h-screen bg-background flex flex-col items-center justify-center font-base text-foreground crt-lines transition-all duration-500 ease-in-out ${isTransitioningOut ? 'opacity-0 translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100'}`}>
         <div className="text-4xl font-black animate-glitch mb-4 uppercase tracking-tighter flex flex-col items-center leading-tight">
           <span className="tracking-normal">{t("app.connecting_db", "連線資料庫中...")}</span>
           <span className="text-[14px] sm:text-[16px] font-mono opacity-60 normal-case mt-2">
@@ -991,6 +1070,50 @@ function App({
     );
   }
 
+  // 網路流量警告攔截畫面
+  if (showWarningScreen) {
+    return (
+      <div className={`min-h-screen bg-background flex flex-col items-center justify-center font-base text-foreground crt-lines p-6 transition-opacity duration-500 ease-in-out ${isTransitioningOut ? 'opacity-0' : 'opacity-100'}`}>
+        <div className="max-w-md w-full bg-card border-4 border-black p-6 md:p-8 shadow-neo flex flex-col items-center text-center">
+          <div className="flex items-center justify-center mb-4">
+            <i className="hn hn-exclamation-triangle-solid text-6xl text-yellow-500 drop-shadow-sm"></i>
+          </div>
+          
+          <h2 className="text-2xl font-black mb-2 uppercase tracking-tighter flex flex-col items-center leading-tight">
+            <span className="tracking-normal text-yellow-500">流量警告</span>
+            <span className="text-[10px] sm:text-xs font-mono opacity-60 normal-case mt-1 text-foreground">
+              DATA_USAGE_WARNING
+            </span>
+          </h2>
+          
+          <p className="text-sm font-bold opacity-80 mb-8 leading-relaxed">
+            {isIosMobileSafari && !networkType && !networkSaveData
+              ? t("app.ios_network_warning", "為保護您的數據流量，若您目前使用行動網路，載入大量圖片可能會消耗較多流量。")
+              : t("app.cellular_network_warning", "您正在使用行動數據或省數據模式，載入大量圖片可能會消耗較多流量。")}
+          </p>
+          
+          <div className="flex flex-col w-full gap-3">
+            <Button 
+              onClick={handleWarningConfirm} 
+              variant="default" 
+              className="w-full bg-black text-white hover:bg-main hover:text-black border-2 border-transparent font-black shadow-neo py-6 text-base transition-transform active:scale-95"
+            >
+              {t("common.confirm", "確認並繼續")}
+            </Button>
+            <p className="text-[10px] font-mono opacity-40 uppercase">
+              By continuing, you accept the data usage
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 防止畫面在動畫期間閃爍
+  if (!isContentReady && !error) {
+    return null; // 在過渡期間保持背景空白（或可以回傳一個純色背景）
+  }
+
   if (error && mvData.length === 0) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center font-base text-foreground crt-lines">
@@ -1007,7 +1130,7 @@ function App({
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-base font-normal selection:bg-main selection:text-main-foreground relative isolate flex flex-col overflow-clip">
+    <div className={`min-h-screen bg-background text-foreground font-base font-normal selection:bg-main selection:text-main-foreground relative isolate flex flex-col overflow-clip transition-all duration-700 ease-out ${isContentFadingIn ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
       {/* 整個首頁的全局背景 CRT 濾鏡層 */}
       <div className="pointer-events-none fixed inset-0 z-[-1] crt-lines-global opacity-100" />
 
