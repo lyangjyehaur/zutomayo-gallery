@@ -533,7 +533,7 @@ export default function FancyboxViewer({
         // ==== 下載檔名注入策略 (Download Filename Strategy) ====
         const targetRawUrl = hasOriginalFull ? img.original_url : img.url;
         const rawDownloadUrl = img.raw ? img.raw : getProxyImgUrl(targetRawUrl!, 'raw', fullFilename);
-        
+
         return {
           src: srcUrl,
           thumb: thumbUrl,
@@ -695,7 +695,8 @@ export default function FancyboxViewer({
           thumbEl: thumbEl,
           $thumb: thumbEl,
           downloadSrc: photo.raw,
-          downloadFilename: photo.rawFilename || photo.caption, // <-- 改用帶有副檔名的檔名
+          // 既然已經透過 imgproxy 注入 Content-Disposition，前端就不需要強制覆蓋檔名，避免產生跨域限制
+          // downloadFilename: photo.rawFilename || photo.caption,
           // Do not pass caption to Fancybox API to completely prevent native caption rendering
           alt: photo.caption,     // 讓 img 標籤加上 alt 屬性，修復 DOM 備用方案
           type: photo.isVideo ? 'html5video' : 'image', // 告訴 Fancybox 這是影片

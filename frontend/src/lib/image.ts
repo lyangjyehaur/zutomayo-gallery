@@ -12,7 +12,7 @@ export const safeBase64 = (str: string): string => {
 
 import { getGeoInfo } from './geo';
 
-export type ProxyMode = 'thumb' | 'full' | 'small' | 'raw';
+export type ProxyMode = 'thumb' | 'full' | 'small' | 'raw' | 'sd' | 'hq';
 
 /**
  * 判斷該媒體是否為影片 (作為資料庫 media_type 遺失時的備用判斷)
@@ -50,80 +50,53 @@ export const isMediaVideo = (url?: string, type?: string): boolean => {
 export const getAppleMusicImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb'): string => {
   if (!rawUrl) return '';
 
-  // 1. 下載原圖 (raw) 
-  if (mode === 'raw') {
+  // Apple Music 圖片網址可以直接修改解析度參數取得不同尺寸與格式
+  // 例如：.../1200x1200bf-60.jpg -> .../600x600bf-60.webp
+
+  if (mode === 'raw' || mode === 'full') {
+    // 原始大小 (高畫質)
     return rawUrl;
   }
-
-  // 2. 針對需要縮圖與燈箱壓縮的情境 (thumb, small, full)
-  // 強制使用 imgproxy 進行壓縮
-  let targetUrl = rawUrl;
-
-  const base64Url = safeBase64(targetUrl);
-  let paramsArr: string[] = [];
-
-  // 3. 組合參數並回傳 imgproxy 網址
-  // 針對 imgproxy，我們確保 paramsArr 正確組合
-  if (mode === 'full') {
-    // 燈箱大圖，使用者指定 1000px 就足夠了 (使用 1002 破除 Service Worker 惡意快取)
-    paramsArr.push('w:1002', 'f:webp');
-  } else if (mode === 'small') {
-    // 中等縮圖，600px WebP (使用 602 破除 Service Worker 惡意快取)
-    paramsArr.push('w:602', 'f:webp');
-  } else {
-    // 瀑布流小圖，300px WebP (使用 302 破除 Service Worker 惡意快取)
-    paramsArr.push('w:302', 'f:webp');
-  }
-
-  const imgProxyDomain = (import.meta.env.VITE_TWITTER_IMG_PROXY || 'https://img.ztmr.club').replace(/\/$/, '');
   
-  if (!import.meta.env.VITE_IMGPROXY_SALT || !import.meta.env.VITE_IMGPROXY_KEY) {
-    const baseUrl = imgProxyDomain.endsWith('/insecure') ? imgProxyDomain : `${imgProxyDomain}/insecure`;
-    return `${baseUrl}/${paramsArr.join('/')}/${base64Url}`;
+  if (mode === 'small' || mode === 'sd') {
+    // 燈箱預覽或中等縮圖，替換為 600x600 WebP
+    return rawUrl.replace(/\/\d+x\d+([a-zA-Z0-9-]*)\.(jpg|jpeg|webp|png)$/i, '/600x600$1.webp');
   }
 
-  const apiUrl = (import.meta.env.VITE_API_URL || '/api/mvs').replace(/\/mvs$/, '');
-  return `${apiUrl}/system/image/proxy?url=${encodeURIComponent(targetUrl)}&mode=${mode}`;
+  // thumb, hq 等瀑布流小圖，替換為 300x300 WebP
+  return rawUrl.replace(/\/\d+x\d+([a-zA-Z0-9-]*)\.(jpg|jpeg|webp|png)$/i, '/300x300$1.webp');
 };
 /**
  * 根據需求建立 imgproxy 請求網址
  */
-const buildImgproxyUrl = (targetUrl: string, mode: ProxyMode, customFilename: string): string => {
+const buildImgproxyUrl = (targetUrl: string, mode: ProxyMode, customFilename = ''): string => {
   const base64Url = safeBase64(targetUrl);
   const paramsArr: string[] = [];
 
   if (mode === 'raw') {
     paramsArr.push('raw:1', 'return_attachment:1');
     if (customFilename) {
-      // imgproxy 的 filename 參數會自動根據檔案格式補上副檔名 (.jpg, .png 等)
-      // 如果我們自己傳入 .jpg，下載時就會變成 .jpg.jpg
-      // 因此這裡必須把檔名尾部的常見副檔名移除，只保留主檔名
+      // 移除常見副檔名，讓 imgproxy 自動推斷並加上副檔名 (避免 .jpg.jpg)
       const safeFilename = customFilename.replace(/\.(jpg|jpeg|png|gif|webp|mp4)$/i, '');
       paramsArr.push(`filename:${safeBase64(safeFilename)}:1`);
     }
   } else if (mode === 'full') {
     paramsArr.push('f:webp');
-  } else if (mode === 'small') {
+  } else if (mode === 'small' || mode === 'sd') {
     paramsArr.push('w:602', 'f:webp');
   } else {
-    paramsArr.push('w:402', 'f:webp'); // thumb
+    paramsArr.push('w:402', 'f:webp'); // thumb, hq
   }
 
-  const imgProxyDomain = (import.meta.env.VITE_TWITTER_IMG_PROXY || 'https://img.ztmr.club').replace(/\/$/, '');
-
-  // 如果環境變數中沒有提供 SALT/KEY，直接回傳 insecure，避免發送多餘的 API 請求
-  if (!import.meta.env.VITE_IMGPROXY_SALT || !import.meta.env.VITE_IMGPROXY_KEY) {
-    const baseUrl = imgProxyDomain.endsWith('/insecure') ? imgProxyDomain : `${imgProxyDomain}/insecure`;
-    return `${baseUrl}/${paramsArr.join('/')}/${base64Url}`;
-  }
-
-  // 由於 getProxyImgUrl 必須是同步回傳字串給 React 組件使用，我們無法在這裡進行 async API Call
-  // 因此在有設定 SALT/KEY 的環境下，我們將圖片 URL 指向後端的代理路由 `/api/system/image/proxy`
-  // 後端收到請求後，會產生簽名並 302 重定向至真正的 imgproxy 網址
+  // 前端一律不直連 imgproxy，強制走後端 API 代理產生簽名
+  // 以徹底關閉 insecure 模式
   const apiUrl = (import.meta.env.VITE_API_URL || '/api/mvs').replace(/\/mvs$/, '');
   const proxyMode = mode === 'thumb' ? 'thumb_general' : mode;
-  const proxyUrl = `${apiUrl}/system/image/proxy?url=${encodeURIComponent(targetUrl)}&mode=${proxyMode}`;
-  return customFilename ? `${proxyUrl}&filename=${encodeURIComponent(customFilename)}` : proxyUrl;
+  let url = `${apiUrl}/system/image/proxy?url=${encodeURIComponent(targetUrl)}&mode=${proxyMode}`;
+  if (customFilename) {
+    url += `&filename=${encodeURIComponent(customFilename)}`;
+  }
+  return url;
 };
 
 /**
@@ -155,15 +128,18 @@ const formatYoutubeImageUrl = (url: string, mode: ProxyMode): string => {
   // mqdefault / mq1 / mq2 / mq3 (320x180, 中畫質)
   // default / 1 / 2 / 3 (120x90, 低畫質)
   
-  // YouTube 封面圖片不存在下載原圖的需求，
-  // modal (MVDetailsModal) 打開時播放器的背景圖片使用 full 模式，降級為標準畫質 (sd, 640x480) 即可
-  if (mode === 'full' || mode === 'small') {
-    return url.replace(/maxres(default|1|2|3)\.jpg/, 'sd$1.jpg');
+  // 對於播放器背景或縮圖，降級到 sd 畫質以節省頻寬
+  if (mode === 'sd' || mode === 'small') {
+    return url.replace(/maxres(default|\d*)\.jpg/i, 'sd$1.jpg');
   }
   
-  // 若是首頁瀑布流縮圖 (thumb) 或其他情況，降級為高畫質 (hq, 480x360) 已經非常足夠
-  // 這樣直連載入時會快很多，且足以應付卡片大小的展示
-  return url.replace(/maxres(default|1|2|3)\.jpg/, 'hq$1.jpg');
+  // 對於首頁卡片，降級到 hq 畫質
+  if (mode === 'hq' || mode === 'thumb') {
+    return url.replace(/maxres(default|\d*)\.jpg/i, 'hq$1.jpg');
+  }
+  
+  // 原圖保留 maxres
+  return url;
 };
 
 /**
@@ -200,13 +176,21 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
       return targetUrl;
     }
 
-    // ==== 2. 圖片下載模式 (Raw) 必須走 Imgproxy ====
-    // 無論海內外，下載模式都必須透過 imgproxy 注入 filename 標頭，
-    // 確保使用者下載的檔案有語義化名稱 (如: 勘冴えて悔しいわ_1.jpg)，而非推特亂碼或 R2 MD5。
+    // ==== 2. 圖片下載模式 (Raw) 處理 ====
+    // 對於下載模式：
+    // - 跨域下載 (Cross-Origin) 時，HTML5 的 <a download> 屬性會被瀏覽器安全機制忽略。
+    //   為了讓下載的檔案有正確名稱 (而非推特雜湊或 R2 MD5)，我們必須透過 imgproxy 的 filename 參數，
+    //   並由伺服器回傳 Content-Disposition: attachment; filename="xxx" 標頭。
+    // - 因此，無論海內外，下載 (raw 模式) 且需要自訂檔名時，一律走 imgproxy 代理。
     if (mode === 'raw') {
       if (targetUrl.includes('pbs.twimg.com')) {
         targetUrl = formatTwitterImageUrl(targetUrl, mode);
       }
+      
+      // 如果沒有提供自訂檔名，且是海外用戶，才允許直連 (因為沒檔名要求)
+      if (!customFilename && isOverseasDirect) return targetUrl;
+      
+      // 其他情況 (尤其是需要自訂檔名的)，必須透過 imgproxy 代理下載以注入 Content-Disposition
       return buildImgproxyUrl(targetUrl, mode, customFilename);
     }
 
@@ -229,7 +213,10 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
       // R2 圖片放大 (full) 時，海外用戶直接直連 Cloudflare R2，不經過我方 Nginx 代理以節省流量
       if (isR2 && mode === 'full') return targetUrl;
       // R2 的縮圖 (thumb/small) 仍需走 imgproxy 壓縮，以避免載入 10MB 的 MD5 原圖
-      return buildImgproxyUrl(targetUrl, mode, customFilename);
+      if (isR2) return buildImgproxyUrl(targetUrl, mode, customFilename);
+      
+      // 其他未知來源 (如果有的話)，預設回傳原網址直連
+      return targetUrl;
     }
 
     // ---- 3B. 中國大陸用戶代理策略 ----
@@ -240,7 +227,7 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
     }
     
     if (isYoutube) {
-      return targetUrl.replace('https://i.ytimg.com', 'https://assets.ztmr.club/yi');
+      return targetUrl.replace(/https:\/\/(i\d*\.ytimg\.com|img\.youtube\.com)/i, 'https://assets.ztmr.club/yi');
     }
     
     if (isR2) {
@@ -253,8 +240,8 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
       return buildImgproxyUrl(targetUrl, mode, customFilename);
     }
 
-    // 預設 Fallback (如果都不是上述網域，交給 imgproxy 處理)
-    return buildImgproxyUrl(targetUrl, mode, customFilename);
+    // 預設 Fallback (如果都不是上述網域，預設不走 imgproxy，直接回傳以防萬一)
+    return targetUrl;
 
   } catch (e) {
     return rawUrl;

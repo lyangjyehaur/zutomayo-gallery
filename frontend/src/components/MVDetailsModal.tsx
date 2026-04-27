@@ -567,12 +567,13 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
                           coverImages={
                             mv?.images
                               ?.filter(img => img.usage === 'cover')
-                              .map(img => getProxyImgUrl(img.url, 'small')) || []
+                              .map(img => img.url) || [] // 移除 getProxyImgUrl，交由 CoverCarousel 內部處理
                           } 
                           title={mv?.title || ''} 
                           isPaused={isLightboxOpen} 
                           forceLoad={true} 
                           hideCrt={true} 
+                          mode="sd"
                         />
                       </div>
                       <div className={`absolute inset-0 transition-colors z-10 ${videoPlatform === 'youtube' && isChinaIP ? 'bg-black/60' : 'bg-black/40 group-hover:bg-black/20'}`} />

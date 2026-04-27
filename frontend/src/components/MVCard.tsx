@@ -41,14 +41,17 @@ const getRandomInt = (min: number, max: number) => {
 
 const sample = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
 
-export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, isPaused, forceLoad = false, hideCrt = false, initialDelay }: { coverImages: string[]; title: string; isPaused?: boolean; forceLoad?: boolean; hideCrt?: boolean; initialDelay?: number }) {
+export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, isPaused, forceLoad = false, hideCrt = false, initialDelay, mode = 'thumb' }: { coverImages: string[]; title: string; isPaused?: boolean; forceLoad?: boolean; hideCrt?: boolean; initialDelay?: number; mode?: import('@/lib/image').ProxyMode }) {
   const { t } = useTranslation();
   const urls = useMemo(() => {
     const normalized = (coverImages || []).map((u) => u?.trim()).filter(Boolean) as string[];
     return normalized;
   }, [coverImages]);
 
-  const proxied = useMemo(() => urls.map((u) => getProxyImgUrl(u, 'thumb')), [urls]);
+  // 直接在這裡將圖片轉為指定畫質並代理
+  const proxied = useMemo(() => urls.map((u) => {
+    return getProxyImgUrl(u, mode);
+  }), [urls, mode]);
   const prefersReducedMotion = useMemo(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -379,7 +382,7 @@ export const MVCard = memo(function MVCard({ mv, isFav, onToggleFav, onClick, is
         lang="ja"
         className="border-2 bg-card text-foreground transition-all"
         media={
-          <CoverCarousel coverImages={coverUrls} title={mv.title} isPaused={isPaused} />
+          <CoverCarousel coverImages={coverUrls} title={mv.title} isPaused={isPaused} mode="hq" />
         }
       >
         <div className={`flex flex-col ${!isVeryCompact ? 'gap-3 px-4 py-3 text-xs' : 'gap-2 px-3 py-2 text-[10px]'} bg-main text-main-foreground uppercase transition-all duration-300`}>

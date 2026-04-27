@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from './ui/button';
 
 // 延遲載入重量級的 Three.js 和 CDCase3D
-const CDCase3D = React.lazy(() => import('./CDCase3D').then(m => ({ default: m.CDCase3D })));
+const CDCase3D = React.lazy(() => import('./CDCase3D'));
 
 export interface TimelineImage {
   url: string;
@@ -147,11 +147,11 @@ function AlbumCardComponent({ album, isEven, idx, itemIndex, isAllowedToLoad, on
       />
       
       {/* 專輯卡片區塊 */}
-        <div 
-          className={`w-[calc(100%-4.5rem)] max-w-[340px] sm:max-w-none sm:w-[calc(100%-6rem)] lg:w-[calc(50%-4rem)] xl:w-[calc(50%-6rem)] ml-[3.5rem] sm:ml-[4rem] lg:ml-0 ${isEven ? 'xl:ml-[2rem]' : 'xl:mr-[2rem]'} flex flex-col group transition-all duration-700 ease-out ${
-            isReady ? 'opacity-100 translate-y-0 delay-100' : 'opacity-0 translate-y-8'
-          }`}
-        >
+      <div 
+        className={`w-[calc(100%-4.5rem)] max-w-[340px] sm:max-w-none sm:w-[calc(100%-6rem)] lg:w-[calc(50%-4rem)] xl:w-[calc(50%-6rem)] ml-[3.5rem] sm:ml-[4rem] lg:ml-0 ${isEven ? 'xl:ml-[2rem]' : 'xl:mr-[2rem]'} flex flex-col group transition-all duration-700 ease-out ${
+          isReady ? 'opacity-100 translate-y-0 delay-100' : 'opacity-0 translate-y-8'
+        }`}
+      >
         {/* 保持 DOM 結構以避免高度塌陷導致滾動跳動，只卸載 3D Canvas */}
         <div className="w-full relative group/card z-10 hover:z-20">
           <div className="relative w-full rounded-base border-4 border-black bg-card shadow-[4px_4px_0px_0px_#000] sm:shadow-[8px_8px_0px_0px_#000] p-4 sm:py-4 sm:pr-4 sm:pl-6 flex flex-col sm:flex-row gap-3 sm:gap-4 items-center sm:items-start transition-shadow duration-300 hover:shadow-[8px_8px_0px_0px_#000] sm:hover:shadow-[12px_12px_0px_0px_#000]">
@@ -201,7 +201,7 @@ function AlbumCardComponent({ album, isEven, idx, itemIndex, isAllowedToLoad, on
             {/* 右側：專輯資訊簡介 (靜態) */}
             <div className="flex flex-col w-full text-left justify-center h-full pt-1 sm:pt-0 sm:pl-6">
               <div className="flex flex-wrap items-end gap-3">
-                <h3 className="text-lg sm:text-xl lg:text-xl font-black uppercase tracking-tight leading-tight line-clamp-3">{album.caption}</h3>
+                <h3 className="text-lg sm:text-xl lg:text-xl font-black uppercase tracking-tight leading-tight line-clamp-3" lang="ja">{album.caption}</h3>
                 <span className="text-[10px] sm:text-xs font-bold opacity-60 uppercase tracking-widest pb-0.5">{album.collectionType}</span>
               </div>
               
@@ -242,7 +242,6 @@ const AlbumCard = React.memo(AlbumCardComponent, (prevProps, nextProps) => {
 const TimelineOverlay = React.memo(({ timelineData, containerRef, lineRef }: { timelineData: any[], containerRef: React.RefObject<HTMLDivElement>, lineRef: React.RefObject<HTMLDivElement> }) => {
   const [activeYear, setActiveYear] = useState<number | null>(null);
   const [isTimelineVisible, setIsTimelineVisible] = useState(false);
-  const [debugProgress, setDebugProgress] = useState(0);
 
   // 1. 處理主時間軸滾動進度與年份高亮
   useEffect(() => {
@@ -279,30 +278,15 @@ const TimelineOverlay = React.memo(({ timelineData, containerRef, lineRef }: { t
                 }
                 
                 progress = Math.max(0, Math.min(1, progress));
-                // 透過 CSS 變數直接更新，避免頻繁觸發 React 渲染，提升性能
-                containerRef.current.style.setProperty('--scroll-percent', progress.toString());
                 
-                // 計算 fixed 線的高度
-                // 1. 基本高度：就是 viewportHeight * progress
-                let fixedHeight = viewportHeight * progress;
-                
-                // 因為我們現在有外層 overflow-hidden 的保護，不再需要手動算 lineRect.bottom 限制了！
-                // JS 算不準或是有動畫延遲都沒關係，因為 CSS 會完美裁切。
-                
-                // 確保高度不為負數
-                fixedHeight = Math.max(0, fixedHeight);
-                
-                containerRef.current.style.setProperty('--fixed-line-height', `${fixedHeight}px`);
-
-                // 判斷是否應該顯示這條 fixed 的線：
-                // 只要線條進入畫面 (lineRect.top <= 0) 就顯示
-                const shouldShowFixedLine = lineRect.top <= 0 && lineRect.bottom > 0;
-                containerRef.current.style.setProperty('--fixed-line-opacity', shouldShowFixedLine ? '1' : '0');
-                
-                // 僅供 Debug 顯示，實際使用可移除，透過 requestAnimationFrame 確保不會過度阻塞
-                setDebugProgress(Math.round(progress * 100));
+                // 批次寫入 CSS 變數，避免多次觸發 Layout/Paint
+                containerRef.current.style.cssText = `
+                  --scroll-percent: ${progress};
+                  --fixed-line-scale: ${progress};
+                  --fixed-line-opacity: ${lineRect.top <= 0 && lineRect.bottom > 0 ? '1' : '0'};
+                `;
               }
-          }
+            }
 
           // 計算目前年份
           let currentYear = timelineData[0]?.year || null;
@@ -383,32 +367,27 @@ const TimelineOverlay = React.memo(({ timelineData, containerRef, lineRef }: { t
 
       {/* 垂直時間軸主線 - 原有的背景色與填滿色，恢復原本的邏輯讓它與節點等高 */}
       <div 
-        className="absolute left-6 lg:left-1/2 top-0 bottom-12 w-1.5 lg:w-2 bg-main z-10 will-change-transform pointer-events-none" 
+        className="absolute left-6 lg:left-1/2 top-0 bottom-12 w-1.5 lg:w-2 bg-main z-10 will-change-transform pointer-events-none origin-top" 
         style={{ 
           transform: `translateX(-50%) scaleY(var(--scroll-percent, 0))`,
-          transformOrigin: 'top',
+          transition: 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)'
         }}
       />
 
       {/* 獨立的固定視窗進度線 (Sticky Line) - 根據您的新思路實作 */}
-      {/* 我們將它包在一個與背景軌道完全等高的絕對定位容器中，並加上 overflow-hidden */}
-      {/* 這是在不影響外層容器的情況下，利用 CSS 物理限制進度線最完美的解法 */}
+      {/* 這個外層絕對定位容器用來「裁切」，保證進度線絕對不會畫出背景線的範圍 */}
       <div 
         className="absolute left-6 lg:left-1/2 top-0 bottom-12 w-1.5 lg:w-2 z-[5] pointer-events-none overflow-hidden -translate-x-1/2"
       >
         <div 
-          className="fixed top-0 w-full bg-main will-change-transform"
+          className="fixed top-0 w-full h-screen bg-main will-change-transform origin-top"
           style={{
-            height: 'var(--fixed-line-height, 0px)',
+            transform: 'scaleY(var(--fixed-line-scale, 0))',
             opacity: 'var(--fixed-line-opacity, 0)',
-            transition: 'height 0.15s ease-out, opacity 0.15s ease-out',
+            // 移除不必要的 transition，因為我們已經在 requestAnimationFrame 裡每幀實時更新 CSS 變數了，
+            // 加上 transition 反而會造成計算上的互相干擾與動畫延遲。
           }}
         />
-      </div>
-
-      {/* Debug 百分比顯示 */}
-      <div className="fixed top-24 right-8 bg-black text-main font-black text-xl px-4 py-2 border-4 border-main z-50 shadow-[4px_4px_0px_0px_#bcff00] pointer-events-none">
-        {debugProgress}%
       </div>
     </>
   );
@@ -704,7 +683,7 @@ export function AppleMusicTimeline({ images }: { images: TimelineImage[] }) {
         }
       `}</style>
       
-      <div className="relative w-full max-w-7xl mx-auto py-12 px-0 lg:px-4 xl:px-0 flex flex-col items-start overflow-visible" ref={containerRef}>
+      <div className="w-full max-w-7xl mx-auto py-12 px-0 lg:px-4 xl:px-0 flex flex-col items-start overflow-visible" ref={containerRef}>
         
         {/* 時間軸主內容區塊 */}
         <div className="relative flex-1 w-full max-w-7xl mx-auto">

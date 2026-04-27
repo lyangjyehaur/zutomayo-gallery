@@ -137,5 +137,5 @@ zutomayo-gallery/
 
 ### 3. 多媒體資源加載策略
 *   本專案**不**直接在伺服器儲存大量的原圖檔案。圖片的 URL 大多指向外部圖床或社群媒體 (如 Twitter)。
-*   為了解決跨域 (CORS) 或防盜鏈 (Hotlink protection) 的問題，前端使用了 `getProxyImgUrl` 函數，將圖片 URL 透過反向代理伺服器 (Image Proxy) 進行轉發載入。
+*   為了解決跨域 (CORS) 或防盜鏈 (Hotlink protection) 的問題，前端使用了 `getProxyImgUrl` 函數，將圖片 URL 透過反向代理伺服器 (Image Proxy) 進行轉發載入。所有請求皆透過後端 `/api/system/image/proxy` 進行安全簽名。
 *   影片播放則透過 YouTube 或 Bilibili 的官方 iframe API 進行嵌入，並根據使用者的 IP 自動選擇最適合的連線來源。

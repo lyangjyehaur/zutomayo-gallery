@@ -30,8 +30,9 @@ services:
       IMGPROXY_AUTO_WEBP: 'true'
       IMGPROXY_AUTO_AVIF: 'true'
       IMGPROXY_SKIP_PROCESSING_FORMATS: 'jpg,png,gif,webp,avif'
-      # IMGPROXY_KEY: 'your_hex_key'
-      # IMGPROXY_SALT: 'your_hex_salt'
+      # 徹底關閉 insecure 模式，必須提供簽名才能存取
+      IMGPROXY_KEY: 'your_hex_key'
+      IMGPROXY_SALT: 'your_hex_salt'
 EOF
 
 cat << 'EOF' > /opt/frps/docker-compose.yml

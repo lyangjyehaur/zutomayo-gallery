@@ -91,21 +91,20 @@ router.get('/image/proxy', (req, res) => {
 
   const path = `/${paramsArr.join('/')}/${base64Url}`;
   
-  if (salt && key) {
-    import('crypto').then((crypto) => {
-      const hmac = crypto.createHmac('sha256', Buffer.from(key, 'hex'));
-      const saltBuf = Buffer.from(salt, 'hex');
-      hmac.update(saltBuf);
-      hmac.update(path);
-      const signature = hmac.digest('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-      res.redirect(302, `${imgProxyDomain}/${signature}${path}`);
-    }).catch(err => {
-      res.status(500).json({ error: 'crypto error' });
-    });
-  } else {
-    const baseUrl = imgProxyDomain.endsWith('/insecure') ? imgProxyDomain : `${imgProxyDomain}/insecure`;
-    res.redirect(302, `${baseUrl}${path}`);
+  if (!salt || !key) {
+    return res.status(500).json({ error: 'Server configuration error: Missing IMGPROXY_SALT or IMGPROXY_KEY. Insecure mode is disabled.' });
   }
+
+  import('crypto').then((crypto) => {
+    const hmac = crypto.createHmac('sha256', Buffer.from(key, 'hex'));
+    const saltBuf = Buffer.from(salt, 'hex');
+    hmac.update(saltBuf);
+    hmac.update(path);
+    const signature = hmac.digest('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    res.redirect(302, `${imgProxyDomain}/${signature}${path}`);
+  }).catch(err => {
+    res.status(500).json({ error: 'crypto error' });
+  });
 });
 
 export default router;
