@@ -30,12 +30,18 @@ if (isProduction || hasRedisUrl) {
     console.log(`[BullMQ] Processing job ${job.id} of type ${job.name}`);
     if (job.name === 'check-rss') {
       // 呼叫原本的檢查邏輯
-      await TwitterMonitorService.checkRss();
+      const result = await TwitterMonitorService.checkRss();
+      
+      // 更新任務進度（可選）
+      await job.updateProgress(100);
+      
+      // 回傳結果，這會顯示在 Bull-Board 的「returnValue」中
+      return result;
     }
   }, { connection });
 
-  worker.on('completed', job => {
-    console.log(`[BullMQ] Job ${job.id} has completed!`);
+  worker.on('completed', (job, returnvalue) => {
+    console.log(`[BullMQ] Job ${job.id} has completed! Result:`, returnvalue);
   });
 
   worker.on('failed', (job, err) => {

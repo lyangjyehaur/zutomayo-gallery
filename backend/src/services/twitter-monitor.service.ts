@@ -22,16 +22,18 @@ export const TwitterMonitorService = {
     console.log('[Twitter Monitor] Running check...');
     try {
       const feed = await parser.parseURL(TWITTER_RSS_URL);
+      let newTweetsCount = 0;
 
-        for (const item of feed.items) {
-          // 確保是推文網址
-          if (!item.link) continue;
-          
-          // 檢查是否已經處理過
-          const existing = await MediaGroupModel.findOne({ where: { source_url: item.link } });
-          if (existing) continue;
+      for (const item of feed.items) {
+        // 確保是推文網址
+        if (!item.link) continue;
+        
+        // 檢查是否已經處理過
+        const existing = await MediaGroupModel.findOne({ where: { source_url: item.link } });
+        if (existing) continue;
 
-          console.log(`[Twitter Monitor] New tweet found: ${item.link}`);
+        newTweetsCount++;
+        console.log(`[Twitter Monitor] New tweet found: ${item.link}`);
 
           // 使用現有的 vxtwitter 解析真實媒體
           let mediaList = [];
@@ -136,8 +138,10 @@ export const TwitterMonitorService = {
             }
           }
         }
-    } catch (error) {
+      return { success: true, processedCount: newTweetsCount, timestamp: new Date().toISOString() };
+    } catch (error: any) {
       console.error('[Twitter Monitor] Error fetching or parsing RSS:', error);
+      throw new Error(`Failed to check RSS: ${error.message}`);
     }
   }
 };
