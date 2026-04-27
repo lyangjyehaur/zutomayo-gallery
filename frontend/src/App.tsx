@@ -655,11 +655,12 @@ function App({
       setTimeout(() => {
         if (!filterAnchorRef.current) return;
         
-        // 取得當前錨點絕對位置
+        // 取得當前錨點絕對位置 (相對於整個 document)
         const anchorTop = filterAnchorRef.current.getBoundingClientRect().top + window.scrollY;
         
-        // 為了確保 100% 觸發吸頂，我們直接將滾動位置設定在錨點下方 5px 處
-        const targetScrollY = anchorTop + 5;
+        // 為了確保精準停靠在吸頂位置，將滾動位置設定在正好是錨點的位置
+        // 加上 1px 是為了確保 window.scrollY > anchorTop (或 >=)，從而穩定觸發 isSticky
+        const targetScrollY = anchorTop + 1;
         
         window.scrollTo({ top: targetScrollY, behavior: "instant" });
         
@@ -1082,8 +1083,8 @@ function App({
           <AppleMusicGalleryPage />
         ) : (
           <>
-            {/* 篩選欄定位錨點（非 sticky），用來計算篩選欄原始位置 */}
-            <div ref={filterAnchorRef} className="w-full h-0 pointer-events-none absolute" style={{ top: '-1rem' }} />
+            {/* 篩選欄定位錨點（非 sticky），用來計算篩選欄原始位置，放在這裡會剛好和 filterBarRef 的頂部對齊 */}
+            <div ref={filterAnchorRef} className="w-full h-0 pointer-events-none" />
             
             {/* 過濾控制列與活躍標籤 */}
         <div 
