@@ -83,15 +83,15 @@ export function PWAPrompt() {
             <p className="text-[15px] leading-snug">{t('app.pwa_update_desc', '點擊更新以載入最新內容。')}</p>
             
             <div className="mt-3 bg-secondary-background/50 p-2.5 rounded-base border-2 border-border text-[11px] sm:text-xs flex flex-col gap-1.5 font-mono">
-              <div className="flex justify-between items-center opacity-70">
-                <span>Current</span>
-                <span>v{VERSION_CONFIG.app} ({import.meta.env.VITE_BUILD_HASH || 'dev'})</span>
+                <div className="flex justify-between items-center opacity-70">
+                  <span>{t('app.pwa_current_version', 'Current')}</span>
+                  <span>v{VERSION_CONFIG.app} ({import.meta.env.VITE_BUILD_HASH || 'dev'})</span>
+                </div>
+                <div className="flex justify-between items-center font-bold text-main">
+                  <span>{t('app.pwa_latest_version', 'Latest 🚀')}</span>
+                  <span>v{newVersion?.version || '?'} ({newVersion?.buildHash || '?'})</span>
+                </div>
               </div>
-              <div className="flex justify-between items-center font-bold text-main">
-                <span>Latest 🚀</span>
-                <span>v{newVersion?.version || '?'} ({newVersion?.buildHash || '?'})</span>
-              </div>
-            </div>
           </div>
           <div className="flex flex-col gap-2 w-full mt-2">
             <button

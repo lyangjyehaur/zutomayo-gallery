@@ -8,8 +8,6 @@
     "load_more": "載入更多"
   },
   "app": {
-    "cellular_network_warning": "你而家用緊流動數據或慳數據模式，載入大量圖片可能會用多啲數據。",
-    "ios_network_warning": "為咗保護你嘅數據，如果你而家用緊流動網絡，載入大量圖片可能會用多啲數據。",
     "title": "ZUTOMAYO Gallery",
     "subtitle": "日々研磨爆裂中！",
     "syncing_visual": "同步緊視覺...",
@@ -27,6 +25,8 @@
     "undo": "復原",
     "favorited": "已加入收藏",
     "feedback": "意見反映",
+    "cellular_network_warning": "你而家用緊流動數據或慳數據模式，載入大量圖片可能會用多啲數據。",
+    "ios_network_warning": "為咗避免用太多數據，如果你而家用緊流動網絡，請留意呢個網站會載入大量圖片。",
     "connecting_db": "正在連線資料庫...",
     "weak_signal": "訊號微弱... 請等等",
     "db_sync_failed": "資料庫同步失敗",
@@ -102,6 +102,8 @@
     "install_pwa_desc": "將網站加入主畫面，享受全螢幕與離線瀏覽體驗！",
     "pwa_update_title": "發現新版本！",
     "pwa_update_desc": "點擊更新以載入最新內容。",
+    "pwa_current_version": "當前版本",
+    "pwa_latest_version": "最新版本 🚀",
     "pwa_update_reload": "重新載入",
     "pwa_recover_title": "修復更新/清除快取",
     "pwa_recover_desc": "將執行以下操作：",
