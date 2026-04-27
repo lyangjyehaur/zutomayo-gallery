@@ -184,6 +184,19 @@ function App({
   };
   systemStatus?: { maintenance: boolean; type?: 'data' | 'ui'; eta?: string | null; buildTime?: string | null };
 }) {
+  const glitchStyleVars = useMemo(() => ({
+    '--glitch-random': Math.random() > 0.5 ? 1 : -1,
+    '--jitter-dur': `${Math.random() * 2 + 2}s`,
+    '--scan-fast-dur': `${Math.random() * 2 + 2.5}s`,
+    '--scan-slow-dur': `${Math.random() * 3 + 4.5}s`,
+    '--crt-scroll-dur': `${Math.random() * 5 + 8}s`,
+    '--glow-dur': `${Math.random() * 2 + 2}s`,
+    '--aberration-dur': `${Math.random() * 3 + 4}s`,
+    '--slice-1-dur': `${Math.random() * 2 + 3.5}s`,
+    '--slice-2-dur': `${Math.random() * 3 + 5.5}s`,
+    '--pulse-dur': `${Math.random() * 1.5 + 1}s`
+  }), []);
+
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -720,10 +733,7 @@ function App({
     const observer = new IntersectionObserver(
       ([entry]) => {
         const titleEl = document.querySelector(
-          ".ztmy-cyber-title",
-        ) as HTMLElement;
-        const textEl = document.querySelector(
-          ".ztmy-cyber-text",
+          ".ztmy-cyber-title-crt",
         ) as HTMLElement;
         const pulseEl = document.querySelector(
           "header .animate-pulse",
@@ -732,10 +742,13 @@ function App({
         // 只有當 header 在畫面內，而且 modal 或 drawer(手機版) 沒打開時，才播放動畫
         const isPaused = isGlobalPaused || !entry.isIntersecting;
 
-        if (titleEl)
+        if (titleEl) {
           titleEl.style.animationPlayState = isPaused ? "paused" : "running";
-        if (textEl)
-          textEl.style.animationPlayState = isPaused ? "paused" : "running";
+          titleEl.style.setProperty(
+            "--anim-state",
+            isPaused ? "paused" : "running",
+          );
+        }
         if (pulseEl)
           pulseEl.style.animationPlayState = isPaused ? "paused" : "running";
       },
@@ -748,19 +761,21 @@ function App({
     } else {
       // 確保即使 IntersectionObserver 沒觸發，只要 modal 開啟就強制暫停
       const titleEl = document.querySelector(
-        ".ztmy-cyber-title",
+        ".ztmy-cyber-title-crt",
       ) as HTMLElement;
-      const textEl = document.querySelector(".ztmy-cyber-text") as HTMLElement;
       const pulseEl = document.querySelector(
         "header .animate-pulse",
       ) as HTMLElement;
 
       const isPaused = isGlobalPaused;
 
-      if (titleEl)
+      if (titleEl) {
         titleEl.style.animationPlayState = isPaused ? "paused" : "running";
-      if (textEl)
-        textEl.style.animationPlayState = isPaused ? "paused" : "running";
+        titleEl.style.setProperty(
+          "--anim-state",
+          isPaused ? "paused" : "running",
+        );
+      }
       if (pulseEl)
         pulseEl.style.animationPlayState = isPaused ? "paused" : "running";
     }
@@ -907,24 +922,28 @@ function App({
         <div className="absolute inset-0 opacity-5 pointer-events-none crt-lines"></div>
 
         <h1 className="text-3xl sm:text-4xl md:text-6xl font-black flex flex-col md:flex-row items-center justify-center gap-2 sm:gap-4 px-2">
-          <span
-            className="ztmy-cyber-title whitespace-nowrap"
+          <span 
+            className="ztmy-cyber-title-crt ztmy-cyber-title-glow whitespace-nowrap relative z-10 inline-block pb-[0.2em] -mb-[0.2em] px-[0.1em] -mx-[0.1em] will-change-transform"
             data-text="ZUTOMAYO Gallery"
-            style={{ animationPlayState: isGlobalPaused ? "paused" : "running" }}
+            style={{ 
+              animation: 'cyber-jitter var(--jitter-dur, 3.5s) infinite linear',
+              '--anim-state': isGlobalPaused ? 'paused' : 'running',
+              animationPlayState: isGlobalPaused ? "paused" : "running",
+              ...glitchStyleVars
+            } as React.CSSProperties}
           >
-            <span
-              className="ztmy-cyber-text"
-              data-text="ZUTOMAYO Gallery"
-              style={{
-                animationPlayState: isGlobalPaused ? "paused" : "running",
-              }}
-            >
+            <span className="ztmy-cyber-title-scan will-change-transform" data-text="ZUTOMAYO Gallery"></span>
+            <span className="ztmy-cyber-text will-change-transform" data-text="ZUTOMAYO Gallery">
               ZUTOMAYO Gallery
             </span>
           </span>
           <span
             className="text-[10px] sm:text-xs md:text-sm bg-main/20 text-main border-2 md:border-3 border-main px-1.5 md:px-2 py-0.5 md:py-1 animate-pulse relative z-10 cursor-pointer select-none"
-            style={{ animationPlayState: isGlobalPaused ? "paused" : "running" }}
+            style={{ 
+              animationPlayState: isGlobalPaused ? "paused" : "running",
+              animationDuration: 'var(--pulse-dur, 2s)',
+              ...glitchStyleVars
+            }}
             onClick={(e) => {
               e.stopPropagation();
               triggerPWARecovery();
