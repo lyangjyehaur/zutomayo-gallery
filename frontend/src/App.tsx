@@ -205,7 +205,8 @@ function App({
   const location = useLocation();
 
   const marqueeAnnouncements = useMemo(() => {
-    const raw = metadata?.settings?.announcements as unknown;
+    // 檢查 API 結構，因為 announcements 從 settings 移動到根目錄了
+    const raw = metadata?.announcements || metadata?.settings?.announcements;
     if (!raw) return [];
     if (Array.isArray(raw)) {
       return raw.filter((v) => typeof v === "string" && v.trim() !== "");
@@ -1130,11 +1131,11 @@ function App({
   }
 
   return (
-    <div className={`min-h-screen bg-background text-foreground font-base font-normal selection:bg-main selection:text-main-foreground relative isolate flex flex-col overflow-clip transition-all duration-700 ease-out ${isContentFadingIn ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+    <div className="min-h-screen bg-background text-foreground font-base font-normal selection:bg-main selection:text-main-foreground relative isolate flex flex-col">
       {/* 整個首頁的全局背景 CRT 濾鏡層 */}
       <div className="pointer-events-none fixed inset-0 z-[-1] crt-lines-global opacity-100" />
 
-      <div className="flex-1 relative flex flex-col">
+      <div className={`flex-1 relative flex flex-col transition-all duration-700 ease-out ${isContentFadingIn ? 'opacity-100' : 'opacity-0 translate-y-8'}`}>
         {/* 跑馬燈 (置於最頂部) */}
         {!is404Route && !isDemo3DCard && marqueeAnnouncements.length > 0 && (
             <div className="w-full relative z-40 bg-main border-y-4 border-black">
@@ -1655,6 +1656,7 @@ function App({
         </>
       )}
       </main>
+      </div>
 
       {/* 右下角懸浮控制面板 (Control Hub) */}
       {!is404Route && (
@@ -2064,7 +2066,6 @@ function App({
   </div>
 </div>
 )}
-      </div>
 
       {/* 頁尾 Footer */}
       <footer className="bg-card relative overflow-hidden">
