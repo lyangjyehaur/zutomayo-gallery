@@ -154,13 +154,15 @@ const AnimatedMVCardItem = memo(function AnimatedMVCardItem({
         } : {}}
       >
         <div style={{ animationPlayState: isEffectivelyPaused ? "paused" : "running", height: "100%" }}>
-          <MVCard
-            mv={mv}
-            isFav={isFav}
-            onToggleFav={handleToggleFav}
-            onClick={handleClick}
-            isPaused={isEffectivelyPaused}
-          />
+          {shouldLoad && (
+            <MVCard
+              mv={mv}
+              isFav={isFav}
+              onToggleFav={handleToggleFav}
+              onClick={handleClick}
+              isPaused={isEffectivelyPaused}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -180,7 +182,7 @@ function App({
   metadata: {
     albumMeta: Record<string, { date?: string; hideDate?: boolean }>;
     artistMeta: Record<string, { id?: string; hideId?: boolean }>;
-    settings: { showAutoAlbumDate: boolean; announcements?: string[] };
+    settings: { showAutoAlbumDate: boolean; announcements?: string[] | Record<string, string[]> };
   };
   systemStatus?: { maintenance: boolean; type?: 'data' | 'ui'; eta?: string | null; buildTime?: string | null };
 }) {
@@ -200,6 +202,27 @@ function App({
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const marqueeAnnouncements = useMemo(() => {
+    const raw = metadata?.settings?.announcements as unknown;
+    if (!raw) return [];
+    if (Array.isArray(raw)) {
+      return raw.filter((v) => typeof v === "string" && v.trim() !== "");
+    }
+    if (raw && typeof raw === "object") {
+      const obj = raw as Record<string, unknown>;
+      const pick = (k: string) => (Array.isArray(obj[k]) ? (obj[k] as unknown[]) : []);
+      const lang = i18n.language;
+      const base = lang.split("-")[0] || lang;
+      const candidates = [pick(lang), pick(base), pick("zh-TW"), pick("zh-HK"), pick("zh-CN")];
+      const preferred = candidates.find((v) => v.length > 0) ?? [];
+      const fallback =
+        (Object.values(obj).find((v) => Array.isArray(v) && v.length > 0) as unknown[]) ?? [];
+      const selected = (preferred.length > 0 ? preferred : fallback) as unknown[];
+      return selected.filter((v) => typeof v === "string" && v.trim() !== "") as string[];
+    }
+    return [];
+  }, [metadata?.settings?.announcements, i18n.language]);
 
   // 過濾狀態
   const [search, setSearch] = useState(() => {
@@ -910,10 +933,9 @@ function App({
 
       <div className="flex-1 relative flex flex-col">
         {/* 跑馬燈 (置於最頂部) */}
-        {!is404Route && !isDemo3DCard && metadata?.settings?.announcements &&
-          metadata.settings.announcements.length > 0 && (
+        {!is404Route && !isDemo3DCard && marqueeAnnouncements.length > 0 && (
             <div className="w-full relative z-40 bg-main border-y-4 border-black">
-              <Marquee items={metadata.settings.announcements} />
+              <Marquee items={marqueeAnnouncements} />
             </div>
           )}
 
@@ -2474,7 +2496,7 @@ export default function RootApp() {
   const defaultMetadata = {
     albumMeta: {},
     artistMeta: {},
-    settings: { showAutoAlbumYear: false },
+    settings: { showAutoAlbumDate: false, announcements: [] as string[] },
   };
 
   const {
@@ -2489,10 +2511,32 @@ export default function RootApp() {
   const { data: metadataData, mutate: mutateMetadata } = useSWR<{
     albumMeta: Record<string, { date?: string; hideDate?: boolean }>;
     artistMeta: Record<string, { id?: string; hideId?: boolean }>;
-    settings: { showAutoAlbumDate: boolean; announcements?: string[] };
+    settings: { showAutoAlbumDate: boolean; announcements?: string[] | Record<string, string[]> };
   }>(`${apiUrl}/metadata`, fetcher, {
     revalidateOnFocus: false,
   });
+
+  const normalizedMetadata = useMemo(() => {
+    const raw = metadataData as any;
+    if (!raw) return defaultMetadata;
+    const albumMeta = raw.albumMeta || {};
+    const artistMeta = raw.artistMeta || {};
+    const announcements =
+      raw.settings?.announcements !== undefined ? raw.settings.announcements : raw.announcements;
+    const showAutoAlbumDate =
+      raw.settings?.showAutoAlbumDate !== undefined
+        ? raw.settings.showAutoAlbumDate
+        : raw.showAutoAlbumDate;
+
+    return {
+      albumMeta,
+      artistMeta,
+      settings: {
+        showAutoAlbumDate: typeof showAutoAlbumDate === "boolean" ? showAutoAlbumDate : false,
+        announcements: announcements ?? [],
+      },
+    };
+  }, [metadataData]);
 
   const { data: systemStatus, mutate: mutateSystemStatus } = useSWR<{ maintenance: boolean; type?: 'data' | 'ui'; eta?: string | null; buildTime?: string | null }>(
     `${apiUrl.replace('/mvs', '/system')}/status`,
@@ -2544,7 +2588,7 @@ export default function RootApp() {
     mvData: mvData || [],
     isLoading,
     error,
-    metadata: metadataData || defaultMetadata,
+    metadata: normalizedMetadata,
     systemStatus,
   };
 
@@ -2575,7 +2619,7 @@ export default function RootApp() {
               element={
                 <AdminPage
                   mvData={mvData || []}
-                  metadata={metadataData || defaultMetadata}
+                  metadata={normalizedMetadata}
                   systemStatus={systemStatus}
                   onRefresh={() => {
                     mutate();
