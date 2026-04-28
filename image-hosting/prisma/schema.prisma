@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(uuid())
+  username     String    @unique
+  email        String    @unique
+  passwordHash String
+  roleGroupId  String
+  roleGroup    RoleGroup @relation(fields: [roleGroupId], references: [id])
+  images       Image[]
+  albums       Album[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model RoleGroup {
+  id                  String    @id @default(uuid())
+  name                String    @unique
+  description         String?
+  uploadPathRule      String?   // e.g., "/uploads/{year}/{month}/"
+  namingRule          String?   // e.g., "{uuid}.{ext}"
+  uploadRateLimit     Int?      // requests per minute
+  requiresAudit       Boolean   @default(false)
+  storageStrategyId   String?
+  storageStrategy     StorageStrategy? @relation(fields: [storageStrategyId], references: [id])
+  users               User[]
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+model StorageStrategy {
+  id          String      @id @default(uuid())
+  name        String      @unique
+  provider    String      // e.g., "R2", "QINIU", "LOCAL"
+  config      Json        // Provider-specific config like bucket, region, keys
+  isActive    Boolean     @default(true)
+  roleGroups  RoleGroup[]
+  images      Image[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Image {
+  id                String    @id @default(uuid())
+  filename          String
+  originalName      String
+  mimeType          String
+  size              Int
+  url               String
+  width             Int?
+  height            Int?
+  status            String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  userId            String
+  user              User      @relation(fields: [userId], references: [id])
+  storageStrategyId String
+  storageStrategy   StorageStrategy @relation(fields: [storageStrategyId], references: [id])
+  albumId           String?
+  album             Album?    @relation(fields: [albumId], references: [id])
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model Album {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  isPublic    Boolean  @default(false)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  images      Image[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

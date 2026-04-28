@@ -12,6 +12,7 @@
     "reset-password": "tsx src/scripts/reset-password.ts",
     "fetch-tweets": "tsx src/scripts/fetch-zutomayo-art-tweets.ts",
     "reparse-tweets": "tsx src/scripts/reparse-raw-apify.ts",
+    "reparse-prod": "npm run build && node dist/scripts/reparse-raw-apify.js",
     "migrate": "tsx src/scripts/migrate.ts up",
     "migrate:down": "tsx src/scripts/migrate.ts down"
   },

@@ -2,6 +2,7 @@ import 'dotenv/config';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { fileURLToPath } from 'url';
 import { StagingFanartModel, syncModels } from '../models/index.js';
 import { uploadBufferToR2 } from '../services/r2.service.js';
 
