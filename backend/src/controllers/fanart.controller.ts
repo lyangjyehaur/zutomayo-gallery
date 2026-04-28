@@ -153,6 +153,7 @@ export const getFanartGallery = async (req: Request, res: Response) => {
 
     const findOptions: any = {
       where,
+      distinct: true,
       include: [
         { model: MediaGroupModel, as: 'group', where: { status: 'organized' }, required: true },
         mvInclude
@@ -161,6 +162,7 @@ export const getFanartGallery = async (req: Request, res: Response) => {
     };
 
     if (!all) {
+      findOptions.subQuery = false;
       findOptions.limit = limit + 1;
       findOptions.offset = offset;
     }
