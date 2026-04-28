@@ -31,6 +31,10 @@ export interface UpdateResult {
 }
 
 export class MVService {
+  clearCache(): void {
+    runtimeData = null;
+  }
+
   async getAllMVs(filters: {
     search?: string;
     year?: string;

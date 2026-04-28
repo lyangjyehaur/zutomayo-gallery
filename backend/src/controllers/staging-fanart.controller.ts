@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { StagingFanartModel, MediaGroupModel, MediaModel, CrawlerStateModel, MVMediaModel } from '../models/index.js';
+import { MVService } from '../services/mv.service.js';
 import { nanoid } from 'nanoid';
 import { Sequelize } from 'sequelize';
 import { runCrawler } from '../scripts/fetch-zutomayo-art-tweets.js';
@@ -259,6 +260,10 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
           }
         });
       }
+      
+      // 有關聯 MV，清除 MV 緩存
+      const mvService = new MVService();
+      mvService.clearCache();
     }
 
     await staging.update({ status: 'approved' });
