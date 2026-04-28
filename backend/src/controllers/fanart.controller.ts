@@ -150,7 +150,7 @@ export const getFanartsByTag = async (req: Request, res: Response) => {
 
 export const getFanartTagSummary = async (req: Request, res: Response) => {
   try {
-    const tags = ['tag:collab', 'tag:acane', 'tag:real', 'tag:uniguri', 'tag:shoga'];
+    const tags = ['tag:collab', 'tag:acane', 'tag:real', 'tag:uniguri', 'tag:other'];
     const counts: Record<string, number> = {};
 
     for (const tag of tags) {

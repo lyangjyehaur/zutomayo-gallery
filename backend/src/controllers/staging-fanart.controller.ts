@@ -251,7 +251,7 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
       if (Object.keys(updateData).length > 0) await group.update(updateData);
     }
 
-    const allowedTags = new Set(['tag:collab', 'tag:acane', 'tag:real', 'tag:uniguri', 'tag:shoga']);
+    const allowedTags = new Set(['tag:collab', 'tag:acane', 'tag:real', 'tag:uniguri', 'tag:other']);
     const rawMvs = Array.isArray(mvs) ? mvs : [];
     const mvIds = rawMvs.filter((v: any) => typeof v === 'string' && !v.startsWith('tag:'));
     const tags = Array.from(

@@ -112,7 +112,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
   const [onlyAcaNe, setOnlyAcaNe] = useState<boolean>(false);
   const [onlyReal, setOnlyReal] = useState<boolean>(false);
   const [onlyUniguri, setOnlyUniguri] = useState<boolean>(false);
-  const [onlyShoga, setOnlyShoga] = useState<boolean>(false);
+  const [onlyOther, setOnlyOther] = useState<boolean>(false);
   
   // 狀態：初篩用的年份和專輯
   const [filterYear, setFilterYear] = useState<string>('all');
@@ -223,9 +223,9 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
     if (onlyAcaNe) tags.push('tag:acane');
     if (onlyReal) tags.push('tag:real');
     if (onlyUniguri) tags.push('tag:uniguri');
-    if (onlyShoga) tags.push('tag:shoga');
+    if (onlyOther) tags.push('tag:other');
     return tags;
-  }, [onlyAcaNe, onlyReal, onlyUniguri, onlyShoga]);
+  }, [onlyAcaNe, onlyReal, onlyUniguri, onlyOther]);
 
   const matchSpecialTags = (tags: string[]) => {
     if (selectedSpecialTags.length === 0) return true;
@@ -256,7 +256,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
     const map = new Map<string, number>();
     allFanArts.forEach(art => {
       const tags = Array.isArray(art.tags) ? art.tags : [];
-      (['tag:acane', 'tag:real', 'tag:uniguri', 'tag:shoga'] as const).forEach(tag => {
+      (['tag:acane', 'tag:real', 'tag:uniguri', 'tag:other'] as const).forEach(tag => {
         if (tags.includes(tag)) map.set(tag, (map.get(tag) || 0) + 1);
       });
     });
@@ -385,8 +385,8 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
                   {onlyCollab ? ' (只看大合繪)' : ''}
                   {onlyAcaNe ? ' (ACAね)' : ''}
                   {onlyReal ? ' (實物)' : ''}
-                  {onlyUniguri ? ' (海膽栗子)' : ''}
-                  {onlyShoga ? ' (生薑)' : ''}
+                  {onlyUniguri ? ' (海膽栗子/生薑)' : ''}
+                  {onlyOther ? ' (其他)' : ''}
                   {filterYear !== 'all' || filterAlbum !== 'all' ? ' · 有啟用初篩' : ''}
                 </div>
               )}
@@ -425,14 +425,14 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
               <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyUniguri ? 'bg-main' : 'bg-card'}`}>
                 {onlyUniguri && <i className="hn hn-check text-xs font-black"></i>}
               </div>
-              <Label className="font-bold cursor-pointer">只看 海膽栗子 ({specialTagCounts.get('tag:uniguri') || 0})</Label>
+              <Label className="font-bold cursor-pointer">只看 海膽栗子/生薑 ({specialTagCounts.get('tag:uniguri') || 0})</Label>
             </div>
 
-            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" onClick={() => setOnlyShoga(!onlyShoga)}>
-              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyShoga ? 'bg-main' : 'bg-card'}`}>
-                {onlyShoga && <i className="hn hn-check text-xs font-black"></i>}
+            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" onClick={() => setOnlyOther(!onlyOther)}>
+              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyOther ? 'bg-main' : 'bg-card'}`}>
+                {onlyOther && <i className="hn hn-check text-xs font-black"></i>}
               </div>
-              <Label className="font-bold cursor-pointer">只看 生薑 ({specialTagCounts.get('tag:shoga') || 0})</Label>
+              <Label className="font-bold cursor-pointer">只看 其他 ({specialTagCounts.get('tag:other') || 0})</Label>
             </div>
 
             {/* MV 單曲初篩 (年份/專輯) */}

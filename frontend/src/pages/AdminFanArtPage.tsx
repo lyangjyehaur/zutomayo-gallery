@@ -132,8 +132,8 @@ export function AdminFanArtPage() {
       { label: '綜合合繪', value: 'tag:collab' },
       { label: 'ACAね', value: 'tag:acane' },
       { label: '實物', value: 'tag:real' },
-      { label: '海膽栗子', value: 'tag:uniguri' },
-      { label: '生薑', value: 'tag:shoga' },
+      { label: '海膽栗子/生薑', value: 'tag:uniguri' },
+      { label: '其他', value: 'tag:other' },
     ];
     const opts = mvData.map(mv => ({ label: mv.title, value: mv.id }));
     return [...tagOpts, ...opts];
@@ -234,8 +234,8 @@ export function AdminFanArtPage() {
               : id === 'tag:real'
                 ? '實物'
                 : id === 'tag:uniguri'
-                  ? '海膽栗子'
-                  : '生薑',
+                  ? '海膽栗子/生薑'
+                  : '其他',
         images: tagMedia
       };
     }
@@ -493,7 +493,7 @@ export function AdminFanArtPage() {
         </div>
 
         <div className="p-2 flex flex-col gap-1">
-          {['tag:collab', 'tag:acane', 'tag:real', 'tag:uniguri', 'tag:shoga'].map(tagId => {
+          {['tag:collab', 'tag:acane', 'tag:real', 'tag:uniguri', 'tag:other'].map(tagId => {
             const count = tagSummary[tagId] || 0;
 
             return (
@@ -510,8 +510,8 @@ export function AdminFanArtPage() {
                       : tagId === 'tag:real'
                         ? '實物'
                         : tagId === 'tag:uniguri'
-                          ? '海膽栗子'
-                          : '生薑'}
+                          ? '海膽栗子/生薑'
+                          : '其他'}
                 </span>
                 <span className="bg-black text-white px-2 py-0.5 rounded-full text-xs shrink-0">{count}</span>
               </button>
@@ -778,8 +778,8 @@ export function AdminFanArtPage() {
                           {tagSet.has('tag:collab') ? '合繪 ' : ''}
                           {tagSet.has('tag:acane') ? 'ACAね ' : ''}
                           {tagSet.has('tag:real') ? '實物 ' : ''}
-                          {tagSet.has('tag:uniguri') ? '海膽栗子 ' : ''}
-                          {tagSet.has('tag:shoga') ? '生薑 ' : ''}
+                          {tagSet.has('tag:uniguri') ? '海膽栗子/生薑 ' : ''}
+                          {tagSet.has('tag:other') ? '其他 ' : ''}
                         </div>
                       </div>
                     </div>
