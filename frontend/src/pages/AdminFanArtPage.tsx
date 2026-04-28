@@ -1,92 +1,168 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { MVItem, MVMedia } from '@/lib/types';
+import { MultiSelect, Option } from '@/components/ui/multi-select';
 
 export function AdminFanArtPage() {
-  const navigate = useNavigate();
-  const [mvData, setMvData] = useState<MVItem[]>([]);
+  const [activeTab, setActiveTab] = useState<string>('unorganized');
+  const [unorganizedGroups, setUnorganizedGroups] = useState<any[]>([]);
+  const [mvData, setMvData] = useState<any[]>([]);
+  const [selectedMvs, setSelectedMvs] = useState<Record<string, string[]>>({});
+  const [editMvs, setEditMvs] = useState<Record<string, string[]>>({});
   
+  // Parse Tweets states
   const [tweetUrl, setTweetUrl] = useState('');
   const [isParsing, setIsParsing] = useState(false);
   const [batchStatus, setBatchStatus] = useState<{ total: number, current: number, failedUrls: string[] } | null>(null);
-  const [parsedImages, setParsedImages] = useState<MVMedia[]>([]);
-  
-  const [selectedMvIds, setSelectedMvIds] = useState<Set<string>>(new Set());
+  const [parsedImages, setParsedImages] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [parseMvSelection, setParseMvSelection] = useState<string[]>([]);
 
-  const [unorganizedGroups, setUnorganizedGroups] = useState<any[]>([]);
-  const [isLoadingUnorganized, setIsLoadingUnorganized] = useState(false);
-  const [pendingGroupIds, setPendingGroupIds] = useState<Set<string>>(new Set());
+  const baseApiUrl = useMemo(() => (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, ''), []);
+
+  const fetchData = async () => {
+    try {
+      const res = await fetch(`${baseApiUrl}/mvs`);
+      const data = await res.json();
+      if (data.success) {
+        setMvData(data.data);
+      }
+    } catch (err) {
+      toast.error('Failed to fetch MVs');
+    }
+  };
 
   const fetchUnorganized = async () => {
-    setIsLoadingUnorganized(true);
     try {
-      const baseApiUrl = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, '');
       const res = await fetch(`${baseApiUrl}/fanarts/unorganized`, {
         headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
       });
       const data = await res.json();
       if (data.success) {
-        setUnorganizedGroups(data.data || []);
+        setUnorganizedGroups(data.data);
       }
-    } catch (e) {
-      console.error('Failed to fetch unorganized fanarts', e);
-    } finally {
-      setIsLoadingUnorganized(false);
-    }
-  };
-
-  const fetchData = async () => {
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
-      const res = await fetch(`${apiUrl}?limit=1000`);
-      const mvs = await res.json();
-      setMvData(mvs.data || []);
-    } catch (e) {
-      toast.error('載入失敗');
+    } catch (err) {
+      toast.error('Failed to fetch unorganized fanarts');
     }
   };
 
   useEffect(() => {
-    const pwd = localStorage.getItem('ztmy_admin_pwd');
-    if (pwd) {
-      fetchData();
-      fetchUnorganized();
-    } else {
-      navigate('/admin');
-    }
-  }, []);
+    fetchData();
+    fetchUnorganized();
+  }, [baseApiUrl]);
 
-  const handleSelectUnorganized = (group: any) => {
-    const newImages = (group.media || []).map((m: any) => ({
-      url: m.url,
-      thumbnail: m.thumbnail_url || m.url,
-      tweetUrl: group.source_url || '',
-      tweetText: group.source_text || '',
-      tweetAuthor: group.author_name || '',
-      tweetHandle: group.author_handle || '',
-      tweetDate: group.post_date || '',
-      groupId: group.id,
-      type: 'fanart',
-      width: m.width || 0,
-      height: m.height || 0,
-      caption: '',
-      alt: ''
-    }));
-    setParsedImages(prev => [...prev, ...newImages]);
-    setUnorganizedGroups(prev => prev.filter(g => g.id !== group.id));
-    setPendingGroupIds(prev => new Set(prev).add(group.id));
+  const mvsOptions: Option[] = useMemo(() => {
+    const tagOpts: Option[] = [
+      { label: '綜合合繪', value: 'tag:collab' },
+      { label: 'ACAね', value: 'tag:acane' },
+      { label: '實物', value: 'tag:real' },
+      { label: '海膽栗子', value: 'tag:uniguri' },
+      { label: '生薑', value: 'tag:shoga' },
+    ];
+    const opts = mvData.map(mv => ({ label: mv.title, value: mv.id }));
+    return [...tagOpts, ...opts];
+  }, [mvData]);
+
+  // Flatten unorganized media
+  const unorganizedMedia = useMemo(() => {
+    const mediaList: any[] = [];
+    unorganizedGroups.forEach(g => {
+      g.media?.forEach((m: any) => {
+        mediaList.push({ ...m, group: g });
+      });
+    });
+    return mediaList;
+  }, [unorganizedGroups]);
+
+  const mediaAssociations = useMemo(() => {
+    const map = new Map<string, { mvIds: Set<string>; tags: Set<string> }>();
+    mvData.forEach(mv => {
+      mv.images?.forEach((img: any) => {
+        if (img.type !== 'fanart') return;
+        const mediaId = img.id;
+        if (!mediaId) return;
+        const currentTags = Array.isArray(img.tags) ? img.tags : [];
+        if (!map.has(mediaId)) {
+          map.set(mediaId, { mvIds: new Set(), tags: new Set(currentTags) });
+        }
+        const entry = map.get(mediaId)!;
+        entry.mvIds.add(mv.id);
+        currentTags.forEach((t: string) => entry.tags.add(t));
+      });
+    });
+    return map;
+  }, [mvData]);
+
+  // MV selection logic
+  const selectedMvData = useMemo(() => {
+    if (activeTab.startsWith('mv:')) {
+      const id = activeTab.replace('mv:', '');
+      return mvData.find(m => m.id === id);
+    }
+    if (activeTab.startsWith('tag:')) {
+      const id = activeTab;
+      // Find all media in mvData that have this tag
+      const allImagesWithTag: any[] = [];
+      const seenIds = new Set();
+      
+      mvData.forEach(mv => {
+        mv.images?.forEach((img: any) => {
+          if (img.type === 'fanart' && img.tags?.includes(id) && !seenIds.has(img.id)) {
+            seenIds.add(img.id);
+            allImagesWithTag.push(img);
+          }
+        });
+      });
+      
+      return {
+        id,
+        title:
+          id === 'tag:collab'
+            ? '綜合合繪'
+            : id === 'tag:acane'
+              ? 'ACAね'
+              : id === 'tag:real'
+                ? '實物'
+                : id === 'tag:uniguri'
+                  ? '海膽栗子'
+                  : '生薑',
+        images: allImagesWithTag
+      };
+    }
+    return null;
+  }, [activeTab, mvData]);
+
+  const handleAssignMedia = async (mediaId: string, groupId: string) => {
+    const mvs = selectedMvs[mediaId] || [];
+    if (mvs.length === 0) return toast.error('請至少選擇一個關聯的 MV 或標籤');
+    
+    try {
+      const res = await fetch(`${baseApiUrl}/fanarts/media/${mediaId}/assign`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' 
+        },
+        body: JSON.stringify({ mvs, groupId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('已保存並關聯');
+        setUnorganizedGroups(prev => prev.filter(g => g.id !== groupId));
+        fetchData(); // refresh mv data
+      } else {
+        toast.error(data.error || '保存失敗');
+      }
+    } catch (err) {
+      toast.error('保存發生錯誤');
+    }
   };
 
-  const handleDeleteUnorganized = async (group: any) => {
-    if (!window.confirm('確定要捨棄這篇推文嗎？這將不會保存到畫廊中。')) return;
+  const handleDiscardGroup = async (groupId: string) => {
+    if (!window.confirm('確定要捨棄整篇推文嗎？這將不會保存到畫廊中。')) return;
     try {
-      const baseApiUrl = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, '');
-      const res = await fetch(`${baseApiUrl}/fanarts/${group.id}/status`, {
+      const res = await fetch(`${baseApiUrl}/fanarts/${groupId}/status`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -94,17 +170,62 @@ export function AdminFanArtPage() {
         },
         body: JSON.stringify({ status: 'deleted' })
       });
-      if (!res.ok) throw new Error('刪除失敗');
-      setUnorganizedGroups(prev => prev.filter(g => g.id !== group.id));
-      toast.success('已捨棄推文');
+      if (res.ok) {
+        toast.success('已捨棄推文');
+        setUnorganizedGroups(prev => prev.filter(g => g.id !== groupId));
+      }
     } catch (e) {
       toast.error('刪除失敗');
     }
   };
 
+  const handleRemoveFromMv = async (mediaId: string, mvId: string) => {
+    const isTag = mvId.startsWith('tag:');
+    if (!window.confirm(`確定要${isTag ? '移除這個標籤' : '從這個 MV 中移除此圖片'}嗎？`)) return;
+    try {
+      const res = await fetch(`${baseApiUrl}/fanarts/media/${mediaId}/remove-mv`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' 
+        },
+        body: JSON.stringify({ mvId })
+      });
+      if (res.ok) {
+        toast.success('已移除');
+        fetchData();
+      }
+    } catch (e) {
+      toast.error('移除失敗');
+    }
+  };
+
+  const handleUpdateAssociations = async (mediaId: string, mvs: string[]) => {
+    if (mvs.length === 0) return toast.error('請至少選擇一個 MV 或標籤');
+    try {
+      const res = await fetch(`${baseApiUrl}/fanarts/media/${mediaId}/assign`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' 
+        },
+        body: JSON.stringify({ mvs })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('已更新關聯');
+        fetchData();
+      } else {
+        toast.error(data.error || '更新失敗');
+      }
+    } catch (err) {
+      toast.error('更新發生錯誤');
+    }
+  };
+
+  // Parse logic
   const handleParse = async () => {
     if (!tweetUrl.trim()) return toast.error('請輸入推文網址');
-    
     const urls = tweetUrl.split('\n').map(u => u.trim()).filter(u => u);
     if (urls.length === 0) return;
 
@@ -115,8 +236,7 @@ export function AdminFanArtPage() {
     let allNewImages: any[] = [];
 
     try {
-      const apiUrl = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, '') + '/mvs/twitter-resolve';
-      
+      const apiUrl = `${baseApiUrl}/mvs/twitter-resolve`;
       for (const url of urls) {
         try {
           const response = await fetch(apiUrl, {
@@ -132,7 +252,6 @@ export function AdminFanArtPage() {
           const json = await response.json();
           
           if (json.success && json.data && json.data.length > 0) {
-            const groupId = json.data.length > 1 ? `tweet-${Date.now()}-${Math.floor(Math.random() * 1000)}` : undefined;
             const newImages = json.data.map((media: any) => ({
               url: media.url,
               thumbnail: media.thumbnail || '',
@@ -141,8 +260,7 @@ export function AdminFanArtPage() {
               tweetAuthor: media.user_name,
               tweetHandle: media.user_screen_name,
               tweetDate: media.date,
-              groupId,
-              type: 'fanart', // 標記為 FanArt
+              type: 'fanart',
               width: 0,
               height: 0,
               caption: '',
@@ -153,7 +271,6 @@ export function AdminFanArtPage() {
             throw new Error('推文中找不到媒體');
           }
         } catch (err: any) {
-          console.error(err);
           currentFailedUrls.push(url);
         } finally {
           setBatchStatus(prev => prev ? { ...prev, current: prev.current + 1, failedUrls: currentFailedUrls } : null);
@@ -172,266 +289,324 @@ export function AdminFanArtPage() {
         toast.warning(`完成，但有 ${currentFailedUrls.length} 個連結解析失敗`);
       }
     } catch (err: any) {
-      toast.error('解析過程發生錯誤: ' + err.message);
+      toast.error('解析過程發生錯誤');
       setBatchStatus(null);
     } finally {
       setIsParsing(false);
     }
   };
 
-  const handleSave = async () => {
+  const handleSaveParsed = async () => {
     if (parsedImages.length === 0) return toast.error('沒有可保存的圖片');
-    if (selectedMvIds.size === 0) return toast.error('請至少選擇一個關聯的 MV');
+    if (parseMvSelection.length === 0) return toast.error('請至少選擇一個關聯的 MV 或標籤');
     
     setIsSaving(true);
     try {
-      // 找出被選擇的 MVs，並將 parsedImages 附加到它們的 images 陣列中
-      const updatedMvs = mvData.filter(mv => selectedMvIds.has(mv.id)).map(mv => ({
-        ...mv,
-        images: [...(mv.images || []), ...parsedImages]
-      }));
-
-      const apiUrl = (import.meta.env.VITE_API_URL || '/api/v1/mvs').replace(/(\/mvs)?$/, '/mvs/update');
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
-        },
-        body: JSON.stringify({ 
-          data: updatedMvs,
-          partial: true 
-        }),
-      });
-
-      if (!response.ok) throw new Error('保存失敗');
+      const mvIds = parseMvSelection.filter(m => !m.startsWith('tag:'));
+      const tags = parseMvSelection.filter(m => m.startsWith('tag:'));
       
-      // 更新未整理推文的狀態
-      const baseApiUrl = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, '');
-      for (const groupId of pendingGroupIds) {
-        if (!groupId || groupId.startsWith('tweet-')) continue; // 跳過手動解析產生的假 ID
-        try {
-          await fetch(`${baseApiUrl}/fanarts/${groupId}/status`, {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
-            },
-            body: JSON.stringify({ status: 'organized' })
-          });
-        } catch (err) {
-          console.error('Failed to update group status', err);
-        }
+      if (mvIds.length === 0) {
+        setIsSaving(false);
+        return toast.error('手動解析保存時必須至少選擇一個 MV');
+      }
+
+      const imagesToSave = parsedImages.map(img => ({ ...img, tags }));
+
+      if (mvIds.length > 0) {
+        const updatedMvs = mvData.filter(mv => mvIds.includes(mv.id)).map(mv => ({
+          ...mv,
+          images: [...(mv.images || []), ...imagesToSave]
+        }));
+
+        const response = await fetch(`${baseApiUrl}/mvs/update`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
+          },
+          body: JSON.stringify({ data: updatedMvs, partial: true }),
+        });
+
+        if (!response.ok) throw new Error('保存失敗');
       }
       
-      toast.success('FanArt 已成功關聯並保存至選擇的 MV 中！');
+      toast.success('FanArt 已成功保存！');
       setParsedImages([]);
-      setSelectedMvIds(new Set());
-      setPendingGroupIds(new Set());
-      fetchData(); // 重新拉取資料
-      fetchUnorganized(); // 重新拉取未整理推文
+      setParseMvSelection([]);
+      fetchData();
     } catch (e: any) {
-      toast.error('保存時發生錯誤: ' + e.message);
+      toast.error('保存時發生錯誤');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const toggleMvSelection = (id: string) => {
-    setSelectedMvIds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) newSet.delete(id);
-      else newSet.add(id);
-      return newSet;
-    });
-  };
-
   return (
-    <div className="h-full flex flex-col bg-background text-foreground overflow-hidden font-mono">
-      {/* 頂部導航 */}
-      <div className="h-20 border-b-4 border-black bg-card flex items-center justify-between px-8 shadow-neo-sm shrink-0">
-        <div className="flex items-center gap-4">
-          <h1 className="text-xl font-black uppercase tracking-widest text-black">FanArt 管理中心</h1>
+    <div className="h-full flex bg-background text-foreground overflow-hidden font-mono">
+      {/* Sidebar */}
+      <div className="w-64 border-r-4 border-black bg-card flex flex-col shrink-0 overflow-y-auto">
+        <div className="p-4 border-b-4 border-black font-black uppercase tracking-widest text-lg">
+          維護中心
+        </div>
+        
+        <div className="p-2 flex flex-col gap-2">
+          <button 
+            className={`px-4 py-2 text-left font-bold border-2 border-transparent hover:border-black ${activeTab === 'unorganized' ? 'bg-ztmy-blue text-white border-black shadow-neo-sm' : ''}`}
+            onClick={() => setActiveTab('unorganized')}
+          >
+            未整理 ({unorganizedGroups.length})
+          </button>
+          <button 
+            className={`px-4 py-2 text-left font-bold border-2 border-transparent hover:border-black ${activeTab === 'parse' ? 'bg-ztmy-purple text-white border-black shadow-neo-sm' : ''}`}
+            onClick={() => setActiveTab('parse')}
+          >
+            手動解析推文
+          </button>
+        </div>
+
+        <div className="px-4 py-2 font-black uppercase text-sm border-y-4 border-black bg-muted">
+          特殊標籤
+        </div>
+
+        <div className="p-2 flex flex-col gap-1">
+          {['tag:collab', 'tag:acane', 'tag:real', 'tag:uniguri', 'tag:shoga'].map(tagId => {
+            let count = 0;
+            const seen = new Set();
+            mvData.forEach(mv => {
+              mv.images?.forEach((img: any) => {
+                if (img.type === 'fanart' && img.tags?.includes(tagId) && !seen.has(img.id)) {
+                  seen.add(img.id);
+                  count++;
+                }
+              });
+            });
+
+            return (
+              <button
+                key={tagId}
+                className={`px-2 py-2 text-left font-bold border-2 border-transparent hover:border-black text-sm flex justify-between items-center ${activeTab === tagId ? 'bg-ztmy-green text-black border-black shadow-neo-sm' : ''}`}
+                onClick={() => setActiveTab(tagId)}
+              >
+                <span className="truncate pr-2">
+                  {tagId === 'tag:collab'
+                    ? '綜合合繪'
+                    : tagId === 'tag:acane'
+                      ? 'ACAね'
+                      : tagId === 'tag:real'
+                        ? '實物'
+                        : tagId === 'tag:uniguri'
+                          ? '海膽栗子'
+                          : '生薑'}
+                </span>
+                <span className="bg-black text-white px-2 py-0.5 rounded-full text-xs shrink-0">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="px-4 py-2 font-black uppercase text-sm border-y-4 border-black bg-muted mt-2">
+          依 MV 維護
+        </div>
+
+        <div className="p-2 flex flex-col gap-1 overflow-y-auto flex-1">
+          {mvData.map(mv => {
+            const fanartCount = mv.images?.filter((i: any) => i.type === 'fanart').length || 0;
+            return (
+              <button
+                key={mv.id}
+                className={`px-2 py-2 text-left font-bold border-2 border-transparent hover:border-black text-sm flex justify-between items-center ${activeTab === `mv:${mv.id}` ? 'bg-ztmy-green text-black border-black shadow-neo-sm' : ''}`}
+                onClick={() => setActiveTab(`mv:${mv.id}`)}
+              >
+                <span className="truncate pr-2">{mv.title}</span>
+                <span className="bg-black text-white px-2 py-0.5 rounded-full text-xs shrink-0">{fanartCount}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-6xl mx-auto p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
-        
-        {/* 左側：解析推文與圖片預覽 */}
-        <div className="space-y-6">
-          
-          {/* 未整理收件匣 */}
-          {unorganizedGroups.length > 0 && (
-            <div className="bg-card border-4 border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-              <h2 className="text-lg font-black uppercase mb-4 flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <i className="hn hn-inbox text-xl" /> 未整理收件匣 ({unorganizedGroups.length})
-                </span>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={fetchUnorganized} 
-                  disabled={isLoadingUnorganized} 
-                  className="border-2 border-black hover:bg-black hover:text-white"
-                >
-                  <i className={`hn hn-refresh ${isLoadingUnorganized ? 'animate-spin' : ''}`} />
-                </Button>
-              </h2>
-              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                {unorganizedGroups.map(group => (
-                  <div key={group.id} className="border-2 border-black p-3 bg-white flex flex-col gap-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                    <div className="flex items-center justify-between">
-                      <a href={group.source_url} target="_blank" rel="noreferrer" className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1">
-                        <i className="hn hn-twitter" /> @{group.author_handle}
-                      </a>
-                      <span className="text-[10px] opacity-50">{new Date(group.post_date).toLocaleDateString()}</span>
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto bg-muted">
+        {activeTab === 'unorganized' && (
+          <div className="p-6">
+            <h2 className="text-2xl font-black uppercase tracking-widest mb-6">未整理的 FanArt</h2>
+            {unorganizedMedia.length === 0 ? (
+              <div className="text-center p-12 border-4 border-dashed border-black/20 text-black/50 font-bold uppercase text-lg">
+                無未整理項目
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {unorganizedMedia.map(media => (
+                  <div key={media.id} className="bg-card border-4 border-black shadow-neo flex flex-col overflow-hidden">
+                    <div className="aspect-square bg-black relative border-b-4 border-black">
+                      <img src={media.url || media.original_url} className="w-full h-full object-cover" />
                     </div>
-                    <p className="text-xs line-clamp-2 opacity-80">{group.source_text}</p>
-                    
-                    {/* 媒體預覽縮圖 */}
-                    <div className="flex gap-2 mt-2 overflow-x-auto pb-2">
-                      {(group.media || []).map((m: any, i: number) => (
-                        <div key={i} className="relative shrink-0">
-                          <img 
-                            src={m.thumbnail_url || m.url} 
-                            alt="media" 
-                            className="w-16 h-16 object-cover border border-black" 
-                          />
-                          {m.media_type === 'video' && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                              <i className="hn hn-play text-white" />
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    
-                    <div className="flex justify-end gap-2 mt-2">
-                      <Button size="sm" variant="destructive" className="h-7 text-xs border-2 border-black rounded-none" onClick={() => handleDeleteUnorganized(group)}>
-                        捨棄
-                      </Button>
-                      <Button size="sm" className="h-7 text-xs bg-ztmy-green text-black hover:bg-black hover:text-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] rounded-none" onClick={() => handleSelectUnorganized(group)}>
-                        <i className="hn hn-arrow-right mr-1" /> 提取圖片
-                      </Button>
+                    <div className="p-2 flex flex-col gap-2 flex-1">
+                      <div className="text-xs truncate font-bold opacity-70">
+                        {media.group?.post_date ? new Date(media.group.post_date).toLocaleDateString() : ''}
+                      </div>
+                      <MultiSelect
+                        options={mvsOptions}
+                        selected={selectedMvs[media.id] || []}
+                        onChange={(sel) => setSelectedMvs(prev => ({ ...prev, [media.id]: sel }))}
+                        placeholder="選擇 MV/標籤..."
+                        className="border-2 border-black bg-white"
+                      />
+                      <div className="mt-auto grid grid-cols-2 gap-2 pt-2">
+                        <Button 
+                          variant="outline" 
+                          className="h-8 text-xs bg-red-500 text-white font-black hover:bg-red-600 border-2 border-black"
+                          onClick={() => handleDiscardGroup(media.group.id)}
+                        >
+                          捨棄推文
+                        </Button>
+                        <Button 
+                          className="h-8 text-xs bg-ztmy-green text-black font-black hover:bg-[#8aff8a] border-2 border-black"
+                          onClick={() => handleAssignMedia(media.id, media.group.id)}
+                        >
+                          保存關聯
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
-              </div>
-            </div>
-          )}
-
-          <div className="bg-card border-4 border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-            <h2 className="text-lg font-black uppercase mb-4 flex items-center gap-2">
-              <i className="hn hn-twitter text-xl" /> 解析推文
-            </h2>
-            <div className="flex flex-col gap-2">
-              <Textarea 
-                placeholder="貼上多行 X/Twitter 網址 (每行一個)..." 
-                value={tweetUrl}
-                onChange={e => setTweetUrl(e.target.value)}
-                className="font-mono text-xs min-h-[120px] border-2 border-black"
-              />
-              <Button onClick={handleParse} disabled={isParsing} className="bg-black text-white hover:bg-main hover:text-black w-full border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                {isParsing ? <i className="hn hn-refresh animate-spin mr-2" /> : <i className="hn hn-download mr-2" />} 
-                {isParsing ? '解析中...' : '開始解析'}
-              </Button>
-            </div>
-            
-            {/* 進度條 */}
-            {batchStatus && batchStatus.total > 0 && (
-              <div className="mt-4 p-4 border-2 border-black bg-black/5">
-                <div className="flex justify-between text-xs font-bold uppercase mb-2">
-                  <span>處理進度</span>
-                  <span>{batchStatus.current} / {batchStatus.total}</span>
-                </div>
-                <div className="h-2 bg-black/20 w-full rounded-full overflow-hidden border border-black">
-                  <div 
-                    className="h-full bg-ztmy-green transition-all duration-300"
-                    style={{ width: `${(batchStatus.current / batchStatus.total) * 100}%` }}
-                  />
-                </div>
-                {batchStatus.failedUrls.length > 0 && (
-                  <div className="mt-2 text-xs text-red-600 font-bold">
-                    <i className="hn hn-exclamation-triangle mr-1" /> {batchStatus.failedUrls.length} 個網址解析失敗
-                  </div>
-                )}
               </div>
             )}
           </div>
+        )}
 
-          {parsedImages.length > 0 && (
-            <div className="bg-card border-4 border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-black uppercase">待保存圖片 ({parsedImages.length})</h2>
-                <Button variant="outline" size="sm" onClick={() => setParsedImages([])} className="border-2 border-black text-red-600 hover:bg-red-50">
-                  清空
-                </Button>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                {parsedImages.map((img, idx) => (
-                  <div key={idx} className="border-2 border-black p-2 relative group bg-background">
-                    <img src={img.thumbnail_url || img.url} alt="preview" className="w-full h-32 object-cover" />
-                    <button 
-                      onClick={() => setParsedImages(prev => prev.filter((_, i) => i !== idx))}
-                      className="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 flex items-center justify-center border-2 border-black opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <i className="hn hn-x" />
-                    </button>
-                    <div className="mt-2 space-y-2">
-                      <Input 
-                        placeholder="圖片標題 (Caption)" 
-                        value={img.caption || ''} 
-                        onChange={e => setParsedImages(prev => prev.map((p, i) => i === idx ? { ...p, caption: e.target.value } : p))}
-                        className="text-xs h-7"
+        {activeTab === 'parse' && (
+          <div className="p-6 max-w-4xl mx-auto flex flex-col gap-6">
+            <h2 className="text-2xl font-black uppercase tracking-widest mb-2">手動解析推文</h2>
+            <div className="bg-card border-4 border-black p-4 shadow-neo flex flex-col gap-4">
+              <textarea
+                value={tweetUrl}
+                onChange={(e) => setTweetUrl(e.target.value)}
+                placeholder="貼上 Twitter/X 網址 (支援多行)"
+                className="w-full h-32 p-3 font-mono text-sm border-2 border-black focus:outline-none focus:ring-2 focus:ring-black/20 resize-none bg-background"
+              />
+              <Button 
+                onClick={handleParse} 
+                disabled={isParsing || !tweetUrl.trim()}
+                className="bg-black text-white hover:bg-black/80 font-bold uppercase tracking-wider self-end border-2 border-black shadow-neo-sm"
+              >
+                {isParsing ? '解析中...' : '開始解析'}
+              </Button>
+              {batchStatus && (
+                <div className="mt-4 p-4 border-2 border-black bg-muted">
+                  <div className="flex justify-between font-bold mb-2">
+                    <span>解析進度</span>
+                    <span>{batchStatus.current} / {batchStatus.total}</span>
+                  </div>
+                  <div className="h-4 bg-background border-2 border-black w-full overflow-hidden">
+                    <div 
+                      className="h-full bg-ztmy-blue transition-all duration-300"
+                      style={{ width: `${(batchStatus.current / batchStatus.total) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {parsedImages.length > 0 && (
+              <div className="bg-card border-4 border-black p-4 shadow-neo flex flex-col gap-4">
+                <div className="flex justify-between items-center border-b-4 border-black pb-4">
+                  <h3 className="text-lg font-black uppercase">待保存 ({parsedImages.length})</h3>
+                  <div className="flex items-center gap-2">
+                    <div className="w-[200px]">
+                      <MultiSelect
+                        options={mvsOptions}
+                        selected={parseMvSelection}
+                        onChange={setParseMvSelection}
+                        placeholder="選擇目標 MV..."
+                        className="border-2 border-black bg-white"
                       />
                     </div>
+                    <Button 
+                      onClick={handleSaveParsed} 
+                      disabled={isSaving || parsedImages.length === 0}
+                      className="bg-ztmy-green text-black hover:bg-[#8aff8a] font-bold uppercase tracking-wider border-2 border-black shadow-neo-sm"
+                    >
+                      {isSaving ? '保存中...' : '全部保存'}
+                    </Button>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* 右側：選擇關聯 MV */}
-        <div className="space-y-6">
-          <div className="bg-card border-4 border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col h-[calc(100vh-200px)]">
-            <h2 className="text-lg font-black uppercase mb-4 flex items-center justify-between">
-              <span><i className="hn hn-link text-xl mr-2" /> 關聯至 MV ({selectedMvIds.size})</span>
-              <Button onClick={handleSave} disabled={isSaving || parsedImages.length === 0 || selectedMvIds.size === 0} className="bg-ztmy-green text-black hover:bg-black hover:text-white border-2 border-black">
-                {isSaving ? <i className="hn hn-refresh animate-spin mr-2" /> : <i className="hn hn-save mr-2" />}
-                保存關聯
-              </Button>
-            </h2>
-            
-            <div className="flex-1 overflow-y-auto pr-2 space-y-2 border-2 border-black/10 p-2">
-              {mvData.map(mv => {
-                const fanartCount = mv.images?.filter(img => img.type === 'fanart').length || 0;
-                return (
-                  <label key={mv.id} className="flex items-center gap-3 p-2 hover:bg-black/5 rounded cursor-pointer border-b border-black/5">
-                    <input 
-                      type="checkbox"
-                      checked={selectedMvIds.has(mv.id)} 
-                      onChange={() => toggleMvSelection(mv.id)}
-                      className="w-5 h-5 border-2 border-black accent-black cursor-pointer"
-                    />
-                    <div className="flex flex-col flex-1 min-w-0">
-                      <span className="font-bold truncate text-sm">{mv.title}</span>
-                      <span className="text-[10px] opacity-50 font-mono truncate">{mv.date} | {mv.creators?.map(c => c.name || c).join(', ')}</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {parsedImages.map((img, i) => (
+                    <div key={i} className="border-4 border-black bg-muted relative group aspect-square">
+                      <img src={img.url} className="w-full h-full object-cover" />
+                      <button 
+                        onClick={() => setParsedImages(prev => prev.filter((_, idx) => idx !== i))}
+                        className="absolute top-2 right-2 w-8 h-8 bg-red-500 border-2 border-black text-white font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-red-600"
+                      >
+                        X
+                      </button>
                     </div>
-                    {fanartCount > 0 && (
-                      <span className="text-[10px] bg-ztmy-green text-black border border-black px-2 py-0.5 rounded-full font-bold">
-                        {fanartCount} FanArt
-                      </span>
-                    )}
-                  </label>
-                );
-              })}
-            </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        </div>
+        )}
 
-      </div>
+        {selectedMvData && (
+          <div className="p-6">
+            <h2 className="text-2xl font-black uppercase tracking-widest mb-6">{selectedMvData.title}</h2>
+            {selectedMvData.images?.filter((i: any) => i.type === 'fanart').length === 0 ? (
+              <div className="text-center p-12 border-4 border-dashed border-black/20 text-black/50 font-bold uppercase text-lg">
+                此 MV 尚未關聯任何 FanArt
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {selectedMvData.images?.filter((i: any) => i.type === 'fanart').map((media: any) => {
+                  const assoc = mediaAssociations.get(media.id);
+                  const defaultSel = [
+                    ...(assoc ? Array.from(assoc.tags) : []),
+                    ...(assoc ? Array.from(assoc.mvIds) : []),
+                  ];
+                  const currentSel = editMvs[media.id] ?? defaultSel;
+
+                  return (
+                    <div key={media.id} className="bg-card border-4 border-black shadow-neo flex flex-col overflow-hidden">
+                      <div className="aspect-square bg-black relative border-b-4 border-black">
+                        <img src={media.url} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="p-2 flex flex-col gap-2">
+                        <MultiSelect
+                          options={mvsOptions}
+                          selected={currentSel}
+                          onChange={(sel) => setEditMvs(prev => ({ ...prev, [media.id]: sel }))}
+                          placeholder="補充關聯 MV/標籤..."
+                          className="border-2 border-black bg-white"
+                        />
+                        <Button
+                          className="h-8 text-xs bg-ztmy-green text-black font-black hover:bg-[#8aff8a] border-2 border-black w-full"
+                          onClick={() => handleUpdateAssociations(media.id, currentSel)}
+                        >
+                          更新關聯
+                        </Button>
+                        <div className="text-xs truncate opacity-70 mb-2">
+                          {media.tags?.includes('tag:collab') ? '合繪 ' : ''}
+                          {media.tags?.includes('tag:acane') ? 'ACAね ' : ''}
+                          {media.tags?.includes('tag:real') ? '實物 ' : ''}
+                          {media.tags?.includes('tag:uniguri') ? '海膽栗子 ' : ''}
+                          {media.tags?.includes('tag:shoga') ? '生薑 ' : ''}
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          className="h-8 text-xs bg-red-500 text-white font-black hover:bg-red-600 border-2 border-black w-full"
+                          onClick={() => handleRemoveFromMv(media.id, selectedMvData.id)}
+                        >
+                          {selectedMvData.id.startsWith('tag:') ? '移除標籤' : '從此 MV 移除'}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

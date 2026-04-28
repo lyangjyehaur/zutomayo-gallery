@@ -240,12 +240,14 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
       }
     });
 
-    const allowedTags = new Set(['tag:collab', 'tag:aca-ne']);
+    const allowedTags = new Set(['tag:collab', 'tag:acane', 'tag:aca-ne', 'tag:real', 'tag:uniguri', 'tag:shoga']);
     const rawMvs = Array.isArray(mvs) ? mvs : [];
     const mvIds = rawMvs.filter((v: any) => typeof v === 'string' && !v.startsWith('tag:'));
     const tags = Array.from(
       new Set(
-        rawMvs.filter((v: any) => typeof v === 'string' && v.startsWith('tag:') && allowedTags.has(v))
+        rawMvs
+          .filter((v: any) => typeof v === 'string' && v.startsWith('tag:') && allowedTags.has(v))
+          .map((v: string) => (v === 'tag:aca-ne' ? 'tag:acane' : v))
       )
     );
 
@@ -282,6 +284,10 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
       // 有關聯 MV，清除 MV 緩存
       const mvService = new MVService();
       mvService.clearCache();
+    }
+
+    if ((mvIds.length > 0 || tags.length > 0) && group.get('status') === 'unorganized') {
+      await group.update({ status: 'organized' });
     }
 
     await staging.update({ status: 'approved' });

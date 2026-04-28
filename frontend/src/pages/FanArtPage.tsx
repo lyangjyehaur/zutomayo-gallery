@@ -28,6 +28,16 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
     return Array.from(years).sort((a, b) => b.localeCompare(a));
   }, [availableMVs]);
 
+  const yearCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    availableMVs.forEach(mv => {
+      const year = mv.date?.substring(0, 4);
+      if (!year) return;
+      map.set(year, (map.get(year) || 0) + 1);
+    });
+    return map;
+  }, [availableMVs]);
+
   // 提取所有專輯
   const availableAlbums = useMemo(() => {
     const albums = new Set<string>();
@@ -44,11 +54,39 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
     return Array.from(albums).sort();
   }, [availableMVs]);
 
+  const albumCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    availableMVs.forEach(mv => {
+      const albumNames: string[] = [];
+      if (mv.albums && Array.isArray(mv.albums)) {
+        mv.albums.forEach(a => {
+          const name = typeof a === 'object' ? (a as any).name : a;
+          if (name) albumNames.push(String(name).trim());
+        });
+      } else if (mv.albums && typeof mv.albums === 'string') {
+        (mv.albums as string)
+          .split(',')
+          .map(a => a.trim())
+          .filter(Boolean)
+          .forEach(a => albumNames.push(a));
+      }
+
+      Array.from(new Set(albumNames)).forEach(name => {
+        if (!name) return;
+        map.set(name, (map.get(name) || 0) + 1);
+      });
+    });
+    return map;
+  }, [availableMVs]);
+
   // 狀態：選中的 MV IDs
   const [selectedMvs, setSelectedMvs] = useState<string[]>([]);
   // 狀態：是否包含綜合插畫 (多角色)
   const [includeCollab, setIncludeCollab] = useState<boolean>(true);
   const [onlyAcaNe, setOnlyAcaNe] = useState<boolean>(false);
+  const [onlyReal, setOnlyReal] = useState<boolean>(false);
+  const [onlyUniguri, setOnlyUniguri] = useState<boolean>(false);
+  const [onlyShoga, setOnlyShoga] = useState<boolean>(false);
   
   // 狀態：初篩用的年份和專輯
   const [filterYear, setFilterYear] = useState<string>('all');
@@ -119,6 +157,61 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
 
   const [isFilterExpanded, setIsFilterExpanded] = useState<boolean>(false);
 
+  const selectedSpecialTags = useMemo(() => {
+    const tags: string[] = [];
+    if (onlyAcaNe) tags.push('tag:acane');
+    if (onlyReal) tags.push('tag:real');
+    if (onlyUniguri) tags.push('tag:uniguri');
+    if (onlyShoga) tags.push('tag:shoga');
+    return tags;
+  }, [onlyAcaNe, onlyReal, onlyUniguri, onlyShoga]);
+
+  const matchSpecialTags = (tags: string[]) => {
+    if (selectedSpecialTags.length === 0) return true;
+    return selectedSpecialTags.some(t => tags.includes(t));
+  };
+
+  const baseFilteredFanArts = useMemo(() => {
+    return allFanArts.filter(art => {
+      const tags = Array.isArray(art.tags) ? art.tags : [];
+      const isCollab = art.mvIds.length > 1 || tags.includes('tag:collab');
+      if (!includeCollab && isCollab) return false;
+      if (!matchSpecialTags(tags)) return false;
+      return true;
+    });
+  }, [allFanArts, includeCollab, selectedSpecialTags]);
+
+  const mvFanArtCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    baseFilteredFanArts.forEach(art => {
+      art.mvIds.forEach((id: string) => {
+        map.set(id, (map.get(id) || 0) + 1);
+      });
+    });
+    return map;
+  }, [baseFilteredFanArts]);
+
+  const specialTagCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    allFanArts.forEach(art => {
+      const tags = Array.isArray(art.tags) ? art.tags : [];
+      (['tag:acane', 'tag:real', 'tag:uniguri', 'tag:shoga'] as const).forEach(tag => {
+        if (tags.includes(tag)) map.set(tag, (map.get(tag) || 0) + 1);
+      });
+    });
+    return map;
+  }, [allFanArts]);
+
+  const collabCount = useMemo(() => {
+    return allFanArts.filter(art => {
+      const tags = Array.isArray(art.tags) ? art.tags : [];
+      const isCollab = art.mvIds.length > 1 || tags.includes('tag:collab');
+      if (!isCollab) return false;
+      if (!matchSpecialTags(tags)) return false;
+      return true;
+    }).length;
+  }, [allFanArts, selectedSpecialTags]);
+
   // 切換 MV 選擇
   const toggleMvSelection = (id: string) => {
     setSelectedMvs(prev => 
@@ -152,7 +245,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
       // 如果不包含綜合插畫，但它是綜合插畫，則過濾掉
       if (!includeCollab && isCollab) return false;
 
-      if (onlyAcaNe && !tags.includes('tag:aca-ne')) return false;
+      if (!matchSpecialTags(tags)) return false;
       
       // 如果沒有選擇任何 MV，則顯示全部符合上述條件的
       if (selectedMvs.length === 0) return true;
@@ -160,7 +253,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
       // 如果有選擇 MV，該圖片必須關聯到至少一個選中的 MV
       return art.mvIds.some(id => selectedMvs.includes(id));
     });
-  }, [allFanArts, includeCollab, onlyAcaNe, selectedMvs]);
+  }, [allFanArts, includeCollab, selectedSpecialTags, selectedMvs]);
 
   const { shuffledFanArts, shuffleKey } = useMemo(() => {
     const next = [...filteredFanArts];
@@ -231,6 +324,9 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
                   {selectedMvs.length > 0 ? `已選 ${selectedMvs.length} 個 MV` : '所有作品'} 
                   {!includeCollab ? ' (不含大合繪)' : ''}
                   {onlyAcaNe ? ' (ACAね)' : ''}
+                  {onlyReal ? ' (實物)' : ''}
+                  {onlyUniguri ? ' (海膽栗子)' : ''}
+                  {onlyShoga ? ' (生薑)' : ''}
                   {filterYear !== 'all' || filterAlbum !== 'all' ? ' · 有啟用初篩' : ''}
                 </div>
               )}
@@ -249,14 +345,35 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
               <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${includeCollab ? 'bg-main' : 'bg-card'}`}>
                 {includeCollab && <i className="hn hn-check text-xs font-black"></i>}
               </div>
-              <Label className="font-bold cursor-pointer">{t('fanart.include_collab', '綜合插畫 (多角色 / 大合繪)')}</Label>
+              <Label className="font-bold cursor-pointer">{t('fanart.include_collab', '綜合插畫 (多角色 / 大合繪)')} ({collabCount})</Label>
             </div>
 
             <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" onClick={() => setOnlyAcaNe(!onlyAcaNe)}>
               <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyAcaNe ? 'bg-main' : 'bg-card'}`}>
                 {onlyAcaNe && <i className="hn hn-check text-xs font-black"></i>}
               </div>
-              <Label className="font-bold cursor-pointer">{t('fanart.only_aca_ne', '只看 ACAね')}</Label>
+              <Label className="font-bold cursor-pointer">{t('fanart.only_aca_ne', '只看 ACAね')} ({specialTagCounts.get('tag:acane') || 0})</Label>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" onClick={() => setOnlyReal(!onlyReal)}>
+              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyReal ? 'bg-main' : 'bg-card'}`}>
+                {onlyReal && <i className="hn hn-check text-xs font-black"></i>}
+              </div>
+              <Label className="font-bold cursor-pointer">只看 實物 ({specialTagCounts.get('tag:real') || 0})</Label>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" onClick={() => setOnlyUniguri(!onlyUniguri)}>
+              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyUniguri ? 'bg-main' : 'bg-card'}`}>
+                {onlyUniguri && <i className="hn hn-check text-xs font-black"></i>}
+              </div>
+              <Label className="font-bold cursor-pointer">只看 海膽栗子 ({specialTagCounts.get('tag:uniguri') || 0})</Label>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" onClick={() => setOnlyShoga(!onlyShoga)}>
+              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyShoga ? 'bg-main' : 'bg-card'}`}>
+                {onlyShoga && <i className="hn hn-check text-xs font-black"></i>}
+              </div>
+              <Label className="font-bold cursor-pointer">只看 生薑 ({specialTagCounts.get('tag:shoga') || 0})</Label>
             </div>
 
             {/* MV 單曲初篩 (年份/專輯) */}
@@ -268,9 +385,9 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
                   onChange={(e) => setFilterYear(e.target.value)}
                   className="w-full border-2 border-black bg-background px-3 py-2 font-bold font-mono outline-none focus:border-main shadow-neo-sm"
                 >
-                  <option value="all">所有年份 (ALL YEARS)</option>
+                  <option value="all">所有年份 (ALL YEARS) ({availableMVs.length})</option>
                   {availableYears.map(year => (
-                    <option key={year} value={year}>{year}</option>
+                    <option key={year} value={year}>{year} ({yearCounts.get(year) || 0})</option>
                   ))}
                 </select>
               </div>
@@ -281,9 +398,9 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
                   onChange={(e) => setFilterAlbum(e.target.value)}
                   className="w-full border-2 border-black bg-background px-3 py-2 font-bold font-mono outline-none focus:border-main shadow-neo-sm"
                 >
-                  <option value="all">所有專輯 (ALL ALBUMS)</option>
+                  <option value="all">所有專輯 (ALL ALBUMS) ({availableMVs.length})</option>
                   {availableAlbums.map(album => (
-                    <option key={album} value={album}>{album}</option>
+                    <option key={album} value={album}>{album} ({albumCounts.get(album) || 0})</option>
                   ))}
                 </select>
               </div>
@@ -311,7 +428,8 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
                     >
                       <div className={`w-3 h-3 border-2 shrink-0 flex items-center justify-center ${selectedMvs.includes(mv.id) ? 'border-main bg-main' : 'border-black bg-card'}`}>
                       </div>
-                      <span className="text-xs font-bold truncate" title={mv.title} lang="ja">{mv.title}</span>
+                      <span className="text-xs font-bold truncate flex-1" title={mv.title} lang="ja">{mv.title}</span>
+                      <span className="text-[10px] font-black opacity-70 shrink-0">{mvFanArtCounts.get(mv.id) || 0}</span>
                     </div>
                   ))}
                 </div>

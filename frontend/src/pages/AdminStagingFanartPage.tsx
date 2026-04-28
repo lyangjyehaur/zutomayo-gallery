@@ -68,7 +68,10 @@ export function AdminStagingFanartPage() {
       if (data.success) {
         const tagOptions: Option[] = [
           { label: '綜合合繪', value: 'tag:collab' },
-          { label: 'ACAね', value: 'tag:aca-ne' },
+          { label: 'ACAね', value: 'tag:acane' },
+          { label: '實物', value: 'tag:real' },
+          { label: '海膽栗子', value: 'tag:uniguri' },
+          { label: '生薑', value: 'tag:shoga' },
         ];
         const mvOptions: Option[] = data.data.map((mv: any) => ({ label: mv.title, value: mv.id }));
         setMvs([...tagOptions, ...mvOptions]);

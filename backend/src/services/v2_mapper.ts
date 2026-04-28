@@ -67,6 +67,7 @@ export async function getMVsFromDB(): Promise<MVItem[]> {
         ...img,
         url: formatMediaUrl(img.url),
         thumbnail_url: formatMediaUrl(img.thumbnail_url),
+        tags: Array.isArray(img.tags) ? img.tags.map((t: any) => (t === 'tag:aca-ne' ? 'tag:acane' : t)) : [],
         usage: img.MVMedia?.usage || img.usage || 'gallery',
         order_index: img.MVMedia?.order_index ?? img.order_index ?? 0
       }));
@@ -179,7 +180,9 @@ export async function saveMVsToDB(mvs: MVItem[], transaction?: any): Promise<voi
 
           const originalUrl = img.original_url || url;
           const usage = img.MVMedia?.usage || img.usage || 'gallery';
-          const desiredTags = Array.isArray((img as any).tags) ? Array.from(new Set((img as any).tags)) : undefined;
+          const desiredTags = Array.isArray((img as any).tags)
+            ? Array.from(new Set((img as any).tags.map((t: any) => (t === 'tag:aca-ne' ? 'tag:acane' : t))))
+            : undefined;
 
           let [image] = await MediaModel.findOrCreate({
             where: { original_url: originalUrl },
