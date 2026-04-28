@@ -175,6 +175,13 @@ export function AdminFanArtPage() {
     return url.includes('ytimg.com') || url.includes('youtube.com') || url.includes('img.youtube.com');
   };
 
+  const formatPostDateTime = (value?: string) => {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+  };
+
   function normalizeTag(tag: any) {
     if (!tag) return '';
     const str = String(tag);
@@ -551,7 +558,7 @@ export function AdminFanArtPage() {
                     </div>
                     <div className="p-2 flex flex-col gap-2 flex-1">
                       <div className="text-xs truncate font-bold opacity-70">
-                        {media.group?.post_date ? new Date(media.group.post_date).toLocaleDateString() : ''}
+                        {formatPostDateTime(media.group?.post_date)}
                       </div>
                       <MultiSelect
                         options={mvsOptions}
@@ -607,7 +614,7 @@ export function AdminFanArtPage() {
                       </div>
                       <div className="p-3 flex flex-col gap-2">
                         <div className="text-xs font-bold opacity-70 truncate">
-                          {group.post_date ? new Date(group.post_date).toLocaleDateString() : ''}
+                          {formatPostDateTime(group.post_date)}
                         </div>
                         <div className="text-xs font-mono opacity-70 truncate" title={group.source_url || ''}>
                           {group.source_url || ''}
