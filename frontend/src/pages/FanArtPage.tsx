@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MVItem } from '@/lib/types';
-import { getProxyImgUrl } from '@/lib/image';
 import { Label } from '@/components/ui/label';
 import { WalineComments } from '@/components/WalineComments';
 import FancyboxViewer from '@/components/FancyboxViewer';
@@ -163,8 +162,21 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
     });
   }, [allFanArts, includeCollab, onlyAcaNe, selectedMvs]);
 
+  const { shuffledFanArts, shuffleKey } = useMemo(() => {
+    const next = [...filteredFanArts];
+    for (let i = next.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [next[i], next[j]] = [next[j], next[i]];
+    }
+    const nextKey =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? (crypto as Crypto).randomUUID()
+        : `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    return { shuffledFanArts: next, shuffleKey: nextKey };
+  }, [filteredFanArts]);
+
   const fancyboxImages = useMemo(() => {
-    return filteredFanArts.map(art => {
+    return shuffledFanArts.map(art => {
       const authorText = art.tweetAuthor ? `@${art.tweetHandle || art.tweetAuthor}` : '';
       const baseCaption = art.caption || (authorText ? `FanArt by ${authorText}` : 'FanArt');
       
@@ -181,7 +193,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
         richText
       };
     });
-  }, [filteredFanArts]);
+  }, [shuffledFanArts]);
 
   return (
     <div className="w-full pb-16">
@@ -326,6 +338,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
       {fancyboxImages.length > 0 ? (
         <div className="max-w-[1600px] mx-auto px-4 md:px-8 pb-12">
           <FancyboxViewer
+            key={shuffleKey}
             images={fancyboxImages}
             itemsPerPage={20}
             autoLoadMore={false}
