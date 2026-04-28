@@ -44,6 +44,14 @@ export function MultiSelect({
     onChange(selected.filter((i) => i !== item))
   }
 
+  const getChipStyle = (value: string) => {
+    const isTag = value.startsWith("tag:")
+    if (isTag) {
+      return "bg-ztmy-purple text-white border-black hover:bg-ztmy-purple/90"
+    }
+    return "bg-ztmy-green text-black border-black hover:bg-ztmy-green/90"
+  }
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -52,14 +60,14 @@ export function MultiSelect({
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "w-full justify-between h-auto min-h-[2.5rem] p-2 border-2 border-black font-bold shadow-neo-sm",
+            "w-full justify-between h-auto min-h-[2.5rem] p-2 border-2 border-black font-bold shadow-neo-sm bg-white text-black",
             className
           )}
           onClick={() => setOpen(!open)}
         >
           <div className="flex flex-wrap gap-1">
             {selected.length === 0 && (
-              <span className="text-muted-foreground">{placeholder}</span>
+              <span className="text-black/50">{placeholder}</span>
             )}
             {selected.map((item) => {
               const option = options.find((opt) => opt.value === item)
@@ -67,7 +75,7 @@ export function MultiSelect({
                 <Badge
                   key={item}
                   variant="secondary"
-                  className="mr-1 mb-1 border-2 border-black bg-white"
+                  className={cn("mr-1 mb-1 border-2 shadow-neo-sm", getChipStyle(item))}
                   onClick={(e) => {
                     e.stopPropagation()
                     handleUnselect(item)
@@ -91,7 +99,7 @@ export function MultiSelect({
                       handleUnselect(item)
                     }}
                   >
-                    <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                    <X className={cn("h-3 w-3", item.startsWith("tag:") ? "text-white/80 hover:text-white" : "text-black/70 hover:text-black")} />
                   </button>
                 </Badge>
               )
@@ -100,7 +108,7 @@ export function MultiSelect({
           <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0 border-2 border-black shadow-neo">
+      <PopoverContent className="w-full p-0 border-2 border-black shadow-neo bg-white">
         <Command>
           <CommandInput placeholder="Search..." className="h-9" />
           <CommandList>
@@ -117,6 +125,10 @@ export function MultiSelect({
                         : [...selected, option.value]
                     )
                   }}
+                  className={cn(
+                    "font-bold",
+                    selected.includes(option.value) ? "bg-ztmy-green/20" : ""
+                  )}
                 >
                   <Check
                     className={cn(

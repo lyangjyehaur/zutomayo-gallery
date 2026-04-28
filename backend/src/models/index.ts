@@ -150,6 +150,7 @@ export const StagingFanartModel = sequelize.define('StagingFanart', {
   tweet_id: { type: DataTypes.STRING, comment: '推文 ID' },
   original_url: { type: DataTypes.STRING, comment: '原始來源網址 (如推文連結)' },
   media_url: { type: DataTypes.STRING, comment: '原始媒體連結' },
+  thumbnail_url: { type: DataTypes.STRING, allowNull: true, comment: '影片縮圖或預覽圖網址' },
   r2_url: { type: DataTypes.STRING, allowNull: true, comment: 'R2 備份連結' },
   media_type: { type: DataTypes.STRING, comment: '媒體格式類型 (image/video)' },
   crawled_at: { type: DataTypes.DATE, comment: '爬取時間' },

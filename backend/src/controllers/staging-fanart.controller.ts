@@ -251,6 +251,8 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
       )
     );
 
+    const stagingThumbnailUrl = staging.get('thumbnail_url') as any;
+
     let existingMedia = await MediaModel.findOne({ where: { original_url: mediaUrl } });
     if (!existingMedia) {
       existingMedia = await MediaModel.create({
@@ -259,6 +261,7 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
         media_type: mediaType || 'image',
         url: finalR2Url || mediaUrl,
         original_url: mediaUrl,
+        thumbnail_url: mediaType === 'video' ? (stagingThumbnailUrl || null) : null,
         width: mediaWidth || null,
         height: mediaHeight || null,
         tags,
@@ -269,7 +272,11 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
       const nextTags = Array.from(
         new Set([...(Array.isArray(currentTags) ? currentTags : []), ...tags])
       );
-      await existingMedia.update({ tags: nextTags });
+      const updateData: any = { tags: nextTags };
+      if (mediaType === 'video' && stagingThumbnailUrl && !existingMedia.get('thumbnail_url')) {
+        updateData.thumbnail_url = stagingThumbnailUrl;
+      }
+      await existingMedia.update(updateData);
     }
 
     if (mvIds.length > 0) {

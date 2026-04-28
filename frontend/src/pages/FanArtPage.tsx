@@ -11,6 +11,14 @@ interface FanArtPageProps {
 
 export function FanArtPage({ mvData }: FanArtPageProps) {
   const { t } = useTranslation();
+
+  const normalizeTag = (tag: any) => {
+    if (!tag) return '';
+    const str = String(tag);
+    if (str === 'tag:aca-ne') return 'tag:acane';
+    if (str.startsWith('tag:')) return str;
+    return `tag:${str}`;
+  };
   
   // 提取所有有圖片的 MV 作為篩選選項
   const availableMVs = useMemo(() => {
@@ -103,6 +111,9 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
           if (img.type === 'fanart') {
             // 使用 url + tweetUrl 組合或只用 url 作為 key
             const key = img.url;
+            const like_count = (img as any).like_count ?? (img as any).group?.like_count ?? 0;
+            const rawTags = Array.isArray((img as any).tags) ? (img as any).tags : [];
+            const normalizedTags = rawTags.map(normalizeTag).filter(Boolean);
             
             if (fanArtMap.has(key)) {
               const existing = fanArtMap.get(key)!;
@@ -110,14 +121,16 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
                 existing.mvIds.push(mv.id);
                 existing.mvTitles.push(mv.title);
               }
-              const nextTags = Array.from(new Set([...(existing.tags || []), ...((img as any).tags || [])]));
-              if (nextTags.length > 0) existing.tags = nextTags;
+              const nextTags = Array.from(new Set([...(existing.tags || []), ...normalizedTags]));
+              existing.tags = nextTags;
+              existing.like_count = Math.max(existing.like_count || 0, like_count || 0);
             } else {
               fanArtMap.set(key, {
                 ...img,
-                tags: Array.isArray((img as any).tags) ? (img as any).tags : [],
+                tags: normalizedTags,
                 mvIds: [mv.id],
-                mvTitles: [mv.title]
+                mvTitles: [mv.title],
+                like_count
               });
             }
           }

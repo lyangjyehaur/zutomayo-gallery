@@ -168,7 +168,7 @@ export async function runCrawler(searchTerms: string, startDate?: string, endDat
           hashtags = targetTweet.entities.hashtags.map((h: any) => h.text || h).filter(Boolean);
         }
         
-        let medias: { url: string; type: string; width?: number; height?: number }[] = [];
+        let medias: { url: string; type: string; width?: number; height?: number; thumbnail_url?: string }[] = [];
 
         if (Array.isArray(mediaList)) {
           for (const m of mediaList) {
@@ -180,6 +180,10 @@ export async function runCrawler(searchTerms: string, startDate?: string, endDat
 
             let url = m.media_url_https || m.media_url || m.url;
             let type = m.type === 'video' || m.type === 'animated_gif' ? 'video' : 'photo';
+            const thumbnail_url =
+              type === 'video'
+                ? (m.media_url_https || m.media_url || m.thumbnail || m.preview_image_url || m.poster || null)
+                : null;
             let width = m.original_info?.width || m.sizes?.large?.w;
             let height = m.original_info?.height || m.sizes?.large?.h;
             
@@ -200,7 +204,7 @@ export async function runCrawler(searchTerms: string, startDate?: string, endDat
             }
             
             if (url && !url.includes('profile_images')) {
-              medias.push({ url, type, width, height });
+              medias.push({ url, type, width, height, thumbnail_url: thumbnail_url || undefined });
             }
           }
         }
@@ -225,6 +229,7 @@ export async function runCrawler(searchTerms: string, startDate?: string, endDat
           tweet_id: tweetId,
           original_url: originalUrl,
           media_url: mediaUrl,
+          thumbnail_url: media.thumbnail_url || null,
           r2_url: null,
           media_type: mediaType === 'photo' ? 'image' : 'video',
           crawled_at: crawledAt,

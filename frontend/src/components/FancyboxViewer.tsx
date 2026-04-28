@@ -328,6 +328,13 @@ const PhotoItem = React.memo(function PhotoItem({ photo, index, onPhotoClick, de
     onPhotoClick?.(index);
   };
 
+  const likeCount =
+    typeof (photo as any).like_count === 'number'
+      ? (photo as any).like_count
+      : typeof (photo as any).likeCount === 'number'
+        ? (photo as any).likeCount
+        : undefined;
+
   return (
     <div
       ref={containerRef2}
@@ -360,47 +367,78 @@ const PhotoItem = React.memo(function PhotoItem({ photo, index, onPhotoClick, de
               </span>
             </div>
 
-            <img
-              alt={photo.caption}
-              src={photo.thumb}
-              className={`w-full h-auto object-cover relative z-10`}
-              loading="lazy"
-              decoding="async"
-              style={{
-                position: 'absolute', 
-                inset: 0, 
-                height: '100%',
-                opacity: isLoaded ? 1 : 0,
-                transition: 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
-                willChange: 'opacity'
-              }}
-              onLoad={(e) => {
-                loadedImagesCache.add(photo.thumb);
-                setIsLoaded(true);
-                const target = e.target as HTMLImageElement;
-                if (!actualDimensions && target.naturalWidth) {
-                  const dims = { width: target.naturalWidth, height: target.naturalHeight };
-                  dimensionCache.set(photo.thumb, dims);
-                  setActualDimensions(dims);
-                }
-              }}
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                // 若優先載入的 originalUrl 失敗 (例如推文已被刪除)，降級回傳 R2 備份的圖
-                if (photo.fallbackThumb && target.src !== photo.fallbackThumb) {
-                  target.src = photo.fallbackThumb;
-                } else {
-                  target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"%3E%3C/svg%3E';
+            {photo.isVideo && isMediaVideo(photo.thumb) ? (
+              <video
+                src={photo.thumb}
+                className="w-full h-full object-cover relative z-10"
+                muted
+                playsInline
+                preload="metadata"
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  height: '100%',
+                  opacity: isLoaded ? 1 : 0,
+                  transition: 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                  willChange: 'opacity'
+                }}
+                onLoadedData={() => {
                   setIsLoaded(true);
-                }
-              }}
-            />
+                }}
+                onError={() => {
+                  setIsLoaded(true);
+                }}
+              />
+            ) : (
+              <img
+                alt={photo.caption}
+                src={photo.thumb}
+                className={`w-full h-auto object-cover relative z-10`}
+                loading="lazy"
+                decoding="async"
+                style={{
+                  position: 'absolute', 
+                  inset: 0, 
+                  height: '100%',
+                  opacity: isLoaded ? 1 : 0,
+                  transition: 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                  willChange: 'opacity'
+                }}
+                onLoad={(e) => {
+                  loadedImagesCache.add(photo.thumb);
+                  setIsLoaded(true);
+                  const target = e.target as HTMLImageElement;
+                  if (!actualDimensions && target.naturalWidth) {
+                    const dims = { width: target.naturalWidth, height: target.naturalHeight };
+                    dimensionCache.set(photo.thumb, dims);
+                    setActualDimensions(dims);
+                  }
+                }}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  if (photo.fallbackThumb && target.src !== photo.fallbackThumb) {
+                    target.src = photo.fallbackThumb;
+                  } else {
+                    target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"%3E%3C/svg%3E';
+                    setIsLoaded(true);
+                  }
+                }}
+              />
+            )}
             
             {photo.isGif && (
               <div className="absolute top-2 left-2 flex items-center justify-center bg-black/60 text-white rounded px-2 py-0.5 shadow-sm backdrop-blur-sm border border-white/10 z-20 pointer-events-none">
                 <span className="font-black text-[10px] tracking-widest">GIF</span>
               </div>
             )}
+
+            {typeof likeCount === 'number' && (
+              <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/70 text-white rounded px-2 py-0.5 shadow-sm backdrop-blur-sm border border-white/10 z-20 pointer-events-none">
+                <i className="hn hn-heart-solid text-red-400 text-[12px] leading-none" />
+                <span className="font-black text-[10px] tabular-nums">{likeCount.toLocaleString()}</span>
+              </div>
+            )}
+
             {photo.isVideo && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none transition-opacity group-hover:bg-black/30 z-20 backdrop-blur-[1px]">
                 <div className="bg-black/70 text-white p-2 sm:p-3 border-2 border-white/20 shadow-lg flex items-center justify-center backdrop-blur-md transform transition-transform group-hover:scale-110">
@@ -512,9 +550,15 @@ export default function FancyboxViewer({
         const hasOriginalFull = img.original_url && (img.original_url.includes('twimg.com') || img.original_url.includes('ytimg.com'));
         const preferredFullUrl = hasOriginalFull ? img.original_url : baseFullUrl;
 
-        // 產生各種尺寸的網址 (優先網址與降級網址)
-        const thumbUrl = img.thumb ? img.thumb : getProxyImgUrl(preferredThumbUrl, 'thumb');
-        const fallbackThumbUrl = img.thumb ? img.thumb : getProxyImgUrl(baseThumbUrl, 'thumb');
+        const hasVideoThumb = !!((img as any).original_thumbnail_url || img.thumbnail_url);
+        const noVideoThumb = isVideo && !hasVideoThumb;
+
+        const thumbUrl = img.thumb
+          ? img.thumb
+          : (noVideoThumb ? getProxyImgUrl(preferredFullUrl, 'raw') : getProxyImgUrl(preferredThumbUrl, 'thumb'));
+        const fallbackThumbUrl = img.thumb
+          ? img.thumb
+          : (noVideoThumb ? getProxyImgUrl(baseFullUrl, 'raw') : getProxyImgUrl(baseThumbUrl, 'thumb'));
 
         const fullUrl = img.full ? img.full : (isVideo ? getProxyImgUrl(preferredFullUrl, 'raw') : getProxyImgUrl(preferredFullUrl, 'full'));
         const fallbackFullUrl = img.full ? img.full : (isVideo ? getProxyImgUrl(baseFullUrl, 'raw') : getProxyImgUrl(baseFullUrl, 'full'));
