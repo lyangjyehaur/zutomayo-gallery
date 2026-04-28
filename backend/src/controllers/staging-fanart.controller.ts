@@ -35,7 +35,11 @@ export const getProgress = async (req: Request, res: Response) => {
     if (crawlerState) {
       syncProgress = {
         total_crawled: crawlerState.getDataValue('total_crawled'),
-        pagination_token: crawlerState.getDataValue('pagination_token')
+        pagination_token: crawlerState.getDataValue('pagination_token'),
+        status: crawlerState.getDataValue('status'),
+        current_run_processed: crawlerState.getDataValue('current_run_processed'),
+        current_run_total: crawlerState.getDataValue('current_run_total'),
+        last_crawled_month: crawlerState.getDataValue('last_crawled_month')
       };
     }
 

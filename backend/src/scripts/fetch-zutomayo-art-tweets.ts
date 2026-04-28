@@ -69,6 +69,7 @@ export async function runCrawler(username: string = 'zutomayo_art') {
     where: { username },
     defaults: {
       pagination_token: null,
+      last_crawled_month: null,
       total_crawled: 0
     }
   });
@@ -81,16 +82,36 @@ export async function runCrawler(username: string = 'zutomayo_art') {
   
   console.log(`[Crawler] 讀取到先前的進度紀錄:`, progress);
 
+  // 計算爬取月份範圍
+  let targetMonth = crawlerState.getDataValue('last_crawled_month');
+  if (!targetMonth) {
+    const now = new Date();
+    targetMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  const [yearStr, monthStr] = targetMonth.split('-');
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+
+  const sinceDate = `${year}-${String(month).padStart(2, '0')}-01`;
+  
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  const untilDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+
+  const prevMonth = month === 1 ? 12 : month - 1;
+  const prevYear = month === 1 ? year - 1 : year;
+  const nextTargetMonth = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+
   try {
-    console.log(`[Crawler] 正在透過 Apify 獲取推文...`);
+    console.log(`[Crawler] 正在透過 Apify 獲取推文... 目標月份: ${targetMonth} (${sinceDate} ~ ${untilDate})`);
     
     const input = {
-      searchMode: "live",
-      searchTerms: [`from:${username}`],
-      maxTweets: 7000
+      searchTerms: [`from:${username} since:${sinceDate} until:${untilDate}`],
+      maxItems: 500
     };
 
-    const run = await client.actor("microworlds/twitter-scraper").call(input);
+    const run = await client.actor("kaitoeasyapi/twitter-x-data-tweet-scraper-pay-per-result-cheapest").call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
 
     // 備份 Apify 原始結果
@@ -103,8 +124,11 @@ export async function runCrawler(username: string = 'zutomayo_art') {
     console.log(`[Crawler] 已將 Apify 原始結果備份至: ${backupFilePath}`);
 
     if (!items || items.length === 0) {
-      console.log('[Crawler] 沒有找到更多推文，爬蟲完成。');
-      await crawlerState.update({ status: 'idle' });
+      console.log('[Crawler] 此月份沒有找到推文，將自動推進到上個月。');
+      await crawlerState.update({ 
+        status: 'idle',
+        last_crawled_month: nextTargetMonth
+      });
       return progress.total_crawled;
     }
 
@@ -302,7 +326,8 @@ export async function runCrawler(username: string = 'zutomayo_art') {
     await crawlerState.update({
       status: 'idle',
       total_crawled: progress.total_crawled,
-      current_run_processed
+      current_run_processed,
+      last_crawled_month: nextTargetMonth
     });
 
   } catch (err: any) {

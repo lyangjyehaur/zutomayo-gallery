@@ -26,6 +26,7 @@ interface ProgressData {
     saved_images?: number;
     saved_videos?: number;
     last_processed_id?: string;
+    last_crawled_month?: string;
   } | null;
   statusCounts: {
     pending: number;
@@ -225,7 +226,7 @@ export function AdminStagingFanartPage() {
                   onClick={handleTriggerCrawler}
                   disabled={isTriggering}
                 >
-                  <i className={`hn ${isTriggering ? 'hn-refresh animate-spin' : 'hn-play'} mr-2`} /> Start Crawler
+                  <i className={`hn ${isTriggering ? 'hn-refresh animate-spin' : 'hn-play'} mr-2`} /> 抓取 {progress?.syncProgress?.last_crawled_month || '本月'} 的推文
                 </Button>
                 <Button 
                   variant="outline" 
@@ -249,6 +250,10 @@ export function AdminStagingFanartPage() {
                    progress?.syncProgress?.status === 'error' ? '發生錯誤' :
                    progress?.syncProgress?.status || '閒置中'}
                 </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold uppercase text-sm opacity-70">下一個準備抓取的月份:</span>
+                <span className="font-black text-lg">{progress?.syncProgress?.last_crawled_month || '本月'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-bold uppercase text-sm opacity-70">總抓取數:</span>
