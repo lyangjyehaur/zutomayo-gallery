@@ -3,10 +3,10 @@
   "version": "3.6.1",
   "type": "module",
   "scripts": {
-    "predev": "npm install",
+    "predev": "pnpm install",
     "dev": "tsx watch src/index.ts",
     "build": "NODE_OPTIONS=--max-old-space-size=4096 tsc",
-    "prestart": "npm install",
+    "prestart": "pnpm install",
     "start": "node dist/index.js",
     "fetch-covers": "tsx src/scripts/fetch_zutomayo_covers.ts",
     "reset-password": "tsx src/scripts/reset-password.ts",

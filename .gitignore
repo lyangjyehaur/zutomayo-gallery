@@ -162,5 +162,6 @@ frontend-memory.md
 
 # Web Scraper
 /scraper/
+backend/crawler/*.json
 
 frontend/memory.md
