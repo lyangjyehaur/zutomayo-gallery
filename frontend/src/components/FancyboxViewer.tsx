@@ -335,6 +335,12 @@ const PhotoItem = React.memo(function PhotoItem({ photo, index, onPhotoClick, de
         ? (photo as any).likeCount
         : undefined;
 
+  const authorName = (photo as any).tweetAuthor || '';
+  const authorHandle = (photo as any).tweetHandle || '';
+  const authorText = authorHandle
+    ? `${authorName ? `${authorName} ` : ''}@${authorHandle}`
+    : authorName;
+
   return (
     <div
       ref={containerRef2}
@@ -436,6 +442,14 @@ const PhotoItem = React.memo(function PhotoItem({ photo, index, onPhotoClick, de
               <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/70 text-white rounded px-2 py-0.5 shadow-sm backdrop-blur-sm border border-white/10 z-20 pointer-events-none">
                 <i className="hn hn-heart-solid text-red-400 text-[12px] leading-none" />
                 <span className="font-black text-[10px] tabular-nums">{likeCount.toLocaleString()}</span>
+              </div>
+            )}
+
+            {!!authorText && (
+              <div className="absolute bottom-2 right-2 max-w-[75%] bg-black/70 text-white rounded px-2 py-0.5 shadow-sm backdrop-blur-sm border border-white/10 z-20 pointer-events-none">
+                <span className="font-black text-[10px] truncate block" title={authorText}>
+                  {authorText}
+                </span>
               </div>
             )}
 
