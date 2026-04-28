@@ -53,6 +53,7 @@ export function AdminStagingFanartPage() {
   const [mvs, setMvs] = useState<Option[]>([]);
   const [selectedMvs, setSelectedMvs] = useState<Record<string, string[]>>({});
   const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
+  const [batchSelectedMvs, setBatchSelectedMvs] = useState<string[]>([]);
 
   const baseApiUrl = useMemo(
     () => (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, ''),
@@ -234,7 +235,9 @@ export function AdminStagingFanartPage() {
 
     for (const id of idsToProcess) {
       try {
-        const payload = action === 'approve' ? { mvs: selectedMvs[id] || [] } : {};
+        const cardMvs = selectedMvs[id] || [];
+        const combinedMvs = Array.from(new Set([...cardMvs, ...batchSelectedMvs]));
+        const payload = action === 'approve' ? { mvs: combinedMvs } : {};
         const res = await fetch(`${baseApiUrl}/staging-fanarts/${id}/${action}`, {
           method: 'POST',
           headers: { 
@@ -261,6 +264,7 @@ export function AdminStagingFanartPage() {
 
     toast.success(`批次操作完成：成功 ${successCount} 筆，失敗 ${failCount} 筆`);
     setSelectedCards(new Set());
+    setBatchSelectedMvs([]);
     fetchFanarts(page);
     fetchProgress();
   };
@@ -432,6 +436,14 @@ export function AdminStagingFanartPage() {
               </label>
               
               <div className="flex items-center gap-2 mt-2 sm:mt-0">
+                <div className="w-[200px]">
+                  <MultiSelect
+                    options={mvs}
+                    selected={batchSelectedMvs}
+                    onChange={setBatchSelectedMvs}
+                    placeholder="批次選擇 MV..."
+                  />
+                </div>
                 <Button 
                   variant="outline" 
                   className="border-2 border-black bg-red-500 text-white font-black uppercase tracking-wider hover:bg-red-600 h-8"
