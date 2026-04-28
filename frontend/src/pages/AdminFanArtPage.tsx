@@ -133,13 +133,13 @@ export function AdminFanArtPage() {
     return url.includes('ytimg.com') || url.includes('youtube.com') || url.includes('img.youtube.com');
   };
 
-  const normalizeTag = (tag: any) => {
+  function normalizeTag(tag: any) {
     if (!tag) return '';
     const str = String(tag);
     if (str === 'tag:aca-ne') return 'tag:acane';
     if (str.startsWith('tag:')) return str;
     return `tag:${str}`;
-  };
+  }
 
   const getTagSet = (obj: any) => {
     const tags = Array.isArray(obj?.tags) ? obj.tags : [];
