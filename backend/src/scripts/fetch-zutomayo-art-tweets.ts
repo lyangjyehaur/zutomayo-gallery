@@ -85,11 +85,12 @@ export async function runCrawler(username: string = 'zutomayo_art') {
     console.log(`[Crawler] 正在透過 Apify 獲取推文...`);
     
     const input = {
+      searchMode: "live",
       searchTerms: [`from:${username}`],
-      maxItems: 7000
+      maxTweets: 7000
     };
 
-    const run = await client.actor("kaitoeasyapi/twitter-x-data-tweet-scraper-pay-per-result-cheapest").call(input);
+    const run = await client.actor("microworlds/twitter-scraper").call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
 
     // 備份 Apify 原始結果
