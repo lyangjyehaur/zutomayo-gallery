@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Check, ChevronsUpDown, X } from "lucide-react"
+import { Check, ChevronsUpDown, X as XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -99,7 +99,7 @@ export function MultiSelect({
                       handleUnselect(item)
                     }}
                   >
-                    <X className={cn("h-3 w-3", item.startsWith("tag:") ? "text-white/80 hover:text-white" : "text-black/70 hover:text-black")} />
+                    <XIcon className={cn("h-3 w-3", item.startsWith("tag:") ? "text-white/80 hover:text-white" : "text-black/70 hover:text-black")} />
                   </button>
                 </Badge>
               )
