@@ -119,6 +119,8 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
     const r2Url = staging.get('r2_url') as string;
     const mediaType = staging.get('media_type') as string;
     const crawledAt = staging.get('crawled_at') as Date;
+    const postDate = staging.get('post_date') as Date;
+    const sourceText = staging.get('source_text') as string;
 
     let finalR2Url = r2Url;
     if (r2Url && r2Url.includes('crawler/')) {
@@ -141,7 +143,8 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
       defaults: {
         id: generateShortId(),
         source_url: originalUrl,
-        post_date: crawledAt || new Date(),
+        post_date: postDate || crawledAt || new Date(),
+        source_text: sourceText || '',
         status: 'unorganized'
       }
     });

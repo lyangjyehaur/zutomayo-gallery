@@ -166,6 +166,8 @@ export async function runCrawler(username: string = 'zutomayo_art') {
         const { tweetId, targetTweet, mediaList } = item as any;
         const originalUrl = targetTweet.url || `https://twitter.com/i/web/status/${tweetId}`;
         const crawledAt = new Date();
+        const postDate = targetTweet.created_at ? new Date(targetTweet.created_at) : (targetTweet.createdAt ? new Date(targetTweet.createdAt) : crawledAt);
+        const sourceText = targetTweet.full_text || targetTweet.text || '';
         
         let medias: { url: string; type: string }[] = [];
 
@@ -257,6 +259,8 @@ export async function runCrawler(username: string = 'zutomayo_art') {
           r2_url: r2Url,
           media_type: mediaType === 'photo' ? 'image' : 'video',
           crawled_at: crawledAt,
+          post_date: postDate,
+          source_text: sourceText,
           status: 'pending',
           source: 'crawler'
         });

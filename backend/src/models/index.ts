@@ -148,6 +148,8 @@ export const StagingFanartModel = sequelize.define('StagingFanart', {
   r2_url: { type: DataTypes.STRING, allowNull: true, comment: 'R2 備份連結' },
   media_type: { type: DataTypes.STRING, comment: '媒體格式類型 (image/video)' },
   crawled_at: { type: DataTypes.DATE, comment: '爬取時間' },
+  post_date: { type: DataTypes.DATE, comment: '發布時間' },
+  source_text: { type: DataTypes.TEXT, comment: '來源內容' },
   status: { type: DataTypes.STRING, defaultValue: 'pending', comment: '處理狀態 (pending/approved/rejected)' },
   source: { type: DataTypes.STRING, comment: '資料來源 (crawler/rss)' },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '建立時間' },
