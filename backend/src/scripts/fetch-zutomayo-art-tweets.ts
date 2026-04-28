@@ -85,11 +85,12 @@ export async function runCrawler(username: string = 'zutomayo_art') {
     console.log(`[Crawler] 正在透過 Apify 獲取推文...`);
     
     const input = {
-      searchTerms: [`from:${username}`],
-      maxItems: 7000
+      twitterHandles: [username],
+      maxItems: 1000,
+      sort: "Latest"
     };
 
-    const run = await client.actor("kaitoeasyapi/twitter-x-data-tweet-scraper-pay-per-result-cheapest").call(input);
+    const run = await client.actor("apidojo/tweet-scraper").call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
 
     // 備份 Apify 原始結果
@@ -107,12 +108,14 @@ export async function runCrawler(username: string = 'zutomayo_art') {
       return progress.total_crawled;
     }
 
-    console.log(`[Crawler] 取得 ${items.length} 則推文。`);
-    await crawlerState.update({ status: 'processing', current_run_total: items.length });
+    const uniqueItems = Array.from(new Map(items.map(item => [item.id_str || item.id || item.rest_id, item])).values());
+    console.log(`[Crawler] 取得 ${items.length} 則推文，去重後剩餘 ${uniqueItems.length} 則推文。`);
+
+    await crawlerState.update({ status: 'processing', current_run_total: uniqueItems.length });
 
     let current_run_processed = 0;
 
-    for (const item of items) {
+    for (const item of uniqueItems) {
       current_run_processed++;
 
       try {
@@ -217,7 +220,7 @@ export async function runCrawler(username: string = 'zutomayo_art') {
         console.log(`[Crawler] 已將推文 ${tweetId} 的二創圖寫入暫存表 (R2: ${r2Url})`);
       }
       } finally {
-        if (current_run_processed % 5 === 0 || current_run_processed === items.length) {
+        if (current_run_processed % 5 === 0 || current_run_processed === uniqueItems.length) {
           await crawlerState.update({ 
             total_crawled: progress.total_crawled,
             current_run_processed 
