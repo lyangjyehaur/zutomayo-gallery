@@ -50,7 +50,7 @@ async function fetchMediaToBuffer(url: string): Promise<{ buffer: Buffer; conten
   }
 }
 
-export async function runCrawler(username: string = 'zutomayo_art') {
+export async function runCrawler(username: string = 'zutomayo_art', targetMonthOverride?: string) {
   if (!APIFY_API_TOKEN) {
     console.warn('[Crawler] 警告: 未設定 APIFY_API_TOKEN 環境變數。');
     console.warn('[Crawler] 請在 .env 檔案中新增憑證資訊。');
@@ -83,7 +83,7 @@ export async function runCrawler(username: string = 'zutomayo_art') {
   console.log(`[Crawler] 讀取到先前的進度紀錄:`, progress);
 
   // 計算爬取月份範圍
-  let targetMonth = crawlerState.getDataValue('last_crawled_month');
+  let targetMonth = targetMonthOverride || crawlerState.getDataValue('last_crawled_month');
   if (!targetMonth) {
     const now = new Date();
     targetMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;

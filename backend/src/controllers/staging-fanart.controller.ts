@@ -10,16 +10,18 @@ const generateShortId = () => nanoid(16);
 export const triggerCrawler = async (req: Request, res: Response) => {
   try {
     const username = req.body.username || 'zutomayo_art';
+    const month = req.body.month;
     
     // 背景執行，不 await
-    runCrawler(username).catch(err => {
+    runCrawler(username, month).catch(err => {
       console.error(`[Crawler Error] Background crawler failed for ${username}:`, err);
     });
 
     res.json({
       success: true,
       message: 'Crawler started in background',
-      username
+      username,
+      month
     });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });

@@ -45,6 +45,7 @@ export function AdminStagingFanartPage() {
   const [isProgressLoading, setIsProgressLoading] = useState(false);
   
   const [crawlerUsername, setCrawlerUsername] = useState('zutomayo_art');
+  const [crawlerMonth, setCrawlerMonth] = useState('');
   const [isTriggering, setIsTriggering] = useState(false);
 
   const fetchProgress = async () => {
@@ -110,6 +111,11 @@ export function AdminStagingFanartPage() {
       return;
     }
     
+    if (crawlerMonth && !/^\d{4}-\d{2}$/.test(crawlerMonth)) {
+      toast.error('請輸入正確的月份格式 (YYYY-MM)');
+      return;
+    }
+    
     setIsTriggering(true);
     try {
       const baseApiUrl = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, '');
@@ -119,7 +125,10 @@ export function AdminStagingFanartPage() {
           'Content-Type': 'application/json',
           'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' 
         },
-        body: JSON.stringify({ username: crawlerUsername })
+        body: JSON.stringify({ 
+          username: crawlerUsername,
+          month: crawlerMonth || undefined
+        })
       });
       const data = await res.json();
       if (data.success) {
@@ -218,6 +227,12 @@ export function AdminStagingFanartPage() {
                     className="border-2 border-black font-bold shadow-neo-sm h-8 w-32 md:w-40 bg-background"
                     placeholder="Username"
                   />
+                  <Input 
+                    value={crawlerMonth}
+                    onChange={(e) => setCrawlerMonth(e.target.value)}
+                    className="border-2 border-black font-bold shadow-neo-sm h-8 w-24 md:w-32 bg-background"
+                    placeholder="YYYY-MM"
+                  />
                 </div>
                 <Button 
                   variant="default" 
@@ -226,7 +241,7 @@ export function AdminStagingFanartPage() {
                   onClick={handleTriggerCrawler}
                   disabled={isTriggering}
                 >
-                  <i className={`hn ${isTriggering ? 'hn-refresh animate-spin' : 'hn-play'} mr-2`} /> 抓取 {progress?.syncProgress?.last_crawled_month || '本月'} 的推文
+                  <i className={`hn ${isTriggering ? 'hn-refresh animate-spin' : 'hn-play'} mr-2`} /> 抓取 {crawlerMonth || progress?.syncProgress?.last_crawled_month || '本月'} 的推文
                 </Button>
                 <Button 
                   variant="outline" 
