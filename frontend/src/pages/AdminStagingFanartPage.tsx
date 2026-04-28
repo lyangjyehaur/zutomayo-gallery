@@ -36,20 +36,47 @@ interface ProgressData {
 }
 
 export function AdminStagingFanartPage() {
+  const settingsKey = 'ztmy_admin_staging_fanart_settings';
+
+  const readSettings = () => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = localStorage.getItem(settingsKey);
+      if (!raw) return null;
+      return JSON.parse(raw) as any;
+    } catch {
+      return null;
+    }
+  };
+
+  const initialSettings = readSettings();
+
   const [fanarts, setFanarts] = useState<StagingFanart[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState<number>(() => {
+    const p = Number(initialSettings?.page);
+    return Number.isFinite(p) && p > 0 ? p : 1;
+  });
   const [totalPages, setTotalPages] = useState(1);
-  const [viewStatus, setViewStatus] = useState<'pending' | 'rejected'>('pending');
+  const [viewStatus, setViewStatus] = useState<'pending' | 'rejected'>(() => {
+    return initialSettings?.viewStatus === 'rejected' ? 'rejected' : 'pending';
+  });
   
   const [progress, setProgress] = useState<ProgressData | null>(null);
   const [isProgressLoading, setIsProgressLoading] = useState(false);
   
-  const [searchTerms, setSearchTerms] = useState('from:zutomayo_art filter:media include:nativeretweets');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [searchTerms, setSearchTerms] = useState(() => {
+    return typeof initialSettings?.searchTerms === 'string' && initialSettings.searchTerms.trim()
+      ? initialSettings.searchTerms
+      : 'from:zutomayo_art filter:media include:nativeretweets';
+  });
+  const [startDate, setStartDate] = useState(() => (typeof initialSettings?.startDate === 'string' ? initialSettings.startDate : ''));
+  const [endDate, setEndDate] = useState(() => (typeof initialSettings?.endDate === 'string' ? initialSettings.endDate : ''));
   const [isTriggering, setIsTriggering] = useState(false);
-  const [maxItems, setMaxItems] = useState<number>(1000);
+  const [maxItems, setMaxItems] = useState<number>(() => {
+    const n = Number(initialSettings?.maxItems);
+    return Number.isFinite(n) && n > 0 ? n : 1000;
+  });
 
   const [mvs, setMvs] = useState<Option[]>([]);
   const [selectedMvs, setSelectedMvs] = useState<Record<string, string[]>>({});
@@ -60,6 +87,22 @@ export function AdminStagingFanartPage() {
     () => (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, ''),
     []
   );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const next = {
+      page,
+      viewStatus,
+      searchTerms,
+      startDate,
+      endDate,
+      maxItems
+    };
+    try {
+      localStorage.setItem(settingsKey, JSON.stringify(next));
+    } catch {
+    }
+  }, [page, viewStatus, searchTerms, startDate, endDate, maxItems]);
 
   const fetchMvs = useCallback(async () => {
     try {
