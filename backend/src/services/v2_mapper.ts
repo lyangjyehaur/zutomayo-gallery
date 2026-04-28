@@ -179,6 +179,7 @@ export async function saveMVsToDB(mvs: MVItem[], transaction?: any): Promise<voi
 
           const originalUrl = img.original_url || url;
           const usage = img.MVMedia?.usage || img.usage || 'gallery';
+          const desiredTags = Array.isArray((img as any).tags) ? Array.from(new Set((img as any).tags)) : undefined;
 
           let [image] = await MediaModel.findOrCreate({
             where: { original_url: originalUrl },
@@ -191,11 +192,20 @@ export async function saveMVsToDB(mvs: MVItem[], transaction?: any): Promise<voi
               caption: img.caption || null,
               width: img.width || null,
               height: img.height || null,
+              tags: desiredTags || [],
             },
             transaction: t
           });
 
           const imageId = image.get('id');
+          if (desiredTags) {
+            const currentTags = image.get('tags') as any;
+            const nextTagsJson = JSON.stringify(desiredTags);
+            const currentTagsJson = JSON.stringify(Array.isArray(currentTags) ? currentTags : []);
+            if (nextTagsJson !== currentTagsJson) {
+              await image.update({ tags: desiredTags }, { transaction: t });
+            }
+          }
 
           if (img.group) {
             let groupId = img.group.id;

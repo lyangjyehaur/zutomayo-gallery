@@ -8,6 +8,7 @@ export interface MVMedia {
   caption?: string;
   width?: number;
   height?: number;
+  tags?: string[];
   group?: {
     id?: string;
     title?: string;

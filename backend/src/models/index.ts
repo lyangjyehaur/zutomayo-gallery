@@ -33,6 +33,7 @@ export const MediaModel = sequelize.define('Media', {
   width: { type: DataTypes.INTEGER, comment: '媒體寬度' },
   height: { type: DataTypes.INTEGER, comment: '媒體高度' },
   caption: { type: DataTypes.TEXT, comment: '媒體描述或圖說' },
+  tags: { type: DataTypes.JSONB, defaultValue: [], comment: '媒體標籤 (JSONB Array)' },
   group_id: { type: DataTypes.STRING(36), comment: '關聯至 media_groups.id' },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '建立時間' },
 }, { tableName: 'media', timestamps: false, comment: '儲存系統中所有的媒體資源 (圖片、影片、GIF)' });

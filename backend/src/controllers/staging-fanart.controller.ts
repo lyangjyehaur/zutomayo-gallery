@@ -234,6 +234,15 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
       }
     });
 
+    const allowedTags = new Set(['tag:collab', 'tag:aca-ne']);
+    const rawMvs = Array.isArray(mvs) ? mvs : [];
+    const mvIds = rawMvs.filter((v: any) => typeof v === 'string' && !v.startsWith('tag:'));
+    const tags = Array.from(
+      new Set(
+        rawMvs.filter((v: any) => typeof v === 'string' && v.startsWith('tag:') && allowedTags.has(v))
+      )
+    );
+
     let existingMedia = await MediaModel.findOne({ where: { original_url: mediaUrl } });
     if (!existingMedia) {
       existingMedia = await MediaModel.create({
@@ -244,12 +253,15 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
         original_url: mediaUrl,
         width: mediaWidth || null,
         height: mediaHeight || null,
+        tags,
         group_id: group.get('id')
       });
+    } else {
+      await existingMedia.update({ tags });
     }
 
-    if (mvs && Array.isArray(mvs) && mvs.length > 0) {
-      for (const mvId of mvs) {
+    if (mvIds.length > 0) {
+      for (const mvId of mvIds) {
         await MVMediaModel.findOrCreate({
           where: { mv_id: mvId, media_id: existingMedia.get('id') },
           defaults: {

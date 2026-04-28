@@ -15,7 +15,9 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
   
   // 提取所有有圖片的 MV 作為篩選選項
   const availableMVs = useMemo(() => {
-    return mvData.filter(mv => mv.images && mv.images.length > 0).sort((a, b) => b.date.localeCompare(a.date));
+    return mvData
+      .filter(mv => Array.isArray(mv.images) && mv.images.some(img => img.type === 'fanart'))
+      .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   }, [mvData]);
 
   // 提取所有年份
@@ -47,6 +49,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
   const [selectedMvs, setSelectedMvs] = useState<string[]>([]);
   // 狀態：是否包含綜合插畫 (多角色)
   const [includeCollab, setIncludeCollab] = useState<boolean>(true);
+  const [onlyAcaNe, setOnlyAcaNe] = useState<boolean>(false);
   
   // 狀態：初篩用的年份和專輯
   const [filterYear, setFilterYear] = useState<string>('all');
@@ -70,9 +73,12 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
                 existing.mvIds.push(mv.id);
                 existing.mvTitles.push(mv.title);
               }
+              const nextTags = Array.from(new Set([...(existing.tags || []), ...((img as any).tags || [])]));
+              if (nextTags.length > 0) existing.tags = nextTags;
             } else {
               fanArtMap.set(key, {
                 ...img,
+                tags: Array.isArray((img as any).tags) ? (img as any).tags : [],
                 mvIds: [mv.id],
                 mvTitles: [mv.title]
               });
@@ -141,10 +147,13 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
   // 根據篩選條件過濾最終要顯示的 FanArt
   const filteredFanArts = useMemo(() => {
     return allFanArts.filter(art => {
-      const isCollab = art.mvIds.length > 1;
+      const tags = Array.isArray(art.tags) ? art.tags : [];
+      const isCollab = art.mvIds.length > 1 || tags.includes('tag:collab');
       
       // 如果不包含綜合插畫，但它是綜合插畫，則過濾掉
       if (!includeCollab && isCollab) return false;
+
+      if (onlyAcaNe && !tags.includes('tag:aca-ne')) return false;
       
       // 如果沒有選擇任何 MV，則顯示全部符合上述條件的
       if (selectedMvs.length === 0) return true;
@@ -152,7 +161,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
       // 如果有選擇 MV，該圖片必須關聯到至少一個選中的 MV
       return art.mvIds.some(id => selectedMvs.includes(id));
     });
-  }, [allFanArts, includeCollab, selectedMvs]);
+  }, [allFanArts, includeCollab, onlyAcaNe, selectedMvs]);
 
   const fancyboxImages = useMemo(() => {
     return filteredFanArts.map(art => {
@@ -209,6 +218,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
                 <div className="text-xs font-bold opacity-60 hidden md:block">
                   {selectedMvs.length > 0 ? `已選 ${selectedMvs.length} 個 MV` : '所有作品'} 
                   {!includeCollab ? ' (不含大合繪)' : ''}
+                  {onlyAcaNe ? ' (ACAね)' : ''}
                   {filterYear !== 'all' || filterAlbum !== 'all' ? ' · 有啟用初篩' : ''}
                 </div>
               )}
@@ -228,6 +238,13 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
                 {includeCollab && <i className="hn hn-check text-xs font-black"></i>}
               </div>
               <Label className="font-bold cursor-pointer">{t('fanart.include_collab', '綜合插畫 (多角色 / 大合繪)')}</Label>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" onClick={() => setOnlyAcaNe(!onlyAcaNe)}>
+              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyAcaNe ? 'bg-main' : 'bg-card'}`}>
+                {onlyAcaNe && <i className="hn hn-check text-xs font-black"></i>}
+              </div>
+              <Label className="font-bold cursor-pointer">{t('fanart.only_aca_ne', '只看 ACAね')}</Label>
             </div>
 
             {/* MV 單曲初篩 (年份/專輯) */}

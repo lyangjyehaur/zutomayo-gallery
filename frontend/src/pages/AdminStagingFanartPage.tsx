@@ -65,7 +65,12 @@ export function AdminStagingFanartPage() {
       const res = await fetch(`${baseApiUrl}/mvs`);
       const data = await res.json();
       if (data.success) {
-        setMvs(data.data.map((mv: any) => ({ label: mv.title, value: mv.id })));
+        const tagOptions: Option[] = [
+          { label: '綜合合繪', value: 'tag:collab' },
+          { label: 'ACAね', value: 'tag:aca-ne' },
+        ];
+        const mvOptions: Option[] = data.data.map((mv: any) => ({ label: mv.title, value: mv.id }));
+        setMvs([...tagOptions, ...mvOptions]);
       }
     } catch (error) {
       console.error('Failed to fetch MVs', error);
