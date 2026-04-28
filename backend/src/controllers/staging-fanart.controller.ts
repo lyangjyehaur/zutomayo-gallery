@@ -10,10 +10,10 @@ const generateShortId = () => nanoid(16);
 export const triggerCrawler = async (req: Request, res: Response) => {
   try {
     const username = req.body.username || 'zutomayo_art';
-    const month = req.body.month;
-    const startDate = req.body.startDate;
-    const endDate = req.body.endDate;
-    const maxItems = req.body.maxItems;
+    const month = req.body.month as string | undefined;
+    const startDate = req.body.startDate as string | undefined;
+    const endDate = req.body.endDate as string | undefined;
+    const maxItems = req.body.maxItems ? parseInt(req.body.maxItems as string, 10) : undefined;
     
     // 背景執行，不 await
     runCrawler(username, month, startDate, endDate, maxItems).catch(err => {
