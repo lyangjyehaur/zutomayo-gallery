@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MVItem } from '@/lib/types';
 import { Label } from '@/components/ui/label';
@@ -20,41 +20,15 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
   };
 
   const baseApiUrl = useMemo(() => (import.meta.env.VITE_API_URL || '/api').replace(/\/mvs$/, ''), []);
-  const galleryCacheBust = useMemo(() => `${Date.now()}`, []);
-  const [galleryFanarts, setGalleryFanarts] = useState<any[] | null>(null);
-
-  useEffect(() => {
-    const run = async () => {
-      try {
-        const fetchOnce = async (url: string) => {
-          const res = await fetch(url, { cache: 'no-store' });
-          if (!res.ok) throw new Error(`HTTP_${res.status}`);
-          const data = await res.json();
-          if (data?.success && Array.isArray(data.data)) return data.data as any[];
-          throw new Error('BAD_PAYLOAD');
-        };
-
-        const urls = [
-          `${baseApiUrl}/fanarts/gallery?t=${galleryCacheBust}`,
-          `/api/fanarts/gallery?t=${galleryCacheBust}`
-        ];
-
-        for (const url of urls) {
-          try {
-            const rows = await fetchOnce(url);
-            setGalleryFanarts(rows);
-            return;
-          } catch {
-          }
-        }
-
-        setGalleryFanarts(null);
-      } catch {
-        setGalleryFanarts(null);
-      }
-    };
-    void run();
-  }, [baseApiUrl, galleryCacheBust]);
+  const [galleryFanarts, setGalleryFanarts] = useState<any[]>([]);
+  const [galleryMeta, setGalleryMeta] = useState<{ limit: number; offset: number; total: number | null; hasMore: boolean }>({
+    limit: 200,
+    offset: 0,
+    total: null,
+    hasMore: false
+  });
+  const [summary, setSummary] = useState<{ tagCounts: Record<string, number>; mvCounts: Record<string, number> } | null>(null);
+  const [isLoadingGallery, setIsLoadingGallery] = useState(false);
   
   // 提取所有有圖片的 MV 作為篩選選項
   const availableMVs = useMemo(() => {
@@ -137,79 +111,34 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
 
   // 提取所有 FanArt 圖片並去重
   const allFanArts = useMemo(() => {
-    if (Array.isArray(galleryFanarts)) {
-      const list = galleryFanarts.map((img: any) => {
-        const group = img.group || null;
-        const rawTags = Array.isArray(img.tags) ? img.tags : [];
-        const tags = rawTags.map(normalizeTag).filter(Boolean);
-        const mvs = Array.isArray(img.mvs) ? img.mvs : [];
-        const mvIds = mvs.map((m: any) => m.id).filter(Boolean);
-        const mvTitles = mvs.map((m: any) => m.title).filter(Boolean);
-        const like_count = group?.like_count ?? 0;
-        return {
-          ...img,
-          tags,
-          mvIds,
-          mvTitles,
-          tweetUrl: group?.source_url,
-          tweetAuthor: group?.author_name,
-          tweetHandle: group?.author_handle,
-          tweetDate: group?.post_date,
-          tweetText: group?.source_text,
-          like_count
-        };
-      });
-
-      return list.sort((a: any, b: any) => {
-        const dateA = a.tweetDate || '';
-        const dateB = b.tweetDate || '';
-        return String(dateB).localeCompare(String(dateA));
-      });
-    }
-
-    const fanArtMap = new Map<string, any>();
-    
-    mvData.forEach(mv => {
-      if (mv.images && Array.isArray(mv.images)) {
-        mv.images.forEach(img => {
-          // 只抓取明確標記為 fanart 的圖片
-          if (img.type === 'fanart') {
-            // 使用 url + tweetUrl 組合或只用 url 作為 key
-            const key = img.url;
-            const like_count = (img as any).like_count ?? (img as any).group?.like_count ?? 0;
-            const rawTags = Array.isArray((img as any).tags) ? (img as any).tags : [];
-            const normalizedTags = rawTags.map(normalizeTag).filter(Boolean);
-            
-            if (fanArtMap.has(key)) {
-              const existing = fanArtMap.get(key)!;
-              if (!existing.mvIds.includes(mv.id)) {
-                existing.mvIds.push(mv.id);
-                existing.mvTitles.push(mv.title);
-              }
-              const nextTags = Array.from(new Set([...(existing.tags || []), ...normalizedTags]));
-              existing.tags = nextTags;
-              existing.like_count = Math.max(existing.like_count || 0, like_count || 0);
-            } else {
-              fanArtMap.set(key, {
-                ...img,
-                tags: normalizedTags,
-                mvIds: [mv.id],
-                mvTitles: [mv.title],
-                like_count
-              });
-            }
-          }
-        });
-      }
+    const list = galleryFanarts.map((img: any) => {
+      const group = img.group || null;
+      const rawTags = Array.isArray(img.tags) ? img.tags : [];
+      const tags = rawTags.map(normalizeTag).filter(Boolean);
+      const mvs = Array.isArray(img.mvs) ? img.mvs : [];
+      const mvIds = mvs.map((m: any) => m.id).filter(Boolean);
+      const mvTitles = mvs.map((m: any) => m.title).filter(Boolean);
+      const like_count = group?.like_count ?? 0;
+      return {
+        ...img,
+        tags,
+        mvIds,
+        mvTitles,
+        tweetUrl: group?.source_url,
+        tweetAuthor: group?.author_name,
+        tweetHandle: group?.author_handle,
+        tweetDate: group?.post_date,
+        tweetText: group?.source_text,
+        like_count
+      };
     });
-    
-    // 按日期降序排序 (最新的在前)
-    return Array.from(fanArtMap.values()).sort((a, b) => {
+
+    return list.sort((a: any, b: any) => {
       const dateA = a.tweetDate || '';
       const dateB = b.tweetDate || '';
-      return dateB.localeCompare(dateA);
+      return String(dateB).localeCompare(String(dateA));
     });
-  }, [mvData]);
+  }, [galleryFanarts]);
 
   // 根據初篩條件過濾顯示的 MV 選項
   const filteredMVs = useMemo(() => {
@@ -244,51 +173,92 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
     return tags;
   }, [onlyAcaNe, onlyReal, onlyUniguri, onlyOther]);
 
-  const matchSpecialTags = (tags: string[]) => {
-    if (selectedSpecialTags.length === 0) return true;
-    return selectedSpecialTags.some(t => tags.includes(t));
-  };
-
-  const baseFilteredFanArts = useMemo(() => {
-    return allFanArts.filter(art => {
-      const tags = Array.isArray(art.tags) ? art.tags : [];
-      const isCollab = tags.includes('tag:collab');
-      if (onlyCollab && !isCollab) return false;
-      if (!matchSpecialTags(tags)) return false;
-      return true;
-    });
-  }, [allFanArts, onlyCollab, selectedSpecialTags]);
+  const filterKey = useMemo(() => {
+    const mvIds = [...selectedMvs].sort();
+    const tags = [...selectedSpecialTags].sort();
+    return JSON.stringify({ mvIds, tags, onlyCollab });
+  }, [selectedMvs, selectedSpecialTags, onlyCollab]);
 
   const mvFanArtCounts = useMemo(() => {
     const map = new Map<string, number>();
-    baseFilteredFanArts.forEach(art => {
-      art.mvIds.forEach((id: string) => {
-        map.set(id, (map.get(id) || 0) + 1);
-      });
-    });
+    const src = summary?.mvCounts || {};
+    Object.keys(src).forEach((mvId) => map.set(mvId, src[mvId] || 0));
     return map;
-  }, [baseFilteredFanArts]);
+  }, [summary]);
 
   const specialTagCounts = useMemo(() => {
     const map = new Map<string, number>();
-    allFanArts.forEach(art => {
-      const tags = Array.isArray(art.tags) ? art.tags : [];
-      (['tag:acane', 'tag:real', 'tag:uniguri', 'tag:other'] as const).forEach(tag => {
-        if (tags.includes(tag)) map.set(tag, (map.get(tag) || 0) + 1);
-      });
+    const src = summary?.tagCounts || {};
+    (['tag:acane', 'tag:real', 'tag:uniguri', 'tag:other'] as const).forEach(tag => {
+      map.set(tag, src[tag] || 0);
     });
     return map;
-  }, [allFanArts]);
+  }, [summary]);
 
-  const collabCount = useMemo(() => {
-    return allFanArts.filter(art => {
-      const tags = Array.isArray(art.tags) ? art.tags : [];
-      const isCollab = tags.includes('tag:collab');
-      if (!isCollab) return false;
-      if (!matchSpecialTags(tags)) return false;
-      return true;
-    }).length;
-  }, [allFanArts, selectedSpecialTags]);
+  const collabCount = useMemo(() => summary?.tagCounts?.['tag:collab'] || 0, [summary]);
+
+  const fetchSummary = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (onlyCollab) params.set('onlyCollab', '1');
+      if (selectedSpecialTags.length > 0) params.set('tags', selectedSpecialTags.join(','));
+      const res = await fetch(`${baseApiUrl}/fanarts/gallery/summary?${params.toString()}`);
+      const data = await res.json();
+      if (res.ok && data?.success && data?.data) {
+        setSummary(data.data);
+      }
+    } catch {
+    }
+  }, [baseApiUrl, onlyCollab, selectedSpecialTags]);
+
+  const fetchGalleryPage = useCallback(
+    async (nextOffset: number, append: boolean, withTotal: boolean) => {
+      setIsLoadingGallery(true);
+      try {
+        const params = new URLSearchParams();
+        params.set('limit', String(galleryMeta.limit));
+        params.set('offset', String(nextOffset));
+        if (withTotal) params.set('withTotal', '1');
+        if (onlyCollab) params.set('onlyCollab', '1');
+        if (selectedSpecialTags.length > 0) params.set('tags', selectedSpecialTags.join(','));
+        if (selectedMvs.length > 0) params.set('mvIds', selectedMvs.join(','));
+
+        const res = await fetch(`${baseApiUrl}/fanarts/gallery?${params.toString()}`);
+        const data = await res.json();
+        if (!res.ok || !data?.success || !Array.isArray(data.data)) throw new Error('BAD_PAYLOAD');
+
+        const meta = data.meta || {};
+        setGalleryFanarts((prev) => (append ? [...prev, ...data.data] : data.data));
+        setGalleryMeta((prev) => ({
+          ...prev,
+          offset: meta.offset ?? nextOffset,
+          total: meta.total ?? prev.total,
+          hasMore: !!meta.hasMore
+        }));
+      } catch {
+        if (!append) setGalleryFanarts([]);
+        setGalleryMeta((prev) => ({ ...prev, hasMore: false }));
+      } finally {
+        setIsLoadingGallery(false);
+      }
+    },
+    [baseApiUrl, galleryMeta.limit, onlyCollab, selectedMvs, selectedSpecialTags]
+  );
+
+  const loadMoreFromServer = useCallback(async () => {
+    if (isLoadingGallery || !galleryMeta.hasMore) return;
+    await fetchGalleryPage(galleryFanarts.length, true, false);
+  }, [fetchGalleryPage, galleryFanarts.length, galleryMeta.hasMore, isLoadingGallery]);
+
+  useEffect(() => {
+    void fetchSummary();
+  }, [fetchSummary]);
+
+  useEffect(() => {
+    setGalleryFanarts([]);
+    setGalleryMeta((prev) => ({ ...prev, offset: 0, total: null, hasMore: false }));
+    void fetchGalleryPage(0, false, true);
+  }, [fetchGalleryPage, filterKey]);
 
   // 切換 MV 選擇
   const toggleMvSelection = (id: string) => {
@@ -314,39 +284,8 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
     }
   };
 
-  // 根據篩選條件過濾最終要顯示的 FanArt
-  const filteredFanArts = useMemo(() => {
-    return allFanArts.filter(art => {
-      const tags = Array.isArray(art.tags) ? art.tags : [];
-      const isCollab = tags.includes('tag:collab');
-      
-      if (onlyCollab && !isCollab) return false;
-
-      if (!matchSpecialTags(tags)) return false;
-      
-      // 如果沒有選擇任何 MV，則顯示全部符合上述條件的
-      if (selectedMvs.length === 0) return true;
-      
-      // 如果有選擇 MV，該圖片必須關聯到至少一個選中的 MV
-      return art.mvIds.some(id => selectedMvs.includes(id));
-    });
-  }, [allFanArts, onlyCollab, selectedSpecialTags, selectedMvs]);
-
-  const { shuffledFanArts, shuffleKey } = useMemo(() => {
-    const next = [...filteredFanArts];
-    for (let i = next.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [next[i], next[j]] = [next[j], next[i]];
-    }
-    const nextKey =
-      typeof crypto !== 'undefined' && 'randomUUID' in crypto
-        ? (crypto as Crypto).randomUUID()
-        : `${Date.now()}_${Math.random().toString(16).slice(2)}`;
-    return { shuffledFanArts: next, shuffleKey: nextKey };
-  }, [filteredFanArts]);
-
   const fancyboxImages = useMemo(() => {
-    return shuffledFanArts.map(art => {
+    return allFanArts.map(art => {
       const authorText = art.tweetAuthor ? `@${art.tweetHandle || art.tweetAuthor}` : '';
       const baseCaption = art.caption || (authorText ? `FanArt by ${authorText}` : 'FanArt');
       
@@ -363,7 +302,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
         richText
       };
     });
-  }, [shuffledFanArts]);
+  }, [allFanArts]);
 
   return (
     <div className="w-full pb-16">
@@ -522,7 +461,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
               onClick={() => setIsFilterExpanded(false)}
               className="bg-black text-white px-6 py-2 font-black uppercase tracking-widest border-2 border-black hover:bg-main hover:text-black transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-y-1 hover:translate-x-1"
             >
-              {t('fanart.apply_filters', '套用並收起 ({{count}} 張作品)', { count: filteredFanArts.length })}
+              {t('fanart.apply_filters', '套用並收起 ({{count}} 張作品)', { count: galleryMeta.total ?? allFanArts.length })}
             </button>
           </div>
         </div>
@@ -532,11 +471,14 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
       {fancyboxImages.length > 0 ? (
         <div className="max-w-[1600px] mx-auto px-4 md:px-8 pb-12">
           <FancyboxViewer
-            key={shuffleKey}
+            key={filterKey}
             images={fancyboxImages}
             itemsPerPage={20}
             autoLoadMore={false}
             enablePagination={true}
+            externalHasMore={galleryMeta.hasMore}
+            onExternalLoadMore={loadMoreFromServer}
+            resetKey={filterKey}
             showHeader={false}
             breakpointColumns={{ default: 1, 640: 2, 1024: 3, 1280: 4 }}
             className="!p-0 !min-h-0"

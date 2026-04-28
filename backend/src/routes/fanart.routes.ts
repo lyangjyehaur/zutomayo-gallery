@@ -1,11 +1,12 @@
 import { Router } from 'express';
-import { getUnorganizedFanarts, getDeletedFanarts, getLegacyFanarts, getFanartGallery, getFanartsByTag, getFanartTagSummary, updateFanartStatus, assignFanartMedia, syncFanartMedia, removeFanartMediaFromMv } from '../controllers/fanart.controller.js';
+import { getUnorganizedFanarts, getDeletedFanarts, getLegacyFanarts, getFanartGallery, getFanartGallerySummary, getFanartsByTag, getFanartTagSummary, updateFanartStatus, assignFanartMedia, syncFanartMedia, removeFanartMediaFromMv } from '../controllers/fanart.controller.js';
 import { requireAdmin } from '../middleware/auth.middleware.js';
 import { cacheMiddleware } from '../middleware/cache.middleware.js';
 
 const router = Router();
 
-router.get('/gallery', cacheMiddleware(30), getFanartGallery);
+router.get('/gallery', cacheMiddleware(300), getFanartGallery);
+router.get('/gallery/summary', cacheMiddleware(300), getFanartGallerySummary);
 router.get('/unorganized', requireAdmin, getUnorganizedFanarts);
 router.get('/deleted', requireAdmin, getDeletedFanarts);
 router.get('/legacy', requireAdmin, getLegacyFanarts);

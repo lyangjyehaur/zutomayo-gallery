@@ -1,7 +1,20 @@
 import { Request, Response } from 'express';
-import { Op } from 'sequelize';
-import { MediaGroupModel, MediaModel, MVMediaModel, MVModel } from '../models/index.js';
+import { Op, QueryTypes } from 'sequelize';
+import { MediaGroupModel, MediaModel, MVMediaModel, MVModel, sequelize } from '../models/index.js';
 import { MVService } from '../services/mv.service.js';
+
+const parseCsv = (value: unknown): string[] => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.flatMap(v => String(v).split(',')).map(s => s.trim()).filter(Boolean);
+  return String(value).split(',').map(s => s.trim()).filter(Boolean);
+};
+
+const clampInt = (value: unknown, fallback: number, min: number, max: number): number => {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  const i = Math.floor(n);
+  return Math.max(min, Math.min(max, i));
+};
 
 export const getUnorganizedFanarts = async (req: Request, res: Response) => {
   try {
@@ -107,17 +120,147 @@ export const getLegacyFanarts = async (req: Request, res: Response) => {
 
 export const getFanartGallery = async (req: Request, res: Response) => {
   try {
-    const rows = await MediaModel.findAll({
-      where: { type: 'fanart' },
+    const all = String(req.query.all || '').toLowerCase() === '1' || String(req.query.all || '').toLowerCase() === 'true';
+    const withTotal = String(req.query.withTotal || '').toLowerCase() === '1' || String(req.query.withTotal || '').toLowerCase() === 'true';
+    const limit = all ? 0 : clampInt(req.query.limit, 200, 1, 500);
+    const offset = all ? 0 : Math.max(0, clampInt(req.query.offset, 0, 0, 10_000_000));
+
+    const tagsAny = parseCsv(req.query.tags);
+    const mvIds = parseCsv(req.query.mvIds);
+    const onlyCollab = String(req.query.onlyCollab || '').toLowerCase() === '1' || String(req.query.onlyCollab || '').toLowerCase() === 'true';
+
+    const andConditions: any[] = [{ type: 'fanart' }];
+    if (onlyCollab) andConditions.push({ tags: { [Op.contains]: ['tag:collab'] } });
+    if (tagsAny.length > 0) {
+      andConditions.push({
+        [Op.or]: tagsAny.map(tag => ({ tags: { [Op.contains]: [tag] } }))
+      });
+    }
+
+    const where: any = andConditions.length === 1 ? andConditions[0] : { [Op.and]: andConditions };
+
+    const mvInclude: any = {
+      model: MVModel,
+      as: 'mvs',
+      through: { attributes: [] },
+      attributes: ['id', 'title'],
+      required: false
+    };
+    if (mvIds.length > 0) {
+      mvInclude.required = true;
+      mvInclude.where = { id: mvIds };
+    }
+
+    const findOptions: any = {
+      where,
       include: [
         { model: MediaGroupModel, as: 'group', where: { status: 'organized' }, required: true },
-        { model: MVModel, as: 'mvs', through: { attributes: [] }, attributes: ['id', 'title'], required: false }
+        mvInclude
       ],
       order: [[{ model: MediaGroupModel, as: 'group' }, 'post_date', 'DESC'], ['id', 'DESC']]
+    };
+
+    if (!all) {
+      findOptions.limit = limit + 1;
+      findOptions.offset = offset;
+    }
+
+    const rows = await MediaModel.findAll(findOptions);
+    const hasMore = !all && rows.length > limit;
+    const slicedRows = !all ? rows.slice(0, limit) : rows;
+    const data = slicedRows.map(r => r.toJSON());
+
+    if (all) {
+      res.json({ success: true, data });
+      return;
+    }
+
+    let total: number | null = null;
+    if (withTotal) {
+      total = await MediaModel.count({
+        where,
+        include: [
+          { model: MediaGroupModel, as: 'group', where: { status: 'organized' }, required: true },
+          mvInclude
+        ],
+        distinct: true,
+        col: 'id'
+      });
+    }
+
+    res.json({
+      success: true,
+      data,
+      meta: {
+        limit,
+        offset,
+        total,
+        hasMore
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const getFanartGallerySummary = async (req: Request, res: Response) => {
+  try {
+    const tags = ['tag:collab', 'tag:acane', 'tag:real', 'tag:uniguri', 'tag:other'];
+
+    const tagCounts: Record<string, number> = {};
+    for (const tag of tags) {
+      tagCounts[tag] = await MediaModel.count({
+        where: { type: 'fanart', tags: { [Op.contains]: [tag] } },
+        include: [{ model: MediaGroupModel, as: 'group', where: { status: 'organized' }, required: true }],
+        distinct: true,
+        col: 'id'
+      });
+    }
+
+    const tagsAny = parseCsv(req.query.tags);
+    const onlyCollab = String(req.query.onlyCollab || '').toLowerCase() === '1' || String(req.query.onlyCollab || '').toLowerCase() === 'true';
+
+    const whereParts: string[] = [
+      `m.type = 'fanart'`,
+      `g.status = 'organized'`
+    ];
+    const replacements: Record<string, any> = {};
+
+    if (onlyCollab) {
+      whereParts.push(`m.tags @> :collabTag::jsonb`);
+      replacements.collabTag = JSON.stringify(['tag:collab']);
+    }
+
+    if (tagsAny.length > 0) {
+      const orParts: string[] = [];
+      tagsAny.forEach((tag, idx) => {
+        const key = `tag_${idx}`;
+        replacements[key] = JSON.stringify([tag]);
+        orParts.push(`m.tags @> :${key}::jsonb`);
+      });
+      whereParts.push(`(${orParts.join(' OR ')})`);
+    }
+
+    const whereSql = whereParts.join(' AND ');
+    const mvRows = await sequelize.query(
+      `
+      SELECT mm.mv_id as "mvId", COUNT(DISTINCT m.id)::int as "count"
+      FROM media m
+      JOIN media_groups g ON g.id = m.group_id
+      JOIN mv_media mm ON mm.media_id = m.id
+      WHERE ${whereSql}
+      GROUP BY mm.mv_id
+      `,
+      { replacements, type: QueryTypes.SELECT }
+    );
+
+    const mvCounts: Record<string, number> = {};
+    (mvRows as any[]).forEach((r) => {
+      if (!r?.mvId) return;
+      mvCounts[String(r.mvId)] = Number(r.count) || 0;
     });
 
-    res.setHeader('Cache-Control', 'no-store');
-    res.json({ success: true, data: rows.map(r => r.toJSON()) });
+    res.json({ success: true, data: { tagCounts, mvCounts } });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }

@@ -481,6 +481,9 @@ export default function FancyboxViewer({
   className = '',
   enablePagination = true,
   autoLoadMore = false, // 預設手動點擊
+  externalHasMore = false,
+  onExternalLoadMore,
+  resetKey,
   onLightboxOpen,
   onLightboxClose,
 }: {
@@ -497,6 +500,9 @@ export default function FancyboxViewer({
   className?: string;
   enablePagination?: boolean;
   autoLoadMore?: boolean;
+  externalHasMore?: boolean;
+  onExternalLoadMore?: () => void | Promise<void>;
+  resetKey?: string;
   onLightboxOpen?: () => void;
   onLightboxClose?: () => void;
 }) {
@@ -532,6 +538,7 @@ export default function FancyboxViewer({
   const displayedCountRef = useRef(0);
   const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
   const fancyboxRef = useRef<ReturnType<typeof NativeFancybox.show> | null>(null);
+  const effectiveHasMore = hasMore || externalHasMore;
 
   useEffect(() => {
     displayedCountRef.current = displayedPhotos.length;
@@ -621,11 +628,10 @@ export default function FancyboxViewer({
   );
 
   const datasetKey = useMemo(() => {
+    if (resetKey) return resetKey;
     if (processedImages.length === 0) return 'empty';
-    const first = processedImages[0].url || '';
-    const last = processedImages[processedImages.length - 1].url || '';
-    return `${processedImages.length}_${first}_${last}`;
-  }, [processedImages]);
+    return processedImages[0].url || 'empty';
+  }, [processedImages, resetKey]);
 
   const prevDatasetKeyRef = useRef<string>('');
 
@@ -659,37 +665,44 @@ export default function FancyboxViewer({
     });
   }, [processedImages, itemsPerPage, getPhotosFromRange, datasetKey]);
 
-  const loadMore = useCallback(() => {
-    if (loadingMore || !hasMore) return;
+  const loadMore = useCallback(async () => {
+    const effectiveHasMore = hasMore || externalHasMore;
+    if (loadingMore || !effectiveHasMore) return;
 
     setLoadingMore(true);
 
-    const startIndex = currentPage * itemsPerPage;
-    getPhotosFromRange(startIndex, itemsPerPage).then((newPhotos) => {
-      // 不再需要 setTimeout 延遲，直接加載
-      if (newPhotos.length > 0) {
-        lastBatchStartRef.current = displayedCountRef.current;
-        
-        setDisplayedPhotos((prev) => {
-          // 使用 originalUrl 或 full 網址作為去重依據，避免不同 MV 產生相同的 src 但其實是同一張原圖
-          const existingKeys = new Set(prev.map(p => p.originalUrl || p.full));
-          const uniqueNewPhotos = newPhotos.filter(p => !existingKeys.has(p.originalUrl || p.full));
-          if (uniqueNewPhotos.length === 0) return prev;
-          return [...prev, ...uniqueNewPhotos];
-        });
-
-        setCurrentPage((prev) => prev + 1);
+    if (!hasMore && externalHasMore && onExternalLoadMore) {
+      try {
+        await onExternalLoadMore();
+      } catch {
       }
+    }
 
-      setHasMore(startIndex + newPhotos.length < processedImages.length);
-      setLoadingMore(false);
-    });
-  }, [currentPage, processedImages.length, loadingMore, hasMore, itemsPerPage, getPhotosFromRange, autoLoadMore]);
+    const startIndex = displayedCountRef.current;
+    const newPhotos = await getPhotosFromRange(startIndex, itemsPerPage);
+
+    if (newPhotos.length > 0) {
+      lastBatchStartRef.current = displayedCountRef.current;
+
+      setDisplayedPhotos((prev) => {
+        const existingKeys = new Set(prev.map(p => p.originalUrl || p.full));
+        const uniqueNewPhotos = newPhotos.filter(p => !existingKeys.has(p.originalUrl || p.full));
+        if (uniqueNewPhotos.length === 0) return prev;
+        return [...prev, ...uniqueNewPhotos];
+      });
+
+      setCurrentPage((prev) => prev + 1);
+    }
+
+    setHasMore(startIndex + newPhotos.length < processedImages.length);
+    setLoadingMore(false);
+  }, [externalHasMore, getPhotosFromRange, hasMore, itemsPerPage, loadingMore, onExternalLoadMore, processedImages.length]);
 
   // 實作無限滾動 (Infinite Scroll) - 僅在 autoLoadMore 開啟時生效
   useEffect(() => {
     const sentinel = loadMoreSentinelRef.current;
-    if (!sentinel || !hasMore || loadingMore || !enablePagination || !autoLoadMore) return;
+    const effectiveHasMore = hasMore || externalHasMore;
+    if (!sentinel || !effectiveHasMore || loadingMore || !enablePagination || !autoLoadMore) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -706,7 +719,7 @@ export default function FancyboxViewer({
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMore, loadingMore, loadMore, enablePagination, autoLoadMore]);
+  }, [hasMore, externalHasMore, loadingMore, loadMore, enablePagination, autoLoadMore]);
 
   const handleAfterOpen = useCallback(() => {
     document.dispatchEvent(new CustomEvent('lightboxBeforeOpen', { detail: { provider: 'fb' } }));
@@ -1215,7 +1228,7 @@ export default function FancyboxViewer({
         </ResponsiveMasonry>
       </div>
 
-      {enablePagination && hasMore && (
+      {enablePagination && effectiveHasMore && (
         <div ref={loadMoreSentinelRef} className="mt-8 lg:mt-12 flex justify-center py-10">
           {loadingMore ? (
             <div className="flex flex-col items-center leading-tight opacity-50 animate-pulse relative z-10">
@@ -1254,7 +1267,7 @@ export default function FancyboxViewer({
         </div>
       )}
 
-      {enablePagination && !hasMore && displayedPhotos.length > 0 && (
+      {enablePagination && !effectiveHasMore && displayedPhotos.length > 0 && (
         <div className="w-full py-18 mt-10 flex flex-col items-center justify-center opacity-30 select-none">
           <div className="flex items-center gap-4 text-xs font-mono font-black">
             <span className="w-12 h-0.5 bg-current"></span>
