@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import { StagingFanartModel, syncModels } from '../models/index.js';
 import { uploadBufferToR2 } from '../services/r2.service.js';
 
-// 需要先從 crawler/ 資料夾找出最新的 raw-apify-results 檔案
+// 需要先從 crawler/ 資料夾找出最新的 raw-apify-results 或 dataset_twitter 檔案
 const crawlerDir = path.join(process.cwd(), 'crawler');
 
 async function fetchMediaToBuffer(url: string): Promise<{ buffer: Buffer; contentType: string; ext: string } | null> {
@@ -47,9 +47,11 @@ export async function reparseRawApify(filename?: string) {
 
   let targetFile = filename;
   if (!targetFile) {
-    const files = fs.readdirSync(crawlerDir).filter(f => f.startsWith('raw-apify-results-') && f.endsWith('.json'));
+    const files = fs.readdirSync(crawlerDir).filter(f => 
+      (f.startsWith('raw-apify-results-') || f.startsWith('dataset_twitter-')) && f.endsWith('.json')
+    );
     if (files.length === 0) {
-      console.error(`[Reparse] 找不到任何 raw-apify-results 檔案。`);
+      console.error(`[Reparse] 找不到任何 raw-apify-results 或 dataset_twitter 檔案。`);
       return;
     }
     // 找出最新的檔案
