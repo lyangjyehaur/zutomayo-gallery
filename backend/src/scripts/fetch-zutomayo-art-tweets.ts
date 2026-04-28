@@ -158,6 +158,25 @@ export async function runCrawler(searchTerms: string, startDate?: string, endDat
         const crawledAt = new Date();
         const postDate = targetTweet.created_at ? new Date(targetTweet.created_at) : (targetTweet.createdAt ? new Date(targetTweet.createdAt) : crawledAt);
         const sourceText = targetTweet.full_text || targetTweet.text || '';
+
+        const rawAuthorName =
+          targetTweet.user?.name ||
+          targetTweet.user_name ||
+          targetTweet.author?.name ||
+          targetTweet.author?.fullName ||
+          targetTweet.name ||
+          '';
+        const rawAuthorHandle =
+          targetTweet.user?.screen_name ||
+          targetTweet.user_screen_name ||
+          targetTweet.author?.screenName ||
+          targetTweet.author?.userName ||
+          targetTweet.username ||
+          targetTweet.screen_name ||
+          targetTweet.handle ||
+          '';
+        const author_name = rawAuthorName ? String(rawAuthorName).trim() : null;
+        const author_handle = rawAuthorHandle ? String(rawAuthorHandle).replace(/^@/, '').trim() : null;
         
         const like_count = targetTweet.likeCount || targetTweet.favorite_count || 0;
         const retweet_count = targetTweet.retweetCount || targetTweet.retweet_count || 0;
@@ -230,6 +249,8 @@ export async function runCrawler(searchTerms: string, startDate?: string, endDat
           original_url: originalUrl,
           media_url: mediaUrl,
           thumbnail_url: media.thumbnail_url || null,
+          author_name,
+          author_handle,
           r2_url: null,
           media_type: mediaType === 'photo' ? 'image' : 'video',
           crawled_at: crawledAt,

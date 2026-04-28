@@ -180,6 +180,8 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
     const retweetCount = staging.get('retweet_count') as number;
     const viewCount = staging.get('view_count') as number;
     const hashtags = staging.get('hashtags') as string[];
+    const authorName = staging.get('author_name') as any;
+    const authorHandle = staging.get('author_handle') as any;
     const mediaWidth = staging.get('media_width') as number;
     const mediaHeight = staging.get('media_height') as number;
 
@@ -232,6 +234,8 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
         source_url: originalUrl,
         post_date: postDate || crawledAt || new Date(),
         source_text: sourceText || '',
+        author_name: authorName || null,
+        author_handle: authorHandle || null,
         like_count: likeCount || 0,
         retweet_count: retweetCount || 0,
         view_count: viewCount || 0,
@@ -239,6 +243,13 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
         status: 'unorganized'
       }
     });
+
+    if ((authorName || authorHandle) && (!group.get('author_name') || !group.get('author_handle'))) {
+      const updateData: any = {};
+      if (authorName && !group.get('author_name')) updateData.author_name = authorName;
+      if (authorHandle && !group.get('author_handle')) updateData.author_handle = authorHandle;
+      if (Object.keys(updateData).length > 0) await group.update(updateData);
+    }
 
     const allowedTags = new Set(['tag:collab', 'tag:acane', 'tag:real', 'tag:uniguri', 'tag:shoga']);
     const rawMvs = Array.isArray(mvs) ? mvs : [];
