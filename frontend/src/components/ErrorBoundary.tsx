@@ -61,6 +61,25 @@ export class ErrorBoundary extends Component<Props, State> {
     window.location.reload();
   };
 
+  handleClearCacheAndReload = () => {
+    const run = async () => {
+      try {
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(r => r.unregister()));
+        }
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
+        }
+      } catch {
+      } finally {
+        window.location.reload();
+      }
+    };
+    void run();
+  };
+
   render() {
     if (this.state.hasError) {
       // 自定義 fallback UI
@@ -96,17 +115,17 @@ export class ErrorBoundary extends Component<Props, State> {
                     {this.state.error?.message || t('error.unknown_error', '未知錯誤 (Unknown error occurred)')}
                   </p>
                   
-                  {/* 開發環境顯示堆棧 */}
-                  {import.meta.env.DEV && this.state.errorInfo && (
+                  {this.state.error && (
                     <details className="mt-4">
                       <summary className="cursor-pointer text-red-400 hover:text-red-300">
                         <span className="flex flex-col leading-tight">
-                          <span>{t('error.stack_trace', '堆疊追蹤 (Dev_Mode)')}</span>
-                          <span className="text-[10px] font-mono opacity-60 normal-case">Stack_Trace (Dev_Mode)</span>
+                          <span>{t('error.stack_trace', '堆疊追蹤')}</span>
+                          <span className="text-[10px] font-mono opacity-60 normal-case">Stack_Trace</span>
                         </span>
                       </summary>
                       <pre className="mt-2 text-xs text-red-300/60 overflow-auto max-h-40 whitespace-pre-wrap">
-                        {this.state.errorInfo.componentStack}
+                        {(this.state.error.stack || '').substring(0, 4000)}
+                        {this.state.errorInfo?.componentStack ? `\n\n${this.state.errorInfo.componentStack.substring(0, 4000)}` : ''}
                       </pre>
                     </details>
                   )}
@@ -131,6 +150,15 @@ export class ErrorBoundary extends Component<Props, State> {
                     data-umami-event-action="reload"
                   >
                     {t('error.reload', '重新加載頁面')}
+                  </Button>
+                  <Button 
+                    onClick={this.handleClearCacheAndReload}
+                    variant="neutral"
+                    className="border-2 border-black hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none"
+                    data-umami-event="Z_Error_Recovery"
+                    data-umami-event-action="clear_cache_reload"
+                  >
+                    {t('error.clear_cache_reload', '清除快取並重載')}
                   </Button>
                   <Button 
                     onClick={() => window.location.href = '/'}
