@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { StagingFanartModel, MediaGroupModel, MediaModel, CrawlerStateModel } from '../models/index.js';
+import { StagingFanartModel, MediaGroupModel, MediaModel, CrawlerStateModel, MVMediaModel } from '../models/index.js';
 import { nanoid } from 'nanoid';
 import { Sequelize } from 'sequelize';
 import { runCrawler } from '../scripts/fetch-zutomayo-art-tweets.js';
@@ -151,6 +151,7 @@ export const getPendingStagingFanarts = async (req: Request, res: Response) => {
 export const approveStagingFanart = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const { mvs } = req.body;
     const staging = await StagingFanartModel.findByPk(id);
 
     if (!staging) {
@@ -232,9 +233,9 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
       }
     });
 
-    const existingMedia = await MediaModel.findOne({ where: { original_url: mediaUrl } });
+    let existingMedia = await MediaModel.findOne({ where: { original_url: mediaUrl } });
     if (!existingMedia) {
-      await MediaModel.create({
+      existingMedia = await MediaModel.create({
         id: generateShortId(),
         type: 'fanart',
         media_type: mediaType || 'image',
@@ -244,6 +245,20 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
         height: mediaHeight || null,
         group_id: group.get('id')
       });
+    }
+
+    if (mvs && Array.isArray(mvs) && mvs.length > 0) {
+      for (const mvId of mvs) {
+        await MVMediaModel.findOrCreate({
+          where: { mv_id: mvId, media_id: existingMedia.get('id') },
+          defaults: {
+            mv_id: mvId,
+            media_id: existingMedia.get('id'),
+            usage: 'gallery',
+            order_index: 0
+          }
+        });
+      }
     }
 
     await staging.update({ status: 'approved' });

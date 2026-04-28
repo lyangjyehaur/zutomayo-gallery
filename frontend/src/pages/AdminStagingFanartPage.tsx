@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MultiSelect, Option } from '@/components/ui/multi-select';
 
 interface StagingFanart {
   id: string;
@@ -49,10 +50,25 @@ export function AdminStagingFanartPage() {
   const [isTriggering, setIsTriggering] = useState(false);
   const [maxItems, setMaxItems] = useState<number>(1000);
 
+  const [mvs, setMvs] = useState<Option[]>([]);
+  const [selectedMvs, setSelectedMvs] = useState<Record<string, string[]>>({});
+
   const baseApiUrl = useMemo(
     () => (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, ''),
     []
   );
+
+  const fetchMvs = useCallback(async () => {
+    try {
+      const res = await fetch(`${baseApiUrl}/mvs`);
+      const data = await res.json();
+      if (data.success) {
+        setMvs(data.data.map((mv: any) => ({ label: mv.title, value: mv.id })));
+      }
+    } catch (error) {
+      console.error('Failed to fetch MVs', error);
+    }
+  }, [baseApiUrl]);
 
   const fetchProgress = useCallback(async () => {
     setIsProgressLoading(true);
@@ -98,6 +114,10 @@ export function AdminStagingFanartPage() {
   useEffect(() => {
     fetchProgress();
   }, [fetchProgress]);
+
+  useEffect(() => {
+    fetchMvs();
+  }, [fetchMvs]);
 
   useEffect(() => {
     const status = progress?.syncProgress?.status;
@@ -156,9 +176,14 @@ export function AdminStagingFanartPage() {
 
   const handleAction = async (id: string, action: 'approve' | 'reject') => {
     try {
+      const payload = action === 'approve' ? { mvs: selectedMvs[id] || [] } : {};
       const res = await fetch(`${baseApiUrl}/staging-fanarts/${id}/${action}`, {
         method: 'POST',
-        headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' 
+        },
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       if (data.success) {
@@ -372,6 +397,16 @@ export function AdminStagingFanartPage() {
                     <span>Date: {new Date(f.crawled_at).toLocaleString()}</span>
                   </div>
                   
+                  <div className="flex flex-col gap-2 mt-2">
+                    <span className="text-xs font-bold uppercase">Associated MVs:</span>
+                    <MultiSelect
+                      options={mvs}
+                      selected={selectedMvs[f.id] || []}
+                      onChange={(selected) => setSelectedMvs(prev => ({ ...prev, [f.id]: selected }))}
+                      placeholder="Select MVs..."
+                    />
+                  </div>
+
                   <div className="mt-auto grid grid-cols-2 gap-2 pt-2">
                     <Button 
                       className="w-full bg-red-500 text-white hover:bg-red-600 border-2 border-black shadow-neo-sm font-black uppercase tracking-wider"
