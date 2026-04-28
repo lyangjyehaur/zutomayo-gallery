@@ -130,8 +130,26 @@ export async function runCrawler(username: string = 'zutomayo_art', targetMonthO
     console.log(`[Crawler] 正在透過 Apify 獲取推文... 目標範圍: ${targetMonth} (${sinceDate} ~ ${untilDate})`);
     
     const input = {
-      searchTerms: [`from:${username} since:${sinceDate}_00:00:00_UTC until:${untilDate}_00:00:00_UTC`],
-      maxItems: maxItems
+      searchTerms: [`from:${username} filter:media since:${sinceDate}_00:00:00_UTC until:${untilDate}_00:00:00_UTC`],
+      maxItems: maxItems,
+      "lang": "en",
+      "include:nativeretweets": false,
+      "filter:replies": false,
+      "filter:links": false,
+      "filter:verified": false,
+      "filter:blue_verified": false,
+      "filter:safe": false,
+      "filter:media": false,
+      "filter:images": false,
+      "filter:videos": false,
+      "filter:consumer_video": false,
+      "filter:pro_video": false,
+      "filter:native_video": false,
+      "filter:periscope": false,
+      "filter:vine": false,
+      "filter:spaces": false,
+      "filter:has_engagement": false,
+      "filter:twimg": false
     };
 
     const run = await client.actor("kaitoeasyapi/twitter-x-data-tweet-scraper-pay-per-result-cheapest").call(input);
