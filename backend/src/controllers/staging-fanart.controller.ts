@@ -240,14 +240,14 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
       }
     });
 
-    const allowedTags = new Set(['tag:collab', 'tag:acane', 'tag:aca-ne', 'tag:real', 'tag:uniguri', 'tag:shoga']);
+    const allowedTags = new Set(['tag:collab', 'tag:acane', 'tag:real', 'tag:uniguri', 'tag:shoga']);
     const rawMvs = Array.isArray(mvs) ? mvs : [];
     const mvIds = rawMvs.filter((v: any) => typeof v === 'string' && !v.startsWith('tag:'));
     const tags = Array.from(
       new Set(
         rawMvs
           .filter((v: any) => typeof v === 'string' && v.startsWith('tag:') && allowedTags.has(v))
-          .map((v: string) => (v === 'tag:aca-ne' ? 'tag:acane' : v))
+          .map((v: string) => v)
       )
     );
 

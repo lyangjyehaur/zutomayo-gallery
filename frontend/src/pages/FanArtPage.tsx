@@ -15,7 +15,6 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
   const normalizeTag = (tag: any) => {
     if (!tag) return '';
     const str = String(tag);
-    if (str === 'tag:aca-ne') return 'tag:acane';
     if (str.startsWith('tag:')) return str;
     return `tag:${str}`;
   };

@@ -127,7 +127,7 @@ export const getFanartsByTag = async (req: Request, res: Response) => {
     const rawTag = String(req.params.tagId || '').trim();
     if (!rawTag) return res.status(400).json({ success: false, error: 'Missing tagId' });
 
-    const tagId = rawTag === 'tag:aca-ne' ? 'tag:acane' : rawTag;
+    const tagId = rawTag;
     const legacyTag = tagId.startsWith('tag:') ? tagId.slice(4) : tagId;
 
     const rows = await MediaModel.findAll({
@@ -182,9 +182,7 @@ export const assignFanartMedia = async (req: Request, res: Response) => {
     if (!media) return res.status(404).json({ success: false, error: 'Media not found' });
     
     const mvIds = mvs.filter((m: string) => !m.startsWith('tag:'));
-    const tags = mvs
-      .filter((m: string) => m.startsWith('tag:'))
-      .map((t: string) => (t === 'tag:aca-ne' ? 'tag:acane' : t));
+    const tags = mvs.filter((m: string) => m.startsWith('tag:'));
 
     if (tags.length > 0) {
       const currentTags = media.get('tags') as any;
@@ -229,11 +227,7 @@ export const syncFanartMedia = async (req: Request, res: Response) => {
     const rawMvs = Array.isArray(mvs) ? mvs : [];
     const mvIds = rawMvs.filter((m: any) => typeof m === 'string' && !m.startsWith('tag:'));
     const tags = Array.from(
-      new Set(
-        rawMvs
-          .filter((m: any) => typeof m === 'string' && m.startsWith('tag:'))
-          .map((t: string) => (t === 'tag:aca-ne' ? 'tag:acane' : t))
-      )
+      new Set(rawMvs.filter((m: any) => typeof m === 'string' && m.startsWith('tag:')))
     );
 
     await media.update({ tags });
