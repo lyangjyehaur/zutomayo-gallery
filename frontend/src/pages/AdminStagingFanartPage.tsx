@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface StagingFanart {
   id: string;
@@ -45,8 +46,13 @@ export function AdminStagingFanartPage() {
   const [isProgressLoading, setIsProgressLoading] = useState(false);
   
   const [crawlerUsername, setCrawlerUsername] = useState('zutomayo_art');
+  const [fetchType, setFetchType] = useState<'month' | 'year'>('month');
   const [crawlerMonth, setCrawlerMonth] = useState('');
+  const [crawlerYear, setCrawlerYear] = useState('');
   const [isTriggering, setIsTriggering] = useState(false);
+
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 5 }, (_, i) => String(currentYear - i));
 
   const fetchProgress = async () => {
     setIsProgressLoading(true);
@@ -111,9 +117,19 @@ export function AdminStagingFanartPage() {
       return;
     }
     
-    if (crawlerMonth && !/^\d{4}-\d{2}$/.test(crawlerMonth)) {
-      toast.error('請輸入正確的月份格式 (YYYY-MM)');
-      return;
+    let targetMonth = '';
+    if (fetchType === 'month') {
+      if (crawlerMonth && !/^\d{4}-\d{2}$/.test(crawlerMonth)) {
+        toast.error('請輸入正確的月份格式 (YYYY-MM)');
+        return;
+      }
+      targetMonth = crawlerMonth;
+    } else {
+      if (!crawlerYear) {
+        toast.error('請選擇年份');
+        return;
+      }
+      targetMonth = crawlerYear;
     }
     
     setIsTriggering(true);
@@ -127,7 +143,7 @@ export function AdminStagingFanartPage() {
         },
         body: JSON.stringify({ 
           username: crawlerUsername,
-          month: crawlerMonth || undefined
+          month: targetMonth || undefined
         })
       });
       const data = await res.json();
@@ -227,12 +243,39 @@ export function AdminStagingFanartPage() {
                     className="border-2 border-black font-bold shadow-neo-sm h-8 w-32 md:w-40 bg-background"
                     placeholder="Username"
                   />
-                  <Input 
-                    value={crawlerMonth}
-                    onChange={(e) => setCrawlerMonth(e.target.value)}
-                    className="border-2 border-black font-bold shadow-neo-sm h-8 w-24 md:w-32 bg-background"
-                    placeholder="YYYY-MM"
-                  />
+                  <Select value={fetchType} onValueChange={(v) => {
+                    setFetchType(v as 'month' | 'year');
+                    setCrawlerMonth('');
+                    setCrawlerYear('');
+                  }}>
+                    <SelectTrigger className="h-8 w-[120px] bg-background border-2 border-black font-bold shadow-neo-sm">
+                      <SelectValue placeholder="抓取方式" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="month">依月份抓取</SelectItem>
+                      <SelectItem value="year">依年份抓取</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {fetchType === 'month' ? (
+                    <Input 
+                      type="month"
+                      value={crawlerMonth}
+                      onChange={(e) => setCrawlerMonth(e.target.value)}
+                      className="border-2 border-black font-bold shadow-neo-sm h-8 w-36 bg-background"
+                    />
+                  ) : (
+                    <Select value={crawlerYear} onValueChange={setCrawlerYear}>
+                      <SelectTrigger className="h-8 w-24 bg-background border-2 border-black font-bold shadow-neo-sm">
+                        <SelectValue placeholder="年份" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {years.map(year => (
+                          <SelectItem key={year} value={year}>{year}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
                 <Button 
                   variant="default" 
@@ -241,7 +284,7 @@ export function AdminStagingFanartPage() {
                   onClick={handleTriggerCrawler}
                   disabled={isTriggering}
                 >
-                  <i className={`hn ${isTriggering ? 'hn-refresh animate-spin' : 'hn-play'} mr-2`} /> 抓取 {crawlerMonth || progress?.syncProgress?.last_crawled_month || '本月'} 的推文
+                  <i className={`hn ${isTriggering ? 'hn-refresh animate-spin' : 'hn-play'} mr-2`} /> 抓取 {(fetchType === 'month' ? crawlerMonth : crawlerYear) || progress?.syncProgress?.last_crawled_month || '本月'} 的推文
                 </Button>
                 <Button 
                   variant="outline" 

@@ -89,26 +89,42 @@ export async function runCrawler(username: string = 'zutomayo_art', targetMonthO
     targetMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   }
 
-  const [yearStr, monthStr] = targetMonth.split('-');
-  const year = parseInt(yearStr, 10);
-  const month = parseInt(monthStr, 10);
+  let sinceDate: string;
+  let untilDate: string;
+  let nextTargetMonth: string;
+  let maxItems: number;
 
-  const sinceDate = `${year}-${String(month).padStart(2, '0')}-01`;
-  
-  const nextMonth = month === 12 ? 1 : month + 1;
-  const nextYear = month === 12 ? year + 1 : year;
-  const untilDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+  const parts = targetMonth.split('-');
+  if (parts.length === 1) {
+    // YYYY 格式
+    const year = parseInt(parts[0], 10);
+    sinceDate = `${year}-01-01`;
+    untilDate = `${year + 1}-01-01`;
+    nextTargetMonth = `${year - 1}`;
+    maxItems = 5000;
+  } else {
+    // YYYY-MM 格式
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
 
-  const prevMonth = month === 1 ? 12 : month - 1;
-  const prevYear = month === 1 ? year - 1 : year;
-  const nextTargetMonth = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+    sinceDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    
+    const nextMonth = month === 12 ? 1 : month + 1;
+    const nextYear = month === 12 ? year + 1 : year;
+    untilDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const prevYear = month === 1 ? year - 1 : year;
+    nextTargetMonth = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+    maxItems = 500;
+  }
 
   try {
-    console.log(`[Crawler] 正在透過 Apify 獲取推文... 目標月份: ${targetMonth} (${sinceDate} ~ ${untilDate})`);
+    console.log(`[Crawler] 正在透過 Apify 獲取推文... 目標範圍: ${targetMonth} (${sinceDate} ~ ${untilDate})`);
     
     const input = {
       searchTerms: [`from:${username} since:${sinceDate} until:${untilDate}`],
-      maxItems: 500
+      maxItems: maxItems
     };
 
     const run = await client.actor("kaitoeasyapi/twitter-x-data-tweet-scraper-pay-per-result-cheapest").call(input);
