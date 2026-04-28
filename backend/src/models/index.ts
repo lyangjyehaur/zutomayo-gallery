@@ -1,22 +1,11 @@
-import { Sequelize, DataTypes, Model } from 'sequelize';
+import { DataTypes, Model } from 'sequelize';
 import { nanoid } from 'nanoid';
+import { sequelize } from '../services/pg.service.js';
 
 // 自定義 16 碼短 ID 生成器 (兼具高安全性與短字元優勢)
 const generateShortId = () => nanoid(16);
 
-const DB_HOST = process.env.DB_HOST || '127.0.0.1';
-const DB_PORT = parseInt(process.env.DB_PORT || '5432', 10);
-const DB_NAME = process.env.DB_NAME || 'zutomayo_gallery_test';
-const DB_USER = process.env.DB_USER || 'zutomayo_gallery_test';
-const DB_PASS = process.env.DB_PASS || 'XCFHbZQyn33KeY66';
-
-export const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASS, {
-  host: DB_HOST,
-  port: DB_PORT,
-  dialect: 'postgres',
-  logging: false,
-  timezone: '+08:00',
-});
+export { sequelize };
 
 // ==========================================
 // Core Entities
