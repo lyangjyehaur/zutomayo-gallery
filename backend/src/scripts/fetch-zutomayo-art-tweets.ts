@@ -130,7 +130,7 @@ export async function runCrawler(username: string = 'zutomayo_art', targetMonthO
     console.log(`[Crawler] 正在透過 Apify 獲取推文... 目標範圍: ${targetMonth} (${sinceDate} ~ ${untilDate})`);
     
     const input = {
-      searchTerms: [`from:${username} since:${sinceDate} until:${untilDate}`],
+      searchTerms: [`from:${username} since:${sinceDate}_00:00:00_UTC until:${untilDate}_00:00:00_UTC`],
       maxItems: maxItems
     };
 
