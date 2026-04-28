@@ -10,6 +10,8 @@ export function AdminFanArtPage() {
   const [unorganizedGroups, setUnorganizedGroups] = useState<any[]>([]);
   const [deletedGroups, setDeletedGroups] = useState<any[]>([]);
   const [legacyMedia, setLegacyMedia] = useState<any[]>([]);
+  const [tagSummary, setTagSummary] = useState<Record<string, number>>({});
+  const [tagMedia, setTagMedia] = useState<any[]>([]);
   const [mvData, setMvData] = useState<any[]>([]);
   const [selectedMvs, setSelectedMvs] = useState<Record<string, string[]>>({});
   const [editMvs, setEditMvs] = useState<Record<string, string[]>>({});
@@ -78,12 +80,52 @@ export function AdminFanArtPage() {
     }
   };
 
+  const fetchTagSummary = async () => {
+    try {
+      const res = await fetch(`${baseApiUrl}/fanarts/tag-summary`, {
+        headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTagSummary(data.data || {});
+      }
+    } catch (err) {
+      toast.error('Failed to fetch tag summary');
+    }
+  };
+
+  const fetchFanartsByTag = async (tagId: string) => {
+    try {
+      const res = await fetch(`${baseApiUrl}/fanarts/by-tag/${encodeURIComponent(tagId)}`, {
+        headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTagMedia(Array.isArray(data.data) ? data.data : []);
+      } else {
+        setTagMedia([]);
+      }
+    } catch (err) {
+      toast.error('Failed to fetch fanarts by tag');
+      setTagMedia([]);
+    }
+  };
+
   useEffect(() => {
     fetchData();
     fetchUnorganized();
     fetchDeleted();
     fetchLegacy();
+    fetchTagSummary();
   }, [baseApiUrl]);
+
+  useEffect(() => {
+    if (activeTab.startsWith('tag:')) {
+      fetchFanartsByTag(activeTab);
+    } else {
+      setTagMedia([]);
+    }
+  }, [activeTab]);
 
   const mvsOptions: Option[] = useMemo(() => {
     const tagOpts: Option[] = [
@@ -176,22 +218,6 @@ export function AdminFanArtPage() {
     }
     if (activeTab.startsWith('tag:')) {
       const id = activeTab;
-      // Find all media in mvData that have this tag
-      const allImagesWithTag: any[] = [];
-      const seenIds = new Set();
-      
-      mvData.forEach(mv => {
-        mv.images?.forEach((img: any) => {
-          if (img.type !== 'fanart') return;
-          if (img.usage === 'cover') return;
-          if (isYoutubeLike(img.original_url || img.url)) return;
-          if (hasTag(img, id) && !seenIds.has(img.id)) {
-            seenIds.add(img.id);
-            allImagesWithTag.push(img);
-          }
-        });
-      });
-      
       return {
         id,
         title:
@@ -204,11 +230,11 @@ export function AdminFanArtPage() {
                 : id === 'tag:uniguri'
                   ? '海膽栗子'
                   : '生薑',
-        images: allImagesWithTag
+        images: tagMedia
       };
     }
     return null;
-  }, [activeTab, mvData]);
+  }, [activeTab, mvData, tagMedia]);
 
   const handleAssignMedia = async (mediaId: string, groupId: string) => {
     const mvs = selectedMvs[mediaId] || [];
@@ -228,6 +254,7 @@ export function AdminFanArtPage() {
         toast.success('已保存並關聯');
         setUnorganizedGroups(prev => prev.filter(g => g.id !== groupId));
         fetchData(); // refresh mv data
+        fetchTagSummary();
       } else {
         toast.error(data.error || '保存失敗');
       }
@@ -292,6 +319,8 @@ export function AdminFanArtPage() {
       if (data.success) {
         toast.success('已更新關聯');
         fetchData();
+        fetchTagSummary();
+        if (activeTab.startsWith('tag:')) fetchFanartsByTag(activeTab);
       } else {
         toast.error(data.error || '更新失敗');
       }
@@ -459,19 +488,7 @@ export function AdminFanArtPage() {
 
         <div className="p-2 flex flex-col gap-1">
           {['tag:collab', 'tag:acane', 'tag:real', 'tag:uniguri', 'tag:shoga'].map(tagId => {
-            let count = 0;
-            const seen = new Set();
-            mvData.forEach(mv => {
-              mv.images?.forEach((img: any) => {
-                if (img.type !== 'fanart') return;
-                if (img.usage === 'cover') return;
-                if (isYoutubeLike(img.original_url || img.url)) return;
-                if (hasTag(img, tagId) && !seen.has(img.id)) {
-                  seen.add(img.id);
-                  count++;
-                }
-              });
-            });
+            const count = tagSummary[tagId] || 0;
 
             return (
               <button

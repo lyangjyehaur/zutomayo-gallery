@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { Op } from 'sequelize';
 import { MediaGroupModel, MediaModel, MVMediaModel } from '../models/index.js';
 import { MVService } from '../services/mv.service.js';
 
@@ -99,6 +100,57 @@ export const getLegacyFanarts = async (req: Request, res: Response) => {
       });
 
     res.json({ success: true, data });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const getFanartsByTag = async (req: Request, res: Response) => {
+  try {
+    const rawTag = String(req.params.tagId || '').trim();
+    if (!rawTag) return res.status(400).json({ success: false, error: 'Missing tagId' });
+
+    const tagId = rawTag === 'tag:aca-ne' ? 'tag:acane' : rawTag;
+    const legacyTag = tagId.startsWith('tag:') ? tagId.slice(4) : tagId;
+
+    const rows = await MediaModel.findAll({
+      where: {
+        type: 'fanart',
+        [Op.or]: [
+          { tags: { [Op.contains]: [tagId] } },
+          { tags: { [Op.contains]: [legacyTag] } }
+        ]
+      },
+      include: [{ model: MediaGroupModel, as: 'group' }],
+      order: [[{ model: MediaGroupModel, as: 'group' }, 'post_date', 'DESC'], ['id', 'DESC']]
+    });
+
+    res.json({ success: true, data: rows.map(r => r.toJSON()) });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const getFanartTagSummary = async (req: Request, res: Response) => {
+  try {
+    const tags = ['tag:collab', 'tag:acane', 'tag:real', 'tag:uniguri', 'tag:shoga'];
+    const counts: Record<string, number> = {};
+
+    for (const tag of tags) {
+      const legacyTag = tag.startsWith('tag:') ? tag.slice(4) : tag;
+      const count = await MediaModel.count({
+        where: {
+          type: 'fanart',
+          [Op.or]: [
+            { tags: { [Op.contains]: [tag] } },
+            { tags: { [Op.contains]: [legacyTag] } }
+          ]
+        }
+      });
+      counts[tag] = count;
+    }
+
+    res.json({ success: true, data: counts });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
