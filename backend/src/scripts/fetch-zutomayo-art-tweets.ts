@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
+import path from 'path';
 import { ApifyClient } from 'apify-client';
 import { StagingFanartModel, CrawlerStateModel, syncModels } from '../models/index.js';
 import { uploadBufferToR2 } from '../services/r2.service.js';
@@ -90,6 +92,15 @@ export async function runCrawler(username: string = 'zutomayo_art') {
     const run = await client.actor("kaitoeasyapi/twitter-x-data-tweet-scraper-pay-per-result-cheapest").call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
 
+    // 備份 Apify 原始結果
+    const crawlerDir = path.join(process.cwd(), 'crawler');
+    if (!fs.existsSync(crawlerDir)) {
+      fs.mkdirSync(crawlerDir, { recursive: true });
+    }
+    const backupFilePath = path.join(crawlerDir, `raw-apify-results-${username}-${Date.now()}.json`);
+    fs.writeFileSync(backupFilePath, JSON.stringify(items, null, 2), 'utf-8');
+    console.log(`[Crawler] 已將 Apify 原始結果備份至: ${backupFilePath}`);
+
     if (!items || items.length === 0) {
       console.log('[Crawler] 沒有找到更多推文，爬蟲完成。');
       await crawlerState.update({ status: 'idle' });
@@ -114,15 +125,24 @@ export async function runCrawler(username: string = 'zutomayo_art') {
       let medias: { url: string; type: string }[] = [];
 
       // 解析 media，apidojo/tweet-scraper 回傳結構接近官方 API
-      const mediaList = tweet.extendedEntities?.media || tweet.extended_entities?.media || tweet.entities?.media || [];
+      const mediaList = tweet.extendedEntities?.media || tweet.extended_entities?.media || tweet.entities?.media || tweet.media || tweet.images || tweet.videos || [];
       if (Array.isArray(mediaList)) {
         const parsed = mediaList.map((m: any) => {
+          if (typeof m === 'string') {
+            return { url: m, type: m.includes('.mp4') || m.includes('video') ? 'video' : 'photo' };
+          }
           let url = m.media_url_https || m.media_url || m.url;
           let type = m.type === 'video' || m.type === 'animated_gif' ? 'video' : 'photo';
           
           if (type === 'video' && m.video_info?.variants) {
-            // Find the best quality mp4
             const variants = m.video_info.variants
+              .filter((v: any) => v.content_type === 'video/mp4')
+              .sort((a: any, b: any) => (b.bitrate || 0) - (a.bitrate || 0));
+            if (variants.length > 0) {
+              url = variants[0].url;
+            }
+          } else if (type === 'video' && m.variants) {
+             const variants = m.variants
               .filter((v: any) => v.content_type === 'video/mp4')
               .sort((a: any, b: any) => (b.bitrate || 0) - (a.bitrate || 0));
             if (variants.length > 0) {
@@ -130,7 +150,7 @@ export async function runCrawler(username: string = 'zutomayo_art') {
             }
           }
           return { url, type };
-        }).filter((m: any) => !!m.url);
+        }).filter((m: any) => !!m.url && !m.url.includes('profile_images'));
         
         medias.push(...parsed);
       }

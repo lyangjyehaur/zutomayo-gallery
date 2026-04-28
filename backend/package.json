@@ -11,6 +11,7 @@
     "fetch-covers": "tsx src/scripts/fetch_zutomayo_covers.ts",
     "reset-password": "tsx src/scripts/reset-password.ts",
     "fetch-tweets": "tsx src/scripts/fetch-zutomayo-art-tweets.ts",
+    "reparse-tweets": "tsx src/scripts/reparse-raw-apify.ts",
     "migrate": "tsx src/scripts/migrate.ts up",
     "migrate:down": "tsx src/scripts/migrate.ts down"
   },
