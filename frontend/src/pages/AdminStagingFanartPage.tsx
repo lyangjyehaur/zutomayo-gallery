@@ -92,7 +92,7 @@ export function AdminStagingFanartPage() {
   const fetchFanarts = useCallback(async (p: number) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${baseApiUrl}/staging-fanarts?page=${p}&limit=20`, {
+      const res = await fetch(`${baseApiUrl}/staging-fanarts?page=${p}&limit=60`, {
         headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
       });
       const data = await res.json();
@@ -462,7 +462,7 @@ export function AdminStagingFanartPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
               {fanarts.map(f => (
                 <div 
                   key={f.id} 
@@ -512,15 +512,15 @@ export function AdminStagingFanartPage() {
                   </a>
                 </div>
                 
-                <div className="p-4 flex flex-col gap-4 flex-1">
-                  <div className="flex flex-col gap-1 text-xs font-mono font-bold opacity-70">
+                <div className="p-2 flex flex-col gap-2 flex-1">
+                  <div className="flex flex-col gap-1 text-[10px] sm:text-xs font-mono font-bold opacity-70">
                     <span className="truncate" title={f.tweet_id}>ID: {f.tweet_id}</span>
                     <span>Type: {f.media_type}</span>
-                    <span>Date: {new Date(f.crawled_at).toLocaleString()}</span>
+                    <span className="truncate" title={new Date(f.crawled_at).toLocaleString()}>Date: {new Date(f.crawled_at).toLocaleDateString()}</span>
                   </div>
                   
-                  <div className="flex flex-col gap-2 mt-2">
-                    <span className="text-xs font-bold uppercase">Associated MVs:</span>
+                  <div className="flex flex-col gap-1 mt-1">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase">Associated MVs:</span>
                     <MultiSelect
                       options={mvs}
                       selected={selectedMvs[f.id] || []}
@@ -531,16 +531,16 @@ export function AdminStagingFanartPage() {
 
                   <div className="mt-auto grid grid-cols-2 gap-2 pt-2">
                     <Button 
-                      className="w-full bg-red-500 text-white hover:bg-red-600 border-2 border-black shadow-neo-sm font-black uppercase tracking-wider"
+                      className="w-full bg-red-500 text-white hover:bg-red-600 border-2 border-black shadow-neo-sm font-black uppercase tracking-wider text-xs h-8"
                       onClick={() => handleAction(f.id, 'reject')}
                     >
-                      <i className="hn hn-trash mr-2" /> 拒絕
+                      <i className="hn hn-trash sm:mr-1" /> <span className="hidden sm:inline">拒絕</span>
                     </Button>
                     <Button 
-                      className="w-full bg-ztmy-green text-black hover:bg-[#8aff8a] border-2 border-black shadow-neo-sm font-black uppercase tracking-wider"
+                      className="w-full bg-ztmy-green text-black hover:bg-[#8aff8a] border-2 border-black shadow-neo-sm font-black uppercase tracking-wider text-xs h-8"
                       onClick={() => handleAction(f.id, 'approve')}
                     >
-                      <i className="hn hn-check mr-2" /> 核准
+                      <i className="hn hn-check sm:mr-1" /> <span className="hidden sm:inline">核准</span>
                     </Button>
                   </div>
                 </div>
