@@ -75,21 +75,50 @@ export async function reparseRawApify(filename?: string) {
 
   for (const item of rawData) {
     const tweet = item as any;
-    const tweetId = tweet.id_str || tweet.id || tweet.rest_id;
-    if (!tweetId) continue;
     
+    let currentTweetId = tweet.id_str || tweet.id || tweet.rest_id;
+    if (!currentTweetId) continue;
+
+    let targetTweet = tweet;
+    let tweetId = currentTweetId;
+
+    let mediaList = targetTweet.extendedEntities?.media || targetTweet.extended_entities?.media || targetTweet.entities?.media || targetTweet.media || targetTweet.images || targetTweet.videos;
+
+    if (!mediaList || mediaList.length === 0) {
+      if (tweet.retweeted_tweet) {
+        const rt = tweet.retweeted_tweet;
+        const rtMediaList = rt.extendedEntities?.media || rt.extended_entities?.media || rt.entities?.media || rt.media || rt.images || rt.videos;
+        if (rtMediaList && rtMediaList.length > 0) {
+          targetTweet = rt;
+          mediaList = rtMediaList;
+          tweetId = rt.id_str || rt.id || rt.rest_id || tweetId;
+        }
+      }
+      
+      if (!mediaList || mediaList.length === 0) {
+        if (tweet.quoted_tweet) {
+          const qt = tweet.quoted_tweet;
+          const qtMediaList = qt.extendedEntities?.media || qt.extended_entities?.media || qt.entities?.media || qt.media || qt.images || qt.videos;
+          if (qtMediaList && qtMediaList.length > 0) {
+            targetTweet = qt;
+            mediaList = qtMediaList;
+            tweetId = qt.id_str || qt.id || qt.rest_id || tweetId;
+          }
+        }
+      }
+    }
+
+    mediaList = mediaList || [];
+
     if (uniqueTweetIds.has(tweetId)) {
       skipped_duplicate_tweet++;
       continue;
     }
     uniqueTweetIds.add(tweetId);
 
-    const originalUrl = tweet.url || `https://twitter.com/i/web/status/${tweetId}`;
+    const originalUrl = targetTweet.url || `https://twitter.com/i/web/status/${tweetId}`;
     
     let medias: { url: string; type: string }[] = [];
-
-    // 嘗試多種可能的 media 路徑
-    const mediaList = tweet.extendedEntities?.media || tweet.extended_entities?.media || tweet.entities?.media || tweet.media || tweet.images || tweet.videos || [];
     
     if (Array.isArray(mediaList)) {
       for (const m of mediaList) {
