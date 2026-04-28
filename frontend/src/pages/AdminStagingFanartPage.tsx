@@ -46,9 +46,11 @@ export function AdminStagingFanartPage() {
   const [isProgressLoading, setIsProgressLoading] = useState(false);
   
   const [crawlerUsername, setCrawlerUsername] = useState('zutomayo_art');
-  const [fetchType, setFetchType] = useState<'month' | 'year'>('month');
+  const [fetchType, setFetchType] = useState<'month' | 'year' | 'custom'>('month');
   const [crawlerMonth, setCrawlerMonth] = useState('');
   const [crawlerYear, setCrawlerYear] = useState('');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [isTriggering, setIsTriggering] = useState(false);
 
   const currentYear = new Date().getFullYear();
@@ -118,18 +120,32 @@ export function AdminStagingFanartPage() {
     }
     
     let targetMonth = '';
+    let startDate = undefined;
+    let endDate = undefined;
+
     if (fetchType === 'month') {
       if (crawlerMonth && !/^\d{4}-\d{2}$/.test(crawlerMonth)) {
         toast.error('請輸入正確的月份格式 (YYYY-MM)');
         return;
       }
       targetMonth = crawlerMonth;
-    } else {
+    } else if (fetchType === 'year') {
       if (!crawlerYear) {
         toast.error('請選擇年份');
         return;
       }
       targetMonth = crawlerYear;
+    } else if (fetchType === 'custom') {
+      if (!customStartDate || !customEndDate) {
+        toast.error('請選擇開始與結束日期');
+        return;
+      }
+      if (customStartDate > customEndDate) {
+        toast.error('開始日期不能大於結束日期');
+        return;
+      }
+      startDate = customStartDate;
+      endDate = customEndDate;
     }
     
     setIsTriggering(true);
@@ -143,7 +159,9 @@ export function AdminStagingFanartPage() {
         },
         body: JSON.stringify({ 
           username: crawlerUsername,
-          month: targetMonth || undefined
+          month: targetMonth || undefined,
+          startDate,
+          endDate
         })
       });
       const data = await res.json();
@@ -244,9 +262,11 @@ export function AdminStagingFanartPage() {
                     placeholder="Username"
                   />
                   <Select value={fetchType} onValueChange={(v) => {
-                    setFetchType(v as 'month' | 'year');
+                    setFetchType(v as 'month' | 'year' | 'custom');
                     setCrawlerMonth('');
                     setCrawlerYear('');
+                    setCustomStartDate('');
+                    setCustomEndDate('');
                   }}>
                     <SelectTrigger className="h-8 w-[120px] bg-background border-2 border-black font-bold shadow-neo-sm">
                       <SelectValue placeholder="抓取方式" />
@@ -254,6 +274,7 @@ export function AdminStagingFanartPage() {
                     <SelectContent>
                       <SelectItem value="month">依月份抓取</SelectItem>
                       <SelectItem value="year">依年份抓取</SelectItem>
+                      <SelectItem value="custom">自訂區間</SelectItem>
                     </SelectContent>
                   </Select>
 
@@ -264,7 +285,7 @@ export function AdminStagingFanartPage() {
                       onChange={(e) => setCrawlerMonth(e.target.value)}
                       className="border-2 border-black font-bold shadow-neo-sm h-8 w-36 bg-background"
                     />
-                  ) : (
+                  ) : fetchType === 'year' ? (
                     <Select value={crawlerYear} onValueChange={setCrawlerYear}>
                       <SelectTrigger className="h-8 w-24 bg-background border-2 border-black font-bold shadow-neo-sm">
                         <SelectValue placeholder="年份" />
@@ -275,6 +296,22 @@ export function AdminStagingFanartPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <Input 
+                        type="date"
+                        value={customStartDate}
+                        onChange={(e) => setCustomStartDate(e.target.value)}
+                        className="border-2 border-black font-bold shadow-neo-sm h-8 w-[140px] bg-background"
+                      />
+                      <span className="font-bold">-</span>
+                      <Input 
+                        type="date"
+                        value={customEndDate}
+                        onChange={(e) => setCustomEndDate(e.target.value)}
+                        className="border-2 border-black font-bold shadow-neo-sm h-8 w-[140px] bg-background"
+                      />
+                    </div>
                   )}
                 </div>
                 <Button 
@@ -284,7 +321,7 @@ export function AdminStagingFanartPage() {
                   onClick={handleTriggerCrawler}
                   disabled={isTriggering}
                 >
-                  <i className={`hn ${isTriggering ? 'hn-refresh animate-spin' : 'hn-play'} mr-2`} /> 抓取 {(fetchType === 'month' ? crawlerMonth : crawlerYear) || progress?.syncProgress?.last_crawled_month || '本月'} 的推文
+                  <i className={`hn ${isTriggering ? 'hn-refresh animate-spin' : 'hn-play'} mr-2`} /> 抓取 {(fetchType === 'month' ? crawlerMonth : fetchType === 'year' ? crawlerYear : fetchType === 'custom' && customStartDate && customEndDate ? `${customStartDate}~${customEndDate}` : '') || progress?.syncProgress?.last_crawled_month || '本月'} 的推文
                 </Button>
                 <Button 
                   variant="outline" 

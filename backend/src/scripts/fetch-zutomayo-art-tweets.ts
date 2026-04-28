@@ -50,7 +50,7 @@ async function fetchMediaToBuffer(url: string): Promise<{ buffer: Buffer; conten
   }
 }
 
-export async function runCrawler(username: string = 'zutomayo_art', targetMonthOverride?: string) {
+export async function runCrawler(username: string = 'zutomayo_art', targetMonthOverride?: string, startDate?: string, endDate?: string) {
   if (!APIFY_API_TOKEN) {
     console.warn('[Crawler] 警告: 未設定 APIFY_API_TOKEN 環境變數。');
     console.warn('[Crawler] 請在 .env 檔案中新增憑證資訊。');
@@ -91,32 +91,39 @@ export async function runCrawler(username: string = 'zutomayo_art', targetMonthO
 
   let sinceDate: string;
   let untilDate: string;
-  let nextTargetMonth: string;
+  let nextTargetMonth: string | undefined;
   let maxItems: number;
 
-  const parts = targetMonth.split('-');
-  if (parts.length === 1) {
-    // YYYY 格式
-    const year = parseInt(parts[0], 10);
-    sinceDate = `${year}-01-01`;
-    untilDate = `${year + 1}-01-01`;
-    nextTargetMonth = `${year - 1}`;
+  if (startDate && endDate) {
+    sinceDate = startDate;
+    untilDate = endDate;
     maxItems = 5000;
+    // nextTargetMonth 保持 undefined，不更新 last_crawled_month
   } else {
-    // YYYY-MM 格式
-    const year = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10);
+    const parts = targetMonth.split('-');
+    if (parts.length === 1) {
+      // YYYY 格式
+      const year = parseInt(parts[0], 10);
+      sinceDate = `${year}-01-01`;
+      untilDate = `${year + 1}-01-01`;
+      nextTargetMonth = `${year - 1}`;
+      maxItems = 5000;
+    } else {
+      // YYYY-MM 格式
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10);
 
-    sinceDate = `${year}-${String(month).padStart(2, '0')}-01`;
-    
-    const nextMonth = month === 12 ? 1 : month + 1;
-    const nextYear = month === 12 ? year + 1 : year;
-    untilDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+      sinceDate = `${year}-${String(month).padStart(2, '0')}-01`;
+      
+      const nextMonth = month === 12 ? 1 : month + 1;
+      const nextYear = month === 12 ? year + 1 : year;
+      untilDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
 
-    const prevMonth = month === 1 ? 12 : month - 1;
-    const prevYear = month === 1 ? year - 1 : year;
-    nextTargetMonth = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
-    maxItems = 500;
+      const prevMonth = month === 1 ? 12 : month - 1;
+      const prevYear = month === 1 ? year - 1 : year;
+      nextTargetMonth = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+      maxItems = 500;
+    }
   }
 
   try {
@@ -140,11 +147,12 @@ export async function runCrawler(username: string = 'zutomayo_art', targetMonthO
     console.log(`[Crawler] 已將 Apify 原始結果備份至: ${backupFilePath}`);
 
     if (!items || items.length === 0) {
-      console.log('[Crawler] 此月份沒有找到推文，將自動推進到上個月。');
-      await crawlerState.update({ 
-        status: 'idle',
-        last_crawled_month: nextTargetMonth
-      });
+      console.log('[Crawler] 此區間沒有找到推文。');
+      const updateData: any = { status: 'idle' };
+      if (nextTargetMonth) {
+        updateData.last_crawled_month = nextTargetMonth;
+      }
+      await crawlerState.update(updateData);
       return progress.total_crawled;
     }
 
@@ -339,12 +347,15 @@ export async function runCrawler(username: string = 'zutomayo_art', targetMonthO
     }
 
     // 更新進度紀錄
-    await crawlerState.update({
+    const finalUpdate: any = {
       status: 'idle',
       total_crawled: progress.total_crawled,
-      current_run_processed,
-      last_crawled_month: nextTargetMonth
-    });
+      current_run_processed
+    };
+    if (nextTargetMonth) {
+      finalUpdate.last_crawled_month = nextTargetMonth;
+    }
+    await crawlerState.update(finalUpdate);
 
   } catch (err: any) {
     console.error('[Crawler] 獲取推文時發生錯誤:', err);
