@@ -754,6 +754,7 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
   const [localMaintenanceEta, setLocalMaintenanceEta] = useState<string>('');
   const [isMetadataDialogOpen, setIsMetadataDialogOpen] = useState(false);
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
+  const [isClearingRedisCache, setIsClearingRedisCache] = useState(false);
   const [announcementLang, setAnnouncementLang] = useState<string>('zh-TW');
 
   useEffect(() => {
@@ -937,6 +938,28 @@ const currentMV = data[activeIndex];
       toast.error('保存全局設定失敗！');
     } finally {
       setIsSavingMetadata(false);
+    }
+  };
+
+  const handleClearRedisCache = async () => {
+    setIsClearingRedisCache(true);
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
+      const res = await fetch(`${apiUrl.replace('/mvs', '/system')}/cache/clear`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
+        }
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.success) throw new Error(data?.error || '清除快取失敗');
+      const cleared = data?.data?.cleared;
+      toast.success(typeof cleared === 'number' ? `已清除 Redis 快取 ${cleared} 筆` : '已清除 Redis 快取');
+    } catch (e: any) {
+      toast.error(e?.message || '清除快取失敗');
+    } finally {
+      setIsClearingRedisCache(false);
     }
   };
   useEffect(() => {
@@ -2946,6 +2969,21 @@ const currentMV = data[activeIndex];
                   </div>
                 </div>
               )}
+            </div>
+
+            <div className="flex items-center justify-between border-2 border-black p-3 bg-card">
+              <div className="flex flex-col">
+                <div className="text-xs font-black tracking-widest">清除 Redis API 快取</div>
+                <div className="text-[10px] font-bold opacity-40 font-mono normal-case">Clear Redis Cache</div>
+                <div className="text-[10px] font-bold opacity-60">維護期資料頻繁變動時可手動刷新所有 GET API 快取</div>
+              </div>
+              <Button
+                onClick={handleClearRedisCache}
+                disabled={isClearingRedisCache}
+                className="border-2 border-black bg-main text-black hover:bg-main/80 font-black shadow-neo-sm"
+              >
+                {isClearingRedisCache ? '清除中...' : '清除快取'}
+              </Button>
             </div>
 
             <div className="flex items-center justify-between border-2 border-black p-3 bg-card">

@@ -3,6 +3,7 @@ import { SysConfigModel, SysDictionaryModel, sequelize } from '../models/index.j
 import fs from 'fs';
 import path from 'path';
 import { getCountryCode, getFullGeoInfo } from '../services/geo.service.js';
+import { redisClient } from '../services/redis.service.js';
 
 // 取得編譯時間與版本號的變數 (只在伺服器啟動時讀取一次)
 let buildTime: string | null = null;
@@ -189,5 +190,30 @@ export const updateDictionaries = async (req: Request, res: Response, next: Next
     res.json({ success: true, data: updatedDicts });
   } catch (error) {
     next(error);
+  }
+};
+
+export const clearRedisApiCache = async (req: Request, res: Response) => {
+  try {
+    if (!redisClient.isOpen) {
+      res.json({ success: true, data: { cleared: 0, message: 'Redis is not connected' } });
+      return;
+    }
+
+    const keys: string[] = [];
+    for await (const key of redisClient.scanIterator({ MATCH: 'api-cache:*', COUNT: 200 })) {
+      keys.push(String(key));
+      if (keys.length >= 5000) break;
+    }
+
+    if (keys.length === 0) {
+      res.json({ success: true, data: { cleared: 0 } });
+      return;
+    }
+
+    await redisClient.del(keys);
+    res.json({ success: true, data: { cleared: keys.length } });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
   }
 };
