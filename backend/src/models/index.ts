@@ -109,6 +109,10 @@ export const MediaGroupModel = sequelize.define('MediaGroup', {
   author_handle: { type: DataTypes.STRING, comment: '來源作者帳號 (如 @username)' },
   post_date: { type: DataTypes.DATE, comment: '發布時間' },
   status: { type: DataTypes.STRING, defaultValue: 'pending', comment: '審核狀態 (參考 sys_dictionaries: fanart_status)' },
+  like_count: { type: DataTypes.INTEGER, defaultValue: 0, comment: '喜歡數' },
+  retweet_count: { type: DataTypes.INTEGER, defaultValue: 0, comment: '轉推數' },
+  view_count: { type: DataTypes.INTEGER, defaultValue: 0, comment: '觀看數' },
+  hashtags: { type: DataTypes.JSONB, defaultValue: [], comment: '推文標籤' },
 }, { tableName: 'media_groups', timestamps: false, comment: '媒體分組資訊 (共用來源詮釋資料，如推文)' });
 
 export const SysDictionaryModel = sequelize.define('SysDictionary', {
@@ -152,6 +156,12 @@ export const StagingFanartModel = sequelize.define('StagingFanart', {
   source_text: { type: DataTypes.TEXT, comment: '來源內容' },
   status: { type: DataTypes.STRING, defaultValue: 'pending', comment: '處理狀態 (pending/approved/rejected)' },
   source: { type: DataTypes.STRING, comment: '資料來源 (crawler/rss)' },
+  like_count: { type: DataTypes.INTEGER, defaultValue: 0, comment: '喜歡數' },
+  retweet_count: { type: DataTypes.INTEGER, defaultValue: 0, comment: '轉推數' },
+  view_count: { type: DataTypes.INTEGER, defaultValue: 0, comment: '觀看數' },
+  media_width: { type: DataTypes.INTEGER, allowNull: true, comment: '媒體寬度' },
+  media_height: { type: DataTypes.INTEGER, allowNull: true, comment: '媒體高度' },
+  hashtags: { type: DataTypes.JSONB, defaultValue: [], comment: '推文標籤' },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '建立時間' },
   updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '更新時間' },
 }, { 

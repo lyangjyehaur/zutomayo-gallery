@@ -120,8 +120,19 @@ export async function reparseRawApify(filename?: string) {
     const crawledAt = new Date();
     const postDate = targetTweet.created_at ? new Date(targetTweet.created_at) : (targetTweet.createdAt ? new Date(targetTweet.createdAt) : crawledAt);
     const sourceText = targetTweet.full_text || targetTweet.text || '';
+
+    // 提取互動數據
+    const like_count = targetTweet.likeCount || targetTweet.favorite_count || 0;
+    const retweet_count = targetTweet.retweetCount || targetTweet.retweet_count || 0;
+    const view_count = targetTweet.viewCount || targetTweet.views || 0;
     
-    let medias: { url: string; type: string }[] = [];
+    // 提取標籤
+    let hashtags: string[] = [];
+    if (targetTweet.entities?.hashtags && Array.isArray(targetTweet.entities.hashtags)) {
+      hashtags = targetTweet.entities.hashtags.map((h: any) => h.text || h).filter(Boolean);
+    }
+    
+    let medias: { url: string; type: string; width?: number; height?: number }[] = [];
     
     if (Array.isArray(mediaList)) {
       for (const m of mediaList) {
@@ -134,6 +145,8 @@ export async function reparseRawApify(filename?: string) {
 
         let url = m.media_url_https || m.media_url || m.url;
         let type = m.type === 'video' || m.type === 'animated_gif' ? 'video' : 'photo';
+        let width = m.original_info?.width || m.sizes?.large?.w;
+        let height = m.original_info?.height || m.sizes?.large?.h;
         
         if (type === 'video' && m.video_info?.variants) {
           const variants = m.video_info.variants
@@ -152,7 +165,7 @@ export async function reparseRawApify(filename?: string) {
         }
         
         if (url && !url.includes('profile_images')) { // 排除大頭貼
-          medias.push({ url, type });
+          medias.push({ url, type, width, height });
         }
       }
     }
@@ -210,6 +223,12 @@ export async function reparseRawApify(filename?: string) {
         crawled_at: crawledAt,
         post_date: postDate,
         source_text: sourceText,
+        like_count,
+        retweet_count,
+        view_count,
+        media_width: media.width,
+        media_height: media.height,
+        hashtags,
         status: 'pending',
         source: 'reparse'
       });

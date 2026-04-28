@@ -121,6 +121,12 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
     const crawledAt = staging.get('crawled_at') as Date;
     const postDate = staging.get('post_date') as Date;
     const sourceText = staging.get('source_text') as string;
+    const likeCount = staging.get('like_count') as number;
+    const retweetCount = staging.get('retweet_count') as number;
+    const viewCount = staging.get('view_count') as number;
+    const hashtags = staging.get('hashtags') as string[];
+    const mediaWidth = staging.get('media_width') as number;
+    const mediaHeight = staging.get('media_height') as number;
 
     let finalR2Url = r2Url;
     if (r2Url && r2Url.includes('crawler/')) {
@@ -145,6 +151,10 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
         source_url: originalUrl,
         post_date: postDate || crawledAt || new Date(),
         source_text: sourceText || '',
+        like_count: likeCount || 0,
+        retweet_count: retweetCount || 0,
+        view_count: viewCount || 0,
+        hashtags: hashtags || [],
         status: 'unorganized'
       }
     });
@@ -158,6 +168,8 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
         media_type: mediaType || 'image',
         url: finalR2Url || mediaUrl,
         original_url: mediaUrl,
+        width: mediaWidth || null,
+        height: mediaHeight || null,
         group_id: group.get('id')
       });
     }
