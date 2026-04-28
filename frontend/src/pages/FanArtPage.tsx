@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MVItem } from '@/lib/types';
 import { Label } from '@/components/ui/label';
@@ -19,6 +19,26 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
     if (str.startsWith('tag:')) return str;
     return `tag:${str}`;
   };
+
+  const baseApiUrl = useMemo(() => (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, ''), []);
+  const [galleryFanarts, setGalleryFanarts] = useState<any[] | null>(null);
+
+  useEffect(() => {
+    const run = async () => {
+      try {
+        const res = await fetch(`${baseApiUrl}/fanarts/gallery`);
+        const data = await res.json();
+        if (data?.success && Array.isArray(data.data)) {
+          setGalleryFanarts(data.data);
+        } else {
+          setGalleryFanarts(null);
+        }
+      } catch {
+        setGalleryFanarts(null);
+      }
+    };
+    void run();
+  }, [baseApiUrl]);
   
   // 提取所有有圖片的 MV 作為篩選選項
   const availableMVs = useMemo(() => {
@@ -102,6 +122,36 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
 
   // 提取所有 FanArt 圖片並去重
   const allFanArts = useMemo(() => {
+    if (Array.isArray(galleryFanarts)) {
+      const list = galleryFanarts.map((img: any) => {
+        const group = img.group || null;
+        const rawTags = Array.isArray(img.tags) ? img.tags : [];
+        const tags = rawTags.map(normalizeTag).filter(Boolean);
+        const mvs = Array.isArray(img.mvs) ? img.mvs : [];
+        const mvIds = mvs.map((m: any) => m.id).filter(Boolean);
+        const mvTitles = mvs.map((m: any) => m.title).filter(Boolean);
+        const like_count = group?.like_count ?? 0;
+        return {
+          ...img,
+          tags,
+          mvIds,
+          mvTitles,
+          tweetUrl: group?.source_url,
+          tweetAuthor: group?.author_name,
+          tweetHandle: group?.author_handle,
+          tweetDate: group?.post_date,
+          tweetText: group?.source_text,
+          like_count
+        };
+      });
+
+      return list.sort((a: any, b: any) => {
+        const dateA = a.tweetDate || '';
+        const dateB = b.tweetDate || '';
+        return String(dateB).localeCompare(String(dateA));
+      });
+    }
+
     const fanArtMap = new Map<string, any>();
     
     mvData.forEach(mv => {

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { Op } from 'sequelize';
-import { MediaGroupModel, MediaModel, MVMediaModel } from '../models/index.js';
+import { MediaGroupModel, MediaModel, MVMediaModel, MVModel } from '../models/index.js';
 import { MVService } from '../services/mv.service.js';
 
 export const getUnorganizedFanarts = async (req: Request, res: Response) => {
@@ -100,6 +100,23 @@ export const getLegacyFanarts = async (req: Request, res: Response) => {
       });
 
     res.json({ success: true, data });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const getFanartGallery = async (req: Request, res: Response) => {
+  try {
+    const rows = await MediaModel.findAll({
+      where: { type: 'fanart' },
+      include: [
+        { model: MediaGroupModel, as: 'group', where: { status: 'organized' }, required: true },
+        { model: MVModel, as: 'mvs', through: { attributes: [] }, attributes: ['id', 'title'], required: false }
+      ],
+      order: [[{ model: MediaGroupModel, as: 'group' }, 'post_date', 'DESC'], ['id', 'DESC']]
+    });
+
+    res.json({ success: true, data: rows.map(r => r.toJSON()) });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
