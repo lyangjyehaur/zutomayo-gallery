@@ -4,35 +4,45 @@ import fs from 'fs';
 import path from 'path';
 import { ApifyClient } from 'apify-client';
 import { StagingFanartModel, CrawlerStateModel, syncModels } from '../models/index.js';
-
-// Configuration
 const APIFY_API_TOKEN = process.env.APIFY_API_TOKEN;
 
-// Types
 interface SyncProgress {
   total_crawled: number;
 }
 
-export async function runCrawler(username: string = 'zutomayo_art', targetMonthOverride?: string, startDate?: string, endDate?: string, customMaxItems?: number) {
+function formatUtcDate(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function addDaysUtc(dateStr: string, days: number) {
+  const [y, m, d] = dateStr.split('-').map(v => parseInt(v, 10));
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return formatUtcDate(dt);
+}
+
+export async function runCrawler(searchTerms: string, startDate?: string, endDate?: string, customMaxItems?: number, stateKey: string = 'staging-fanart') {
   if (!APIFY_API_TOKEN) {
     console.warn('[Crawler] 警告: 未設定 APIFY_API_TOKEN 環境變數。');
     console.warn('[Crawler] 請在 .env 檔案中新增憑證資訊。');
     throw new Error('Missing APIFY_API_TOKEN');
   }
 
-  console.log(`[Crawler] 初始化爬蟲... 目標帳號: @${username}`);
+  const normalizedSearchTerms = (searchTerms || '').trim();
+  if (!normalizedSearchTerms) {
+    throw new Error('Missing searchTerms');
+  }
+
   await syncModels();
   
   const client = new ApifyClient({
     token: APIFY_API_TOKEN,
   });
 
-  // 讀取爬蟲進度 (僅用於記錄總數，因為 Apify 使用 maxItems)
   const [crawlerState] = await CrawlerStateModel.findOrCreate({
-    where: { username },
+    where: { username: stateKey },
     defaults: {
       pagination_token: null,
-      last_crawled_month: null,
       total_crawled: 0
     }
   });
@@ -43,104 +53,52 @@ export async function runCrawler(username: string = 'zutomayo_art', targetMonthO
     total_crawled: crawlerState.getDataValue('total_crawled') || 0
   };
   
-  console.log(`[Crawler] 讀取到先前的進度紀錄:`, progress);
-
-  // 計算爬取月份範圍
-  let targetMonth = targetMonthOverride || crawlerState.getDataValue('last_crawled_month');
-  if (!targetMonth) {
-    const now = new Date();
-    targetMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  }
-
   let sinceDate: string;
   let untilDate: string;
-  let nextTargetMonth: string | undefined;
-  let maxItems: number;
 
   if (startDate && endDate) {
     sinceDate = startDate;
-    untilDate = endDate;
-    maxItems = customMaxItems || 5000;
-    // nextTargetMonth 保持 undefined，不更新 last_crawled_month
+    untilDate = addDaysUtc(endDate, 1);
   } else {
-    const parts = targetMonth.split('-');
-    if (parts.length === 1) {
-      // YYYY 格式
-      const year = parseInt(parts[0], 10);
-      sinceDate = `${year}-01-01`;
-      untilDate = `${year + 1}-01-01`;
-      nextTargetMonth = `${year - 1}`;
-      maxItems = customMaxItems || 5000;
-    } else {
-      // YYYY-MM 格式
-      const year = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10);
-
-      sinceDate = `${year}-${String(month).padStart(2, '0')}-01`;
-      
-      const nextMonth = month === 12 ? 1 : month + 1;
-      const nextYear = month === 12 ? year + 1 : year;
-      untilDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
-
-      const prevMonth = month === 1 ? 12 : month - 1;
-      const prevYear = month === 1 ? year - 1 : year;
-      nextTargetMonth = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
-      maxItems = customMaxItems || 500;
-    }
+    const now = new Date();
+    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+    sinceDate = formatUtcDate(start);
+    untilDate = formatUtcDate(end);
   }
 
+  const maxItems = customMaxItems || 1000;
+  const baseTerms = normalizedSearchTerms
+    .split(/\s+/)
+    .filter(t => t && !t.startsWith('since:') && !t.startsWith('until:'))
+    .join(' ');
+  const finalQuery = `${baseTerms} since:${sinceDate}_00:00:00_UTC until:${untilDate}_00:00:00_UTC`;
+
   try {
-    console.log(`[Crawler] 正在透過 Apify 獲取推文... 目標範圍: ${targetMonth} (${sinceDate} ~ ${untilDate})`);
+    console.log(`[Crawler] 正在透過 Apify 獲取推文... (${sinceDate} ~ ${untilDate})`);
     
     const input = {
-      searchTerms: [`from:${username} filter:media include:nativeretweets since:${sinceDate}_00:00:00_UTC until:${untilDate}_00:00:00_UTC`],
-      maxItems: maxItems,
-      "from": username,
-      "twitterContent": "",
-      "queryType": "Latest",
-      "lang": "en",
-      "include:nativeretweets": true,
-      "filter:replies": false,
-      "filter:links": false,
-      "filter:verified": false,
-      "filter:blue_verified": false,
-      "filter:safe": false,
-      "filter:media": false,
-      "filter:images": false,
-      "filter:videos": false,
-      "filter:consumer_video": false,
-      "filter:pro_video": false,
-      "filter:native_video": false,
-      "filter:periscope": false,
-      "filter:vine": false,
-      "filter:spaces": false,
-      "filter:has_engagement": false,
-      "filter:twimg": false
+      searchTerms: [finalQuery],
+      maxItems: maxItems
     };
 
     const run = await client.actor("kaitoeasyapi/twitter-x-data-tweet-scraper-pay-per-result-cheapest").call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
 
-    // 備份 Apify 原始結果
     const crawlerDir = path.join(process.cwd(), 'crawler');
     if (!fs.existsSync(crawlerDir)) {
       fs.mkdirSync(crawlerDir, { recursive: true });
     }
-    const backupFilePath = path.join(crawlerDir, `raw-apify-results-${username}-${Date.now()}.json`);
+    const backupFilePath = path.join(crawlerDir, `raw-apify-results-${Date.now()}.json`);
     fs.writeFileSync(backupFilePath, JSON.stringify(items, null, 2), 'utf-8');
     console.log(`[Crawler] 已將 Apify 原始結果備份至: ${backupFilePath}`);
 
     if (!items || items.length === 0) {
       console.log('[Crawler] 此區間沒有找到推文。');
-      const updateData: any = { status: 'idle' };
-      if (nextTargetMonth) {
-        updateData.last_crawled_month = nextTargetMonth;
-      }
-      await crawlerState.update(updateData);
+      await crawlerState.update({ status: 'idle' });
       return progress.total_crawled;
     }
 
-    // 去重並提取最終推文資訊
     const uniqueItemsMap = new Map();
 
     for (const item of items) {
@@ -179,7 +137,6 @@ export async function runCrawler(username: string = 'zutomayo_art', targetMonthO
 
       mediaList = mediaList || [];
 
-      // 若去重 Map 中還沒有這個最終 tweetId，則加入
       if (!uniqueItemsMap.has(tweetId)) {
         uniqueItemsMap.set(tweetId, { tweetId, targetTweet, mediaList });
       }
@@ -202,12 +159,10 @@ export async function runCrawler(username: string = 'zutomayo_art', targetMonthO
         const postDate = targetTweet.created_at ? new Date(targetTweet.created_at) : (targetTweet.createdAt ? new Date(targetTweet.createdAt) : crawledAt);
         const sourceText = targetTweet.full_text || targetTweet.text || '';
         
-        // 提取互動數據
         const like_count = targetTweet.likeCount || targetTweet.favorite_count || 0;
         const retweet_count = targetTweet.retweetCount || targetTweet.retweet_count || 0;
         const view_count = targetTweet.viewCount || targetTweet.views || 0;
         
-        // 提取標籤
         let hashtags: string[] = [];
         if (targetTweet.entities?.hashtags && Array.isArray(targetTweet.entities.hashtags)) {
           hashtags = targetTweet.entities.hashtags.map((h: any) => h.text || h).filter(Boolean);
@@ -215,7 +170,6 @@ export async function runCrawler(username: string = 'zutomayo_art', targetMonthO
         
         let medias: { url: string; type: string; width?: number; height?: number }[] = [];
 
-        // 解析 media
         if (Array.isArray(mediaList)) {
           for (const m of mediaList) {
             if (typeof m === 'string') {
@@ -259,7 +213,6 @@ export async function runCrawler(username: string = 'zutomayo_art', targetMonthO
         const mediaUrl = media.url;
         const mediaType = media.type;
 
-        // 檢查資料庫是否已存在相同網址的紀錄 (避免重複處理同個圖片)
         const existing = await StagingFanartModel.findOne({ where: { media_url: mediaUrl } });
         if (existing) {
           console.log(`[Crawler] 推文 ${tweetId} 的媒體已存在，跳過。`);
@@ -268,7 +221,6 @@ export async function runCrawler(username: string = 'zutomayo_art', targetMonthO
 
         console.log(`[Crawler] 處理推文 ${tweetId} 的媒體: ${mediaUrl} (暫存至資料庫，不下載至 R2)`);
         
-        // 寫入暫存表
         await StagingFanartModel.create({
           tweet_id: tweetId,
           original_url: originalUrl,
@@ -301,15 +253,11 @@ export async function runCrawler(username: string = 'zutomayo_art', targetMonthO
       }
     }
 
-    // 更新進度紀錄
     const finalUpdate: any = {
       status: 'idle',
       total_crawled: progress.total_crawled,
       current_run_processed
     };
-    if (nextTargetMonth) {
-      finalUpdate.last_crawled_month = nextTargetMonth;
-    }
     await crawlerState.update(finalUpdate);
 
   } catch (err: any) {
@@ -323,8 +271,12 @@ export async function runCrawler(username: string = 'zutomayo_art', targetMonthO
 
 const isMain = import.meta.url.startsWith('file:') && process.argv[1] === fileURLToPath(import.meta.url);
 if (isMain) {
-  const usernameArg = process.argv[2] || 'zutomayo_art';
-  runCrawler(usernameArg).catch(err => {
+  const searchTermsArg = process.argv[2] || 'from:zutomayo_art filter:media include:nativeretweets';
+  const startDateArg = process.argv[3];
+  const endDateArg = process.argv[4];
+  const maxItemsArg = process.argv[5] ? parseInt(process.argv[5], 10) : undefined;
+
+  runCrawler(searchTermsArg, startDateArg, endDateArg, maxItemsArg).catch(err => {
     console.error('[Crawler] 致命錯誤:', err);
     process.exit(1);
   });

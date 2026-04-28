@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface StagingFanart {
   id: string;
@@ -27,7 +26,6 @@ interface ProgressData {
     saved_images?: number;
     saved_videos?: number;
     last_processed_id?: string;
-    last_crawled_month?: string;
   } | null;
   statusCounts: {
     pending: number;
@@ -45,23 +43,21 @@ export function AdminStagingFanartPage() {
   const [progress, setProgress] = useState<ProgressData | null>(null);
   const [isProgressLoading, setIsProgressLoading] = useState(false);
   
-  const [crawlerUsername, setCrawlerUsername] = useState('zutomayo_art');
-  const [fetchType, setFetchType] = useState<'month' | 'year' | 'custom'>('month');
-  const [crawlerMonth, setCrawlerMonth] = useState('');
-  const [crawlerYear, setCrawlerYear] = useState('');
-  const [customStartDate, setCustomStartDate] = useState('');
-  const [customEndDate, setCustomEndDate] = useState('');
+  const [searchTerms, setSearchTerms] = useState('from:zutomayo_art filter:media include:nativeretweets');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [isTriggering, setIsTriggering] = useState(false);
   const [maxItems, setMaxItems] = useState<number>(1000);
 
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 5 }, (_, i) => String(currentYear - i));
+  const baseApiUrl = useMemo(
+    () => (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, ''),
+    []
+  );
 
-  const fetchProgress = async () => {
+  const fetchProgress = useCallback(async () => {
     setIsProgressLoading(true);
     try {
-      const baseApiUrl = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, '');
-      const res = await fetch(`${baseApiUrl}/staging-fanarts/progress?username=${crawlerUsername}`, {
+      const res = await fetch(`${baseApiUrl}/staging-fanarts/progress`, {
         headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
       });
       const data = await res.json();
@@ -73,12 +69,11 @@ export function AdminStagingFanartPage() {
     } finally {
       setIsProgressLoading(false);
     }
-  };
+  }, [baseApiUrl]);
 
-  const fetchFanarts = async (p: number) => {
+  const fetchFanarts = useCallback(async (p: number) => {
     setIsLoading(true);
     try {
-      const baseApiUrl = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, '');
       const res = await fetch(`${baseApiUrl}/staging-fanarts?page=${p}&limit=20`, {
         headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
       });
@@ -94,15 +89,15 @@ export function AdminStagingFanartPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [baseApiUrl]);
 
   useEffect(() => {
     fetchFanarts(page);
-  }, [page]);
+  }, [fetchFanarts, page]);
 
   useEffect(() => {
     fetchProgress();
-  }, []); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchProgress]);
 
   useEffect(() => {
     const status = progress?.syncProgress?.status;
@@ -112,46 +107,26 @@ export function AdminStagingFanartPage() {
       }, 3000);
       return () => clearInterval(timer);
     }
-  }, [progress?.syncProgress?.status]); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchProgress, progress?.syncProgress?.status]);
 
   const handleTriggerCrawler = async () => {
-    if (!crawlerUsername) {
-      toast.error('請輸入 username');
+    if (!searchTerms.trim()) {
+      toast.error('請輸入 searchTerms');
       return;
     }
-    
-    let targetMonth = '';
-    let startDate = undefined;
-    let endDate = undefined;
 
-    if (fetchType === 'month') {
-      if (crawlerMonth && !/^\d{4}-\d{2}$/.test(crawlerMonth)) {
-        toast.error('請輸入正確的月份格式 (YYYY-MM)');
-        return;
-      }
-      targetMonth = crawlerMonth;
-    } else if (fetchType === 'year') {
-      if (!crawlerYear) {
-        toast.error('請選擇年份');
-        return;
-      }
-      targetMonth = crawlerYear;
-    } else if (fetchType === 'custom') {
-      if (!customStartDate || !customEndDate) {
-        toast.error('請選擇開始與結束日期');
-        return;
-      }
-      if (customStartDate > customEndDate) {
-        toast.error('開始日期不能大於結束日期');
-        return;
-      }
-      startDate = customStartDate;
-      endDate = customEndDate;
+    if (!startDate || !endDate) {
+      toast.error('請選擇開始與結束日期');
+      return;
+    }
+
+    if (startDate > endDate) {
+      toast.error('開始日期不能大於結束日期');
+      return;
     }
     
     setIsTriggering(true);
     try {
-      const baseApiUrl = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, '');
       const res = await fetch(`${baseApiUrl}/staging-fanarts/trigger`, {
         method: 'POST',
         headers: { 
@@ -159,10 +134,9 @@ export function AdminStagingFanartPage() {
           'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' 
         },
         body: JSON.stringify({ 
-          username: crawlerUsername,
-          month: targetMonth || undefined,
-          startDate,
-          endDate,
+          searchTerms,
+          startDate: startDate,
+          endDate: endDate,
           maxItems
         })
       });
@@ -182,7 +156,6 @@ export function AdminStagingFanartPage() {
 
   const handleAction = async (id: string, action: 'approve' | 'reject') => {
     try {
-      const baseApiUrl = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, '');
       const res = await fetch(`${baseApiUrl}/staging-fanarts/${id}/${action}`, {
         method: 'POST',
         headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
@@ -192,7 +165,6 @@ export function AdminStagingFanartPage() {
         toast.success(data.message);
         setFanarts(prev => prev.filter(f => f.id !== id));
         
-        // Update local progress counts
         setProgress(prev => {
           if (!prev) return prev;
           return {
@@ -205,7 +177,6 @@ export function AdminStagingFanartPage() {
           };
         });
         
-        // If we ran out of items on this page, fetch again to keep UI populated
         if (fanarts.length <= 1) {
           fetchFanarts(page);
         }
@@ -256,67 +227,28 @@ export function AdminStagingFanartPage() {
               
               <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
                 <div className="flex items-center gap-2 flex-1 md:flex-none">
-                  <span className="text-sm font-bold uppercase shrink-0">Target:</span>
+                  <span className="text-sm font-bold uppercase shrink-0">Search:</span>
                   <Input 
-                    value={crawlerUsername}
-                    onChange={(e) => setCrawlerUsername(e.target.value)}
-                    className="border-2 border-black font-bold shadow-neo-sm h-8 w-32 md:w-40 bg-background"
-                    placeholder="Username"
+                    value={searchTerms}
+                    onChange={(e) => setSearchTerms(e.target.value)}
+                    className="border-2 border-black font-bold shadow-neo-sm h-8 w-[280px] md:w-[420px] bg-background"
+                    placeholder="e.g. from:zutomayo_art filter:media include:nativeretweets"
                   />
-                  <Select value={fetchType} onValueChange={(v) => {
-                    setFetchType(v as 'month' | 'year' | 'custom');
-                    setCrawlerMonth('');
-                    setCrawlerYear('');
-                    setCustomStartDate('');
-                    setCustomEndDate('');
-                  }}>
-                    <SelectTrigger className="h-8 w-[120px] bg-background border-2 border-black font-bold shadow-neo-sm">
-                      <SelectValue placeholder="抓取方式" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="month">依月份抓取</SelectItem>
-                      <SelectItem value="year">依年份抓取</SelectItem>
-                      <SelectItem value="custom">自訂區間</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  {fetchType === 'month' ? (
+                  <div className="flex items-center gap-1">
                     <Input 
-                      type="month"
-                      value={crawlerMonth}
-                      onChange={(e) => setCrawlerMonth(e.target.value)}
-                      className="border-2 border-black font-bold shadow-neo-sm h-8 w-36 bg-background"
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="border-2 border-black font-bold shadow-neo-sm h-8 w-[140px] bg-background"
                     />
-                  ) : fetchType === 'year' ? (
-                    <Select value={crawlerYear} onValueChange={setCrawlerYear}>
-                      <SelectTrigger className="h-8 w-24 bg-background border-2 border-black font-bold shadow-neo-sm">
-                        <SelectValue placeholder="年份" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {years.map(year => (
-                          <SelectItem key={year} value={year}>
-                            {year}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <div className="flex items-center gap-1">
-                      <Input 
-                        type="date"
-                        value={customStartDate}
-                        onChange={(e) => setCustomStartDate(e.target.value)}
-                        className="border-2 border-black font-bold shadow-neo-sm h-8 w-[140px] bg-background"
-                      />
-                      <span className="font-bold">-</span>
-                      <Input 
-                        type="date"
-                        value={customEndDate}
-                        onChange={(e) => setCustomEndDate(e.target.value)}
-                        className="border-2 border-black font-bold shadow-neo-sm h-8 w-[140px] bg-background"
-                      />
-                    </div>
-                  )}
+                    <span className="font-bold">-</span>
+                    <Input 
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="border-2 border-black font-bold shadow-neo-sm h-8 w-[140px] bg-background"
+                    />
+                  </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold uppercase shrink-0">最大抓取數量:</span>
                     <Input 
@@ -335,7 +267,7 @@ export function AdminStagingFanartPage() {
                   onClick={handleTriggerCrawler}
                   disabled={isTriggering}
                 >
-                  <i className={`hn ${isTriggering ? 'hn-refresh animate-spin' : 'hn-play'} mr-2`} /> 抓取 {(fetchType === 'month' ? crawlerMonth : fetchType === 'year' ? crawlerYear : fetchType === 'custom' && customStartDate && customEndDate ? `${customStartDate}~${customEndDate}` : '') || progress?.syncProgress?.last_crawled_month || '本月'} 的推文
+                  <i className={`hn ${isTriggering ? 'hn-refresh animate-spin' : 'hn-play'} mr-2`} /> 抓取 {startDate && endDate ? `${startDate}~${endDate}` : '指定區間'} 的推文
                 </Button>
                 <Button 
                   variant="outline" 
@@ -361,38 +293,30 @@ export function AdminStagingFanartPage() {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-bold uppercase text-sm opacity-70">下一個準備抓取的月份:</span>
-                <span className="font-black text-lg">{progress?.syncProgress?.last_crawled_month || '本月'}</span>
-              </div>
-              <div className="flex items-center gap-2">
                 <span className="font-bold uppercase text-sm opacity-70">總抓取數:</span>
                 <span className="font-black text-xl">{progress?.syncProgress?.total_crawled || 0}</span>
               </div>
             </div>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {/* Sync Progress */}
               <div className="border-2 border-black p-3 bg-secondary-background">
                 <div className="text-xs font-bold uppercase opacity-70 mb-1">X/Twitter 抓取進度</div>
                 <div className="text-2xl font-black">
-                  {progress?.syncProgress?.processed_tweets || 0} 
-                  <span className="text-sm font-bold opacity-50 ml-1">/ {progress?.syncProgress?.total_tweets || '?'}</span>
+                  {progress?.syncProgress?.current_run_processed || 0}
+                  <span className="text-sm font-bold opacity-50 ml-1">/ {progress?.syncProgress?.current_run_total || '?'}</span>
                 </div>
               </div>
               
-              {/* Pending */}
               <div className="border-2 border-black p-3 bg-yellow-200">
                 <div className="text-xs font-bold uppercase opacity-70 mb-1">待審核 (Pending)</div>
                 <div className="text-2xl font-black">{progress?.statusCounts?.pending || 0}</div>
               </div>
               
-              {/* Approved */}
               <div className="border-2 border-black p-3 bg-ztmy-green/50">
                 <div className="text-xs font-bold uppercase opacity-70 mb-1">已核准 (Approved)</div>
                 <div className="text-2xl font-black">{progress?.statusCounts?.approved || 0}</div>
               </div>
               
-              {/* Rejected */}
               <div className="border-2 border-black p-3 bg-red-200">
                 <div className="text-xs font-bold uppercase opacity-70 mb-1">已拒絕 (Rejected)</div>
                 <div className="text-2xl font-black">{progress?.statusCounts?.rejected || 0}</div>

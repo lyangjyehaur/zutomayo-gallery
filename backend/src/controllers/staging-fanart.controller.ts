@@ -38,22 +38,29 @@ async function fetchMediaToBuffer(url: string): Promise<{ buffer: Buffer; conten
 
 export const triggerCrawler = async (req: Request, res: Response) => {
   try {
-    const username = req.body.username || 'zutomayo_art';
-    const month = req.body.month as string | undefined;
+    const searchTerms = req.body.searchTerms as string | undefined;
     const startDate = req.body.startDate as string | undefined;
     const endDate = req.body.endDate as string | undefined;
     const maxItems = req.body.maxItems ? parseInt(req.body.maxItems as string, 10) : undefined;
+
+    if (!searchTerms || typeof searchTerms !== 'string' || !searchTerms.trim()) {
+      res.status(400).json({ success: false, error: 'searchTerms is required' });
+      return;
+    }
+
+    if (!startDate || !endDate) {
+      res.status(400).json({ success: false, error: 'startDate and endDate are required' });
+      return;
+    }
     
-    // 背景執行，不 await
-    runCrawler(username, month, startDate, endDate, maxItems).catch(err => {
-      console.error(`[Crawler Error] Background crawler failed for ${username}:`, err);
+    runCrawler(searchTerms, startDate, endDate, maxItems).catch(err => {
+      console.error(`[Crawler Error] Background crawler failed:`, err);
     });
 
     res.json({
       success: true,
       message: 'Crawler started in background',
-      username,
-      month,
+      searchTerms,
       startDate,
       endDate,
       maxItems
@@ -65,7 +72,7 @@ export const triggerCrawler = async (req: Request, res: Response) => {
 
 export const getProgress = async (req: Request, res: Response) => {
   try {
-    const username = (req.query.username as string) || 'zutomayo_art';
+    const username = 'staging-fanart';
     let syncProgress = null;
     
     const crawlerState = await CrawlerStateModel.findOne({ where: { username } });
@@ -76,7 +83,6 @@ export const getProgress = async (req: Request, res: Response) => {
         status: crawlerState.getDataValue('status'),
         current_run_processed: crawlerState.getDataValue('current_run_processed'),
         current_run_total: crawlerState.getDataValue('current_run_total'),
-        last_crawled_month: crawlerState.getDataValue('last_crawled_month')
       };
     }
 
@@ -183,7 +189,6 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
         }
       }
     } else if (!r2Url) {
-      // 尚未下載至 R2，現在才下載並上傳
       console.log(`[Approve] 正在從 Twitter 下載媒體: ${mediaUrl}`);
       const fetchedMedia = await fetchMediaToBuffer(mediaUrl);
       if (fetchedMedia) {
@@ -212,7 +217,6 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
       }
     }
 
-    // Find or create MediaGroup
     let [group] = await MediaGroupModel.findOrCreate({
       where: { source_url: originalUrl },
       defaults: {
@@ -228,7 +232,6 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
       }
     });
 
-    // Create Media if not exists
     const existingMedia = await MediaModel.findOne({ where: { original_url: mediaUrl } });
     if (!existingMedia) {
       await MediaModel.create({
@@ -243,7 +246,6 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
       });
     }
 
-    // Update staging status
     await staging.update({ status: 'approved' });
 
     res.json({ success: true, message: 'Approved and moved to MediaGroup successfully' });
