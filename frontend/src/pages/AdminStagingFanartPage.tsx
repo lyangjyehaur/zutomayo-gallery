@@ -52,6 +52,7 @@ export function AdminStagingFanartPage() {
 
   const [mvs, setMvs] = useState<Option[]>([]);
   const [selectedMvs, setSelectedMvs] = useState<Record<string, string[]>>({});
+  const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
 
   const baseApiUrl = useMemo(
     () => (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, ''),
@@ -189,6 +190,11 @@ export function AdminStagingFanartPage() {
       if (data.success) {
         toast.success(data.message);
         setFanarts(prev => prev.filter(f => f.id !== id));
+        setSelectedCards(prev => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
         
         setProgress(prev => {
           if (!prev) return prev;
@@ -211,6 +217,52 @@ export function AdminStagingFanartPage() {
     } catch (error) {
       toast.error(`Failed to ${action} staging fanart`);
     }
+  };
+
+  const handleBatchAction = async (action: 'approve' | 'reject') => {
+    if (selectedCards.size === 0) return;
+    
+    if (!window.confirm(`確定要批次${action === 'approve' ? '核准' : '拒絕'}這 ${selectedCards.size} 張卡片嗎？`)) {
+      return;
+    }
+
+    setIsLoading(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    const idsToProcess = Array.from(selectedCards);
+
+    for (const id of idsToProcess) {
+      try {
+        const payload = action === 'approve' ? { mvs: selectedMvs[id] || [] } : {};
+        const res = await fetch(`${baseApiUrl}/staging-fanarts/${id}/${action}`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' 
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } else {
+          failCount++;
+        }
+      } catch (error) {
+        failCount++;
+      }
+    }
+
+    toast.success(`批次操作完成：成功 ${successCount} 筆，失敗 ${failCount} 筆`);
+    setSelectedCards(new Set());
+    fetchFanarts(page);
+    fetchProgress();
   };
 
   return (
@@ -361,10 +413,68 @@ export function AdminStagingFanartPage() {
             No pending fanarts
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {fanarts.map(f => (
-              <div key={f.id} className="bg-card border-4 border-black shadow-neo flex flex-col overflow-hidden group">
-                <div className="aspect-square bg-black relative border-b-4 border-black">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center justify-between p-3 border-2 border-black bg-white shadow-neo-sm">
+              <label className="flex items-center gap-2 cursor-pointer font-bold select-none">
+                <input 
+                  type="checkbox" 
+                  className="w-5 h-5 accent-black border-2 border-black cursor-pointer"
+                  checked={selectedCards.size === fanarts.length && fanarts.length > 0}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedCards(new Set(fanarts.map(f => f.id)));
+                    } else {
+                      setSelectedCards(new Set());
+                    }
+                  }}
+                />
+                <span className="uppercase tracking-wider">全選 ({selectedCards.size})</span>
+              </label>
+              
+              <div className="flex items-center gap-2 mt-2 sm:mt-0">
+                <Button 
+                  variant="outline" 
+                  className="border-2 border-black bg-red-500 text-white font-black uppercase tracking-wider hover:bg-red-600 h-8"
+                  disabled={selectedCards.size === 0 || isLoading}
+                  onClick={() => handleBatchAction('reject')}
+                >
+                  <i className="hn hn-trash mr-2" /> 批次拒絕
+                </Button>
+                <Button 
+                  className="border-2 border-black bg-ztmy-green font-black text-black uppercase tracking-wider hover:bg-[#8aff8a] h-8"
+                  disabled={selectedCards.size === 0 || isLoading}
+                  onClick={() => handleBatchAction('approve')}
+                >
+                  <i className="hn hn-check mr-2" /> 批次核准 (含已選MV)
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {fanarts.map(f => (
+                <div 
+                  key={f.id} 
+                  className={`bg-card border-4 border-black shadow-neo flex flex-col overflow-hidden group relative transition-colors ${selectedCards.has(f.id) ? 'ring-4 ring-ztmy-green ring-offset-2' : ''}`}
+                >
+                  {/* Card Checkbox overlay */}
+                  <label className="absolute top-2 left-2 z-20 cursor-pointer bg-white border-2 border-black p-1 shadow-neo-sm hover:scale-110 transition-transform flex items-center justify-center">
+                    <input 
+                      type="checkbox" 
+                      className="w-5 h-5 accent-black cursor-pointer"
+                      checked={selectedCards.has(f.id)}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setSelectedCards(prev => {
+                          const next = new Set(prev);
+                          if (checked) next.add(f.id);
+                          else next.delete(f.id);
+                          return next;
+                        });
+                      }}
+                    />
+                  </label>
+
+                  <div className="aspect-square bg-black relative border-b-4 border-black">
                   {f.media_type === 'video' ? (
                     <video 
                       src={f.r2_url || f.media_url} 
@@ -425,6 +535,7 @@ export function AdminStagingFanartPage() {
               </div>
             ))}
           </div>
+        </div>
         )}
         </div>
       </div>
