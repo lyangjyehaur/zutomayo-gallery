@@ -265,7 +265,11 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
         group_id: group.get('id')
       });
     } else {
-      await existingMedia.update({ tags });
+      const currentTags = existingMedia.get('tags') as any;
+      const nextTags = Array.from(
+        new Set([...(Array.isArray(currentTags) ? currentTags : []), ...tags])
+      );
+      await existingMedia.update({ tags: nextTags });
     }
 
     if (mvIds.length > 0) {

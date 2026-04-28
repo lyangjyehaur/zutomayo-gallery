@@ -203,10 +203,13 @@ export async function saveMVsToDB(mvs: MVItem[], transaction?: any): Promise<voi
           const imageId = image.get('id');
           if (desiredTags) {
             const currentTags = image.get('tags') as any;
-            const nextTagsJson = JSON.stringify(desiredTags);
+            const nextTags = Array.from(
+              new Set([...(Array.isArray(currentTags) ? currentTags : []), ...desiredTags])
+            );
+            const nextTagsJson = JSON.stringify(nextTags);
             const currentTagsJson = JSON.stringify(Array.isArray(currentTags) ? currentTags : []);
             if (nextTagsJson !== currentTagsJson) {
-              await image.update({ tags: desiredTags }, { transaction: t });
+              await image.update({ tags: nextTags }, { transaction: t });
             }
           }
 

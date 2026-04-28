@@ -3,10 +3,13 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MultiSelect, Option } from '@/components/ui/multi-select';
+import { getProxyImgUrl } from '@/lib/image';
 
 export function AdminFanArtPage() {
   const [activeTab, setActiveTab] = useState<string>('unorganized');
   const [unorganizedGroups, setUnorganizedGroups] = useState<any[]>([]);
+  const [deletedGroups, setDeletedGroups] = useState<any[]>([]);
+  const [legacyMedia, setLegacyMedia] = useState<any[]>([]);
   const [mvData, setMvData] = useState<any[]>([]);
   const [selectedMvs, setSelectedMvs] = useState<Record<string, string[]>>({});
   const [editMvs, setEditMvs] = useState<Record<string, string[]>>({});
@@ -47,9 +50,39 @@ export function AdminFanArtPage() {
     }
   };
 
+  const fetchDeleted = async () => {
+    try {
+      const res = await fetch(`${baseApiUrl}/fanarts/deleted`, {
+        headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDeletedGroups(data.data);
+      }
+    } catch (err) {
+      toast.error('Failed to fetch deleted fanarts');
+    }
+  };
+
+  const fetchLegacy = async () => {
+    try {
+      const res = await fetch(`${baseApiUrl}/fanarts/legacy`, {
+        headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLegacyMedia(data.data);
+      }
+    } catch (err) {
+      toast.error('Failed to fetch legacy fanarts');
+    }
+  };
+
   useEffect(() => {
     fetchData();
     fetchUnorganized();
+    fetchDeleted();
+    fetchLegacy();
   }, [baseApiUrl]);
 
   const mvsOptions: Option[] = useMemo(() => {
@@ -80,6 +113,7 @@ export function AdminFanArtPage() {
     mvData.forEach(mv => {
       mv.images?.forEach((img: any) => {
         if (img.type !== 'fanart') return;
+        if (img.usage === 'cover') return;
         const mediaId = img.id;
         if (!mediaId) return;
         const currentTags = Array.isArray(img.tags) ? img.tags : [];
@@ -93,6 +127,18 @@ export function AdminFanArtPage() {
     });
     return map;
   }, [mvData]);
+
+  const isYoutubeLike = (url?: string) => {
+    if (!url) return false;
+    return url.includes('ytimg.com') || url.includes('youtube.com') || url.includes('img.youtube.com');
+  };
+
+  const getPreviewSrc = (media: any) => {
+    const originalUrl = media.original_url || media.originalUrl || '';
+    const url = media.url || '';
+    const prefer = originalUrl && !isYoutubeLike(originalUrl) ? originalUrl : url;
+    return getProxyImgUrl(prefer || url, 'thumb');
+  };
 
   // MV selection logic
   const selectedMvData = useMemo(() => {
@@ -108,7 +154,10 @@ export function AdminFanArtPage() {
       
       mvData.forEach(mv => {
         mv.images?.forEach((img: any) => {
-          if (img.type === 'fanart' && img.tags?.includes(id) && !seenIds.has(img.id)) {
+          if (img.type !== 'fanart') return;
+          if (img.usage === 'cover') return;
+          if (isYoutubeLike(img.original_url || img.url)) return;
+          if (img.tags?.includes(id) && !seenIds.has(img.id)) {
             seenIds.add(img.id);
             allImagesWithTag.push(img);
           }
@@ -173,37 +222,37 @@ export function AdminFanArtPage() {
       if (res.ok) {
         toast.success('已捨棄推文');
         setUnorganizedGroups(prev => prev.filter(g => g.id !== groupId));
+        fetchDeleted();
       }
     } catch (e) {
       toast.error('刪除失敗');
     }
   };
 
-  const handleRemoveFromMv = async (mediaId: string, mvId: string) => {
-    const isTag = mvId.startsWith('tag:');
-    if (!window.confirm(`確定要${isTag ? '移除這個標籤' : '從這個 MV 中移除此圖片'}嗎？`)) return;
+  const handleRestoreGroup = async (groupId: string) => {
     try {
-      const res = await fetch(`${baseApiUrl}/fanarts/media/${mediaId}/remove-mv`, {
+      const res = await fetch(`${baseApiUrl}/fanarts/${groupId}/status`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' 
+          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
         },
-        body: JSON.stringify({ mvId })
+        body: JSON.stringify({ status: 'unorganized' })
       });
       if (res.ok) {
-        toast.success('已移除');
-        fetchData();
+        toast.success('已還原回未整理');
+        setDeletedGroups(prev => prev.filter(g => g.id !== groupId));
+        fetchUnorganized();
       }
     } catch (e) {
-      toast.error('移除失敗');
+      toast.error('還原失敗');
     }
   };
 
   const handleUpdateAssociations = async (mediaId: string, mvs: string[]) => {
     if (mvs.length === 0) return toast.error('請至少選擇一個 MV 或標籤');
     try {
-      const res = await fetch(`${baseApiUrl}/fanarts/media/${mediaId}/assign`, {
+      const res = await fetch(`${baseApiUrl}/fanarts/media/${mediaId}/sync`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -357,6 +406,18 @@ export function AdminFanArtPage() {
             未整理 ({unorganizedGroups.length})
           </button>
           <button 
+            className={`px-4 py-2 text-left font-bold border-2 border-transparent hover:border-black ${activeTab === 'deleted' ? 'bg-red-500 text-white border-black shadow-neo-sm' : ''}`}
+            onClick={() => setActiveTab('deleted')}
+          >
+            已捨棄 ({deletedGroups.length})
+          </button>
+          <button 
+            className={`px-4 py-2 text-left font-bold border-2 border-transparent hover:border-black ${activeTab === 'legacy' ? 'bg-yellow-200 text-black border-black shadow-neo-sm' : ''}`}
+            onClick={() => setActiveTab('legacy')}
+          >
+            舊資料 ({legacyMedia.length})
+          </button>
+          <button 
             className={`px-4 py-2 text-left font-bold border-2 border-transparent hover:border-black ${activeTab === 'parse' ? 'bg-ztmy-purple text-white border-black shadow-neo-sm' : ''}`}
             onClick={() => setActiveTab('parse')}
           >
@@ -410,7 +471,7 @@ export function AdminFanArtPage() {
 
         <div className="p-2 flex flex-col gap-1 overflow-y-auto flex-1">
           {mvData.map(mv => {
-            const fanartCount = mv.images?.filter((i: any) => i.type === 'fanart').length || 0;
+            const fanartCount = mv.images?.filter((i: any) => i.type === 'fanart' && i.usage !== 'cover' && !isYoutubeLike(i.original_url || i.url)).length || 0;
             return (
               <button
                 key={mv.id}
@@ -439,7 +500,7 @@ export function AdminFanArtPage() {
                 {unorganizedMedia.map(media => (
                   <div key={media.id} className="bg-card border-4 border-black shadow-neo flex flex-col overflow-hidden">
                     <div className="aspect-square bg-black relative border-b-4 border-black">
-                      <img src={media.url || media.original_url} className="w-full h-full object-cover" />
+                      <img src={getPreviewSrc(media)} className="w-full h-full object-cover" />
                     </div>
                     <div className="p-2 flex flex-col gap-2 flex-1">
                       <div className="text-xs truncate font-bold opacity-70">
@@ -466,6 +527,74 @@ export function AdminFanArtPage() {
                         >
                           保存關聯
                         </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'deleted' && (
+          <div className="p-6">
+            <h2 className="text-2xl font-black uppercase tracking-widest mb-6">已捨棄的推文</h2>
+            {deletedGroups.length === 0 ? (
+              <div className="text-center p-12 border-4 border-dashed border-black/20 text-black/50 font-bold uppercase text-lg">
+                無已捨棄項目
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {deletedGroups.map(group => {
+                  const cover = group.media?.[0]?.url || group.images?.[0]?.url || '';
+                  const coverOriginal = group.media?.[0]?.original_url || group.images?.[0]?.original_url || '';
+                  return (
+                    <div key={group.id} className="bg-card border-4 border-black shadow-neo flex flex-col overflow-hidden">
+                      <div className="aspect-video bg-black border-b-4 border-black">
+                        {cover ? <img src={getProxyImgUrl(coverOriginal || cover, 'thumb')} className="w-full h-full object-cover" /> : null}
+                      </div>
+                      <div className="p-3 flex flex-col gap-2">
+                        <div className="text-xs font-bold opacity-70 truncate">
+                          {group.post_date ? new Date(group.post_date).toLocaleDateString() : ''}
+                        </div>
+                        <div className="text-xs font-mono opacity-70 truncate" title={group.source_url || ''}>
+                          {group.source_url || ''}
+                        </div>
+                        <Button
+                          className="h-8 text-xs bg-yellow-200 text-black font-black hover:bg-yellow-300 border-2 border-black w-full"
+                          onClick={() => handleRestoreGroup(group.id)}
+                        >
+                          還原回未整理
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'legacy' && (
+          <div className="p-6">
+            <h2 className="text-2xl font-black uppercase tracking-widest mb-6">舊資料 / 異常 FanArt</h2>
+            {legacyMedia.length === 0 ? (
+              <div className="text-center p-12 border-4 border-dashed border-black/20 text-black/50 font-bold uppercase text-lg">
+                無異常項目
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {legacyMedia.map((m: any) => (
+                  <div key={m.id} className="bg-card border-4 border-black shadow-neo flex flex-col overflow-hidden">
+                    <div className="aspect-square bg-black relative border-b-4 border-black">
+                      <img src={getProxyImgUrl(m.original_url || m.url, 'thumb')} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="p-2 flex flex-col gap-2">
+                      <div className="text-[10px] font-mono opacity-70 truncate" title={m.original_url || m.url}>
+                        {m.original_url || m.url}
+                      </div>
+                      <div className="text-[10px] font-mono opacity-70 truncate" title={m.group?.source_url || ''}>
+                        {m.group?.source_url || ''}
                       </div>
                     </div>
                   </div>
@@ -552,13 +681,13 @@ export function AdminFanArtPage() {
         {selectedMvData && (
           <div className="p-6">
             <h2 className="text-2xl font-black uppercase tracking-widest mb-6">{selectedMvData.title}</h2>
-            {selectedMvData.images?.filter((i: any) => i.type === 'fanart').length === 0 ? (
+            {selectedMvData.images?.filter((i: any) => i.type === 'fanart' && i.usage !== 'cover' && !isYoutubeLike(i.original_url || i.url)).length === 0 ? (
               <div className="text-center p-12 border-4 border-dashed border-black/20 text-black/50 font-bold uppercase text-lg">
                 此 MV 尚未關聯任何 FanArt
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {selectedMvData.images?.filter((i: any) => i.type === 'fanart').map((media: any) => {
+                {selectedMvData.images?.filter((i: any) => i.type === 'fanart' && i.usage !== 'cover' && !isYoutubeLike(i.original_url || i.url)).map((media: any) => {
                   const assoc = mediaAssociations.get(media.id);
                   const defaultSel = [
                     ...(assoc ? Array.from(assoc.tags) : []),
@@ -569,7 +698,7 @@ export function AdminFanArtPage() {
                   return (
                     <div key={media.id} className="bg-card border-4 border-black shadow-neo flex flex-col overflow-hidden">
                       <div className="aspect-square bg-black relative border-b-4 border-black">
-                        <img src={media.url} className="w-full h-full object-cover" />
+                        <img src={getPreviewSrc(media)} className="w-full h-full object-cover" />
                       </div>
                       <div className="p-2 flex flex-col gap-2">
                         <MultiSelect
@@ -592,13 +721,6 @@ export function AdminFanArtPage() {
                           {media.tags?.includes('tag:uniguri') ? '海膽栗子 ' : ''}
                           {media.tags?.includes('tag:shoga') ? '生薑 ' : ''}
                         </div>
-                        <Button 
-                          variant="outline" 
-                          className="h-8 text-xs bg-red-500 text-white font-black hover:bg-red-600 border-2 border-black w-full"
-                          onClick={() => handleRemoveFromMv(media.id, selectedMvData.id)}
-                        >
-                          {selectedMvData.id.startsWith('tag:') ? '移除標籤' : '從此 MV 移除'}
-                        </Button>
                       </div>
                     </div>
                   );

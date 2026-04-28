@@ -498,7 +498,7 @@ export function AdminStagingFanartPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap items-center justify-between p-3 border-2 border-black bg-white shadow-neo-sm">
+            <div className="sticky top-0 z-30 flex flex-wrap items-center justify-between p-3 border-2 border-black bg-white shadow-neo-sm">
               <label className="flex items-center gap-2 cursor-pointer font-bold select-none">
                 <input 
                   type="checkbox" 
