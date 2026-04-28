@@ -19,20 +19,36 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
     return `tag:${str}`;
   };
 
-  const baseApiUrl = useMemo(() => (import.meta.env.VITE_API_URL || '/api/mvs').replace(/\/mvs$/, ''), []);
+  const baseApiUrl = useMemo(() => (import.meta.env.VITE_API_URL || '/api').replace(/\/mvs$/, ''), []);
   const galleryCacheBust = useMemo(() => `${Date.now()}`, []);
   const [galleryFanarts, setGalleryFanarts] = useState<any[] | null>(null);
 
   useEffect(() => {
     const run = async () => {
       try {
-        const res = await fetch(`${baseApiUrl}/fanarts/gallery?t=${galleryCacheBust}`, { cache: 'no-store' });
-        const data = await res.json();
-        if (data?.success && Array.isArray(data.data)) {
-          setGalleryFanarts(data.data);
-        } else {
-          setGalleryFanarts(null);
+        const fetchOnce = async (url: string) => {
+          const res = await fetch(url, { cache: 'no-store' });
+          if (!res.ok) throw new Error(`HTTP_${res.status}`);
+          const data = await res.json();
+          if (data?.success && Array.isArray(data.data)) return data.data as any[];
+          throw new Error('BAD_PAYLOAD');
+        };
+
+        const urls = [
+          `${baseApiUrl}/fanarts/gallery?t=${galleryCacheBust}`,
+          `/api/fanarts/gallery?t=${galleryCacheBust}`
+        ];
+
+        for (const url of urls) {
+          try {
+            const rows = await fetchOnce(url);
+            setGalleryFanarts(rows);
+            return;
+          } catch {
+          }
         }
+
+        setGalleryFanarts(null);
       } catch {
         setGalleryFanarts(null);
       }
