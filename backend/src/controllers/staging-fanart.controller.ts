@@ -3,9 +3,38 @@ import { StagingFanartModel, MediaGroupModel, MediaModel, CrawlerStateModel } fr
 import { nanoid } from 'nanoid';
 import { Sequelize } from 'sequelize';
 import { runCrawler } from '../scripts/fetch-zutomayo-art-tweets.js';
-import { moveFileInR2 } from '../services/r2.service.js';
+import { moveFileInR2, uploadBufferToR2 } from '../services/r2.service.js';
+import crypto from 'crypto';
 
 const generateShortId = () => nanoid(16);
+
+async function fetchMediaToBuffer(url: string): Promise<{ buffer: Buffer; contentType: string; ext: string } | null> {
+  let fetchUrl = url;
+  if (fetchUrl.includes('pbs.twimg.com')) {
+    fetchUrl = fetchUrl.replace(/&name=[a-z0-9]+/i, '');
+    fetchUrl = fetchUrl.replace(/\?name=[a-z0-9]+/i, '?');
+    fetchUrl = fetchUrl.includes('?') ? `${fetchUrl}&name=orig` : `${fetchUrl}?name=orig`;
+    fetchUrl = fetchUrl.replace('?&', '?');
+  }
+
+  try {
+    const res = await fetch(fetchUrl);
+    if (!res.ok) return null;
+    const arrayBuffer = await res.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    
+    let contentType = res.headers.get('content-type') || 'application/octet-stream';
+    const extMatch = url.match(/\.(jpg|jpeg|png|gif|webp|avif|mp4|m4v|mov|m3u8)/i);
+    let ext = extMatch ? extMatch[1].toLowerCase() : 'jpg';
+    if (url.includes('format=png')) ext = 'png';
+    if (url.includes('format=webp')) ext = 'webp';
+    if (url.includes('format=mp4')) ext = 'mp4';
+    
+    return { buffer, contentType, ext };
+  } catch (err) {
+    return null;
+  }
+}
 
 export const triggerCrawler = async (req: Request, res: Response) => {
   try {
@@ -152,6 +181,34 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
           finalR2Url = newR2Url;
           await staging.update({ r2_url: newR2Url });
         }
+      }
+    } else if (!r2Url) {
+      // 尚未下載至 R2，現在才下載並上傳
+      console.log(`[Approve] 正在從 Twitter 下載媒體: ${mediaUrl}`);
+      const fetchedMedia = await fetchMediaToBuffer(mediaUrl);
+      if (fetchedMedia) {
+        const hash = crypto.createHash('md5').update(mediaUrl).digest('hex');
+        const fileName = `fanart/${hash}.${fetchedMedia.ext}`;
+        const newR2Url = await uploadBufferToR2(
+          fetchedMedia.buffer,
+          fileName,
+          fetchedMedia.contentType,
+          {
+            metadata: {
+              'original-url': mediaUrl,
+              'tweet-id': staging.get('tweet_id') as string,
+              source: 'approved_staging'
+            }
+          }
+        );
+        if (newR2Url) {
+          finalR2Url = newR2Url;
+          await staging.update({ r2_url: newR2Url });
+        } else {
+          console.error(`[Approve] R2 上傳失敗: ${mediaUrl}`);
+        }
+      } else {
+        console.error(`[Approve] 媒體下載失敗: ${mediaUrl}`);
       }
     }
 

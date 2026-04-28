@@ -1,11 +1,9 @@
 import 'dotenv/config';
-import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import path from 'path';
 import { ApifyClient } from 'apify-client';
 import { StagingFanartModel, CrawlerStateModel, syncModels } from '../models/index.js';
-import { uploadBufferToR2 } from '../services/r2.service.js';
 
 // Configuration
 const APIFY_API_TOKEN = process.env.APIFY_API_TOKEN;
@@ -13,41 +11,6 @@ const APIFY_API_TOKEN = process.env.APIFY_API_TOKEN;
 // Types
 interface SyncProgress {
   total_crawled: number;
-}
-
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-async function fetchMediaToBuffer(url: string): Promise<{ buffer: Buffer; contentType: string; ext: string } | null> {
-  let fetchUrl = url;
-  // 對 Twitter 圖片要求原始最高畫質
-  if (fetchUrl.includes('pbs.twimg.com')) {
-    fetchUrl = fetchUrl.replace(/&name=[a-z0-9]+/i, '');
-    fetchUrl = fetchUrl.replace(/\?name=[a-z0-9]+/i, '?');
-    fetchUrl = fetchUrl.includes('?') ? `${fetchUrl}&name=orig` : `${fetchUrl}?name=orig`;
-    fetchUrl = fetchUrl.replace('?&', '?');
-  }
-
-  try {
-    const res = await fetch(fetchUrl);
-    if (!res.ok) {
-      console.error(`Failed to fetch media: ${fetchUrl}, status: ${res.status}`);
-      return null;
-    }
-    const arrayBuffer = await res.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    
-    let contentType = res.headers.get('content-type') || 'application/octet-stream';
-    const extMatch = url.match(/\.(jpg|jpeg|png|gif|webp|avif|mp4|m4v|mov|m3u8)/i);
-    let ext = extMatch ? extMatch[1].toLowerCase() : 'jpg';
-    if (url.includes('format=png')) ext = 'png';
-    if (url.includes('format=webp')) ext = 'webp';
-    if (url.includes('format=mp4')) ext = 'mp4';
-    
-    return { buffer, contentType, ext };
-  } catch (err) {
-    console.error(`Error fetching media: ${fetchUrl}`, err);
-    return null;
-  }
 }
 
 export async function runCrawler(username: string = 'zutomayo_art', targetMonthOverride?: string, startDate?: string, endDate?: string, customMaxItems?: number) {
@@ -303,43 +266,14 @@ export async function runCrawler(username: string = 'zutomayo_art', targetMonthO
           continue;
         }
 
-        console.log(`[Crawler] 處理推文 ${tweetId} 的媒體: ${mediaUrl}`);
+        console.log(`[Crawler] 處理推文 ${tweetId} 的媒體: ${mediaUrl} (暫存至資料庫，不下載至 R2)`);
         
-        // 下載媒體轉為 Buffer
-        const fetchedMedia = await fetchMediaToBuffer(mediaUrl);
-        if (!fetchedMedia) {
-          console.error(`[Crawler] 無法下載媒體，跳過該推文 ${tweetId} 的此媒體。`);
-          continue;
-        }
-
-        const hash = crypto.createHash('md5').update(mediaUrl).digest('hex');
-        const fileName = `crawler/${hash}.${fetchedMedia.ext}`;
-        
-        // 呼叫 r2.service 上傳至 R2
-        const r2Url = await uploadBufferToR2(
-          fetchedMedia.buffer,
-          fileName,
-          fetchedMedia.contentType,
-          {
-            metadata: {
-              'original-url': mediaUrl,
-              'tweet-id': tweetId,
-              source: 'crawler'
-            }
-          }
-        );
-
-        if (!r2Url) {
-          console.error(`[Crawler] 無法將推文 ${tweetId} 的媒體上傳至 R2，跳過。`);
-          continue;
-        }
-
         // 寫入暫存表
         await StagingFanartModel.create({
           tweet_id: tweetId,
           original_url: originalUrl,
           media_url: mediaUrl,
-          r2_url: r2Url,
+          r2_url: null,
           media_type: mediaType === 'photo' ? 'image' : 'video',
           crawled_at: crawledAt,
           post_date: postDate,
@@ -355,7 +289,7 @@ export async function runCrawler(username: string = 'zutomayo_art', targetMonthO
         });
 
         progress.total_crawled++;
-        console.log(`[Crawler] 已將推文 ${tweetId} 的二創圖寫入暫存表 (R2: ${r2Url})`);
+        console.log(`[Crawler] 已將推文 ${tweetId} 的二創圖寫入暫存表 (未下載)`);
       }
       } finally {
         if (current_run_processed % 5 === 0 || current_run_processed === uniqueItems.length) {

@@ -1,41 +1,11 @@
 import 'dotenv/config';
 import fs from 'fs';
 import path from 'path';
-import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { StagingFanartModel, syncModels } from '../models/index.js';
-import { uploadBufferToR2 } from '../services/r2.service.js';
 
 // 需要先從 crawler/ 資料夾找出最新的 raw-apify-results 或 dataset_twitter 檔案
 const crawlerDir = path.join(process.cwd(), 'crawler');
-
-async function fetchMediaToBuffer(url: string): Promise<{ buffer: Buffer; contentType: string; ext: string } | null> {
-  let fetchUrl = url;
-  if (fetchUrl.includes('pbs.twimg.com')) {
-    fetchUrl = fetchUrl.replace(/&name=[a-z0-9]+/i, '');
-    fetchUrl = fetchUrl.replace(/\?name=[a-z0-9]+/i, '?');
-    fetchUrl = fetchUrl.includes('?') ? `${fetchUrl}&name=orig` : `${fetchUrl}?name=orig`;
-    fetchUrl = fetchUrl.replace('?&', '?');
-  }
-
-  try {
-    const res = await fetch(fetchUrl);
-    if (!res.ok) return null;
-    const arrayBuffer = await res.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    
-    let contentType = res.headers.get('content-type') || 'application/octet-stream';
-    const extMatch = url.match(/\.(jpg|jpeg|png|gif|webp|avif|mp4|m4v|mov|m3u8)/i);
-    let ext = extMatch ? extMatch[1].toLowerCase() : 'jpg';
-    if (url.includes('format=png')) ext = 'png';
-    if (url.includes('format=webp')) ext = 'webp';
-    if (url.includes('format=mp4')) ext = 'mp4';
-    
-    return { buffer, contentType, ext };
-  } catch (err) {
-    return null;
-  }
-}
 
 export async function reparseRawApify(filename?: string) {
   await syncModels();
@@ -191,40 +161,13 @@ export async function reparseRawApify(filename?: string) {
         continue;
       }
 
-      console.log(`[Reparse] 發現新媒體 [${mediaType}] 推文 ${tweetId}: ${mediaUrl}`);
-      
-      const fetchedMedia = await fetchMediaToBuffer(mediaUrl);
-      if (!fetchedMedia) {
-        console.error(`[Reparse] 無法下載媒體，跳過: ${mediaUrl}`);
-        continue;
-      }
-
-      const hash = crypto.createHash('md5').update(mediaUrl).digest('hex');
-      const fileName = `crawler/${hash}.${fetchedMedia.ext}`;
-      
-      const r2Url = await uploadBufferToR2(
-        fetchedMedia.buffer,
-        fileName,
-        fetchedMedia.contentType,
-        {
-          metadata: {
-            'original-url': mediaUrl,
-            'tweet-id': tweetId,
-            source: 'reparse'
-          }
-        }
-      );
-
-      if (!r2Url) {
-        console.error(`[Reparse] 無法上傳至 R2，跳過: ${mediaUrl}`);
-        continue;
-      }
+      console.log(`[Reparse] 發現新媒體 [${mediaType}] 推文 ${tweetId}: ${mediaUrl} (暫存至資料庫，不下載)`);
 
       await StagingFanartModel.create({
         tweet_id: tweetId,
         original_url: originalUrl,
         media_url: mediaUrl,
-        r2_url: r2Url,
+        r2_url: null,
         media_type: mediaType === 'photo' ? 'image' : 'video',
         crawled_at: crawledAt,
         post_date: postDate,
@@ -240,7 +183,7 @@ export async function reparseRawApify(filename?: string) {
       });
 
       processed++;
-      console.log(`[Reparse] 已儲存至暫存表 (R2: ${r2Url})`);
+      console.log(`[Reparse] 已儲存至暫存表 (未下載)`);
     }
   }
 
