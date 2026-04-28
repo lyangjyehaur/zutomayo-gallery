@@ -132,6 +132,9 @@ export async function runCrawler(username: string = 'zutomayo_art', targetMonthO
     const input = {
       searchTerms: [`from:${username} filter:media include:nativeretweets since:${sinceDate}_00:00:00_UTC until:${untilDate}_00:00:00_UTC`],
       maxItems: maxItems,
+      "from": username,
+      "twitterContent": "",
+      "queryType": "Latest",
       "lang": "en",
       "include:nativeretweets": true,
       "filter:replies": false,
