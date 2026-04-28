@@ -108,8 +108,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
 
   // 狀態：選中的 MV IDs
   const [selectedMvs, setSelectedMvs] = useState<string[]>([]);
-  // 狀態：是否包含綜合插畫 (多角色)
-  const [includeCollab, setIncludeCollab] = useState<boolean>(true);
+  const [onlyCollab, setOnlyCollab] = useState<boolean>(false);
   const [onlyAcaNe, setOnlyAcaNe] = useState<boolean>(false);
   const [onlyReal, setOnlyReal] = useState<boolean>(false);
   const [onlyUniguri, setOnlyUniguri] = useState<boolean>(false);
@@ -237,11 +236,11 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
     return allFanArts.filter(art => {
       const tags = Array.isArray(art.tags) ? art.tags : [];
       const isCollab = art.mvIds.length > 1 || tags.includes('tag:collab');
-      if (!includeCollab && isCollab) return false;
+      if (onlyCollab && !isCollab) return false;
       if (!matchSpecialTags(tags)) return false;
       return true;
     });
-  }, [allFanArts, includeCollab, selectedSpecialTags]);
+  }, [allFanArts, onlyCollab, selectedSpecialTags]);
 
   const mvFanArtCounts = useMemo(() => {
     const map = new Map<string, number>();
@@ -304,8 +303,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
       const tags = Array.isArray(art.tags) ? art.tags : [];
       const isCollab = art.mvIds.length > 1 || tags.includes('tag:collab');
       
-      // 如果不包含綜合插畫，但它是綜合插畫，則過濾掉
-      if (!includeCollab && isCollab) return false;
+      if (onlyCollab && !isCollab) return false;
 
       if (!matchSpecialTags(tags)) return false;
       
@@ -315,7 +313,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
       // 如果有選擇 MV，該圖片必須關聯到至少一個選中的 MV
       return art.mvIds.some(id => selectedMvs.includes(id));
     });
-  }, [allFanArts, includeCollab, selectedSpecialTags, selectedMvs]);
+  }, [allFanArts, onlyCollab, selectedSpecialTags, selectedMvs]);
 
   const { shuffledFanArts, shuffleKey } = useMemo(() => {
     const next = [...filteredFanArts];
@@ -384,7 +382,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
               {!isFilterExpanded && (
                 <div className="text-xs font-bold opacity-60 hidden md:block">
                   {selectedMvs.length > 0 ? `已選 ${selectedMvs.length} 個 MV` : '所有作品'} 
-                  {!includeCollab ? ' (不含大合繪)' : ''}
+                  {onlyCollab ? ' (只看大合繪)' : ''}
                   {onlyAcaNe ? ' (ACAね)' : ''}
                   {onlyReal ? ' (實物)' : ''}
                   {onlyUniguri ? ' (海膽栗子)' : ''}
@@ -402,12 +400,11 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
           </div>
           
           <div className={`space-y-6 overflow-hidden transition-all duration-500 origin-top ${isFilterExpanded ? 'max-h-[2000px] opacity-100 mt-6' : 'max-h-0 opacity-0 mt-0'}`}>
-            {/* 特殊選項：綜合插畫 */}
-            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" onClick={() => setIncludeCollab(!includeCollab)}>
-              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${includeCollab ? 'bg-main' : 'bg-card'}`}>
-                {includeCollab && <i className="hn hn-check text-xs font-black"></i>}
+            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" onClick={() => setOnlyCollab(!onlyCollab)}>
+              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyCollab ? 'bg-main' : 'bg-card'}`}>
+                {onlyCollab && <i className="hn hn-check text-xs font-black"></i>}
               </div>
-              <Label className="font-bold cursor-pointer">{t('fanart.include_collab', '綜合插畫 (多角色 / 大合繪)')} ({collabCount})</Label>
+              <Label className="font-bold cursor-pointer">{t('fanart.only_collab', '只看 綜合插畫 (多角色 / 大合繪)')} ({collabCount})</Label>
             </div>
 
             <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" onClick={() => setOnlyAcaNe(!onlyAcaNe)}>
