@@ -950,8 +950,17 @@ const currentMV = data[activeIndex];
         if (imageTypeTab === 'fanart') return img.type === 'fanart';
         return img.type !== 'fanart';
       })
+      .filter(({ img }) => img.usage !== 'cover' && img.type !== 'cover')
       .slice(0, imageDisplayLimit);
   }, [currentMV?.images, imageDisplayLimit, imageTypeTab]);
+
+  const getAdminImagePreviewUrl = (img: any) => {
+    const raw = img.thumbnail || img.url || '';
+    const original = img.original_url || img.originalUrl || '';
+    const prefer = original && (original.includes('twimg.com') || original.includes('ytimg.com')) ? original : raw;
+    const mode = String(prefer).includes('r2.dan.tw') ? 'full' : 'thumb';
+    return getProxyImgUrl(prefer, mode as any);
+  };
 
   const handleImageObserver = useCallback((entries: IntersectionObserverEntry[]) => {
     const [target] = entries;
@@ -2388,7 +2397,7 @@ const currentMV = data[activeIndex];
                           )}
                           {img.url ? (
                             <>
-                              <img src={getProxyImgUrl(img.thumbnail || img.url, 'thumb')} className="w-full h-full object-cover" alt="預覽" />
+                              <img src={getAdminImagePreviewUrl(img)} className="w-full h-full object-cover" alt="預覽" />
                               {isVideo && (
                                 <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
                                   <div className="bg-black/80 text-white rounded-full p-2 border-2 border-white/20">
@@ -2481,7 +2490,7 @@ const currentMV = data[activeIndex];
                               <div className="aspect-square bg-black/5 border-2 border-dashed border-black/20 flex items-center justify-center overflow-hidden relative rounded">
                                 {currentMV.images[editingImageIdx].url ? (
                                   <>
-                                    <img src={getProxyImgUrl(currentMV.images[editingImageIdx].thumbnail || currentMV.images[editingImageIdx].url, 'thumb')} className="w-full h-full object-contain" alt="預覽" />
+                                    <img src={getAdminImagePreviewUrl(currentMV.images[editingImageIdx])} className="w-full h-full object-contain" alt="預覽" />
                                     {/* GIF 標籤 */}
                                     {currentMV.images[editingImageIdx].url?.match(/\.gif$/i) || currentMV.images[editingImageIdx].url?.includes('tweet_video_thumb') ? (
                                       <div className="absolute top-2 left-2 flex items-center justify-center bg-black/60 text-white rounded px-2 py-0.5 shadow-sm backdrop-blur-sm border border-white/10 z-10 pointer-events-none">

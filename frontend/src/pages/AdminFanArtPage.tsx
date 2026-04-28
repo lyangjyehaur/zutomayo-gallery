@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MultiSelect, Option } from '@/components/ui/multi-select';
-import { getProxyImgUrl } from '@/lib/image';
+import { getProxyImgUrl, isMediaVideo } from '@/lib/image';
 
 export function AdminFanArtPage() {
   const [activeTab, setActiveTab] = useState<string>('unorganized');
@@ -116,7 +116,7 @@ export function AdminFanArtPage() {
         if (img.usage === 'cover') return;
         const mediaId = img.id;
         if (!mediaId) return;
-        const currentTags = Array.isArray(img.tags) ? img.tags : [];
+        const currentTags = Array.isArray(img.tags) ? img.tags.map(normalizeTag) : [];
         if (!map.has(mediaId)) {
           map.set(mediaId, { mvIds: new Set(), tags: new Set(currentTags) });
         }
@@ -133,11 +133,39 @@ export function AdminFanArtPage() {
     return url.includes('ytimg.com') || url.includes('youtube.com') || url.includes('img.youtube.com');
   };
 
-  const getPreviewSrc = (media: any) => {
+  const normalizeTag = (tag: any) => {
+    if (!tag) return '';
+    const str = String(tag);
+    if (str === 'tag:aca-ne') return 'tag:acane';
+    if (str.startsWith('tag:')) return str;
+    return `tag:${str}`;
+  };
+
+  const getTagSet = (obj: any) => {
+    const tags = Array.isArray(obj?.tags) ? obj.tags : [];
+    return new Set(tags.map(normalizeTag).filter(Boolean));
+  };
+
+  const hasTag = (obj: any, tagId: string) => {
+    return getTagSet(obj).has(tagId);
+  };
+
+  const getRawMediaUrl = (media: any) => {
     const originalUrl = media.original_url || media.originalUrl || '';
     const url = media.url || '';
     const prefer = originalUrl && !isYoutubeLike(originalUrl) ? originalUrl : url;
-    return getProxyImgUrl(prefer || url, 'thumb');
+    return prefer || url;
+  };
+
+  const renderPreview = (media: any) => {
+    const rawUrl = getRawMediaUrl(media);
+    if (!rawUrl) return null;
+    const video = isMediaVideo(rawUrl) || media.media_type === 'video';
+    const src = getProxyImgUrl(rawUrl, video ? 'full' : 'thumb');
+    if (video) {
+      return <video src={src} className="w-full h-full object-cover" controls preload="metadata" />;
+    }
+    return <img src={src} className="w-full h-full object-cover" loading="lazy" />;
   };
 
   // MV selection logic
@@ -157,7 +185,7 @@ export function AdminFanArtPage() {
           if (img.type !== 'fanart') return;
           if (img.usage === 'cover') return;
           if (isYoutubeLike(img.original_url || img.url)) return;
-          if (img.tags?.includes(id) && !seenIds.has(img.id)) {
+          if (hasTag(img, id) && !seenIds.has(img.id)) {
             seenIds.add(img.id);
             allImagesWithTag.push(img);
           }
@@ -435,7 +463,10 @@ export function AdminFanArtPage() {
             const seen = new Set();
             mvData.forEach(mv => {
               mv.images?.forEach((img: any) => {
-                if (img.type === 'fanart' && img.tags?.includes(tagId) && !seen.has(img.id)) {
+                if (img.type !== 'fanart') return;
+                if (img.usage === 'cover') return;
+                if (isYoutubeLike(img.original_url || img.url)) return;
+                if (hasTag(img, tagId) && !seen.has(img.id)) {
                   seen.add(img.id);
                   count++;
                 }
@@ -500,7 +531,7 @@ export function AdminFanArtPage() {
                 {unorganizedMedia.map(media => (
                   <div key={media.id} className="bg-card border-4 border-black shadow-neo flex flex-col overflow-hidden">
                     <div className="aspect-square bg-black relative border-b-4 border-black">
-                      <img src={getPreviewSrc(media)} className="w-full h-full object-cover" />
+                      {renderPreview(media)}
                     </div>
                     <div className="p-2 flex flex-col gap-2 flex-1">
                       <div className="text-xs truncate font-bold opacity-70">
@@ -548,10 +579,15 @@ export function AdminFanArtPage() {
                 {deletedGroups.map(group => {
                   const cover = group.media?.[0]?.url || group.images?.[0]?.url || '';
                   const coverOriginal = group.media?.[0]?.original_url || group.images?.[0]?.original_url || '';
+                  const coverMedia = group.media?.[0] || group.images?.[0] || { url: cover, original_url: coverOriginal };
                   return (
                     <div key={group.id} className="bg-card border-4 border-black shadow-neo flex flex-col overflow-hidden">
                       <div className="aspect-video bg-black border-b-4 border-black">
-                        {cover ? <img src={getProxyImgUrl(coverOriginal || cover, 'thumb')} className="w-full h-full object-cover" /> : null}
+                        {cover ? (
+                          <div className="w-full h-full">
+                            {renderPreview(coverMedia)}
+                          </div>
+                        ) : null}
                       </div>
                       <div className="p-3 flex flex-col gap-2">
                         <div className="text-xs font-bold opacity-70 truncate">
@@ -587,7 +623,7 @@ export function AdminFanArtPage() {
                 {legacyMedia.map((m: any) => (
                   <div key={m.id} className="bg-card border-4 border-black shadow-neo flex flex-col overflow-hidden">
                     <div className="aspect-square bg-black relative border-b-4 border-black">
-                      <img src={getProxyImgUrl(m.original_url || m.url, 'thumb')} className="w-full h-full object-cover" />
+                      {renderPreview(m)}
                     </div>
                     <div className="p-2 flex flex-col gap-2">
                       <div className="text-[10px] font-mono opacity-70 truncate" title={m.original_url || m.url}>
@@ -694,11 +730,12 @@ export function AdminFanArtPage() {
                     ...(assoc ? Array.from(assoc.mvIds) : []),
                   ];
                   const currentSel = editMvs[media.id] ?? defaultSel;
+                  const tagSet = getTagSet(media);
 
                   return (
                     <div key={media.id} className="bg-card border-4 border-black shadow-neo flex flex-col overflow-hidden">
                       <div className="aspect-square bg-black relative border-b-4 border-black">
-                        <img src={getPreviewSrc(media)} className="w-full h-full object-cover" />
+                        {renderPreview(media)}
                       </div>
                       <div className="p-2 flex flex-col gap-2">
                         <MultiSelect
@@ -715,11 +752,11 @@ export function AdminFanArtPage() {
                           更新關聯
                         </Button>
                         <div className="text-xs truncate opacity-70 mb-2">
-                          {media.tags?.includes('tag:collab') ? '合繪 ' : ''}
-                          {media.tags?.includes('tag:acane') ? 'ACAね ' : ''}
-                          {media.tags?.includes('tag:real') ? '實物 ' : ''}
-                          {media.tags?.includes('tag:uniguri') ? '海膽栗子 ' : ''}
-                          {media.tags?.includes('tag:shoga') ? '生薑 ' : ''}
+                          {tagSet.has('tag:collab') ? '合繪 ' : ''}
+                          {tagSet.has('tag:acane') ? 'ACAね ' : ''}
+                          {tagSet.has('tag:real') ? '實物 ' : ''}
+                          {tagSet.has('tag:uniguri') ? '海膽栗子 ' : ''}
+                          {tagSet.has('tag:shoga') ? '生薑 ' : ''}
                         </div>
                       </div>
                     </div>
