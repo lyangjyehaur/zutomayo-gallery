@@ -40,6 +40,7 @@ export function AdminStagingFanartPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [viewStatus, setViewStatus] = useState<'pending' | 'rejected'>('pending');
   
   const [progress, setProgress] = useState<ProgressData | null>(null);
   const [isProgressLoading, setIsProgressLoading] = useState(false);
@@ -94,10 +95,10 @@ export function AdminStagingFanartPage() {
     }
   }, [baseApiUrl]);
 
-  const fetchFanarts = useCallback(async (p: number) => {
+  const fetchFanarts = useCallback(async (p: number, status: 'pending' | 'rejected') => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${baseApiUrl}/staging-fanarts?page=${p}&limit=60`, {
+      const res = await fetch(`${baseApiUrl}/staging-fanarts?page=${p}&limit=60&status=${status}`, {
         headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
       });
       const data = await res.json();
@@ -115,8 +116,8 @@ export function AdminStagingFanartPage() {
   }, [baseApiUrl]);
 
   useEffect(() => {
-    fetchFanarts(page);
-  }, [fetchFanarts, page]);
+    fetchFanarts(page, viewStatus);
+  }, [fetchFanarts, page, viewStatus]);
 
   useEffect(() => {
     fetchProgress();
@@ -135,6 +136,13 @@ export function AdminStagingFanartPage() {
       return () => clearInterval(timer);
     }
   }, [fetchProgress, progress?.syncProgress?.status]);
+
+  const switchViewStatus = (status: 'pending' | 'rejected') => {
+    setViewStatus(status);
+    setPage(1);
+    setSelectedCards(new Set());
+    setBatchSelectedMvs([]);
+  };
 
   const handleTriggerCrawler = async () => {
     if (!searchTerms.trim()) {
@@ -181,20 +189,24 @@ export function AdminStagingFanartPage() {
     }
   };
 
-  const handleAction = async (id: string, action: 'approve' | 'reject') => {
+  const handleAction = async (id: string, action: 'approve' | 'reject' | 'restore') => {
     try {
-      const payload = action === 'approve' ? { mvs: selectedMvs[id] || [] } : {};
-      const res = await fetch(`${baseApiUrl}/staging-fanarts/${id}/${action}`, {
+      const isApprove = action === 'approve';
+      const isRestore = action === 'restore';
+      const payload = isApprove ? { mvs: selectedMvs[id] || [] } : undefined;
+      const endpointAction = isRestore ? 'restore' : action;
+
+      const res = await fetch(`${baseApiUrl}/staging-fanarts/${id}/${endpointAction}`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' 
         },
-        body: JSON.stringify(payload)
+        body: payload ? JSON.stringify(payload) : undefined
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(data.message);
+        toast.success(action === 'restore' ? '已還原為待審核' : data.message);
         setFanarts(prev => prev.filter(f => f.id !== id));
         setSelectedCards(prev => {
           const next = new Set(prev);
@@ -204,6 +216,16 @@ export function AdminStagingFanartPage() {
         
         setProgress(prev => {
           if (!prev) return prev;
+          if (action === 'restore') {
+            return {
+              ...prev,
+              statusCounts: {
+                ...prev.statusCounts,
+                pending: prev.statusCounts.pending + 1,
+                rejected: Math.max(0, prev.statusCounts.rejected - 1)
+              }
+            };
+          }
           return {
             ...prev,
             statusCounts: {
@@ -215,7 +237,7 @@ export function AdminStagingFanartPage() {
         });
         
         if (fanarts.length <= 1) {
-          fetchFanarts(page);
+          fetchFanarts(page, viewStatus);
         }
       } else {
         toast.error(data.error || `Failed to ${action}`);
@@ -270,8 +292,42 @@ export function AdminStagingFanartPage() {
     toast.success(`批次操作完成：成功 ${successCount} 筆，失敗 ${failCount} 筆`);
     setSelectedCards(new Set());
     setBatchSelectedMvs([]);
-    fetchFanarts(page);
+    fetchFanarts(page, viewStatus);
     fetchProgress();
+  };
+
+  const handleBatchRestore = async () => {
+    if (selectedCards.size === 0) return;
+    if (!window.confirm(`確定要將這 ${selectedCards.size} 筆已拒絕資料還原回待審核嗎？`)) {
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${baseApiUrl}/staging-fanarts/batch-restore`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' 
+        },
+        body: JSON.stringify({ ids: Array.from(selectedCards) })
+      });
+      const data = await res.json();
+      if (data.success) {
+        const updatedCount = data.data?.updatedCount ?? 0;
+        toast.success(`已還原 ${updatedCount} 筆`);
+        setSelectedCards(new Set());
+        setBatchSelectedMvs([]);
+        fetchFanarts(page, viewStatus);
+        fetchProgress();
+      } else {
+        toast.error(data.error || '批次還原失敗');
+      }
+    } catch (error) {
+      toast.error('批次還原失敗');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -281,6 +337,22 @@ export function AdminStagingFanartPage() {
           <i className="hn hn-image" /> Staging FanArts
         </h1>
         <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              className={`border-2 border-black font-bold shadow-neo-sm h-8 ${viewStatus === 'pending' ? 'bg-yellow-200' : 'bg-white'}`}
+              onClick={() => switchViewStatus('pending')}
+            >
+              待審核 ({progress?.statusCounts?.pending || 0})
+            </Button>
+            <Button
+              variant="outline"
+              className={`border-2 border-black font-bold shadow-neo-sm h-8 ${viewStatus === 'rejected' ? 'bg-red-200' : 'bg-white'}`}
+              onClick={() => switchViewStatus('rejected')}
+            >
+              已拒絕 ({progress?.statusCounts?.rejected || 0})
+            </Button>
+          </div>
           <span className="text-sm font-bold font-mono">Page {page} of {totalPages}</span>
           <div className="flex gap-2">
             <Button 
@@ -419,7 +491,7 @@ export function AdminStagingFanartPage() {
         ) : fanarts.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 border-4 border-dashed border-black/20 text-black/50 font-bold text-lg uppercase tracking-widest">
             <i className="hn hn-inbox text-4xl mb-4" />
-            No pending fanarts
+            {viewStatus === 'pending' ? 'No pending fanarts' : 'No rejected fanarts'}
           </div>
         ) : (
           <div className="flex flex-col gap-4">
@@ -441,29 +513,41 @@ export function AdminStagingFanartPage() {
               </label>
               
               <div className="flex items-center gap-2 mt-2 sm:mt-0">
-                <div className="w-[200px]">
-                  <MultiSelect
-                    options={mvs}
-                    selected={batchSelectedMvs}
-                    onChange={setBatchSelectedMvs}
-                    placeholder="批次選擇 MV..."
-                  />
-                </div>
-                <Button 
-                  variant="outline" 
-                  className="border-2 border-black bg-red-500 text-white font-black uppercase tracking-wider hover:bg-red-600 h-8"
-                  disabled={selectedCards.size === 0 || isLoading}
-                  onClick={() => handleBatchAction('reject')}
-                >
-                  <i className="hn hn-trash mr-2" /> 批次拒絕
-                </Button>
-                <Button 
-                  className="border-2 border-black bg-ztmy-green font-black text-black uppercase tracking-wider hover:bg-[#8aff8a] h-8"
-                  disabled={selectedCards.size === 0 || isLoading}
-                  onClick={() => handleBatchAction('approve')}
-                >
-                  <i className="hn hn-check mr-2" /> 批次核准 (含已選MV)
-                </Button>
+                {viewStatus === 'pending' ? (
+                  <>
+                    <div className="w-[200px]">
+                      <MultiSelect
+                        options={mvs}
+                        selected={batchSelectedMvs}
+                        onChange={setBatchSelectedMvs}
+                        placeholder="批次選擇 MV..."
+                      />
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      className="border-2 border-black bg-red-500 text-white font-black uppercase tracking-wider hover:bg-red-600 h-8"
+                      disabled={selectedCards.size === 0 || isLoading}
+                      onClick={() => handleBatchAction('reject')}
+                    >
+                      <i className="hn hn-trash mr-2" /> 批次拒絕
+                    </Button>
+                    <Button 
+                      className="border-2 border-black bg-ztmy-green font-black text-black uppercase tracking-wider hover:bg-[#8aff8a] h-8"
+                      disabled={selectedCards.size === 0 || isLoading}
+                      onClick={() => handleBatchAction('approve')}
+                    >
+                      <i className="hn hn-check mr-2" /> 批次核准 (含已選MV)
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    className="border-2 border-black bg-yellow-200 font-black text-black uppercase tracking-wider hover:bg-yellow-300 h-8"
+                    disabled={selectedCards.size === 0 || isLoading}
+                    onClick={handleBatchRestore}
+                  >
+                    <i className="hn hn-refresh mr-2" /> 批次還原為待審核
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -524,30 +608,43 @@ export function AdminStagingFanartPage() {
                     <span className="truncate" title={new Date(f.crawled_at).toLocaleString()}>Date: {new Date(f.crawled_at).toLocaleDateString()}</span>
                   </div>
                   
-                  <div className="flex flex-col gap-1 mt-1">
-                    <span className="text-[10px] sm:text-xs font-bold uppercase">Associated MVs:</span>
-                    <MultiSelect
-                      options={mvs}
-                      selected={selectedMvs[f.id] || []}
-                      onChange={(selected) => setSelectedMvs(prev => ({ ...prev, [f.id]: selected }))}
-                      placeholder="Select MVs..."
-                    />
-                  </div>
+                  {viewStatus === 'pending' ? (
+                    <div className="flex flex-col gap-1 mt-1">
+                      <span className="text-[10px] sm:text-xs font-bold uppercase">Associated MVs:</span>
+                      <MultiSelect
+                        options={mvs}
+                        selected={selectedMvs[f.id] || []}
+                        onChange={(selected) => setSelectedMvs(prev => ({ ...prev, [f.id]: selected }))}
+                        placeholder="Select MVs..."
+                      />
+                    </div>
+                  ) : null}
 
-                  <div className="mt-auto grid grid-cols-2 gap-2 pt-2">
-                    <Button 
-                      className="w-full bg-red-500 text-white hover:bg-red-600 border-2 border-black shadow-neo-sm font-black uppercase tracking-wider text-xs h-8"
-                      onClick={() => handleAction(f.id, 'reject')}
-                    >
-                      <i className="hn hn-trash sm:mr-1" /> <span className="hidden sm:inline">拒絕</span>
-                    </Button>
-                    <Button 
-                      className="w-full bg-ztmy-green text-black hover:bg-[#8aff8a] border-2 border-black shadow-neo-sm font-black uppercase tracking-wider text-xs h-8"
-                      onClick={() => handleAction(f.id, 'approve')}
-                    >
-                      <i className="hn hn-check sm:mr-1" /> <span className="hidden sm:inline">核准</span>
-                    </Button>
-                  </div>
+                  {viewStatus === 'pending' ? (
+                    <div className="mt-auto grid grid-cols-2 gap-2 pt-2">
+                      <Button 
+                        className="w-full bg-red-500 text-white hover:bg-red-600 border-2 border-black shadow-neo-sm font-black uppercase tracking-wider text-xs h-8"
+                        onClick={() => handleAction(f.id, 'reject')}
+                      >
+                        <i className="hn hn-trash sm:mr-1" /> <span className="hidden sm:inline">拒絕</span>
+                      </Button>
+                      <Button 
+                        className="w-full bg-ztmy-green text-black hover:bg-[#8aff8a] border-2 border-black shadow-neo-sm font-black uppercase tracking-wider text-xs h-8"
+                        onClick={() => handleAction(f.id, 'approve')}
+                      >
+                        <i className="hn hn-check sm:mr-1" /> <span className="hidden sm:inline">核准</span>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="mt-auto pt-2">
+                      <Button
+                        className="w-full bg-yellow-200 text-black hover:bg-yellow-300 border-2 border-black shadow-neo-sm font-black uppercase tracking-wider text-xs h-8"
+                        onClick={() => handleAction(f.id, 'restore')}
+                      >
+                        <i className="hn hn-refresh sm:mr-1" /> <span className="hidden sm:inline">還原</span>
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { StagingFanartModel, MediaGroupModel, MediaModel, CrawlerStateModel, MVMediaModel } from '../models/index.js';
 import { MVService } from '../services/mv.service.js';
 import { nanoid } from 'nanoid';
-import { Sequelize } from 'sequelize';
+import { Op, Sequelize } from 'sequelize';
 import { runCrawler } from '../scripts/fetch-zutomayo-art-tweets.js';
 import { moveFileInR2, uploadBufferToR2 } from '../services/r2.service.js';
 import crypto from 'crypto';
@@ -121,14 +121,20 @@ export const getProgress = async (req: Request, res: Response) => {
   }
 };
 
-export const getPendingStagingFanarts = async (req: Request, res: Response) => {
+export const getStagingFanarts = async (req: Request, res: Response) => {
   try {
+    const status = (req.query.status as string) || 'pending';
+    const allowedStatuses = new Set(['pending', 'approved', 'rejected']);
+    if (!allowedStatuses.has(status)) {
+      return res.status(400).json({ success: false, error: 'Invalid status' });
+    }
+
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;
     const offset = (page - 1) * limit;
 
     const { count, rows } = await StagingFanartModel.findAndCountAll({
-      where: { status: 'pending' },
+      where: { status },
       order: [['crawled_at', 'DESC'], ['created_at', 'DESC']],
       limit,
       offset
@@ -295,9 +301,57 @@ export const rejectStagingFanart = async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: 'Staging fanart not found' });
     }
 
+    if (staging.get('status') !== 'pending') {
+      return res.status(400).json({ success: false, error: 'Only pending fanarts can be rejected' });
+    }
+
     await staging.update({ status: 'rejected' });
 
     res.json({ success: true, message: 'Rejected successfully' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const restoreStagingFanart = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const staging = await StagingFanartModel.findByPk(id);
+
+    if (!staging) {
+      return res.status(404).json({ success: false, error: 'Staging fanart not found' });
+    }
+
+    if (staging.get('status') !== 'rejected') {
+      return res.status(400).json({ success: false, error: 'Only rejected fanarts can be restored' });
+    }
+
+    await staging.update({ status: 'pending' });
+    res.json({ success: true, message: 'Restored to pending successfully' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const batchRestoreStagingFanarts = async (req: Request, res: Response) => {
+  try {
+    const rawIds = (req.body as any)?.ids;
+    const ids = Array.isArray(rawIds) ? rawIds.filter((v: any) => typeof v === 'string' && v.trim()) : [];
+
+    if (ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'ids is required' });
+    }
+
+    const [updatedCount] = await StagingFanartModel.update(
+      { status: 'pending' },
+      { where: { id: { [Op.in]: ids }, status: 'rejected' } }
+    );
+
+    res.json({
+      success: true,
+      message: `Restored ${updatedCount} items`,
+      data: { updatedCount }
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }

@@ -6,7 +6,7 @@ export const getUnorganizedFanarts = async (req: Request, res: Response) => {
     const rows = await MediaGroupModel.findAll({
       where: { status: 'unorganized' },
       include: [{ model: MediaModel, as: 'images' }],
-      order: [['createdAt', 'DESC']]
+      order: [['post_date', 'DESC'], ['id', 'DESC']]
     });
     
     // 格式化資料以相容前端
