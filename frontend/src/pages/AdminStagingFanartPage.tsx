@@ -52,6 +52,7 @@ export function AdminStagingFanartPage() {
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [isTriggering, setIsTriggering] = useState(false);
+  const [maxItems, setMaxItems] = useState<number>(1000);
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => String(currentYear - i));
@@ -161,7 +162,8 @@ export function AdminStagingFanartPage() {
           username: crawlerUsername,
           month: targetMonth || undefined,
           startDate,
-          endDate
+          endDate,
+          maxItems
         })
       });
       const data = await res.json();
@@ -292,7 +294,9 @@ export function AdminStagingFanartPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {years.map(year => (
-                          <SelectItem key={year} value={year}>{year}</SelectItem>
+                          <SelectItem key={year} value={year}>
+                            {year}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -313,6 +317,16 @@ export function AdminStagingFanartPage() {
                       />
                     </div>
                   )}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold uppercase shrink-0">最大抓取數量:</span>
+                    <Input 
+                      type="number"
+                      value={maxItems}
+                      onChange={(e) => setMaxItems(parseInt(e.target.value, 10) || 0)}
+                      className="border-2 border-black font-bold shadow-neo-sm h-8 w-24 bg-background"
+                      min={1}
+                    />
+                  </div>
                 </div>
                 <Button 
                   variant="default" 

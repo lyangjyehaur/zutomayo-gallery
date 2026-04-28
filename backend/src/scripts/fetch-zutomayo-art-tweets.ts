@@ -50,7 +50,7 @@ async function fetchMediaToBuffer(url: string): Promise<{ buffer: Buffer; conten
   }
 }
 
-export async function runCrawler(username: string = 'zutomayo_art', targetMonthOverride?: string, startDate?: string, endDate?: string) {
+export async function runCrawler(username: string = 'zutomayo_art', targetMonthOverride?: string, startDate?: string, endDate?: string, customMaxItems?: number) {
   if (!APIFY_API_TOKEN) {
     console.warn('[Crawler] 警告: 未設定 APIFY_API_TOKEN 環境變數。');
     console.warn('[Crawler] 請在 .env 檔案中新增憑證資訊。');
@@ -97,7 +97,7 @@ export async function runCrawler(username: string = 'zutomayo_art', targetMonthO
   if (startDate && endDate) {
     sinceDate = startDate;
     untilDate = endDate;
-    maxItems = 5000;
+    maxItems = customMaxItems || 5000;
     // nextTargetMonth 保持 undefined，不更新 last_crawled_month
   } else {
     const parts = targetMonth.split('-');
@@ -107,7 +107,7 @@ export async function runCrawler(username: string = 'zutomayo_art', targetMonthO
       sinceDate = `${year}-01-01`;
       untilDate = `${year + 1}-01-01`;
       nextTargetMonth = `${year - 1}`;
-      maxItems = 5000;
+      maxItems = customMaxItems || 5000;
     } else {
       // YYYY-MM 格式
       const year = parseInt(parts[0], 10);
@@ -122,7 +122,7 @@ export async function runCrawler(username: string = 'zutomayo_art', targetMonthO
       const prevMonth = month === 1 ? 12 : month - 1;
       const prevYear = month === 1 ? year - 1 : year;
       nextTargetMonth = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
-      maxItems = 500;
+      maxItems = customMaxItems || 500;
     }
   }
 

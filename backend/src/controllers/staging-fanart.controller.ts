@@ -13,9 +13,10 @@ export const triggerCrawler = async (req: Request, res: Response) => {
     const month = req.body.month;
     const startDate = req.body.startDate;
     const endDate = req.body.endDate;
+    const maxItems = req.body.maxItems;
     
     // 背景執行，不 await
-    runCrawler(username, month, startDate, endDate).catch(err => {
+    runCrawler(username, month, startDate, endDate, maxItems).catch(err => {
       console.error(`[Crawler Error] Background crawler failed for ${username}:`, err);
     });
 
@@ -25,7 +26,8 @@ export const triggerCrawler = async (req: Request, res: Response) => {
       username,
       month,
       startDate,
-      endDate
+      endDate,
+      maxItems
     });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
