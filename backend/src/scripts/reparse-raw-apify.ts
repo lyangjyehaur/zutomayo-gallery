@@ -58,7 +58,13 @@ export async function reparseRawApify(filename?: string) {
     files.sort((a, b) => fs.statSync(path.join(crawlerDir, b)).mtimeMs - fs.statSync(path.join(crawlerDir, a)).mtimeMs);
     targetFile = path.join(crawlerDir, files[0]);
   } else {
-    targetFile = path.join(crawlerDir, targetFile);
+    if (path.isAbsolute(targetFile)) {
+      // 已經是絕對路徑，不需額外處理
+    } else if (targetFile.startsWith('crawler/')) {
+      targetFile = path.resolve(process.cwd(), targetFile);
+    } else {
+      targetFile = path.resolve(crawlerDir, targetFile);
+    }
   }
 
   console.log(`[Reparse] 正在讀取並重新解析原始資料: ${targetFile}`);
