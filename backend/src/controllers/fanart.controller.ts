@@ -116,6 +116,7 @@ export const getFanartGallery = async (req: Request, res: Response) => {
       order: [[{ model: MediaGroupModel, as: 'group' }, 'post_date', 'DESC'], ['id', 'DESC']]
     });
 
+    res.setHeader('Cache-Control', 'no-store');
     res.json({ success: true, data: rows.map(r => r.toJSON()) });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });

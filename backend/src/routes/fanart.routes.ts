@@ -5,7 +5,7 @@ import { cacheMiddleware } from '../middleware/cache.middleware.js';
 
 const router = Router();
 
-router.get('/gallery', cacheMiddleware(300), getFanartGallery);
+router.get('/gallery', cacheMiddleware(30), getFanartGallery);
 router.get('/unorganized', requireAdmin, getUnorganizedFanarts);
 router.get('/deleted', requireAdmin, getDeletedFanarts);
 router.get('/legacy', requireAdmin, getLegacyFanarts);

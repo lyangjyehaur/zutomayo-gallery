@@ -20,12 +20,13 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
   };
 
   const baseApiUrl = useMemo(() => (import.meta.env.VITE_API_URL || '/api/mvs').replace(/\/mvs$/, ''), []);
+  const galleryCacheBust = useMemo(() => `${Date.now()}`, []);
   const [galleryFanarts, setGalleryFanarts] = useState<any[] | null>(null);
 
   useEffect(() => {
     const run = async () => {
       try {
-        const res = await fetch(`${baseApiUrl}/fanarts/gallery`);
+        const res = await fetch(`${baseApiUrl}/fanarts/gallery?t=${galleryCacheBust}`, { cache: 'no-store' });
         const data = await res.json();
         if (data?.success && Array.isArray(data.data)) {
           setGalleryFanarts(data.data);
@@ -37,7 +38,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
       }
     };
     void run();
-  }, [baseApiUrl]);
+  }, [baseApiUrl, galleryCacheBust]);
   
   // 提取所有有圖片的 MV 作為篩選選項
   const availableMVs = useMemo(() => {
