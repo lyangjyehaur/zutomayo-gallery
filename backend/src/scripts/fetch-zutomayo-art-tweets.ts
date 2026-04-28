@@ -85,12 +85,11 @@ export async function runCrawler(username: string = 'zutomayo_art') {
     console.log(`[Crawler] 正在透過 Apify 獲取推文...`);
     
     const input = {
-      twitterHandles: [username],
-      maxItems: 1000,
-      sort: "Latest"
+      searchTerms: [`from:${username}`],
+      maxItems: 7000
     };
 
-    const run = await client.actor("apidojo/tweet-scraper").call(input);
+    const run = await client.actor("kaitoeasyapi/twitter-x-data-tweet-scraper-pay-per-result-cheapest").call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
 
     // 備份 Apify 原始結果
@@ -108,7 +107,52 @@ export async function runCrawler(username: string = 'zutomayo_art') {
       return progress.total_crawled;
     }
 
-    const uniqueItems = Array.from(new Map(items.map(item => [item.id_str || item.id || item.rest_id, item])).values());
+    // 去重並提取最終推文資訊
+    const uniqueItemsMap = new Map();
+
+    for (const item of items) {
+      const tweet = item as any;
+      let currentTweetId = tweet.id_str || tweet.id || tweet.rest_id;
+      if (!currentTweetId) continue;
+
+      let targetTweet = tweet;
+      let tweetId = currentTweetId;
+
+      let mediaList = targetTweet.extendedEntities?.media || targetTweet.extended_entities?.media || targetTweet.entities?.media || targetTweet.media || targetTweet.images || targetTweet.videos;
+
+      if (!mediaList || mediaList.length === 0) {
+        if (tweet.retweeted_tweet) {
+          const rt = tweet.retweeted_tweet;
+          const rtMediaList = rt.extendedEntities?.media || rt.extended_entities?.media || rt.entities?.media || rt.media || rt.images || rt.videos;
+          if (rtMediaList && rtMediaList.length > 0) {
+            targetTweet = rt;
+            mediaList = rtMediaList;
+            tweetId = rt.id_str || rt.id || rt.rest_id || tweetId;
+          }
+        }
+        
+        if (!mediaList || mediaList.length === 0) {
+          if (tweet.quoted_tweet) {
+            const qt = tweet.quoted_tweet;
+            const qtMediaList = qt.extendedEntities?.media || qt.extended_entities?.media || qt.entities?.media || qt.media || qt.images || qt.videos;
+            if (qtMediaList && qtMediaList.length > 0) {
+              targetTweet = qt;
+              mediaList = qtMediaList;
+              tweetId = qt.id_str || qt.id || qt.rest_id || tweetId;
+            }
+          }
+        }
+      }
+
+      mediaList = mediaList || [];
+
+      // 若去重 Map 中還沒有這個最終 tweetId，則加入
+      if (!uniqueItemsMap.has(tweetId)) {
+        uniqueItemsMap.set(tweetId, { tweetId, targetTweet, mediaList });
+      }
+    }
+
+    const uniqueItems = Array.from(uniqueItemsMap.values());
     console.log(`[Crawler] 取得 ${items.length} 則推文，去重後剩餘 ${uniqueItems.length} 則推文。`);
 
     await crawlerState.update({ status: 'processing', current_run_total: uniqueItems.length });
@@ -119,44 +163,45 @@ export async function runCrawler(username: string = 'zutomayo_art') {
       current_run_processed++;
 
       try {
-        const tweet = item as any;
-      const tweetId = tweet.id_str || tweet.id || tweet.rest_id;
-      if (!tweetId) continue;
-      const originalUrl = tweet.url || `https://twitter.com/${username}/status/${tweetId}`;
-      const crawledAt = new Date();
-      
-      let medias: { url: string; type: string }[] = [];
-
-      // 解析 media，apidojo/tweet-scraper 回傳結構接近官方 API
-      const mediaList = tweet.extendedEntities?.media || tweet.extended_entities?.media || tweet.entities?.media || tweet.media || tweet.images || tweet.videos || [];
-      if (Array.isArray(mediaList)) {
-        const parsed = mediaList.map((m: any) => {
-          if (typeof m === 'string') {
-            return { url: m, type: m.includes('.mp4') || m.includes('video') ? 'video' : 'photo' };
-          }
-          let url = m.media_url_https || m.media_url || m.url;
-          let type = m.type === 'video' || m.type === 'animated_gif' ? 'video' : 'photo';
-          
-          if (type === 'video' && m.video_info?.variants) {
-            const variants = m.video_info.variants
-              .filter((v: any) => v.content_type === 'video/mp4')
-              .sort((a: any, b: any) => (b.bitrate || 0) - (a.bitrate || 0));
-            if (variants.length > 0) {
-              url = variants[0].url;
-            }
-          } else if (type === 'video' && m.variants) {
-             const variants = m.variants
-              .filter((v: any) => v.content_type === 'video/mp4')
-              .sort((a: any, b: any) => (b.bitrate || 0) - (a.bitrate || 0));
-            if (variants.length > 0) {
-              url = variants[0].url;
-            }
-          }
-          return { url, type };
-        }).filter((m: any) => !!m.url && !m.url.includes('profile_images'));
+        const { tweetId, targetTweet, mediaList } = item as any;
+        const originalUrl = targetTweet.url || `https://twitter.com/i/web/status/${tweetId}`;
+        const crawledAt = new Date();
         
-        medias.push(...parsed);
-      }
+        let medias: { url: string; type: string }[] = [];
+
+        // 解析 media
+        if (Array.isArray(mediaList)) {
+          for (const m of mediaList) {
+            if (typeof m === 'string') {
+              const type = m.includes('.mp4') || m.includes('video') ? 'video' : 'photo';
+              medias.push({ url: m, type });
+              continue;
+            }
+
+            let url = m.media_url_https || m.media_url || m.url;
+            let type = m.type === 'video' || m.type === 'animated_gif' ? 'video' : 'photo';
+            
+            if (type === 'video' && m.video_info?.variants) {
+              const variants = m.video_info.variants
+                .filter((v: any) => v.content_type === 'video/mp4')
+                .sort((a: any, b: any) => (b.bitrate || 0) - (a.bitrate || 0));
+              if (variants.length > 0) {
+                url = variants[0].url;
+              }
+            } else if (type === 'video' && m.variants) {
+               const variants = m.variants
+                .filter((v: any) => v.content_type === 'video/mp4')
+                .sort((a: any, b: any) => (b.bitrate || 0) - (a.bitrate || 0));
+              if (variants.length > 0) {
+                url = variants[0].url;
+              }
+            }
+            
+            if (url && !url.includes('profile_images')) {
+              medias.push({ url, type });
+            }
+          }
+        }
 
       if (medias.length === 0) {
         continue;
