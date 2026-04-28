@@ -19,7 +19,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
     return `tag:${str}`;
   };
 
-  const baseApiUrl = useMemo(() => (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, ''), []);
+  const baseApiUrl = useMemo(() => (import.meta.env.VITE_API_URL || '/api/mvs').replace(/\/mvs$/, ''), []);
   const [galleryFanarts, setGalleryFanarts] = useState<any[] | null>(null);
 
   useEffect(() => {
@@ -235,7 +235,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
   const baseFilteredFanArts = useMemo(() => {
     return allFanArts.filter(art => {
       const tags = Array.isArray(art.tags) ? art.tags : [];
-      const isCollab = art.mvIds.length > 1 || tags.includes('tag:collab');
+      const isCollab = tags.includes('tag:collab');
       if (onlyCollab && !isCollab) return false;
       if (!matchSpecialTags(tags)) return false;
       return true;
@@ -266,7 +266,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
   const collabCount = useMemo(() => {
     return allFanArts.filter(art => {
       const tags = Array.isArray(art.tags) ? art.tags : [];
-      const isCollab = art.mvIds.length > 1 || tags.includes('tag:collab');
+      const isCollab = tags.includes('tag:collab');
       if (!isCollab) return false;
       if (!matchSpecialTags(tags)) return false;
       return true;
@@ -301,7 +301,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
   const filteredFanArts = useMemo(() => {
     return allFanArts.filter(art => {
       const tags = Array.isArray(art.tags) ? art.tags : [];
-      const isCollab = art.mvIds.length > 1 || tags.includes('tag:collab');
+      const isCollab = tags.includes('tag:collab');
       
       if (onlyCollab && !isCollab) return false;
 
