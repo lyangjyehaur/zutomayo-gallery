@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getSystemStatus, toggleMaintenance, getClientGeo, getDictionaries, updateDictionaries, clearRedisApiCache } from '../controllers/system.controller.js';
+import { getSystemStatus, toggleMaintenance, getClientGeo, saveGeoRaw, getDictionaries, updateDictionaries, clearRedisApiCache } from '../controllers/system.controller.js';
 import { syncImagesToR2 } from '../controllers/r2.controller.js';
 import { rebuildR2 } from '../controllers/r2_rebuild.js';
 import { requireAuth, requirePermission } from '../middleware/auth.middleware.js';
@@ -49,6 +49,8 @@ router.get('/status', asyncHandler(getSystemStatus));
 
 // Public: Get client geo location info
 router.get('/geo', asyncHandler(getClientGeo));
+
+router.post('/geo/raw', asyncHandler(saveGeoRaw));
 
 // Admin: Toggle maintenance mode
 router.put('/maintenance', requireAuth, requirePermission('admin.system.maintenance.update'), asyncHandler(toggleMaintenance));

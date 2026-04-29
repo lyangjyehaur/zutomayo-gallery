@@ -145,6 +145,36 @@ export const SysAnnouncementModel = sequelize.define('SysAnnouncement', {
   updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '最後更新時間' },
 }, { tableName: 'sys_announcements', timestamps: false, comment: '首頁公告表 (獨立於系統配置)' });
 
+export const GeoRawLogModel = sequelize.define('GeoRawLog', {
+  id: { type: DataTypes.STRING(36), primaryKey: true, defaultValue: generateShortId },
+  ip: { type: DataTypes.STRING },
+  country: { type: DataTypes.STRING },
+  raw_country: { type: DataTypes.STRING },
+  ip2region_raw: { type: DataTypes.TEXT },
+  geoip_raw: { type: DataTypes.TEXT },
+  maxmind_city_raw: { type: DataTypes.TEXT },
+  maxmind_asn_raw: { type: DataTypes.TEXT },
+  ip2region_sha256: { type: DataTypes.STRING(64) },
+  geoip_sha256: { type: DataTypes.STRING(64) },
+  maxmind_city_sha256: { type: DataTypes.STRING(64) },
+  maxmind_asn_sha256: { type: DataTypes.STRING(64) },
+  user_agent: { type: DataTypes.TEXT },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+}, {
+  tableName: 'geo_raw_logs',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: false,
+  indexes: [
+    { fields: ['ip'] },
+    { fields: ['geoip_sha256'] },
+    { fields: ['maxmind_city_sha256'] },
+    { fields: ['maxmind_asn_sha256'] },
+    { fields: ['ip2region_sha256'] },
+    { fields: ['created_at'] },
+  ],
+});
+
 export const StagingFanartModel = sequelize.define('StagingFanart', {
   id: { type: DataTypes.STRING(36), primaryKey: true, defaultValue: generateShortId, comment: '暫存資料唯一識別碼' },
   tweet_id: { type: DataTypes.STRING, comment: '推文 ID' },

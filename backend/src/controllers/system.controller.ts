@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { SysConfigModel, SysDictionaryModel, sequelize } from '../models/index.js';
+import { GeoRawLogModel, SysConfigModel, SysDictionaryModel, sequelize } from '../models/index.js';
 import fs from 'fs';
 import path from 'path';
 import { getCountryCode, getFullGeoInfo } from '../services/geo.service.js';
@@ -129,6 +129,50 @@ export const getClientGeo = async (req: Request, res: Response, next: NextFuncti
   } catch (error) {
     console.error('[Geo] Error resolving client IP:', error);
     res.json({ success: true, data: { country: 'UNKNOWN', source: 'error' } });
+  }
+};
+
+export const saveGeoRaw = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const {
+      ip,
+      country,
+      raw_country,
+      ip2region_raw,
+      geoip_raw,
+      maxmind_city_raw,
+      maxmind_asn_raw,
+      ip2region_sha256,
+      geoip_sha256,
+      maxmind_city_sha256,
+      maxmind_asn_sha256,
+    } = req.body || {};
+
+    const userAgent = req.headers['user-agent'];
+
+    if (typeof ip !== 'string' || ip.length === 0) {
+      res.status(400).json({ success: false, error: 'ip is required' });
+      return;
+    }
+
+    const row = await GeoRawLogModel.create({
+      ip,
+      country: typeof country === 'string' ? country : null,
+      raw_country: typeof raw_country === 'string' ? raw_country : null,
+      ip2region_raw: typeof ip2region_raw === 'string' ? ip2region_raw : null,
+      geoip_raw: typeof geoip_raw === 'string' ? geoip_raw : null,
+      maxmind_city_raw: typeof maxmind_city_raw === 'string' ? maxmind_city_raw : null,
+      maxmind_asn_raw: typeof maxmind_asn_raw === 'string' ? maxmind_asn_raw : null,
+      ip2region_sha256: typeof ip2region_sha256 === 'string' ? ip2region_sha256 : null,
+      geoip_sha256: typeof geoip_sha256 === 'string' ? geoip_sha256 : null,
+      maxmind_city_sha256: typeof maxmind_city_sha256 === 'string' ? maxmind_city_sha256 : null,
+      maxmind_asn_sha256: typeof maxmind_asn_sha256 === 'string' ? maxmind_asn_sha256 : null,
+      user_agent: typeof userAgent === 'string' ? userAgent : null,
+    });
+
+    res.json({ success: true, data: { id: (row as any).id } });
+  } catch (error) {
+    next(error);
   }
 };
 

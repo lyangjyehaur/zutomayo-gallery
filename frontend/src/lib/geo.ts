@@ -21,6 +21,13 @@ export interface GeoInfo {
 
 let geoCache: GeoInfo | null = null;
 
+const sha256Hex = async (input: string): Promise<string> => {
+  const bytes = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  const hashArray = Array.from(new Uint8Array(digest));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
 const getIsChinaTimezone = () => {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const chinaTimezones = [
@@ -154,12 +161,6 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
       
       // 將精確的地理與 IP 資訊上報給 Umami (如果有的話)
       if ((window as any).umami && typeof (window as any).umami.track === 'function') {
-        const truncate = (v: unknown, maxLen = 480) => {
-          if (typeof v !== 'string') return v;
-          if (v.length <= maxLen) return v;
-          return v.slice(0, maxLen);
-        };
-
         const payload: any = {
             country: ipCountry,
             raw_country: rawCountry || ipCountry, // 同時上報原始的中文國家名稱
@@ -224,19 +225,55 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
         }
         
         (window as any).umami.track('Z_Geo_Location_Detected', payload);
+      }
 
-        if (geoipRaw || maxmindCityRaw || maxmindAsnRaw || ip2regionRaw) {
+      if (ip && (ip2regionRaw || geoipRaw || maxmindCityRaw || maxmindAsnRaw)) {
+        const geoRawApi = (import.meta.env.VITE_API_URL || '/api/mvs').replace(/\/mvs$/, '/system/geo/raw');
+        const rawCountryStr = rawCountry || ipCountry;
+
+        const [
+          ip2regionSha,
+          geoipSha,
+          maxmindCitySha,
+          maxmindAsnSha
+        ] = await Promise.all([
+          ip2regionRaw ? sha256Hex(ip2regionRaw) : Promise.resolve(''),
+          geoipRaw ? sha256Hex(geoipRaw) : Promise.resolve(''),
+          maxmindCityRaw ? sha256Hex(maxmindCityRaw) : Promise.resolve(''),
+          maxmindAsnRaw ? sha256Hex(maxmindAsnRaw) : Promise.resolve(''),
+        ]);
+
+        if ((window as any).umami && typeof (window as any).umami.track === 'function') {
           const rawPayload: any = {
             country: ipCountry,
-            raw_country: rawCountry || ipCountry,
+            raw_country: rawCountryStr,
           };
           if (ip) rawPayload.ip = ip;
-          if (ip2regionRaw) rawPayload.ip2region_raw = truncate(ip2regionRaw);
-          if (geoipRaw) rawPayload.geoip_raw = truncate(geoipRaw);
-          if (maxmindCityRaw) rawPayload.maxmind_city_raw = truncate(maxmindCityRaw);
-          if (maxmindAsnRaw) rawPayload.maxmind_asn_raw = truncate(maxmindAsnRaw);
+          if (ip2regionSha) rawPayload.ip2region_sha256 = ip2regionSha;
+          if (geoipSha) rawPayload.geoip_sha256 = geoipSha;
+          if (maxmindCitySha) rawPayload.maxmind_city_sha256 = maxmindCitySha;
+          if (maxmindAsnSha) rawPayload.maxmind_asn_sha256 = maxmindAsnSha;
           (window as any).umami.track('Z_Geo_Raw_Detected', rawPayload);
         }
+
+        fetch(geoRawApi, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          keepalive: true,
+          body: JSON.stringify({
+            ip,
+            country: ipCountry,
+            raw_country: rawCountryStr,
+            ip2region_raw: ip2regionRaw || undefined,
+            geoip_raw: geoipRaw || undefined,
+            maxmind_city_raw: maxmindCityRaw || undefined,
+            maxmind_asn_raw: maxmindAsnRaw || undefined,
+            ip2region_sha256: ip2regionSha || undefined,
+            geoip_sha256: geoipSha || undefined,
+            maxmind_city_sha256: maxmindCitySha || undefined,
+            maxmind_asn_sha256: maxmindAsnSha || undefined,
+          }),
+        }).catch(() => {});
       }
     }
     
