@@ -243,37 +243,47 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
           maxmindAsnRaw ? sha256Hex(maxmindAsnRaw) : Promise.resolve(''),
         ]);
 
+        let geoRawId: string | null = null;
+        try {
+          const resp = await fetch(geoRawApi, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            keepalive: true,
+            body: JSON.stringify({
+              ip,
+              country: ipCountry,
+              raw_country: rawCountryStr,
+              ip2region_raw: ip2regionRaw || undefined,
+              geoip_raw: geoipRaw || undefined,
+              maxmind_city_raw: maxmindCityRaw || undefined,
+              maxmind_asn_raw: maxmindAsnRaw || undefined,
+              ip2region_sha256: ip2regionSha || undefined,
+              geoip_sha256: geoipSha || undefined,
+              maxmind_city_sha256: maxmindCitySha || undefined,
+              maxmind_asn_sha256: maxmindAsnSha || undefined,
+            }),
+          });
+          if (resp.ok) {
+            const json = await resp.json();
+            geoRawId = json?.data?.id || null;
+          }
+        } catch {}
+
         if ((window as any).umami && typeof (window as any).umami.track === 'function') {
           const rawPayload: any = {
             country: ipCountry,
             raw_country: rawCountryStr,
           };
           if (ip) rawPayload.ip = ip;
-          if (ip2regionSha) rawPayload.ip2region_sha256 = ip2regionSha;
-          if (geoipSha) rawPayload.geoip_sha256 = geoipSha;
-          if (maxmindCitySha) rawPayload.maxmind_city_sha256 = maxmindCitySha;
-          if (maxmindAsnSha) rawPayload.maxmind_asn_sha256 = maxmindAsnSha;
+          if (geoRawId) rawPayload.geo_raw_id = geoRawId;
+          if (!geoRawId) {
+            if (ip2regionSha) rawPayload.ip2region_hash = ip2regionSha.slice(0, 12);
+            if (geoipSha) rawPayload.geoip_hash = geoipSha.slice(0, 12);
+            if (maxmindCitySha) rawPayload.maxmind_city_hash = maxmindCitySha.slice(0, 12);
+            if (maxmindAsnSha) rawPayload.maxmind_asn_hash = maxmindAsnSha.slice(0, 12);
+          }
           (window as any).umami.track('Z_Geo_Raw_Detected', rawPayload);
         }
-
-        fetch(geoRawApi, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          keepalive: true,
-          body: JSON.stringify({
-            ip,
-            country: ipCountry,
-            raw_country: rawCountryStr,
-            ip2region_raw: ip2regionRaw || undefined,
-            geoip_raw: geoipRaw || undefined,
-            maxmind_city_raw: maxmindCityRaw || undefined,
-            maxmind_asn_raw: maxmindAsnRaw || undefined,
-            ip2region_sha256: ip2regionSha || undefined,
-            geoip_sha256: geoipSha || undefined,
-            maxmind_city_sha256: maxmindCitySha || undefined,
-            maxmind_asn_sha256: maxmindAsnSha || undefined,
-          }),
-        }).catch(() => {});
       }
     }
     
