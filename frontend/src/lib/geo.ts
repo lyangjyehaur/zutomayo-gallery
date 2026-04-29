@@ -20,6 +20,7 @@ export interface GeoInfo {
 }
 
 let geoCache: GeoInfo | null = null;
+let geoInitPromise: Promise<GeoInfo> | null = null;
 
 const sha256Hex = async (input: string): Promise<string> => {
   const bytes = new TextEncoder().encode(input);
@@ -57,8 +58,11 @@ const shouldUseIpLookup = () => {
  */
 export const clearGeoCache = () => {
   geoCache = null;
+  geoInitPromise = null;
   if (typeof window !== 'undefined') {
     sessionStorage.removeItem('geo_info');
+    sessionStorage.removeItem('umami_geo_location_reported');
+    sessionStorage.removeItem('umami_geo_raw_reported');
   }
 };
 
@@ -102,8 +106,10 @@ const fetchIpCountry = async (): Promise<{ countryCode: string, ip?: string, raw
 export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
   if (forceRefresh) clearGeoCache();
   if (geoCache) return geoCache;
+  if (geoInitPromise) return geoInitPromise;
 
-  try {
+  geoInitPromise = (async () => {
+    try {
     if (typeof window !== 'undefined') {
       // 手動 Debug 模式 (最高優先級)
       // 可以透過在控制台輸入 localStorage.setItem('mock_geo_mode', 'CN' | 'VPN' | 'GLOBAL') 來模擬
@@ -161,6 +167,7 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
       
       // 將精確的地理與 IP 資訊上報給 Umami (如果有的話)
       if ((window as any).umami && typeof (window as any).umami.track === 'function') {
+        const locationReported = sessionStorage.getItem('umami_geo_location_reported') === 'true';
         const payload: any = {
             country: ipCountry,
             raw_country: rawCountry || ipCountry, // 同時上報原始的中文國家名稱
@@ -224,10 +231,16 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
           }
         }
         
-        (window as any).umami.track('Z_Geo_Location_Detected', payload);
+        if (!locationReported) {
+          (window as any).umami.track('Z_Geo_Location_Detected', payload);
+          sessionStorage.setItem('umami_geo_location_reported', 'true');
+        }
       }
 
       if (ip && (ip2regionRaw || geoipRaw || maxmindCityRaw || maxmindAsnRaw)) {
+        const rawReported = sessionStorage.getItem('umami_geo_raw_reported') === 'true';
+        if (rawReported) return geoCache;
+
         const geoRawApi = (import.meta.env.VITE_API_URL || '/api/mvs').replace(/\/mvs$/, '/system/geo/raw');
         const rawCountryStr = rawCountry || ipCountry;
 
@@ -284,11 +297,13 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
           }
           (window as any).umami.track('Z_Geo_Raw_Detected', rawPayload);
         }
+
+        sessionStorage.setItem('umami_geo_raw_reported', 'true');
       }
     }
     
     return geoCache;
-  } catch (e) {
+    } catch (e) {
     const isChinaTimezone = getIsChinaTimezone();
     
     geoCache = {
@@ -298,7 +313,12 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
       isVPN: false
     };
     return geoCache;
-  }
+    } finally {
+      geoInitPromise = null;
+    }
+  })();
+
+  return geoInitPromise;
 };
 
 /**
