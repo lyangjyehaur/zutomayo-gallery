@@ -154,7 +154,7 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
       
       // 將精確的地理與 IP 資訊上報給 Umami (如果有的話)
       if ((window as any).umami && typeof (window as any).umami.track === 'function') {
-        const truncate = (v: unknown, maxLen = 3500) => {
+        const truncate = (v: unknown, maxLen = 480) => {
           if (typeof v !== 'string') return v;
           if (v.length <= maxLen) return v;
           return v.slice(0, maxLen);
@@ -225,16 +225,16 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
         
         (window as any).umami.track('Z_Geo_Location_Detected', payload);
 
-        if (geoipRaw || maxmindCityRaw || maxmindAsnRaw) {
+        if (geoipRaw || maxmindCityRaw || maxmindAsnRaw || ip2regionRaw) {
           const rawPayload: any = {
             country: ipCountry,
             raw_country: rawCountry || ipCountry,
-            ip2region_raw: truncate(ip2regionRaw || ''),
-            geoip_raw: truncate(geoipRaw || ''),
-            maxmind_city_raw: truncate(maxmindCityRaw || ''),
-            maxmind_asn_raw: truncate(maxmindAsnRaw || ''),
           };
           if (ip) rawPayload.ip = ip;
+          if (ip2regionRaw) rawPayload.ip2region_raw = truncate(ip2regionRaw);
+          if (geoipRaw) rawPayload.geoip_raw = truncate(geoipRaw);
+          if (maxmindCityRaw) rawPayload.maxmind_city_raw = truncate(maxmindCityRaw);
+          if (maxmindAsnRaw) rawPayload.maxmind_asn_raw = truncate(maxmindAsnRaw);
           (window as any).umami.track('Z_Geo_Raw_Detected', rawPayload);
         }
       }
