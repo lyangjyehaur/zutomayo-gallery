@@ -2,16 +2,18 @@ import path from 'path';
 import fs from 'fs';
 import geoip from 'geoip-lite';
 import { fileURLToPath } from 'url';
-import { Ip2Region } from '../utils/ip2region.js';
+import { Ip2Region, Ip2RegionV6 } from '../utils/ip2region.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// xdb 檔案存放在 backend/data/ip2region.xdb
+// xdb 檔案存放在 backend/data/
 const dbDir = path.join(__dirname, '../../data');
-const dbPath = path.join(dbDir, 'ip2region.xdb');
+const dbV4Path = path.join(dbDir, 'ip2region.xdb');
+const dbV6Path = path.join(dbDir, 'ip2region_v6.xdb');
 
-let searcher: Ip2Region | null = null;
+let searcherV4: Ip2Region | null = null;
+let searcherV6: Ip2RegionV6 | null = null;
 
 /**
  * 初始化 Geo 服務 (載入資料庫至記憶體)
@@ -20,11 +22,18 @@ let searcher: Ip2Region | null = null;
 export const initGeoService = async () => {
   try {
     // 1. 載入 ip2region (中國大陸高精度)
-    if (fs.existsSync(dbPath)) {
-      searcher = new Ip2Region(dbPath);
-      console.log('[GeoService] ip2region database loaded into memory.');
+    if (fs.existsSync(dbV4Path)) {
+      searcherV4 = new Ip2Region(dbV4Path);
+      console.log('[GeoService] ip2region v4 database loaded into memory.');
     } else {
-      console.warn(`[GeoService] ip2region.xdb not found at ${dbPath}. Please run the update script.`);
+      console.warn(`[GeoService] ip2region.xdb not found at ${dbV4Path}. Please run the update script.`);
+    }
+
+    if (fs.existsSync(dbV6Path)) {
+      searcherV6 = new Ip2RegionV6(dbV6Path);
+      console.log('[GeoService] ip2region v6 database loaded into memory.');
+    } else {
+      console.warn(`[GeoService] ip2region_v6.xdb not found at ${dbV6Path}. Please run the update script.`);
     }
 
     // 2. geoip-lite 內建自帶資料庫，會在首次呼叫 lookup 時自動載入記憶體
@@ -38,7 +47,7 @@ export const initGeoService = async () => {
  * 查詢 IP 的完整地理資訊
  */
 export const getFullGeoInfo = async (ip: string): Promise<{ country: string, region: string, province: string, city: string, isp: string, raw: string, source: 'ip2region' | 'geoip-lite', ip2regionRaw?: string, geoipRaw?: string } | null> => {
-  if (!searcher) {
+  if (!searcherV4 && !searcherV6) {
     await initGeoService();
   }
 
@@ -46,8 +55,11 @@ export const getFullGeoInfo = async (ip: string): Promise<{ country: string, reg
   let geoipResult: geoip.Lookup | null = null;
 
   // 1. 同時執行兩個引擎的查詢
-  if (searcher) {
-    ip2regionResult = searcher.search(ip);
+  const isIPv6 = ip.includes(':');
+  if (isIPv6) {
+    if (searcherV6) ip2regionResult = searcherV6.search(ip);
+  } else {
+    if (searcherV4) ip2regionResult = searcherV4.search(ip);
   }
   
   try {
