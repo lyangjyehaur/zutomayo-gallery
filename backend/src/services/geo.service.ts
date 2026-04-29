@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs';
-import geoip from 'geoip-lite';
+import maxmind, { type Reader } from 'maxmind';
 import { fileURLToPath } from 'url';
 import { Ip2Region, Ip2RegionV6 } from '../utils/ip2region.js';
 
@@ -11,9 +11,13 @@ const __dirname = path.dirname(__filename);
 const dbDir = path.join(__dirname, '../../data');
 const dbV4Path = path.join(dbDir, 'ip2region.xdb');
 const dbV6Path = path.join(dbDir, 'ip2region_v6.xdb');
+const mmdbCityPath = path.join(dbDir, 'GeoLite2-City.mmdb');
+const mmdbAsnPath = path.join(dbDir, 'GeoLite2-ASN.mmdb');
 
 let searcherV4: Ip2Region | null = null;
 let searcherV6: Ip2RegionV6 | null = null;
+let cityReader: Reader<any> | null = null;
+let asnReader: Reader<any> | null = null;
 
 /**
  * 初始化 Geo 服務 (載入資料庫至記憶體)
@@ -21,7 +25,6 @@ let searcherV6: Ip2RegionV6 | null = null;
  */
 export const initGeoService = async () => {
   try {
-    // 1. 載入 ip2region (中國大陸高精度)
     if (fs.existsSync(dbV4Path)) {
       searcherV4 = new Ip2Region(dbV4Path);
       console.log('[GeoService] ip2region v4 database loaded into memory.');
@@ -36,8 +39,19 @@ export const initGeoService = async () => {
       console.warn(`[GeoService] ip2region_v6.xdb not found at ${dbV6Path}. Please run the update script.`);
     }
 
-    // 2. geoip-lite 內建自帶資料庫，會在首次呼叫 lookup 時自動載入記憶體
-    console.log('[GeoService] geoip-lite is ready.');
+    if (fs.existsSync(mmdbCityPath)) {
+      cityReader = await maxmind.open(mmdbCityPath, { cache: { max: 5000 }, watchForUpdates: false });
+      console.log('[GeoService] GeoLite2 City database loaded.');
+    } else {
+      console.warn(`[GeoService] GeoLite2-City.mmdb not found at ${mmdbCityPath}.`);
+    }
+
+    if (fs.existsSync(mmdbAsnPath)) {
+      asnReader = await maxmind.open(mmdbAsnPath, { cache: { max: 5000 }, watchForUpdates: false });
+      console.log('[GeoService] GeoLite2 ASN database loaded.');
+    } else {
+      console.warn(`[GeoService] GeoLite2-ASN.mmdb not found at ${mmdbAsnPath}.`);
+    }
   } catch (error) {
     console.error('[GeoService] Failed to initialize geo service:', error);
   }
@@ -46,13 +60,14 @@ export const initGeoService = async () => {
 /**
  * 查詢 IP 的完整地理資訊
  */
-export const getFullGeoInfo = async (ip: string): Promise<{ country: string, region: string, province: string, city: string, isp: string, raw: string, source: 'ip2region' | 'geoip-lite', ip2regionRaw?: string, geoipRaw?: string } | null> => {
-  if (!searcherV4 && !searcherV6) {
+export const getFullGeoInfo = async (ip: string): Promise<{ country: string, region: string, province: string, city: string, isp: string, raw: string, source: 'ip2region' | 'maxmind', ip2regionRaw?: string, geoipRaw?: string } | null> => {
+  if (!searcherV4 && !searcherV6 && !cityReader && !asnReader) {
     await initGeoService();
   }
 
   let ip2regionResult: string | null = null;
-  let geoipResult: geoip.Lookup | null = null;
+  let mmCity: any = null;
+  let mmAsn: any = null;
 
   // 1. 同時執行兩個引擎的查詢
   const isIPv6 = ip.includes(':');
@@ -63,19 +78,40 @@ export const getFullGeoInfo = async (ip: string): Promise<{ country: string, reg
   }
   
   try {
-    geoipResult = geoip.lookup(ip);
+    if (cityReader) mmCity = cityReader.get(ip);
+    if (asnReader) mmAsn = asnReader.get(ip);
   } catch (e) {
-    console.warn(`[GeoService] geoip-lite lookup failed for ${ip}:`, e);
+    console.warn(`[GeoService] MaxMind lookup failed for ${ip}:`, e);
   }
 
   const ip2regionRaw = ip2regionResult || undefined;
-  const geoipRaw = geoipResult ? JSON.stringify(geoipResult) : undefined;
+  const maxmindLite: any = {};
+  if (mmCity?.country?.iso_code) {
+    maxmindLite.country = mmCity.country.iso_code;
+    maxmindLite.timezone = mmCity.location?.time_zone || '';
+    if (typeof mmCity.location?.latitude === 'number' && typeof mmCity.location?.longitude === 'number') {
+      maxmindLite.ll = [mmCity.location.latitude, mmCity.location.longitude];
+    }
 
-  // 2. 判斷邏輯：以 geoip-lite 為國際標準 (解決 ip2region 把 TW/HK 歸類為 CN 的問題)
-  if (geoipResult && geoipResult.country) {
-    const isoCountry = geoipResult.country; // e.g. 'CN', 'TW', 'HK', 'US'
+    const locale = mmCity.country.iso_code === 'CN' ? 'zh-CN' : 'en';
+    const subdivision = Array.isArray(mmCity.subdivisions) ? mmCity.subdivisions[0] : undefined;
+    const regionIso = subdivision?.iso_code || '';
+    const regionName = subdivision?.names?.[locale] || subdivision?.names?.en || '';
+    maxmindLite.region = regionIso || regionName;
 
-    // 如果 geoip-lite 判斷為中國大陸 (CN)，我們才使用 ip2region 的高精度詳細資料
+    const cityName = mmCity.city?.names?.[locale] || mmCity.city?.names?.en || '';
+    maxmindLite.city = cityName;
+  }
+  if (mmAsn?.autonomous_system_number) {
+    maxmindLite.asn = mmAsn.autonomous_system_number;
+    maxmindLite.org = mmAsn.autonomous_system_organization || '';
+  }
+  const geoipRaw = Object.keys(maxmindLite).length > 0 ? JSON.stringify(maxmindLite) : undefined;
+
+  if (maxmindLite.country) {
+    const isoCountry = maxmindLite.country;
+
+    // 如果 MaxMind 判斷為中國大陸 (CN)，我們才使用 ip2region 的高精度詳細資料
     if (isoCountry === 'CN' && ip2regionResult) {
       const parts = ip2regionResult.split('|');
       const country = parts[0] === '0' ? 'UNKNOWN' : parts[0];
@@ -84,7 +120,7 @@ export const getFullGeoInfo = async (ip: string): Promise<{ country: string, reg
       const isp = parts[3] === '0' ? '' : parts[3];
 
       return {
-        country, // 回傳 '中国' 讓後續映射
+        country,
         region: province,
         province,
         city,
@@ -96,21 +132,23 @@ export const getFullGeoInfo = async (ip: string): Promise<{ country: string, reg
       };
     }
 
-    // 非中國大陸 IP (包含 TW, HK, MO 或海外)，完全信任 geoip-lite 的國際標準解析
+    const province = maxmindLite.region || '';
+    const city = maxmindLite.city || '';
+
     return {
-      country: isoCountry, // 直接回傳標準代碼 (如 TW, US)
-      region: geoipResult.region || '',
-      province: geoipResult.region || '', // geoip-lite 的 region 通常對應省/州
-      city: geoipResult.city || '',
-      isp: '', // geoip-lite 免費版無 ISP
-      raw: JSON.stringify(geoipResult),
-      source: 'geoip-lite',
+      country: isoCountry,
+      region: province,
+      province,
+      city,
+      isp: '',
+      raw: geoipRaw || '',
+      source: 'maxmind',
       ip2regionRaw,
       geoipRaw
     };
   }
   
-  // 3. Fallback (最差情況：geoip-lite 查不到，但 ip2region 之前有查到資訊)
+  // 3. Fallback
   if (ip2regionResult) {
     const parts = ip2regionResult.split('|');
     const country = parts[0] === '0' ? 'UNKNOWN' : parts[0];
@@ -153,8 +191,7 @@ export const getCountryCode = async (ip: string): Promise<string> => {
   const geo = await getFullGeoInfo(ip);
   
   if (geo && geo.country !== 'UNKNOWN') {
-    // 若為 geoip-lite 回傳的結果，它本身就已經是 ISO 2 字母代碼 (例如 'US', 'GB')
-    if (geo.source === 'geoip-lite') {
+    if (geo.source === 'maxmind') {
       return geo.country;
     }
     

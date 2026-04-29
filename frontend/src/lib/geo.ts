@@ -179,6 +179,8 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
               payload.geoip_lat = geoipObj.ll[0];
               payload.geoip_lon = geoipObj.ll[1];
             }
+            if (geoipObj.asn) payload.geoip_asn = geoipObj.asn;
+            if (geoipObj.org) payload.geoip_org = geoipObj.org;
           } catch (e) {
             console.warn('[Geo] Failed to parse geoipRaw for Umami tracking');
           }

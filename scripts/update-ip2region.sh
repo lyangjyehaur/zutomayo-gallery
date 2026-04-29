@@ -43,14 +43,43 @@ else
     rm -f "$DB_V6_PATH.tmp"
 fi
 
-# 3. 更新 geoip-lite (海外精準庫)
-echo "更新 geoip-lite 內建資料庫..."
-cd "$PROJECT_DIR/backend" || exit
-if command -v npm &> /dev/null; then
-    npm run updatedb || npx geoip-lite-update
-    echo "✅ geoip-lite 資料庫更新完成"
+# 3. 更新 MaxMind GeoLite2 (City + ASN)
+if [ -z "${MAXMIND_LICENSE_KEY}" ]; then
+    echo "⚠️ 未設定 MAXMIND_LICENSE_KEY，跳過 GeoLite2 下載。"
 else
-    echo "⚠️ 找不到 npm，跳過 geoip-lite 更新"
+    TMP_DIR="$(mktemp -d)"
+    CITY_URL="https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=${MAXMIND_LICENSE_KEY}&suffix=tar.gz"
+    ASN_URL="https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${MAXMIND_LICENSE_KEY}&suffix=tar.gz"
+
+    echo "下載 GeoLite2-City..."
+    if curl -f -L -o "${TMP_DIR}/GeoLite2-City.tar.gz" "${CITY_URL}"; then
+        tar -xzf "${TMP_DIR}/GeoLite2-City.tar.gz" -C "${TMP_DIR}"
+        CITY_MMDB="$(find "${TMP_DIR}" -name "GeoLite2-City.mmdb" -type f | head -n 1)"
+        if [ -n "${CITY_MMDB}" ]; then
+            cp "${CITY_MMDB}" "${DATA_DIR}/GeoLite2-City.mmdb"
+            echo "✅ GeoLite2-City 更新完成"
+        else
+            echo "❌ 找不到 GeoLite2-City.mmdb"
+        fi
+    else
+        echo "❌ GeoLite2-City 下載失敗！"
+    fi
+
+    echo "下載 GeoLite2-ASN..."
+    if curl -f -L -o "${TMP_DIR}/GeoLite2-ASN.tar.gz" "${ASN_URL}"; then
+        tar -xzf "${TMP_DIR}/GeoLite2-ASN.tar.gz" -C "${TMP_DIR}"
+        ASN_MMDB="$(find "${TMP_DIR}" -name "GeoLite2-ASN.mmdb" -type f | head -n 1)"
+        if [ -n "${ASN_MMDB}" ]; then
+            cp "${ASN_MMDB}" "${DATA_DIR}/GeoLite2-ASN.mmdb"
+            echo "✅ GeoLite2-ASN 更新完成"
+        else
+            echo "❌ 找不到 GeoLite2-ASN.mmdb"
+        fi
+    else
+        echo "❌ GeoLite2-ASN 下載失敗！"
+    fi
+
+    rm -rf "${TMP_DIR}"
 fi
 
 # 重啟後端服務讓記憶體重新載入最新的資料庫

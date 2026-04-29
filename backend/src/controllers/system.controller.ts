@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { getCountryCode, getFullGeoInfo } from '../services/geo.service.js';
 import { redisClient } from '../services/redis.service.js';
+const isProduction = process.env.NODE_ENV === 'production';
 
 // 取得編譯時間與版本號的變數 (只在伺服器啟動時讀取一次)
 let buildTime: string | null = null;
@@ -59,6 +60,19 @@ export const getSystemStatus = async (req: Request, res: Response, next: NextFun
       } 
     });
   } catch (error) {
+    if (!isProduction) {
+      res.json({
+        success: true,
+        data: {
+          maintenance: false,
+          type: 'data',
+          eta: null,
+          buildTime,
+          version: appVersion,
+        },
+      });
+      return;
+    }
     next(error);
   }
 };
@@ -101,10 +115,10 @@ export const getClientGeo = async (req: Request, res: Response, next: NextFuncti
       success: true, 
       data: { 
         country: countryCode, 
-        rawCountry: geoInfo ? (geoInfo.source === 'geoip-lite' ? geoInfo.country : geoInfo.country) : 'UNKNOWN', // 單獨回傳原始的國家名稱
+        rawCountry: geoInfo ? geoInfo.country : 'UNKNOWN',
         rawString: geoInfo ? geoInfo.raw : '', // 回傳主要的原始字串
         ip2regionRaw: geoInfo?.ip2regionRaw, // 獨立回傳 ip2region 解析結果
-        geoipRaw: geoInfo?.geoipRaw,         // 獨立回傳 geoip-lite 解析結果
+        geoipRaw: geoInfo?.geoipRaw,
         source: geoInfo ? geoInfo.source : 'fallback',
         ip: clientIp, // 將真實 IP 傳給前端，讓前端可以上報給 Umami
         details: geoInfo // 把詳細資訊也傳給前端備用
