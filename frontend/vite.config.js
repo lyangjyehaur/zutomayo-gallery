@@ -42,7 +42,7 @@ export default defineConfig({
       registerType: 'prompt',
       injectRegister: 'auto',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,ttf}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,ttf,webmanifest}'],
         navigateFallback: 'index.html',
         navigateFallbackDenylist: [/^\/api\//, /^\/admin\//],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 放寬到 5MB 以容納大型 JS chunk
@@ -80,53 +80,7 @@ export default defineConfig({
       devOptions: {
         enabled: true
       },
-      manifest: {
-        name: 'ZUTOMAYO Gallery',
-        short_name: 'ZTMY Gallery',
-        description: 'ZUTOMAYO (ずっと真夜中でいいのに。) 粉絲自建 MV 設定圖資料庫。',
-        theme_color: '#0d0d0f',
-        background_color: '#0d0d0f',
-        display: 'standalone',
-        icons: [
-          {
-            src: 'pwa-64x64.png',
-            sizes: '64x64',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
-          },
-          {
-            src: 'maskable-icon-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable'
-          }
-        ],
-        shortcuts: [
-          {
-            name: "所有 MV (All MVs)",
-            short_name: "Gallery",
-            description: "瀏覽所有 MV 設定圖",
-            url: "/",
-            icons: [{ src: "/pwa-192x192.png", sizes: "192x192" }]
-          },
-          {
-            name: "我的收藏 (Favorites)",
-            short_name: "Favorites",
-            description: "查看已收藏的內容",
-            url: "/zh-Hant/favorites",
-            icons: [{ src: "/pwa-192x192.png", sizes: "192x192" }]
-          }
-        ]
-      }
+      manifest: false
     })
   ],
   resolve: {

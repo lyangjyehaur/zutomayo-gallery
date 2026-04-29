@@ -1858,6 +1858,12 @@ function App({
                             <li className="flex items-start gap-2 group">
                               <span className="text-main font-black">►</span>
                               <div>
+                                <a href="https://jhenty.cn" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">立花</a><br /><span className="opacity-70 ml-2 text-sm">{t("app.thanks_rikka", "立花老師的像素風 favicon 換上去真的很加分，不愧是專業的出手，感謝支援門面")}</span>
+                              </div>
+                            </li>
+                            <li className="flex items-start gap-2 group">
+                              <span className="text-main font-black">►</span>
+                              <div>
                                 <a href="https://github.com/TakWolf/fusion-pixel-font" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">縫合像素字體 / Fusion Pixel Font</a><br /><span className="opacity-70 ml-2 text-sm">{t("app.thanks_fusion_pixel", "提供完整「泛中日韓語言特定字形」開源字型支援")}</span>
                               </div>
                             </li>
