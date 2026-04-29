@@ -154,6 +154,12 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
       
       // 將精確的地理與 IP 資訊上報給 Umami (如果有的話)
       if ((window as any).umami && typeof (window as any).umami.track === 'function') {
+        const truncate = (v: unknown, maxLen = 3500) => {
+          if (typeof v !== 'string') return v;
+          if (v.length <= maxLen) return v;
+          return v.slice(0, maxLen);
+        };
+
         const payload: any = {
             country: ipCountry,
             raw_country: rawCountry || ipCountry, // 同時上報原始的中文國家名稱
@@ -218,6 +224,19 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
         }
         
         (window as any).umami.track('Z_Geo_Location_Detected', payload);
+
+        if (geoipRaw || maxmindCityRaw || maxmindAsnRaw) {
+          const rawPayload: any = {
+            country: ipCountry,
+            raw_country: rawCountry || ipCountry,
+            ip2region_raw: truncate(ip2regionRaw || ''),
+            geoip_raw: truncate(geoipRaw || ''),
+            maxmind_city_raw: truncate(maxmindCityRaw || ''),
+            maxmind_asn_raw: truncate(maxmindAsnRaw || ''),
+          };
+          if (ip) rawPayload.ip = ip;
+          (window as any).umami.track('Z_Geo_Raw_Detected', rawPayload);
+        }
       }
     }
     
