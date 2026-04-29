@@ -134,18 +134,30 @@ app.use(session({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+await initRedis();
+
+const createRateLimitStore = (prefix?: string) => {
+  if (!redisClient.isOpen) return undefined;
+  try {
+    return new RedisStore({
+      sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+      ...(prefix ? { prefix } : {}),
+    });
+  } catch {
+    return undefined;
+  }
+};
+
+const apiRateLimitStore = createRateLimitStore();
+const writeRateLimitStore = createRateLimitStore('rl:write:');
+
 // 請求限流 - 一般 API
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 分鐘
   max: 1000, // 每個 IP 1000 次請求
   standardHeaders: true,
   legacyHeaders: false,
-  // 如果在本地開發且沒有連線，不提供 store，rate-limit 會自動使用 MemoryStore
-  ...(isProduction || process.env.REDIS_URL ? {
-    store: new RedisStore({
-      sendCommand: (...args: string[]) => redisClient.sendCommand(args),
-    })
-  } : {}),
+  ...(apiRateLimitStore ? { store: apiRateLimitStore } : {}),
   message: {
     success: false,
     error: '請求過於頻繁，請稍後再試',
@@ -164,12 +176,7 @@ const apiLimiter = rateLimit({
 const writeLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 分鐘 (原為 1 小時)
   max: 200, // 每個 IP 200 次寫入 (原為 30 次)
-  ...(isProduction || process.env.REDIS_URL ? {
-    store: new RedisStore({
-      sendCommand: (...args: string[]) => redisClient.sendCommand(args),
-      prefix: 'rl:write:', // 加上前綴以區分不同限流器
-    })
-  } : {}),
+  ...(writeRateLimitStore ? { store: writeRateLimitStore } : {}),
   message: {
     success: false,
     error: '寫入操作過於頻繁，請稍後再試',
