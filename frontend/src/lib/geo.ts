@@ -22,6 +22,17 @@ export interface GeoInfo {
 let geoCache: GeoInfo | null = null;
 let geoInitPromise: Promise<GeoInfo> | null = null;
 
+const getGeoSessionId = (): string => {
+  if (typeof window === 'undefined') return '';
+  const existing = sessionStorage.getItem('geo_session_id');
+  if (existing) return existing;
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  const id = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
+  sessionStorage.setItem('geo_session_id', id);
+  return id;
+};
+
 const sha256Hex = async (input: string): Promise<string> => {
   const bytes = new TextEncoder().encode(input);
   const digest = await crypto.subtle.digest('SHA-256', bytes);
@@ -61,6 +72,7 @@ export const clearGeoCache = () => {
   geoInitPromise = null;
   if (typeof window !== 'undefined') {
     sessionStorage.removeItem('geo_info');
+    sessionStorage.removeItem('geo_session_id');
     sessionStorage.removeItem('umami_geo_location_reported');
     sessionStorage.removeItem('umami_geo_raw_reported');
   }
@@ -258,11 +270,13 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
 
         let geoRawId: string | null = null;
         try {
+          const geoSessionId = getGeoSessionId();
           const resp = await fetch(geoRawApi, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             keepalive: true,
             body: JSON.stringify({
+              geo_session_id: geoSessionId,
               ip,
               country: ipCountry,
               raw_country: rawCountryStr,

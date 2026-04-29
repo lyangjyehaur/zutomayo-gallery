@@ -135,6 +135,7 @@ export const getClientGeo = async (req: Request, res: Response, next: NextFuncti
 export const saveGeoRaw = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const {
+      geo_session_id,
       ip,
       country,
       raw_country,
@@ -155,7 +156,17 @@ export const saveGeoRaw = async (req: Request, res: Response, next: NextFunction
       return;
     }
 
+    const sessionId = typeof geo_session_id === 'string' && geo_session_id.length > 0 ? geo_session_id : null;
+    if (sessionId) {
+      const existing = await GeoRawLogModel.findOne({ where: { geo_session_id: sessionId } });
+      if (existing) {
+        res.json({ success: true, data: { id: (existing as any).id } });
+        return;
+      }
+    }
+
     const row = await GeoRawLogModel.create({
+      geo_session_id: sessionId,
       ip,
       country: typeof country === 'string' ? country : null,
       raw_country: typeof raw_country === 'string' ? raw_country : null,

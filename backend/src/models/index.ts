@@ -147,6 +147,7 @@ export const SysAnnouncementModel = sequelize.define('SysAnnouncement', {
 
 export const GeoRawLogModel = sequelize.define('GeoRawLog', {
   id: { type: DataTypes.STRING(36), primaryKey: true, defaultValue: generateShortId },
+  geo_session_id: { type: DataTypes.STRING(32) },
   ip: { type: DataTypes.STRING },
   country: { type: DataTypes.STRING },
   raw_country: { type: DataTypes.STRING },
@@ -166,6 +167,7 @@ export const GeoRawLogModel = sequelize.define('GeoRawLog', {
   createdAt: 'created_at',
   updatedAt: false,
   indexes: [
+    { unique: true, fields: ['geo_session_id'] },
     { fields: ['ip'] },
     { fields: ['geoip_sha256'] },
     { fields: ['maxmind_city_sha256'] },
