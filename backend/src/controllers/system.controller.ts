@@ -115,10 +115,12 @@ export const getClientGeo = async (req: Request, res: Response, next: NextFuncti
       success: true, 
       data: { 
         country: countryCode, 
-        rawCountry: geoInfo ? geoInfo.country : 'UNKNOWN',
+        rawCountry: geoInfo ? (geoInfo.source === 'geoip-lite' ? geoInfo.country : geoInfo.country) : 'UNKNOWN', // 單獨回傳原始的國家名稱
         rawString: geoInfo ? geoInfo.raw : '', // 回傳主要的原始字串
         ip2regionRaw: geoInfo?.ip2regionRaw, // 獨立回傳 ip2region 解析結果
-        geoipRaw: geoInfo?.geoipRaw,
+        geoipRaw: geoInfo?.geoipRaw,         // 獨立回傳 geoip-lite 解析結果
+        maxmindCityRaw: geoInfo?.maxmindCityRaw,
+        maxmindAsnRaw: geoInfo?.maxmindAsnRaw,
         source: geoInfo ? geoInfo.source : 'fallback',
         ip: clientIp, // 將真實 IP 傳給前端，讓前端可以上報給 Umami
         details: geoInfo // 把詳細資訊也傳給前端備用

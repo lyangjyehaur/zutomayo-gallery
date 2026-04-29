@@ -24,13 +24,15 @@ import { MVDetailsModal } from "@/components/MVDetailsModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AdminPage } from "@/pages/AdminPage";
-import { AdminDBPage } from "@/pages/AdminDBPage";
 import { AdminArtistsPage } from "@/pages/AdminArtistsPage";
 import { AdminAlbumsPage } from "@/pages/AdminAlbumsPage";
 import { AdminAppleMusicAlbumsPage } from "@/pages/AdminAppleMusicAlbumsPage";
 import { AdminDictsPage } from "@/pages/AdminDictsPage";
 import { AdminFanArtPage } from "@/pages/AdminFanArtPage";
 import { AdminStagingFanartPage } from "@/pages/AdminStagingFanartPage";
+import { AdminSystemUsersPage } from "@/pages/AdminSystemUsersPage";
+import { AdminSystemRolesPage } from "@/pages/AdminSystemRolesPage";
+import { AdminSystemMenusPage } from "@/pages/AdminSystemMenusPage";
 import { AppleMusicGalleryPage } from "@/pages/AppleMusicGalleryPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { Demo3DCardPage } from "@/pages/Demo3DCardPage";
@@ -344,23 +346,17 @@ function App({
   }, []);
 
   useEffect(() => {
-    const saved = localStorage.getItem("ztmy_admin_pwd");
-    if (!saved) return;
-
     const apiUrl = import.meta.env.VITE_API_URL || "/api/mvs";
+    const authApiUrl = apiUrl.replace(/\/mvs$/, "/auth");
     let cancelled = false;
 
-    fetch(`${apiUrl}/verify-admin`, {
-      method: "POST",
-      headers: { "x-admin-password": saved },
-    })
+    fetch(`${authApiUrl}/me`, { credentials: "include" })
       .then((res) => {
         if (cancelled) return;
         if (res.ok) {
           setIsAdminAuthenticated(true);
           return;
         }
-        localStorage.removeItem("ztmy_admin_pwd");
         setIsAdminAuthenticated(false);
       })
       .catch(() => {});
@@ -874,7 +870,7 @@ function App({
         
         // 取得跨 Session 的使用者偏好設定
         const uiLanguage = i18n.language || browserLanguage;
-        const isAdmin = !!localStorage.getItem('ztmy_admin_pwd');
+        const isAdmin = isAdminAuthenticated;
         const isChinaNetwork = localStorage.getItem('is_china') === 'true';
         const enableIpGeo = localStorage.getItem('enable_ip_geo') !== 'false';
 
@@ -2788,13 +2784,16 @@ export default function RootApp() {
                 />
               }
             />
-            <Route path="db" element={<AdminDBPage />} />
             <Route path="artists" element={<AdminArtistsPage />} />
             <Route path="albums" element={<AdminAlbumsPage />} />
             <Route path="apple-music-albums" element={<AdminAppleMusicAlbumsPage />} />
             <Route path="dicts" element={<AdminDictsPage />} />
             <Route path="fanart" element={<AdminFanArtPage />} />
             <Route path="staging-fanarts" element={<AdminStagingFanartPage />} />
+            <Route path="system" element={<Navigate to="/admin/system/users" replace />} />
+            <Route path="system/users" element={<AdminSystemUsersPage />} />
+            <Route path="system/roles" element={<AdminSystemRolesPage />} />
+            <Route path="system/menus" element={<AdminSystemMenusPage />} />
           </Route>
           <Route path="/debug/fb/:mvid?" element={<DebugFancyboxMasonry />} />
           <Route path="/debug/modal" element={<DebugMVModalLightbox />} />

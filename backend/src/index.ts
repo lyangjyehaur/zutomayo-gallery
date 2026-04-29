@@ -5,6 +5,8 @@ import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import compression from 'compression';
+import session from 'express-session';
+import connectSessionSequelize from 'connect-session-sequelize';
 import RedisStore from 'rate-limit-redis';
 import mvRoutes from './routes/mv.routes.js';
 import authRoutes from './routes/auth.routes.js';
@@ -14,16 +16,29 @@ import systemRoutes from './routes/system.routes.js';
 import sitemapRoutes from './routes/sitemap.routes.js';
 import webhookRoutes from './routes/webhook.routes.js';
 import albumRoutes from './routes/album.routes.js';
+import adminSystemRoutes from './routes/admin-system.routes.js';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { sequelize, AuthPasskey, AuthSetting } from './services/pg.service.js';
 import { initGeoService } from './services/geo.service.js';
 import { initRedis, redisClient } from './services/redis.service.js';
 import { initMeiliSearch, syncDataToMeili } from './services/meili.service.js';
 import { initQueues, bullBoardAdapter } from './services/queue.service.js';
-import { requireAdmin } from './middleware/auth.middleware.js';
+import { getSessionCookieOptions, getSessionMaxAgeMs, sessionCookieName } from './config/session.js';
 
 const app = express();
 const PORT = process.env.PORT || 5010;
+const isProduction = process.env.NODE_ENV === 'production';
+const useDbSessionStore = isProduction || process.env.SESSION_STORE === 'sequelize';
+const sessionMaxAgeMs = getSessionMaxAgeMs();
+
+const sessionStore: session.Store = useDbSessionStore
+  ? new (connectSessionSequelize(session.Store))({
+    db: sequelize,
+    tableName: 'sessions',
+    expiration: sessionMaxAgeMs,
+    checkExpirationInterval: Math.min(sessionMaxAgeMs, 15 * 60 * 1000),
+  })
+  : new session.MemoryStore();
 
 // 信任反向代理（如 Nginx），這樣 express-rate-limit 才能獲取到正確的真實客戶端 IP
 const trustProxy = process.env.TRUST_PROXY;
@@ -35,44 +50,6 @@ if (trustProxy === 'true') {
   app.set('trust proxy', trustProxy);
 } else {
   app.set('trust proxy', false);
-}
-
-// 初始化服務
-try {
-  await initRedis();
-  
-  await sequelize.authenticate();
-  
-  // 自動同步 Auth 相關表結構 (避免新環境/測試庫缺少表)
-  await AuthPasskey.sync({ alter: true });
-  await AuthSetting.sync({ alter: true });
-  
-  // 同步主資料庫的表結構 (確保 is_hidden 等新欄位被建立)
-  const { syncModels } = await import('./models/index.js');
-  await syncModels();
-  
-  // 執行跨版本增量更新 (Migrations)
-  try {
-    const { migrator } = await import('./scripts/migrate.js');
-    await migrator.up();
-    console.log('Database migrations executed successfully');
-  } catch (migErr) {
-    console.error('Migration failed during startup:', migErr);
-    // 可根據需求決定是否要拋出錯誤阻斷啟動
-  }
-  
-  console.log('PostgreSQL Database connected and all tables synced');
-  
-  // 啟動時初始化並同步 Meilisearch 資料
-  await initMeiliSearch();
-  await syncDataToMeili();
-  initGeoService();
-  console.log('IP2Region DB initialized');
-  
-  // 啟動 Twitter 監聽服務
-  await initQueues();
-} catch (error) {
-  console.error('Failed to initialize services:', error);
 }
 
 // CORS 配置 - 僅允許特定來源
@@ -87,8 +64,6 @@ const allowedOrigins = [
 if (process.env.ALLOWED_ORIGINS) {
   allowedOrigins.push(...process.env.ALLOWED_ORIGINS.split(','));
 }
-
-const isProduction = process.env.NODE_ENV === 'production';
 
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
@@ -147,6 +122,15 @@ app.get('/health', (req, res) => res.json({
 
 app.use(cors(corsOptions));
 app.use(compression()); // 啟用 gzip/brotli 壓縮，大幅減少大型 JSON 的傳輸體積
+app.use(session({
+  name: sessionCookieName,
+  secret: process.env.SESSION_SECRET || process.env.ADMIN_PASSWORD || 'dev-session-secret',
+  store: sessionStore,
+  proxy: Boolean(app.get('trust proxy')),
+  resave: false,
+  saveUninitialized: false,
+  cookie: getSessionCookieOptions(),
+}));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -217,6 +201,7 @@ app.use('/api/system', systemRoutes);
 app.use('/api/fanarts', fanartRoutes);
 app.use('/api/staging-fanarts', stagingFanartRoutes);
 app.use('/api/webhook', webhookRoutes);
+app.use('/api/admin/system', adminSystemRoutes);
 
 // 如果 bull-board 初始化成功，掛載可視化介面路由
 if (bullBoardAdapter) {
@@ -237,3 +222,44 @@ app.listen(PORT, () => {
   console.log(`ZTMY Backend running on http://localhost:${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
+
+const initServices = async () => {
+  try {
+    await initRedis();
+    
+    await sequelize.authenticate();
+    
+    await AuthPasskey.sync({ alter: true });
+    await AuthSetting.sync({ alter: true });
+    
+    const { syncModels } = await import('./models/index.js');
+    await syncModels();
+    
+    try {
+      const { migrator } = await import('./scripts/migrate.js');
+      await migrator.up();
+      const { seedAdminRBAC } = await import('./seeds/admin.seed.js');
+      await seedAdminRBAC();
+      console.log('Database migrations executed successfully');
+    } catch (migErr) {
+      console.error('Migration failed during startup:', migErr);
+    }
+
+    if (useDbSessionStore && 'sync' in sessionStore && typeof (sessionStore as any).sync === 'function') {
+      await (sessionStore as any).sync();
+    }
+    
+    console.log('PostgreSQL Database connected and all tables synced');
+    
+    await initMeiliSearch();
+    await syncDataToMeili();
+    initGeoService();
+    console.log('IP2Region DB initialized');
+    
+    await initQueues();
+  } catch (error) {
+    console.error('Failed to initialize services:', error);
+  }
+};
+
+void initServices();

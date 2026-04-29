@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { getSystemStatus, toggleMaintenance, getClientGeo, getDictionaries, updateDictionaries, clearRedisApiCache } from '../controllers/system.controller.js';
 import { syncImagesToR2 } from '../controllers/r2.controller.js';
 import { rebuildR2 } from '../controllers/r2_rebuild.js';
-import { requireAdmin } from '../middleware/auth.middleware.js';
+import { requireAuth, requirePermission } from '../middleware/auth.middleware.js';
+import { asyncHandler } from '../middleware/errorHandler.js';
 
 const router = Router();
 
@@ -21,42 +22,49 @@ const isPrivateIp = (ip: string): boolean => {
   return false;
 };
 
-const requireR2SyncAuth = async (req: any, res: any, next: any): Promise<void> => {
-  const token = req.headers['x-r2-sync-token'];
-  const expected = process.env.R2_SYNC_TOKEN;
-  if (typeof token === 'string' && expected && token === expected) {
-    const ip = getClientIp(req);
-    if (isPrivateIp(ip)) {
-      next();
+const requireR2SyncAuth = (permissionCode: string) => {
+  const requirePerm = requirePermission(permissionCode);
+  return asyncHandler(async (req: any, res: any, next: any): Promise<void> => {
+    const token = req.headers['x-r2-sync-token'];
+    const expected = process.env.R2_SYNC_TOKEN;
+    if (typeof token === 'string' && expected && token === expected) {
+      const ip = getClientIp(req);
+      if (isPrivateIp(ip)) {
+        next();
+        return;
+      }
+      res.status(403).json({ success: false, message: 'Forbidden' });
       return;
     }
-    res.status(403).json({ success: false, message: 'Forbidden' });
-    return;
-  }
-  await requireAdmin(req, res, next);
+    await requireAuth(req, res, async (err?: any) => {
+      if (err) next(err);
+    });
+    if (!req.user) return;
+    await requirePerm(req, res, next);
+  });
 };
 
 // Public: Get system status (maintenance mode)
-router.get('/status', getSystemStatus);
+router.get('/status', asyncHandler(getSystemStatus));
 
 // Public: Get client geo location info
-router.get('/geo', getClientGeo);
+router.get('/geo', asyncHandler(getClientGeo));
 
 // Admin: Toggle maintenance mode
-router.put('/maintenance', requireAdmin, toggleMaintenance);
+router.put('/maintenance', requireAuth, requirePermission('admin.system.maintenance.update'), asyncHandler(toggleMaintenance));
 
 // Admin: Get dictionaries
-router.get('/dicts', getDictionaries);
+router.get('/dicts', asyncHandler(getDictionaries));
 
 // Admin: Update dictionaries
-router.post('/dicts', requireAdmin, updateDictionaries);
+router.post('/dicts', requireAuth, requirePermission('admin.system.dicts.update'), asyncHandler(updateDictionaries));
 
-router.post('/cache/clear', requireAdmin, clearRedisApiCache);
+router.post('/cache/clear', requireAuth, requirePermission('admin.system.cache.clear'), asyncHandler(clearRedisApiCache));
 
 // Admin: Sync existing Twitter images to R2 Bucket
-router.post('/r2-sync', requireR2SyncAuth, syncImagesToR2);
+router.post('/r2-sync', requireR2SyncAuth('admin.system.r2.sync'), asyncHandler(syncImagesToR2));
 
-router.post('/r2-rebuild', requireR2SyncAuth, rebuildR2);
+router.post('/r2-rebuild', requireR2SyncAuth('admin.system.r2.rebuild'), asyncHandler(rebuildR2));
 
 // Public: Get signed image proxy URL and redirect
 router.get('/image/proxy', (req, res) => {

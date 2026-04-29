@@ -8,6 +8,8 @@ export interface GeoInfo {
   rawString?: string;  // 完整的原始字串 (主要來源)
   ip2regionRaw?: string; // 獨立回傳 ip2region 解析結果
   geoipRaw?: string;     // 獨立回傳 geoip-lite 解析結果
+  maxmindCityRaw?: string;
+  maxmindAsnRaw?: string;
   details?: {
     country: string;
     region: string;
@@ -57,7 +59,7 @@ export const clearGeoCache = () => {
  * 獲取 IP 所在的國家代碼
  * 使用 Promise.any 實現競速機制 (Race)，哪個 API 先回應就用哪個
  */
-const fetchIpCountry = async (): Promise<{ countryCode: string, ip?: string, rawCountry?: string, rawString?: string, ip2regionRaw?: string, geoipRaw?: string, details?: GeoInfo['details'] }> => {
+const fetchIpCountry = async (): Promise<{ countryCode: string, ip?: string, rawCountry?: string, rawString?: string, ip2regionRaw?: string, geoipRaw?: string, maxmindCityRaw?: string, maxmindAsnRaw?: string, details?: GeoInfo['details'] }> => {
   const apiUrl = (import.meta.env.VITE_API_URL || '/api/mvs').replace(/\/mvs$/, '/system/geo');
 
   try {
@@ -75,6 +77,8 @@ const fetchIpCountry = async (): Promise<{ countryCode: string, ip?: string, raw
         rawString: json.data.rawString,   // 後端傳來的完整原始字串
         ip2regionRaw: json.data.ip2regionRaw,
         geoipRaw: json.data.geoipRaw,
+        maxmindCityRaw: json.data.maxmindCityRaw,
+        maxmindAsnRaw: json.data.maxmindAsnRaw,
         details: json.data.details
       };
     }
@@ -138,12 +142,12 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
       return geoCache;
     }
 
-    const { countryCode, ip, rawCountry, rawString, ip2regionRaw, geoipRaw, details } = await fetchIpCountry();
+    const { countryCode, ip, rawCountry, rawString, ip2regionRaw, geoipRaw, maxmindCityRaw, maxmindAsnRaw, details } = await fetchIpCountry();
     const ipCountry = countryCode;
     const isChinaIP = ipCountry === 'CN';
     const isVPN = !isChinaIP && isChinaTimezone;
 
-    geoCache = { ipCountry, isChinaTimezone, isChinaIP, isVPN, ip, rawCountry, rawString, ip2regionRaw, geoipRaw, details };
+    geoCache = { ipCountry, isChinaTimezone, isChinaIP, isVPN, ip, rawCountry, rawString, ip2regionRaw, geoipRaw, maxmindCityRaw, maxmindAsnRaw, details };
     
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('geo_info', JSON.stringify(geoCache));
@@ -179,10 +183,37 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
               payload.geoip_lat = geoipObj.ll[0];
               payload.geoip_lon = geoipObj.ll[1];
             }
-            if (geoipObj.asn) payload.geoip_asn = geoipObj.asn;
-            if (geoipObj.org) payload.geoip_org = geoipObj.org;
           } catch (e) {
             console.warn('[Geo] Failed to parse geoipRaw for Umami tracking');
+          }
+        }
+
+        if (maxmindCityRaw) {
+          try {
+            const mm = JSON.parse(maxmindCityRaw);
+            if (mm?.country?.iso_code) payload.maxmind_country = mm.country.iso_code;
+            const mmRegion = mm?.subdivisions?.[0]?.iso_code || '';
+            if (mmRegion) payload.maxmind_region = mmRegion;
+            const mmCity = mm?.city?.names?.en || '';
+            if (mmCity) payload.maxmind_city = mmCity;
+            const mmTz = mm?.location?.time_zone || '';
+            if (mmTz) payload.maxmind_timezone = mmTz;
+            const lat = mm?.location?.latitude;
+            const lon = mm?.location?.longitude;
+            if (typeof lat === 'number') payload.maxmind_lat = lat;
+            if (typeof lon === 'number') payload.maxmind_lon = lon;
+          } catch (e) {
+            console.warn('[Geo] Failed to parse maxmindCityRaw for Umami tracking');
+          }
+        }
+
+        if (maxmindAsnRaw) {
+          try {
+            const mmAsn = JSON.parse(maxmindAsnRaw);
+            if (mmAsn?.autonomous_system_number) payload.maxmind_asn = mmAsn.autonomous_system_number;
+            if (mmAsn?.autonomous_system_organization) payload.maxmind_org = mmAsn.autonomous_system_organization;
+          } catch (e) {
+            console.warn('[Geo] Failed to parse maxmindAsnRaw for Umami tracking');
           }
         }
         

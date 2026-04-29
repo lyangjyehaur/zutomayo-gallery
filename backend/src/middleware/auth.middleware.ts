@@ -42,3 +42,7 @@ export const requireAdmin = async (req: Request, res: Response, next: NextFuncti
     }
   }
 };
+
+export const requireAuth = requireAdmin;
+
+export const requirePermission = (_permissionCode: string) => requireAdmin;

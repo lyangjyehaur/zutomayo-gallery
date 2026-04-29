@@ -1,5 +1,6 @@
 import path from 'path';
 import fs from 'fs';
+import geoip from 'geoip-lite';
 import maxmind, { type Reader } from 'maxmind';
 import { fileURLToPath } from 'url';
 import { Ip2Region, Ip2RegionV6 } from '../utils/ip2region.js';
@@ -11,13 +12,13 @@ const __dirname = path.dirname(__filename);
 const dbDir = path.join(__dirname, '../../data');
 const dbV4Path = path.join(dbDir, 'ip2region.xdb');
 const dbV6Path = path.join(dbDir, 'ip2region_v6.xdb');
-const mmdbCityPath = path.join(dbDir, 'GeoLite2-City.mmdb');
-const mmdbAsnPath = path.join(dbDir, 'GeoLite2-ASN.mmdb');
+const maxmindCityPath = path.join(dbDir, 'GeoLite2-City.mmdb');
+const maxmindAsnPath = path.join(dbDir, 'GeoLite2-ASN.mmdb');
 
 let searcherV4: Ip2Region | null = null;
 let searcherV6: Ip2RegionV6 | null = null;
-let cityReader: Reader<any> | null = null;
-let asnReader: Reader<any> | null = null;
+let maxmindCityReader: Reader<any> | null = null;
+let maxmindAsnReader: Reader<any> | null = null;
 
 /**
  * 初始化 Geo 服務 (載入資料庫至記憶體)
@@ -25,6 +26,7 @@ let asnReader: Reader<any> | null = null;
  */
 export const initGeoService = async () => {
   try {
+    // 1. 載入 ip2region (中國大陸高精度)
     if (fs.existsSync(dbV4Path)) {
       searcherV4 = new Ip2Region(dbV4Path);
       console.log('[GeoService] ip2region v4 database loaded into memory.');
@@ -39,19 +41,24 @@ export const initGeoService = async () => {
       console.warn(`[GeoService] ip2region_v6.xdb not found at ${dbV6Path}. Please run the update script.`);
     }
 
-    if (fs.existsSync(mmdbCityPath)) {
-      cityReader = await maxmind.open(mmdbCityPath, { cache: { max: 5000 }, watchForUpdates: false });
-      console.log('[GeoService] GeoLite2 City database loaded.');
-    } else {
-      console.warn(`[GeoService] GeoLite2-City.mmdb not found at ${mmdbCityPath}.`);
+    if (fs.existsSync(maxmindCityPath)) {
+      maxmindCityReader = await maxmind.open(maxmindCityPath, {
+        watchForUpdates: false,
+        cache: { max: 1000 }
+      });
+      console.log('[GeoService] MaxMind GeoLite2 City database loaded.');
     }
 
-    if (fs.existsSync(mmdbAsnPath)) {
-      asnReader = await maxmind.open(mmdbAsnPath, { cache: { max: 5000 }, watchForUpdates: false });
-      console.log('[GeoService] GeoLite2 ASN database loaded.');
-    } else {
-      console.warn(`[GeoService] GeoLite2-ASN.mmdb not found at ${mmdbAsnPath}.`);
+    if (fs.existsSync(maxmindAsnPath)) {
+      maxmindAsnReader = await maxmind.open(maxmindAsnPath, {
+        watchForUpdates: false,
+        cache: { max: 2000 }
+      });
+      console.log('[GeoService] MaxMind GeoLite2 ASN database loaded.');
     }
+
+    // 2. geoip-lite 內建自帶資料庫，會在首次呼叫 lookup 時自動載入記憶體
+    console.log('[GeoService] geoip-lite is ready.');
   } catch (error) {
     console.error('[GeoService] Failed to initialize geo service:', error);
   }
@@ -60,14 +67,15 @@ export const initGeoService = async () => {
 /**
  * 查詢 IP 的完整地理資訊
  */
-export const getFullGeoInfo = async (ip: string): Promise<{ country: string, region: string, province: string, city: string, isp: string, raw: string, source: 'ip2region' | 'maxmind', ip2regionRaw?: string, geoipRaw?: string } | null> => {
-  if (!searcherV4 && !searcherV6 && !cityReader && !asnReader) {
+export const getFullGeoInfo = async (ip: string): Promise<{ country: string, region: string, province: string, city: string, isp: string, raw: string, source: 'ip2region' | 'geoip-lite' | 'maxmind', ip2regionRaw?: string, geoipRaw?: string, maxmindCityRaw?: string, maxmindAsnRaw?: string } | null> => {
+  if (!searcherV4 && !searcherV6 && !maxmindCityReader && !maxmindAsnReader) {
     await initGeoService();
   }
 
   let ip2regionResult: string | null = null;
-  let mmCity: any = null;
-  let mmAsn: any = null;
+  let geoipResult: geoip.Lookup | null = null;
+  let maxmindCityResult: any | null = null;
+  let maxmindAsnResult: any | null = null;
 
   // 1. 同時執行兩個引擎的查詢
   const isIPv6 = ip.includes(':');
@@ -78,40 +86,36 @@ export const getFullGeoInfo = async (ip: string): Promise<{ country: string, reg
   }
   
   try {
-    if (cityReader) mmCity = cityReader.get(ip);
-    if (asnReader) mmAsn = asnReader.get(ip);
+    geoipResult = geoip.lookup(ip);
   } catch (e) {
-    console.warn(`[GeoService] MaxMind lookup failed for ${ip}:`, e);
+    console.warn(`[GeoService] geoip-lite lookup failed for ${ip}:`, e);
   }
 
   const ip2regionRaw = ip2regionResult || undefined;
-  const maxmindLite: any = {};
-  if (mmCity?.country?.iso_code) {
-    maxmindLite.country = mmCity.country.iso_code;
-    maxmindLite.timezone = mmCity.location?.time_zone || '';
-    if (typeof mmCity.location?.latitude === 'number' && typeof mmCity.location?.longitude === 'number') {
-      maxmindLite.ll = [mmCity.location.latitude, mmCity.location.longitude];
+  const geoipRaw = geoipResult ? JSON.stringify(geoipResult) : undefined;
+  if (maxmindCityReader) {
+    try {
+      maxmindCityResult = maxmindCityReader.get(ip) || null;
+    } catch (e) {
+      console.warn(`[GeoService] maxmind city lookup failed for ${ip}:`, e);
     }
-
-    const locale = mmCity.country.iso_code === 'CN' ? 'zh-CN' : 'en';
-    const subdivision = Array.isArray(mmCity.subdivisions) ? mmCity.subdivisions[0] : undefined;
-    const regionIso = subdivision?.iso_code || '';
-    const regionName = subdivision?.names?.[locale] || subdivision?.names?.en || '';
-    maxmindLite.region = regionIso || regionName;
-
-    const cityName = mmCity.city?.names?.[locale] || mmCity.city?.names?.en || '';
-    maxmindLite.city = cityName;
   }
-  if (mmAsn?.autonomous_system_number) {
-    maxmindLite.asn = mmAsn.autonomous_system_number;
-    maxmindLite.org = mmAsn.autonomous_system_organization || '';
+
+  if (maxmindAsnReader) {
+    try {
+      maxmindAsnResult = maxmindAsnReader.get(ip) || null;
+    } catch (e) {
+      console.warn(`[GeoService] maxmind asn lookup failed for ${ip}:`, e);
+    }
   }
-  const geoipRaw = Object.keys(maxmindLite).length > 0 ? JSON.stringify(maxmindLite) : undefined;
 
-  if (maxmindLite.country) {
-    const isoCountry = maxmindLite.country;
+  const maxmindCityRaw = maxmindCityResult ? JSON.stringify(maxmindCityResult) : undefined;
+  const maxmindAsnRaw = maxmindAsnResult ? JSON.stringify(maxmindAsnResult) : undefined;
 
-    // 如果 MaxMind 判斷為中國大陸 (CN)，我們才使用 ip2region 的高精度詳細資料
+  if (maxmindCityResult?.country?.iso_code || geoipResult?.country) {
+    const isoCountry = (maxmindCityResult?.country?.iso_code || geoipResult?.country) as string;
+
+    // 如果判斷為中國大陸 (CN)，我們才使用 ip2region 的高精度詳細資料
     if (isoCountry === 'CN' && ip2regionResult) {
       const parts = ip2regionResult.split('|');
       const country = parts[0] === '0' ? 'UNKNOWN' : parts[0];
@@ -128,27 +132,39 @@ export const getFullGeoInfo = async (ip: string): Promise<{ country: string, reg
         raw: ip2regionResult,
         source: 'ip2region',
         ip2regionRaw,
-        geoipRaw
+        geoipRaw,
+        maxmindCityRaw,
+        maxmindAsnRaw
       };
     }
 
-    const province = maxmindLite.region || '';
-    const city = maxmindLite.city || '';
+    const provinceName = maxmindCityResult?.subdivisions?.[0]?.names?.['zh-CN']
+      || maxmindCityResult?.subdivisions?.[0]?.names?.en
+      || maxmindCityResult?.subdivisions?.[0]?.iso_code
+      || geoipResult?.region
+      || '';
+    const cityName = maxmindCityResult?.city?.names?.['zh-CN']
+      || maxmindCityResult?.city?.names?.en
+      || geoipResult?.city
+      || '';
+    const asnOrg = maxmindAsnResult?.autonomous_system_organization || '';
 
     return {
-      country: isoCountry,
-      region: province,
-      province,
-      city,
-      isp: '',
-      raw: geoipRaw || '',
-      source: 'maxmind',
+      country: isoCountry, // 直接回傳標準代碼 (如 TW, US)
+      region: provinceName,
+      province: provinceName,
+      city: cityName,
+      isp: asnOrg,
+      raw: maxmindCityRaw || (geoipResult ? JSON.stringify(geoipResult) : ''),
+      source: maxmindCityRaw ? 'maxmind' : 'geoip-lite',
       ip2regionRaw,
-      geoipRaw
+      geoipRaw,
+      maxmindCityRaw,
+      maxmindAsnRaw
     };
   }
   
-  // 3. Fallback
+  // 3. Fallback (最差情況：geoip-lite 查不到，但 ip2region 之前有查到資訊)
   if (ip2regionResult) {
     const parts = ip2regionResult.split('|');
     const country = parts[0] === '0' ? 'UNKNOWN' : parts[0];
@@ -165,7 +181,9 @@ export const getFullGeoInfo = async (ip: string): Promise<{ country: string, reg
       raw: ip2regionResult,
       source: 'ip2region',
       ip2regionRaw,
-      geoipRaw
+      geoipRaw,
+      maxmindCityRaw,
+      maxmindAsnRaw
     };
   }
   
@@ -191,7 +209,8 @@ export const getCountryCode = async (ip: string): Promise<string> => {
   const geo = await getFullGeoInfo(ip);
   
   if (geo && geo.country !== 'UNKNOWN') {
-    if (geo.source === 'maxmind') {
+    // 若為 geoip-lite / maxmind 回傳的結果，它本身就已經是 ISO 2 字母代碼 (例如 'US', 'GB')
+    if (geo.source === 'geoip-lite' || geo.source === 'maxmind') {
       return geo.country;
     }
     
