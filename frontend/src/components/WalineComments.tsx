@@ -167,12 +167,6 @@ export function WalineComments({
           pageSize: 10,
           pageview: true,
           
-          // 開啟豐富的留言板功能
-          search: true,          // 允許搜尋 GIF 動圖
-          imageUploader: true,   // 允許上傳圖片
-          highlighter: true,     // 開啟程式碼高亮
-          texRenderer: true,     // 開啟數學公式渲染
-          
           // 優化：自訂登入提示，增加互動性
           locale: { 
             reactionTitle: finalReactionTitle,
@@ -249,11 +243,15 @@ export function WalineComments({
       }
       // 清理 Waline 实例
       if (walineInstance && typeof walineInstance.destroy === 'function') {
-        walineInstance.destroy();
+        try {
+          walineInstance.destroy();
+        } catch {
+        }
+        walineInstance = null;
       }
       initializedRef.current = false;
     };
-  }, [path, i18n.language, finalReactionTitle, t]);
+  }, [path, i18n.language, finalReactionTitle]);
 
   return <div ref={containerRef} className={className} />;
 }
