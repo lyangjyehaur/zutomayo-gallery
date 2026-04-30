@@ -188,14 +188,23 @@ export const listRepairMediaGroups = async (req: Request, res: Response) => {
       g.*,
       COUNT(m.id)::int AS media_count,
       COUNT(DISTINCT mm.mv_id)::int AS mv_count,
-      MIN(COALESCE(m.url, m.original_url)) AS preview_url,
+      COALESCE(sm.url, sm.original_url) AS preview_url,
+      sm.url AS sample_url,
+      sm.original_url AS sample_original_url,
       (g.source_url IS NULL OR g.source_url = '') AS missing_source_url,
       (g.post_date IS NULL) AS missing_post_date
     FROM media_groups g
     LEFT JOIN media m ON m.group_id = g.id
     LEFT JOIN mv_media mm ON mm.media_id = m.id
+    LEFT JOIN LATERAL (
+      SELECT m2.url, m2.original_url
+      FROM media m2
+      WHERE m2.group_id = g.id
+      ORDER BY m2.created_at ASC NULLS LAST, m2.id ASC
+      LIMIT 1
+    ) sm ON true
     ${whereSql}
-    GROUP BY g.id
+    GROUP BY g.id, sm.url, sm.original_url
     ORDER BY g.post_date DESC NULLS LAST, g.id DESC
     LIMIT :limit OFFSET :offset
     `,

@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Switch } from "@/components/ui/switch"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +34,8 @@ type RepairGroupRow = {
   media_count?: number
   mv_count?: number
   preview_url?: string | null
+  sample_url?: string | null
+  sample_original_url?: string | null
   missing_source_url?: boolean
   missing_post_date?: boolean
 }
@@ -63,6 +66,7 @@ export function AdminMediaGroupRepairPage() {
   const [error, setError] = React.useState<string | null>(null)
   const [loading, setLoading] = React.useState(false)
   const [q, setQ] = React.useState("")
+  const [onlyInferable, setOnlyInferable] = React.useState(false)
   const [offset, setOffset] = React.useState(0)
   const limit = 50
 
@@ -81,6 +85,56 @@ export function AdminMediaGroupRepairPage() {
 
   const [unassignConfirmOpen, setUnassignConfirmOpen] = React.useState(false)
   const [unassignRow, setUnassignRow] = React.useState<RepairGroupRow | null>(null)
+
+  const infer = React.useCallback((row: RepairGroupRow) => {
+    const handle = String(row.author_handle || "").trim().replace(/^@/, "")
+    const candidates = [row.sample_original_url, row.sample_url, row.preview_url]
+      .map((v) => (typeof v === "string" ? v.trim() : ""))
+      .filter(Boolean)
+
+    const extract = (raw: string) => {
+      const m1 = raw.match(/https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/([^\/?#]+)\/status(?:es)?\/(\d+)/i)
+      if (m1) return { handle: m1[1], tweetId: m1[2] }
+      const m2 = raw.match(/\/status(?:es)?\/(\d+)/i)
+      if (m2) return { handle: "", tweetId: m2[1] }
+      const m3 = raw.match(/[?&]tweet_id=(\d+)/i)
+      if (m3) return { handle: "", tweetId: m3[1] }
+      return null
+    }
+
+    for (const raw of candidates) {
+      const hit = extract(raw)
+      if (!hit) continue
+      const finalHandle = hit.handle || handle
+      if (finalHandle) {
+        return { url: `https://x.com/${finalHandle}/status/${hit.tweetId}`, confidence: "high" as const }
+      }
+      return { url: `https://x.com/i/web/status/${hit.tweetId}`, confidence: "medium" as const }
+    }
+
+    return { url: "", confidence: "none" as const }
+  }, [])
+
+  const inferred = React.useMemo(() => {
+    return items.map((row) => ({ row, inferred: infer(row) }))
+  }, [infer, items])
+
+  const visible = React.useMemo(() => {
+    if (!onlyInferable) return inferred
+    return inferred.filter((x) => x.inferred.confidence !== "none")
+  }, [inferred, onlyInferable])
+
+  const inferStats = React.useMemo(() => {
+    let high = 0
+    let medium = 0
+    let none = 0
+    inferred.forEach((x) => {
+      if (x.inferred.confidence === "high") high += 1
+      else if (x.inferred.confidence === "medium") medium += 1
+      else none += 1
+    })
+    return { high, medium, none }
+  }, [inferred])
 
   const fetchList = React.useCallback(async () => {
     setLoading(true)
@@ -230,7 +284,16 @@ export function AdminMediaGroupRepairPage() {
             查詢
           </Button>
         </div>
-        <div className="text-xs font-mono opacity-60">Total: {total} | Offset: {offset}</div>
+        <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+          <div className="text-xs font-mono opacity-60">Total: {total} | Offset: {offset}</div>
+          <div className="flex items-center gap-3">
+            <div className="text-xs font-mono opacity-60">Infer high/medium/none: {inferStats.high}/{inferStats.medium}/{inferStats.none}</div>
+            <div className="flex items-center gap-2">
+              <Switch checked={onlyInferable} onCheckedChange={setOnlyInferable} />
+              <div className="text-xs font-mono opacity-60">只看可反推</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <Table>
@@ -242,11 +305,13 @@ export function AdminMediaGroupRepairPage() {
             <TableHead>Media</TableHead>
             <TableHead>MV</TableHead>
             <TableHead>Source URL</TableHead>
+            <TableHead>Inferred</TableHead>
+            <TableHead>Conf</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {items.map((g) => {
+          {visible.map(({ row: g, inferred: inf }) => {
             const rawUrl = String(g.preview_url || "")
             const previewUrl = rawUrl ? getProxyImgUrl(rawUrl) : ""
             const isVideo = isMediaVideo(rawUrl) || g.preview_url?.includes(".mp4")
@@ -289,6 +354,16 @@ export function AdminMediaGroupRepairPage() {
                     "-"
                   )}
                 </TableCell>
+                <TableCell className="font-mono text-xs break-all">
+                  {inf.url ? (
+                    <a href={inf.url} target="_blank" rel="noreferrer" className="underline">
+                      {inf.url}
+                    </a>
+                  ) : (
+                    "-"
+                  )}
+                </TableCell>
+                <TableCell className="font-mono text-xs">{inf.confidence}</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="outline" onClick={() => openEdit(g)}>
@@ -312,7 +387,7 @@ export function AdminMediaGroupRepairPage() {
           })}
           {items.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="text-center opacity-60">
+              <TableCell colSpan={9} className="text-center opacity-60">
                 {loading ? "Loading..." : "No data"}
               </TableCell>
             </TableRow>

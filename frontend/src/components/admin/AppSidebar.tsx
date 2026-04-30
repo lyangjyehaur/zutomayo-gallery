@@ -60,21 +60,29 @@ export function AppSidebar({
 
   const systemItems = React.useMemo(() => {
     const base = sorted.filter((m) => String(m.path || "").startsWith("/admin/system/"))
-    const withOrphans = [
-      ...base,
-      { label: "推文修復", path: "/admin/system/group-repair", sort: 9997 },
-      { label: "推文分組", path: "/admin/system/media-groups", sort: 9998 },
-      { label: "未歸屬媒體", path: "/admin/system/orphans", sort: 9999 },
+    const mediaTools = [
+      { label: "推文修復", path: "/admin/system/group-repair", sort: 9981 },
+      { label: "推文分組", path: "/admin/system/media-groups", sort: 9982 },
+      { label: "未歸屬媒體", path: "/admin/system/orphans", sort: 9983 },
     ]
-    const map = new Map<string, any>()
-    withOrphans.forEach((m) => {
+    const excluded = new Set(mediaTools.map((m) => m.path))
+    const adminTools = base.filter((m) => {
       const path = String(m.path || "")
-      if (!path) return
-      if (!map.has(path)) map.set(path, m)
+      if (!path) return false
+      return !excluded.has(path)
     })
-    return Array.from(map.values()).sort(
-      (a, b) => (Number(a.sort || 0) || 0) - (Number(b.sort || 0) || 0),
-    )
+    const normalize = (list: any[]) => {
+      const map = new Map<string, any>()
+      list.forEach((m) => {
+        const path = String(m.path || "")
+        if (!path) return
+        if (!map.has(path)) map.set(path, m)
+      })
+      return Array.from(map.values()).sort(
+        (a, b) => (Number(a.sort || 0) || 0) - (Number(b.sort || 0) || 0),
+      )
+    }
+    return { adminTools: normalize(adminTools), mediaTools: normalize(mediaTools as any[]) }
   }, [sorted])
 
   const globalSettingsPath = "/admin/mvs/settings"
@@ -211,7 +219,23 @@ export function AppSidebar({
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <SidebarMenuSub>
-                    {systemItems.map((m, idx) => {
+                    <div className="px-2 py-1 text-[10px] font-mono opacity-60">媒體</div>
+                    {systemItems.mediaTools.map((m, idx) => {
+                      const path = String(m.path || "")
+                      if (!path) return null
+                      const active = location.pathname === path
+                      return (
+                        <SidebarMenuSubItem key={`${path}-${idx}`}>
+                          <SidebarMenuSubButton asChild isActive={active}>
+                            <Link to={path}>
+                              <span>{m.label || path}</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      )
+                    })}
+                    <div className="px-2 py-1 text-[10px] font-mono opacity-60">權限</div>
+                    {systemItems.adminTools.map((m, idx) => {
                       const path = String(m.path || "")
                       if (!path) return null
                       const active = location.pathname === path

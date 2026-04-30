@@ -109,6 +109,71 @@ export default function AdminLayout() {
     return [...list].sort((a, b) => (Number(a.sort || 0) || 0) - (Number(b.sort || 0) || 0))
   }, [me])
 
+  const mvListPath = React.useMemo(() => {
+    const prefer = menus.find((m) => String(m.path || "") === "/admin/mvs")
+    if (prefer?.path) return String(prefer.path)
+    const root = menus.find((m) => String(m.path || "") === "/admin")
+    return root?.path ? String(root.path) : "/admin/mvs"
+  }, [menus])
+
+  const mvLabel = React.useMemo(() => {
+    const list = menus.filter((m) => {
+      const path = String(m.path || "")
+      return path === "/admin" || path === "/admin/mvs"
+    })
+    return list.find((m) => String(m.path || "") === mvListPath)?.label || "MV 管理"
+  }, [menus, mvListPath])
+
+  const staticLabelByPath = React.useMemo(() => {
+    return new Map<string, string>([
+      ["/admin/mvs/settings", "全局設定"],
+      ["/admin/system/group-repair", "推文修復"],
+      ["/admin/system/media-groups", "推文分組"],
+      ["/admin/system/orphans", "未歸屬媒體"],
+    ])
+  }, [])
+
+  const labelForPath = React.useCallback(
+    (path: string) => {
+      const exact = menus.find((m) => String(m.path || "") === path)
+      if (exact?.label) return String(exact.label)
+      const staticLabel = staticLabelByPath.get(path)
+      if (staticLabel) return staticLabel
+      const seg = path.split("/").filter(Boolean).slice(-1)[0] || path
+      return seg
+    },
+    [menus, staticLabelByPath],
+  )
+
+  const systemRootPath = React.useMemo(() => {
+    const prefer = menus.find((m) => String(m.path || "") === "/admin/system/users")?.path
+    if (prefer) return String(prefer)
+    const first = menus.find((m) => String(m.path || "").startsWith("/admin/system/"))?.path
+    return first ? String(first) : "/admin/system/media-groups"
+  }, [menus])
+
+  const breadcrumb = React.useMemo(() => {
+    const path = location.pathname
+    const items: Array<{ label: string; to?: string }> = [{ label: "Admin", to: "/admin" }]
+
+    if (path === "/admin") return items
+
+    if (path === "/admin/mvs/settings") {
+      items.push({ label: mvLabel, to: mvListPath })
+      items.push({ label: "全局設定" })
+      return items
+    }
+
+    if (path.startsWith("/admin/system/")) {
+      items.push({ label: "系統管理", to: systemRootPath })
+      items.push({ label: labelForPath(path) })
+      return items
+    }
+
+    items.push({ label: labelForPath(path) })
+    return items
+  }, [labelForPath, location.pathname, mvLabel, mvListPath, systemRootPath])
+
   if (isInitializing) {
     return <div className="p-6 font-mono">Loading...</div>
   }
@@ -117,9 +182,6 @@ export default function AdminLayout() {
     const to = encodeURIComponent(`${location.pathname}${location.search}`)
     return <Navigate to={`/admin/auth?to=${to}`} replace />
   }
-
-  const activeMenu = menus.find((m) => String(m.path || "") === location.pathname)
-  const activeLabel = activeMenu?.label || location.pathname
 
   return (
     <SidebarProvider>
@@ -137,15 +199,23 @@ export default function AdminLayout() {
             <SidebarTrigger />
             <Breadcrumb>
               <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink asChild>
-                    <Link to="/admin">Admin</Link>
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>{activeLabel}</BreadcrumbPage>
-                </BreadcrumbItem>
+                {breadcrumb.map((b, idx) => {
+                  const isLast = idx === breadcrumb.length - 1
+                  return (
+                    <React.Fragment key={`${b.label}-${idx}`}>
+                      <BreadcrumbItem>
+                        {isLast ? (
+                          <BreadcrumbPage>{b.label}</BreadcrumbPage>
+                        ) : (
+                          <BreadcrumbLink asChild>
+                            <Link to={b.to || "/admin"}>{b.label}</Link>
+                          </BreadcrumbLink>
+                        )}
+                      </BreadcrumbItem>
+                      {isLast ? null : <BreadcrumbSeparator />}
+                    </React.Fragment>
+                  )
+                })}
               </BreadcrumbList>
             </Breadcrumb>
           </div>
@@ -153,15 +223,25 @@ export default function AdminLayout() {
             <MenubarMenu>
               <MenubarTrigger>Navigate</MenubarTrigger>
               <MenubarContent>
-                {menus.slice(0, 12).map((m, idx) => {
-                  const path = String(m.path || "")
-                  if (!path) return null
-                  return (
-                    <MenubarItem key={`${path}-${idx}`} asChild>
-                      <Link to={path}>{m.label || path}</Link>
-                    </MenubarItem>
-                  )
-                })}
+                <MenubarItem asChild>
+                  <Link to={mvListPath}>{mvLabel}</Link>
+                </MenubarItem>
+                <MenubarItem asChild>
+                  <Link to="/admin/mvs/settings">全局設定</Link>
+                </MenubarItem>
+                <MenubarSeparator />
+                <MenubarItem asChild>
+                  <Link to={systemRootPath}>系統管理</Link>
+                </MenubarItem>
+                <MenubarItem asChild>
+                  <Link to="/admin/system/group-repair">推文修復</Link>
+                </MenubarItem>
+                <MenubarItem asChild>
+                  <Link to="/admin/system/media-groups">推文分組</Link>
+                </MenubarItem>
+                <MenubarItem asChild>
+                  <Link to="/admin/system/orphans">未歸屬媒體</Link>
+                </MenubarItem>
               </MenubarContent>
             </MenubarMenu>
           </Menubar>
