@@ -135,7 +135,7 @@ export function WalineComments({
           const gravatarHost = geoInfo.isChinaIP ? 'cravatar.cn/avatar' : 'gravatar.com/avatar';
         
         walineInstance = init({
-          el: containerRef.current,
+          el: currentContainer,
           serverURL, // 根據 IP 地區動態切換
           path,
 
@@ -206,7 +206,7 @@ export function WalineComments({
         observer = new MutationObserver((mutations) => {
           mutations.forEach((mutation) => {
             if (mutation.type === 'childList') {
-              const imgs = containerRef.current?.querySelectorAll('img') as NodeListOf<HTMLImageElement>;
+              const imgs = currentContainer.querySelectorAll('img') as NodeListOf<HTMLImageElement>;
               imgs?.forEach(img => {
                 if (img.src && (img.src.includes('gravatar.com') || img.src.includes('seccdn.alipay.com') || img.src.includes('sdn.geekzu.org'))) {
                   const originalUrl = new URL(img.src);
@@ -220,7 +220,7 @@ export function WalineComments({
               });
 
               // 替 wl-mail 增加 placeholder 說明
-              const mailInput = containerRef.current?.querySelector('.wl-mail') as HTMLInputElement;
+              const mailInput = currentContainer.querySelector('.wl-mail') as HTMLInputElement;
               if (mailInput && !mailInput.getAttribute('data-custom-placeholder')) {
                 mailInput.placeholder = t('waline.mailPlaceholder', '留信箱可免登入顯示頭像');
                 mailInput.setAttribute('data-custom-placeholder', 'true');
@@ -229,9 +229,7 @@ export function WalineComments({
           });
         });
         
-        if (containerRef.current) {
-          observer.observe(containerRef.current, { childList: true, subtree: true });
-        }
+        observer.observe(currentContainer, { childList: true, subtree: true });
         
         initializedRef.current = true;
       } catch (error) {
@@ -243,16 +241,15 @@ export function WalineComments({
 
     return () => {
       isMounted = false;
-      // 清理 Waline 实例
-      if (walineInstance && typeof walineInstance.destroy === 'function') {
-        walineInstance.destroy();
+      if (observer) {
+        observer.disconnect();
       }
       if (currentContainer) {
         currentContainer.removeEventListener('click', handleWalineInteraction as unknown as EventListener);
-        currentContainer.innerHTML = '';
       }
-      if (observer) {
-        observer.disconnect();
+      // 清理 Waline 实例
+      if (walineInstance && typeof walineInstance.destroy === 'function') {
+        walineInstance.destroy();
       }
       initializedRef.current = false;
     };
