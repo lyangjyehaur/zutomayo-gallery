@@ -79,6 +79,9 @@ export function AdminMediaGroupRepairPage() {
   const [mergeTargetUrl, setMergeTargetUrl] = React.useState("")
   const [mergeTargetId, setMergeTargetId] = React.useState("")
 
+  const [unassignConfirmOpen, setUnassignConfirmOpen] = React.useState(false)
+  const [unassignRow, setUnassignRow] = React.useState<RepairGroupRow | null>(null)
+
   const fetchList = React.useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -167,6 +170,29 @@ export function AdminMediaGroupRepairPage() {
       setMergeConfirmOpen(false)
       setMergeOpen(false)
       setMergeRow(null)
+      await fetchList()
+    } catch (e: any) {
+      setError(String(e?.message || e))
+    }
+  }
+
+  const openUnassign = (row: RepairGroupRow) => {
+    setUnassignRow(row)
+    setUnassignConfirmOpen(true)
+  }
+
+  const doUnassign = async () => {
+    if (!unassignRow?.id) return
+    setError(null)
+    try {
+      const res = await adminFetch(`${base}/system/media/groups/${encodeURIComponent(unassignRow.id)}/unassign`, {
+        method: "POST",
+      })
+      const json = await res.json().catch(() => null)
+      if (!res.ok || !json?.success) throw new Error(String(json?.error || "UNASSIGN_FAILED"))
+      toast.success("已拆回 Orphans")
+      setUnassignConfirmOpen(false)
+      setUnassignRow(null)
       await fetchList()
     } catch (e: any) {
       setError(String(e?.message || e))
@@ -270,6 +296,9 @@ export function AdminMediaGroupRepairPage() {
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => openMerge(g)}>
                       Merge
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => openUnassign(g)}>
+                      Unassign
                     </Button>
                     <Button size="sm" variant="outline" asChild>
                       <Link to={`/admin/system/media-groups?group=${encodeURIComponent(g.id)}`} target="_blank">
@@ -407,7 +436,21 @@ export function AdminMediaGroupRepairPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={unassignConfirmOpen} onOpenChange={setUnassignConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>確認拆回 Orphans</AlertDialogTitle>
+            <AlertDialogDescription>
+              將把 group {unassignRow?.id} 內所有 media 的 group_id 清空（變成 orphan），並刪除該 group。確定要繼續嗎？
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void doUnassign()}>確認</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
-

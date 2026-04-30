@@ -271,3 +271,22 @@ export const mergeMediaGroups = async (req: Request, res: Response) => {
 
   res.json({ success: true, data: true });
 };
+
+export const unassignMediaGroup = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const group = await MediaGroupModel.findByPk(id);
+  if (!group) {
+    res.status(404).json({ success: false, error: 'Group not found' });
+    return;
+  }
+
+  await sequelize.transaction(async (t) => {
+    await MediaModel.update(
+      { group_id: null },
+      { where: { group_id: id } as any, transaction: t },
+    );
+    await group.destroy({ transaction: t });
+  });
+
+  res.json({ success: true, data: true });
+};
