@@ -2,7 +2,9 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import { AdminMenuModel, AdminUserModel } from '../models/index.js';
 import { getEnforcer } from '../rbac/enforcer.js';
-import { checkLegacyAdminHeader, isLegacyAdminAllowed } from '../middleware/auth.middleware.js';
+import { checkLegacyAdminHeader } from '../middleware/auth.middleware.js';
+import { authService } from '../services/auth.service.js';
+import { getSessionCookieOptions, sessionCookieName } from '../config/session.js';
 
 const serializeMenus = async (username: string, permissions: Set<string>) => {
   const allowAll = permissions.has('*');
@@ -41,8 +43,13 @@ const buildMePayload = async (username: string) => {
   }
 
   const menus = await serializeMenus(username, permissions);
+  const user = await AdminUserModel.findOne({ where: { username } as any });
+  const data = user?.toJSON ? (user.toJSON() as any) : null;
   return {
     username,
+    email: data?.email ? String(data.email) : null,
+    display_name: data?.display_name ? String(data.display_name) : null,
+    avatar_url: data?.avatar_url ? String(data.avatar_url) : null,
     roles,
     permissions: Array.from(permissions),
     menus,
@@ -84,19 +91,29 @@ export const login = async (req: Request, res: Response) => {
 };
 
 export const logout = async (req: Request, res: Response) => {
+  const header = req.headers['x-admin-password'];
+  if (typeof header === 'string' && authService.isValidSessionToken(header)) {
+    authService.revokeSessionToken(header);
+  }
+
   const destroy = () =>
     new Promise<void>((resolve) => {
       req.session.destroy(() => resolve());
     });
 
   await destroy();
+  const opts = getSessionCookieOptions();
+  res.clearCookie(sessionCookieName, {
+    domain: opts.domain,
+    path: '/',
+  });
   res.json({ success: true, data: true });
 };
 
 export const me = async (req: Request, res: Response) => {
   const username = (req.session as any)?.username;
   if (typeof username !== 'string') {
-    if (isLegacyAdminAllowed() && (await checkLegacyAdminHeader(req))) {
+    if (await checkLegacyAdminHeader(req)) {
       const payload = {
         username: 'legacy',
         roles: ['role:super_admin'],

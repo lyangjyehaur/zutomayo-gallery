@@ -295,6 +295,9 @@ AppleMusicAlbumModel.hasMany(AlbumModel, { foreignKey: 'apple_music_album_id', a
 export const AdminUserModel = sequelize.define('AdminUser', {
   id: { type: DataTypes.STRING(36), primaryKey: true, defaultValue: generateShortId },
   username: { type: DataTypes.STRING, allowNull: false, unique: true },
+  email: { type: DataTypes.STRING, allowNull: true },
+  display_name: { type: DataTypes.STRING, allowNull: true },
+  avatar_url: { type: DataTypes.TEXT, allowNull: true },
   password_hash: { type: DataTypes.TEXT, allowNull: false },
   is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },

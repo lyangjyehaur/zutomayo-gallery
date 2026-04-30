@@ -9,6 +9,13 @@ const normalizeUsername = (value: unknown) => {
   return value.trim();
 };
 
+const normalizeOptionalString = (value: unknown) => {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'string') return null;
+  const v = value.trim();
+  return v.length > 0 ? v : null;
+};
+
 const userToDto = async (user: any) => {
   const data = user.toJSON ? (user.toJSON() as any) : (user as any);
   const username = String(data.username);
@@ -17,6 +24,9 @@ const userToDto = async (user: any) => {
   return {
     id: String(data.id),
     username,
+    email: data.email ? String(data.email) : null,
+    display_name: data.display_name ? String(data.display_name) : null,
+    avatar_url: data.avatar_url ? String(data.avatar_url) : null,
     is_active: Boolean(data.is_active),
     created_at: data.created_at,
     updated_at: data.updated_at,
@@ -35,6 +45,9 @@ export const createUser = async (req: Request, res: Response) => {
   const username = normalizeUsername(req.body?.username);
   const password = typeof req.body?.password === 'string' ? req.body.password : '';
   const isActive = typeof req.body?.is_active === 'boolean' ? req.body.is_active : true;
+  const email = normalizeOptionalString(req.body?.email);
+  const displayName = normalizeOptionalString(req.body?.display_name);
+  const avatarUrl = normalizeOptionalString(req.body?.avatar_url);
 
   if (!username || username.length < 2) {
     res.status(400).json({ success: false, error: 'INVALID_USERNAME' });
@@ -55,6 +68,9 @@ export const createUser = async (req: Request, res: Response) => {
   const row = await AdminUserModel.create({
     id: nanoid(16),
     username,
+    email,
+    display_name: displayName,
+    avatar_url: avatarUrl,
     password_hash: passwordHash,
     is_active: isActive,
   } as any);
@@ -63,13 +79,12 @@ export const createUser = async (req: Request, res: Response) => {
   res.json({ success: true, data: dto });
 };
 
-export const updateUserActive = async (req: Request, res: Response) => {
+export const updateUser = async (req: Request, res: Response) => {
   const id = req.params.id;
   const isActive = req.body?.is_active;
-  if (typeof isActive !== 'boolean') {
-    res.status(400).json({ success: false, error: 'is_active must be boolean' });
-    return;
-  }
+  const email = normalizeOptionalString(req.body?.email);
+  const displayName = normalizeOptionalString(req.body?.display_name);
+  const avatarUrl = normalizeOptionalString(req.body?.avatar_url);
 
   const user = await AdminUserModel.findOne({ where: { id } as any });
   if (!user) {
@@ -77,16 +92,29 @@ export const updateUserActive = async (req: Request, res: Response) => {
     return;
   }
 
-  await user.update({ is_active: isActive } as any);
+  const update: any = {};
+  if (typeof isActive === 'boolean') update.is_active = isActive;
+  if (req.body && 'email' in req.body) update.email = email;
+  if (req.body && 'display_name' in req.body) update.display_name = displayName;
+  if (req.body && 'avatar_url' in req.body) update.avatar_url = avatarUrl;
+
+  if (Object.keys(update).length === 0) {
+    res.status(400).json({ success: false, error: 'NO_FIELDS_TO_UPDATE' });
+    return;
+  }
+
+  await user.update(update as any);
   const dto = await userToDto(user);
   res.json({ success: true, data: dto });
 };
 
 export const resetUserPassword = async (req: Request, res: Response) => {
   const id = req.params.id;
-  const newPassword = typeof req.body?.new_password === 'string' && req.body.new_password.length >= 4
-    ? req.body.new_password
-    : nanoid(12);
+  const newPassword = typeof req.body?.new_password === 'string' ? req.body.new_password : '';
+  if (!newPassword || newPassword.length < 4) {
+    res.status(400).json({ success: false, error: 'INVALID_PASSWORD' });
+    return;
+  }
 
   const user = await AdminUserModel.findOne({ where: { id } as any });
   if (!user) {
@@ -96,7 +124,7 @@ export const resetUserPassword = async (req: Request, res: Response) => {
 
   const passwordHash = await bcrypt.hash(newPassword, 10);
   await user.update({ password_hash: passwordHash } as any);
-  res.json({ success: true, data: { password: newPassword } });
+  res.json({ success: true, data: true });
 };
 
 export const setUserRoles = async (req: Request, res: Response) => {

@@ -269,21 +269,6 @@
             "url": "{{baseUrl}}/mvs/verify-admin",
             "description": "檢查目前登入的管理員是否仍在使用不安全的系統預設密碼"
           }
-        },
-        {
-          "name": "[管理員] 執行原生 SQL (DB Query)",
-          "request": {
-            "method": "POST",
-            "url": "{{baseUrl}}/mvs/db/query",
-            "description": "直接執行原生 SQL 語句 (除錯與進階資料庫管理用途)",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"sql\": \"SELECT * FROM mvs LIMIT 10;\"\n}"
-            }
-          }
         }
       ]
     },

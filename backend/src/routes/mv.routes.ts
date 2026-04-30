@@ -3,23 +3,8 @@ import { getMVs, getMVById, updateMVs, probeImage, getMetadata, updateMetadata, 
 import { requireAdmin } from '../middleware/auth.middleware.js';
 import { cacheMiddleware } from '../middleware/cache.middleware.js';
 import { authService } from '../services/auth.service.js';
-import { sequelize } from '../services/pg.service.js';
-import bcrypt from 'bcrypt';
 
 const router = Router();
-
-// 執行原生 SQL (供管理員操作)
-router.post('/db/query', requireAdmin, async (req, res) => {
-  try {
-    const { sql } = req.body;
-    if (!sql) return res.status(400).json({ error: 'SQL 不可為空' });
-    
-    const [results, metadata] = await sequelize.query(sql);
-    res.json({ rows: results, metadata });
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
-  }
-});
 
 // 管理員密碼驗證
 router.post('/verify-admin', requireAdmin, async (req, res) => {

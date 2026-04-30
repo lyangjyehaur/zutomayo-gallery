@@ -6,6 +6,7 @@ import { MultiSelect, Option } from '@/components/ui/multi-select';
 import { getProxyImgUrl, isMediaVideo } from '@/lib/image';
 import { adminFetch, getApiRoot } from '@/lib/admin-api';
 import { useConfirmDialog } from '@/components/admin/useConfirmDialog';
+import { buildMvTagOptions, normalizeTagId, normalizeTags } from '@/lib/admin-media';
 
 export function AdminFanArtPage() {
   const [confirm, ConfirmDialog] = useConfirmDialog();
@@ -121,15 +122,7 @@ export function AdminFanArtPage() {
   }, [activeTab]);
 
   const mvsOptions: Option[] = useMemo(() => {
-    const tagOpts: Option[] = [
-      { label: '綜合合繪', value: 'tag:collab' },
-      { label: 'ACAね', value: 'tag:acane' },
-      { label: '實物', value: 'tag:real' },
-      { label: '海膽栗子/生薑', value: 'tag:uniguri' },
-      { label: '其他', value: 'tag:other' },
-    ];
-    const opts = mvData.map(mv => ({ label: mv.title, value: mv.id }));
-    return [...tagOpts, ...opts];
+    return buildMvTagOptions(mvData) as Option[];
   }, [mvData]);
 
   // Flatten unorganized media
@@ -151,7 +144,7 @@ export function AdminFanArtPage() {
         if (img.usage === 'cover') return;
         const mediaId = img.id;
         if (!mediaId) return;
-        const currentTags = Array.isArray(img.tags) ? img.tags.map(normalizeTag) : [];
+        const currentTags = normalizeTags(img.tags);
         if (!map.has(mediaId)) {
           map.set(mediaId, { mvIds: new Set(), tags: new Set(currentTags) });
         }
@@ -175,16 +168,9 @@ export function AdminFanArtPage() {
     return d.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
   };
 
-  function normalizeTag(tag: any) {
-    if (!tag) return '';
-    const str = String(tag);
-    if (str.startsWith('tag:')) return str;
-    return `tag:${str}`;
-  }
-
   const getTagSet = (obj: any) => {
     const tags = Array.isArray(obj?.tags) ? obj.tags : [];
-    return new Set(tags.map(normalizeTag).filter(Boolean));
+    return new Set(tags.map(normalizeTagId).filter(Boolean));
   };
 
   const hasTag = (obj: any, tagId: string) => {

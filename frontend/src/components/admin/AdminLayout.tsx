@@ -1,6 +1,7 @@
 import React from "react"
-import { Link, Outlet, useLocation } from "react-router-dom"
+import { Link, Navigate, Outlet, useLocation } from "react-router-dom"
 import { Refine } from "@refinedev/core"
+import { toast } from "sonner"
 import { adminFetch, getAuthApiBase, getMvsApiBase } from "@/lib/admin-api"
 import {
   adminAccessControlProvider,
@@ -11,14 +12,18 @@ import {
 } from "@/lib/refine"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/admin/AppSidebar"
 import { Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarSeparator, MenubarTrigger } from "@/components/ui/menubar"
+import { useConfirmDialog } from "@/components/admin/useConfirmDialog"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 type MePayload = {
   username?: string
+  email?: string | null
+  display_name?: string | null
+  avatar_url?: string | null
   roles?: string[]
   permissions?: string[]
   menus?: Array<{ label?: string; path?: string; sort?: number }>
@@ -35,24 +40,13 @@ const fetchMe = async (): Promise<MePayload | null> => {
   return json.data
 }
 
-const verifyLegacy = async (password: string) => {
-  const res = await adminFetch(`${getMvsApiBase()}/verify-admin`, {
-    method: "POST",
-    headers: { "x-admin-password": password },
-  })
-  return res.ok
-}
-
 export default function AdminLayout() {
   const location = useLocation()
+  const [confirm, ConfirmDialog] = useConfirmDialog()
   const [isInitializing, setIsInitializing] = React.useState(true)
   const [isAuthed, setIsAuthed] = React.useState(false)
   const [me, setMe] = React.useState<MePayload | null>(null)
-
-  const [username, setUsername] = React.useState("")
-  const [password, setPassword] = React.useState("")
-  const [legacyPassword, setLegacyPassword] = React.useState("")
-  const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [logoutError, setLogoutError] = React.useState<string | null>(null)
 
   const permissions = React.useMemo(() => {
     if (me?.permissions && Array.isArray(me.permissions)) return me.permissions
@@ -81,39 +75,34 @@ export default function AdminLayout() {
     run()
   }, [refresh])
 
-  const handleLogin = React.useCallback(async () => {
-    setIsSubmitting(true)
-    try {
-      const res = await adminFetch(`${getAuthApiBase()}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      })
-      const json = (await res.json().catch(() => null)) as ApiResponse<MePayload> | null
-      if (!res.ok || !json?.success) throw new Error(String((json as any)?.error || "LOGIN_FAILED"))
-      await refresh()
-    } finally {
-      setIsSubmitting(false)
-    }
-  }, [password, refresh, username])
-
-  const handleLegacyLogin = React.useCallback(async () => {
-    setIsSubmitting(true)
-    try {
-      const ok = await verifyLegacy(legacyPassword)
-      if (!ok) throw new Error("LEGACY_LOGIN_FAILED")
-      localStorage.setItem("ztmy_admin_pwd", legacyPassword)
-      await refresh()
-    } finally {
-      setIsSubmitting(false)
-    }
-  }, [legacyPassword, refresh])
-
   const handleLogout = React.useCallback(async () => {
-    await adminFetch(`${getAuthApiBase()}/logout`, { method: "POST" }).catch(() => undefined)
+    const ok = await confirm({
+      title: "登出後台",
+      description: "確定要登出嗎？",
+      confirmText: "登出",
+      cancelText: "取消",
+    })
+    if (!ok) return
+
+    try {
+      setLogoutError(null)
+      const res = await adminFetch(`${getAuthApiBase()}/logout`, { method: "POST" })
+      if (!res.ok) {
+        const json = await res.json().catch(() => null)
+        throw new Error(String(json?.error || json?.message || "LOGOUT_FAILED"))
+      }
+      try {
+        localStorage.removeItem("ztmy_admin_pwd")
+      } catch {
+      }
+      toast.success("已登出")
+    } catch (e: any) {
+      setLogoutError(`登出失敗：${String(e?.message || e)}`)
+      return
+    }
     setMe(null)
     setIsAuthed(false)
-  }, [])
+  }, [confirm])
 
   const menus = React.useMemo(() => {
     const list = Array.isArray(me?.menus) ? me!.menus : []
@@ -125,43 +114,8 @@ export default function AdminLayout() {
   }
 
   if (!isAuthed) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Admin Login</CardTitle>
-            <CardDescription>Session 為主，必要時可使用 legacy header。</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-6">
-            <div className="flex flex-col gap-2">
-              <div className="text-xs font-mono font-bold opacity-70">Session Login</div>
-              <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="username" />
-              <Input
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="password"
-                type="password"
-              />
-              <Button onClick={() => void handleLogin()} disabled={isSubmitting || !username.trim() || !password}>
-                Login
-              </Button>
-            </div>
-            <div className="border-t-2 border-border pt-4 flex flex-col gap-2">
-              <div className="text-xs font-mono font-bold opacity-70">Legacy Header Login</div>
-              <Input
-                value={legacyPassword}
-                onChange={(e) => setLegacyPassword(e.target.value)}
-                placeholder="admin password"
-                type="password"
-              />
-              <Button variant="neutral" onClick={() => void handleLegacyLogin()} disabled={isSubmitting || !legacyPassword}>
-                Login (Legacy)
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
+    const to = encodeURIComponent(`${location.pathname}${location.search}`)
+    return <Navigate to={`/admin/auth?to=${to}`} replace />
   }
 
   const activeMenu = menus.find((m) => String(m.path || "") === location.pathname)
@@ -169,7 +123,14 @@ export default function AdminLayout() {
 
   return (
     <SidebarProvider>
-      <AppSidebar menus={menus} username={me?.username || "legacy"} onLogout={() => void handleLogout()} />
+        <AppSidebar
+          menus={menus}
+          username={me?.username || "legacy"}
+          email={me?.email}
+          displayName={me?.display_name}
+          avatarUrl={me?.avatar_url}
+          onLogout={() => void handleLogout()}
+        />
       <SidebarInset>
         <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b-2 border-border bg-background px-4">
           <div className="flex items-center gap-2 min-w-0">
@@ -203,21 +164,17 @@ export default function AdminLayout() {
                 })}
               </MenubarContent>
             </MenubarMenu>
-            <MenubarMenu>
-              <MenubarTrigger>Account</MenubarTrigger>
-              <MenubarContent>
-                <MenubarItem onClick={() => void handleLogout()}>Logout</MenubarItem>
-                <MenubarSeparator />
-                <MenubarItem asChild>
-                  <a href="/" target="_blank" rel="noreferrer">
-                    Open Site
-                  </a>
-                </MenubarItem>
-              </MenubarContent>
-            </MenubarMenu>
           </Menubar>
         </header>
         <div className="flex-1 min-w-0">
+          {logoutError ? (
+            <div className="p-4">
+              <Alert variant="destructive">
+                <AlertTitle>操作失敗</AlertTitle>
+                <AlertDescription>{logoutError}</AlertDescription>
+              </Alert>
+            </div>
+          ) : null}
           <Refine
             dataProvider={adminDataProvider}
             authProvider={adminAuthProvider}
@@ -227,6 +184,7 @@ export default function AdminLayout() {
           >
             <Outlet />
           </Refine>
+          <ConfirmDialog />
         </div>
       </SidebarInset>
     </SidebarProvider>

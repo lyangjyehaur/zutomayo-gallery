@@ -63,7 +63,6 @@
 | **POST** | `/probe` | 管理員 | 探測指定圖片網址的原始尺寸 (`width` 與 `height`)。<br>Body: `{ "url": "https://..." }` |
 | **POST** | `/twitter-resolve` | 管理員 | 解析 Twitter 貼文網址，自動提取出推文內的圖片直連網址與畫師文字資訊。<br>Body: `{ "url": "https://x.com/..." }` |
 | **POST** | `/verify-admin` | 管理員 | 檢查目前登入的管理員是否仍在使用不安全的系統預設密碼。 |
-| **POST** | `/db/query` | 管理員 | 直接執行原生 SQL 語句 (除錯與進階資料庫管理用途)。 |
 
 ---
 

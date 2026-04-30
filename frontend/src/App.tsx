@@ -33,6 +33,11 @@ import { AdminStagingFanartPage } from "@/pages/AdminStagingFanartPage";
 import { AdminSystemUsersPage } from "@/pages/AdminSystemUsersPage";
 import { AdminSystemRolesPage } from "@/pages/AdminSystemRolesPage";
 import { AdminSystemMenusPage } from "@/pages/AdminSystemMenusPage";
+import { AdminAuthPage } from "@/pages/AdminAuthPage";
+import { AdminMVSettingsPage } from "@/pages/AdminMVSettingsPage";
+import { AdminOrphanMediaPage } from "@/pages/AdminOrphanMediaPage";
+import { AdminMediaGroupsPage } from "@/pages/AdminMediaGroupsPage";
+import { AdminMediaGroupRepairPage } from "@/pages/AdminMediaGroupRepairPage";
 import { AppleMusicGalleryPage } from "@/pages/AppleMusicGalleryPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { Demo3DCardPage } from "@/pages/Demo3DCardPage";
@@ -2768,6 +2773,7 @@ export default function RootApp() {
           </Route>
           <Route path="/demo/3d-card" element={<Demo3DCardPage />} />
           <Route path="/demo/cd-case" element={<DemoCDCasePage />} />
+          <Route path="/admin/auth" element={<AdminAuthPage />} />
           <Route path="/admin" element={<AdminLayout />}>
             <Route
               index
@@ -2799,6 +2805,20 @@ export default function RootApp() {
                 />
               }
             />
+            <Route
+              path="mvs/settings"
+              element={
+                <AdminMVSettingsPage
+                  metadata={normalizedMetadata}
+                  systemStatus={systemStatus}
+                  onRefresh={() => {
+                    mutate();
+                    mutateMetadata();
+                    mutateSystemStatus();
+                  }}
+                />
+              }
+            />
             <Route path="artists" element={<AdminArtistsPage />} />
             <Route path="albums" element={<AdminAlbumsPage />} />
             <Route path="apple-music-albums" element={<AdminAppleMusicAlbumsPage />} />
@@ -2809,6 +2829,9 @@ export default function RootApp() {
             <Route path="system/users" element={<AdminSystemUsersPage />} />
             <Route path="system/roles" element={<AdminSystemRolesPage />} />
             <Route path="system/menus" element={<AdminSystemMenusPage />} />
+            <Route path="system/media-groups" element={<AdminMediaGroupsPage />} />
+            <Route path="system/group-repair" element={<AdminMediaGroupRepairPage />} />
+            <Route path="system/orphans" element={<AdminOrphanMediaPage />} />
           </Route>
           <Route path="/debug/fb/:mvid?" element={<DebugFancyboxMasonry />} />
           <Route path="/debug/modal" element={<DebugMVModalLightbox />} />

@@ -35,6 +35,10 @@ export class AuthService {
     return this.sessionTokens.has(token);
   }
 
+  public revokeSessionToken(token: string): boolean {
+    return this.sessionTokens.delete(token);
+  }
+
   async getPasskeys(): Promise<Passkey[]> {
     const rows = await AuthPasskey.findAll();
     return rows.map(r => {

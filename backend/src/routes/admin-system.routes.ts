@@ -5,7 +5,7 @@ import {
   listUsers,
   resetUserPassword,
   setUserRoles,
-  updateUserActive,
+  updateUser,
 } from '../controllers/admin-system/users.controller.js';
 import {
   createRole,
@@ -29,7 +29,7 @@ router.use(requireAdmin);
 
 router.get('/users', listUsers);
 router.post('/users', createUser);
-router.patch('/users/:id', updateUserActive);
+router.patch('/users/:id', updateUser);
 router.post('/users/:id/reset-password', resetUserPassword);
 router.put('/users/:id/roles', setUserRoles);
 

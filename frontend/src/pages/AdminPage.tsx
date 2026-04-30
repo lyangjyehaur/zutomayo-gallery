@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MVItem } from '@/lib/types';
 import { getProxyImgUrl, isMediaVideo } from '@/lib/image';
 import Editor from '@monaco-editor/react';
@@ -37,6 +37,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useConfirmDialog } from "@/components/admin/useConfirmDialog"
+import { materializeGroupAndStripLegacy } from "@/lib/admin-media"
 import { Progress } from '@/components/ui/progress';
 import {
   DropdownMenu,
@@ -705,7 +706,7 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
   const [expandedImageIndices, setExpandedImageIndices] = useState<Set<number>>(new Set());
   const [editingImageIdx, setEditingImageIdx] = useState<number | null>(null);
   const [activeSection, setActiveSection] = useState<'basic' | 'media' | 'images' | 'schema'>('images');
-  const [hoveredGroupId, setHoveredGroupId] = useState<string | null>(null);
+  const [hoveredGroupKey, setHoveredGroupKey] = useState<string | null>(null);
 
   // 批量新增與分組狀態
   const [isBatchAddOpen, setIsBatchAddOpen] = useState(false);
@@ -876,6 +877,15 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
   }, [mvData]);
 
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [pendingJump, setPendingJump] = useState<{ mvId: string; mediaId?: string } | null>(null);
+
+  useEffect(() => {
+    const mvId = searchParams.get('mvId') || searchParams.get('mv');
+    const mediaId = searchParams.get('mediaId') || searchParams.get('media') || undefined;
+    if (!mvId) return;
+    setPendingJump({ mvId, mediaId });
+  }, [searchParams]);
 
   useEffect(() => {
     if (mvData && mvData.length > 0) {
@@ -885,12 +895,38 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
         const dateB = `${b.year}-${b.date || ''}`;
         return dateB.localeCompare(dateA);
       });
-      setData(JSON.parse(JSON.stringify(sortedData)));
-      originalDataRef.current = JSON.parse(JSON.stringify(sortedData));
+      const cloned = JSON.parse(JSON.stringify(sortedData));
+      const hydrated = cloned;
+      setData(hydrated);
+      originalDataRef.current = JSON.parse(JSON.stringify(hydrated));
       // 重置變動追蹤
       setChangedFields(new Map());
     }
   }, [mvData]);
+
+  useEffect(() => {
+    if (!pendingJump) return;
+    if (!data || data.length === 0) return;
+    const idx = data.findIndex((mv) => String((mv as any).id) === pendingJump.mvId);
+    if (idx < 0) {
+      setPendingJump(null);
+      return;
+    }
+    if (activeIndex !== idx) {
+      setActiveIndex(idx);
+      return;
+    }
+    if (pendingJump.mediaId) {
+      const mv: any = data[idx] as any;
+      const images = Array.isArray(mv?.images) ? mv.images : [];
+      const imgIdx = images.findIndex((img: any) => String(img?.id) === pendingJump.mediaId);
+      if (imgIdx >= 0) {
+        setActiveSection('images');
+        setEditingImageIdx(imgIdx);
+      }
+    }
+    setPendingJump(null);
+  }, [activeIndex, data, pendingJump]);
 
   // 註冊鍵盤快捷鍵 Ctrl+S
   useEffect(() => {
@@ -1124,21 +1160,50 @@ const currentMV = data[activeIndex];
       const newImages = [...(mv.images || [])];
       
       const currentImg = newImages[imgIdx];
-      const groupId = currentImg.groupId;
+      const groupKey = currentImg?.group?.source_url ? String(currentImg.group.source_url).trim() : '';
       // 所有欄位除了白名單外的都同步
       const nonSyncFields = ['url', 'thumbnail', 'caption', 'alt', 'width', 'height'];
       
       newImages[imgIdx] = { ...currentImg, [field]: value };
       
-      if (groupId && !nonSyncFields.includes(field)) {
+      if (groupKey && !nonSyncFields.includes(field)) {
         newImages.forEach((img, idx) => {
-          if (idx !== imgIdx && img.groupId === groupId) {
+          const k = img?.group?.source_url ? String(img.group.source_url).trim() : '';
+          if (idx !== imgIdx && k === groupKey) {
             newImages[idx] = { ...img, [field]: value };
             markFieldChanged(targetId, `images.${idx}.${field}`);
           }
         });
       }
       
+      return { ...mv, images: newImages };
+    }));
+  };
+
+  const updateImageGroupField = (imgIdx: number, key: string, value: any) => {
+    const targetId = currentMV.id;
+    markFieldChanged(targetId, `images.${imgIdx}.group.${key}`);
+
+    setData(prevData => prevData.map(mv => {
+      if (mv.id !== targetId) return mv;
+      const newImages = [...(mv.images || [])];
+      const currentImg: any = newImages[imgIdx];
+      const groupKey = currentImg?.group?.source_url ? String(currentImg.group.source_url).trim() : '';
+      const currentGroup = (currentImg && typeof currentImg.group === 'object' && currentImg.group) ? currentImg.group : {};
+      const nextGroup = { ...currentGroup, [key]: value };
+      newImages[imgIdx] = { ...currentImg, group: nextGroup };
+
+      if (groupKey) {
+        newImages.forEach((img: any, idx: number) => {
+          const k = img?.group?.source_url ? String(img.group.source_url).trim() : '';
+          if (idx !== imgIdx && k === groupKey) {
+            const g = (img && typeof img.group === 'object' && img.group) ? img.group : {};
+            newImages[idx] = { ...img, group: { ...g, [key]: value } };
+            markFieldChanged(targetId, `images.${idx}.group.${key}`);
+          }
+        });
+      }
+
       return { ...mv, images: newImages };
     }));
   };
@@ -1168,8 +1233,8 @@ const currentMV = data[activeIndex];
     
     // 降冪排序：最新的推文在前，沒有日期的往後排
     const sortedImages = [...currentMV.images].sort((a, b) => {
-      const timeA = a.tweetDate ? new Date(a.tweetDate).getTime() : 0;
-      const timeB = b.tweetDate ? new Date(b.tweetDate).getTime() : 0;
+      const timeA = a.group?.post_date ? new Date(a.group.post_date).getTime() : 0;
+      const timeB = b.group?.post_date ? new Date(b.group.post_date).getTime() : 0;
       return timeB - timeA;
     });
 
@@ -1184,7 +1249,7 @@ const currentMV = data[activeIndex];
     
     const newImages = currentMV.images.map((img, idx) => {
       const newImg = { ...img };
-      const reservedKeys = ['url', 'thumbnail', 'caption', 'alt', 'richText', 'width', 'height', 'tweetUrl', 'groupId', 'tweetText', 'tweetAuthor', 'tweetHandle', 'tweetDate'];
+      const reservedKeys = ['id', 'type', 'media_type', 'original_url', 'thumbnail_url', 'usage', 'order_index', 'tags', 'group', 'url', 'thumbnail', 'caption', 'alt', 'richText', 'width', 'height'];
       
       Object.keys(newImg).forEach(key => {
         if (!reservedKeys.includes(key)) {
@@ -1255,8 +1320,6 @@ const currentMV = data[activeIndex];
         const json = await response.json();
         
         if (json.success && json.data && json.data.length > 0) {
-          const groupId = json.data.length > 1 ? `tweet-${Date.now()}-${Math.floor(Math.random() * 1000)}` : undefined;
-          
           for (const media of json.data) {
             // 使用核心 ID 比對，忽略推特網址尾綴參數的干擾
             const targetMediaId = getTwitterMediaId(media.url);
@@ -1274,12 +1337,15 @@ const currentMV = data[activeIndex];
               newImagesData[existingIdx] = {
                 ...newImagesData[existingIdx],
                 thumbnail: newImagesData[existingIdx].thumbnail || media.thumbnail || '',
-                tweetUrl: newImagesData[existingIdx].tweetUrl || url,
-                groupId: newImagesData[existingIdx].groupId || groupId,
-                tweetText: newImagesData[existingIdx].tweetText || media.text,
-                tweetAuthor: newImagesData[existingIdx].tweetAuthor || media.user_name,
-                tweetHandle: newImagesData[existingIdx].tweetHandle || media.user_screen_name,
-                tweetDate: newImagesData[existingIdx].tweetDate || media.date
+                group: {
+                  ...(newImagesData[existingIdx].group || {}),
+                  source_url: newImagesData[existingIdx].group?.source_url || url,
+                  source_text: newImagesData[existingIdx].group?.source_text || media.text,
+                  author_name: newImagesData[existingIdx].group?.author_name || media.user_name,
+                  author_handle: newImagesData[existingIdx].group?.author_handle || media.user_screen_name,
+                  post_date: newImagesData[existingIdx].group?.post_date || media.date,
+                  status: newImagesData[existingIdx].group?.status || 'organized',
+                },
               };
               markFieldChanged(targetId, `images.${existingIdx}`);
             } else {
@@ -1297,17 +1363,19 @@ const currentMV = data[activeIndex];
               newExtractedImages.push({
                 url: media.url,
                 thumbnail: media.thumbnail || '',
-                tweetUrl: url,
+                group: {
+                  source_url: url,
+                  source_text: media.text,
+                  author_name: media.user_name,
+                  author_handle: media.user_screen_name,
+                  post_date: media.date,
+                  status: 'organized',
+                },
                 caption: '',
                 alt: '',
                 richText: '',
                 width,
                 height,
-                groupId,
-                tweetText: media.text,
-                tweetAuthor: media.user_name,
-                tweetHandle: media.user_screen_name,
-                tweetDate: media.date
               });
             }
           }
@@ -1447,17 +1515,17 @@ const currentMV = data[activeIndex];
       const newImages = [...(currentMV.images || [])];
       
       // 更新當前索引的圖片為第一個解析出的媒體
-      const groupId = `tweet-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-      
       const updateData = {
         url: firstMedia.url,
         thumbnail: firstMedia.thumbnail || '', // 如果是影片會有縮圖
-        tweetUrl: url, // 儲存原始推文 URL
-        groupId: resolvedMediaList.length > 1 ? groupId : undefined,
-        tweetText: firstMedia.text,
-        tweetAuthor: firstMedia.user_name,
-        tweetHandle: firstMedia.user_screen_name,
-        tweetDate: firstMedia.date
+        group: {
+          source_url: url,
+          source_text: firstMedia.text,
+          author_name: firstMedia.user_name,
+          author_handle: firstMedia.user_screen_name,
+          post_date: firstMedia.date,
+          status: 'organized',
+        },
       };
 
       newImages[imgIdx] = { 
@@ -1474,12 +1542,14 @@ const currentMV = data[activeIndex];
             caption: newImages[imgIdx].caption || '',
             alt: newImages[imgIdx].alt || '',
             richText: newImages[imgIdx].richText || '',
-            tweetUrl: url,
-            tweetText: resolvedMediaList[i].text,
-            tweetAuthor: resolvedMediaList[i].user_name,
-            tweetHandle: resolvedMediaList[i].user_screen_name,
-            tweetDate: resolvedMediaList[i].date,
-            groupId,
+            group: {
+              source_url: url,
+              source_text: resolvedMediaList[i].text,
+              author_name: resolvedMediaList[i].user_name,
+              author_handle: resolvedMediaList[i].user_screen_name,
+              post_date: resolvedMediaList[i].date,
+              status: 'organized',
+            },
             width: 0,
             height: 0
           });
@@ -1539,11 +1609,16 @@ const currentMV = data[activeIndex];
     setDraggableIdx(null);
   };
 
-  // 取得群組標識 (A, B, C...)
-  const getGroupLetter = (groupId: string | undefined, allImages: MVMedia[] | undefined) => {
-    if (!groupId || !allImages) return '';
-    const uniqueGroups = Array.from(new Set(allImages.filter(img => img.groupId).map(img => img.groupId)));
-    const index = uniqueGroups.indexOf(groupId);
+  const getGroupKey = (img: any) => {
+    const v = img?.group?.source_url;
+    if (typeof v !== 'string') return '';
+    return v.trim();
+  };
+
+  const getGroupLetter = (groupKey: string | undefined, allImages: MVMedia[] | undefined) => {
+    if (!groupKey || !allImages) return '';
+    const uniqueGroups = Array.from(new Set(allImages.map(getGroupKey).filter(Boolean)));
+    const index = uniqueGroups.indexOf(groupKey);
     if (index === -1) return '';
     // A-Z, AA, AB...
     let letter = '';
@@ -1565,10 +1640,12 @@ const currentMV = data[activeIndex];
     const newImages = [...(currentMV.images || [])];
     const draggedImage = newImages[draggedImageIdx];
     const dropImage = newImages[dropIndex];
+    const draggedKey = getGroupKey(draggedImage);
+    const dropKey = getGroupKey(dropImage);
     
     // 若拖曳的圖片有分組
-    if (draggedImage.groupId) {
-      if (dropImage.groupId === draggedImage.groupId) {
+    if (draggedKey) {
+      if (dropKey === draggedKey) {
         // 同組內部排序：只移動該張圖片
         newImages.splice(draggedImageIdx, 1);
         // 因為刪除了一個元素，如果 dropIndex > draggedImageIdx，實際插入位置要 -1，但 splice 是針對當前陣列操作
@@ -1578,8 +1655,8 @@ const currentMV = data[activeIndex];
         newImages.splice(dropIndex, 0, draggedImage);
       } else {
         // 跨組移動：將整個群組移動到目標位置
-        const groupItems = newImages.filter(img => img.groupId === draggedImage.groupId);
-        const filteredImages = newImages.filter(img => img.groupId !== draggedImage.groupId);
+        const groupItems = newImages.filter(img => getGroupKey(img) === draggedKey);
+        const filteredImages = newImages.filter(img => getGroupKey(img) !== draggedKey);
         const newDropIndex = filteredImages.indexOf(dropImage);
         filteredImages.splice(newDropIndex >= 0 ? newDropIndex : dropIndex, 0, ...groupItems);
         updateField('images', filteredImages);
@@ -1588,12 +1665,12 @@ const currentMV = data[activeIndex];
       }
     } else {
       // 無分組圖片移動
-      if (dropImage.groupId) {
+      if (dropKey) {
         // 避免插入到群組中間，找到該群組的邊界
-        const groupStartIndex = newImages.findIndex(img => img.groupId === dropImage.groupId);
+        const groupStartIndex = newImages.findIndex(img => getGroupKey(img) === dropKey);
         let groupEndIndex = -1;
         for (let i = newImages.length - 1; i >= 0; i--) {
-          if (newImages[i].groupId === dropImage.groupId) {
+          if (getGroupKey(newImages[i]) === dropKey) {
             groupEndIndex = i;
             break;
           }
@@ -1785,13 +1862,25 @@ const currentMV = data[activeIndex];
     }
     
     // 使用 Promise toast 處理非同步狀態
+    const normalizedChangedData = Array.isArray(changedData)
+      ? changedData.map((mv: any) => {
+          if (!mv || typeof mv !== 'object') return mv;
+          if (!Array.isArray(mv.images)) return mv;
+          return {
+            ...mv,
+            images: mv.images.map((img: any) => materializeGroupAndStripLegacy(img)),
+          };
+        })
+      : changedData;
+    (normalizedChangedData as any)._deleted = (changedData as any)._deleted;
+
     toast.promise(
       adminFetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          data: changedData,
-          deletedIds: changedData._deleted || [],
+          data: normalizedChangedData,
+          deletedIds: (normalizedChangedData as any)._deleted || [],
           partial: true // 標記為部分更新
         }),
       }).then(async response => {
@@ -2237,20 +2326,23 @@ const currentMV = data[activeIndex];
                       size="sm" 
                       className="bg-blue-500 text-white hover:bg-blue-600 border-2 border-black"
                       onClick={() => {
-                        const groupId = `group-${Date.now()}`;
+                        const sourceUrl = window.prompt('請輸入推文網址 (source_url)');
+                        if (!sourceUrl || !sourceUrl.trim()) return;
                         const targetId = currentMV.id;
                         const newImages = [...(currentMV.images || [])];
                         selectedImageIndices.forEach(idx => {
-                          newImages[idx] = { ...newImages[idx], groupId };
-                          markFieldChanged(targetId, `images.${idx}.groupId`);
+                          const img: any = newImages[idx];
+                          const g = (img && typeof img.group === 'object' && img.group) ? img.group : {};
+                          newImages[idx] = { ...img, group: { ...g, source_url: sourceUrl.trim(), status: g.status || 'organized' } };
+                          markFieldChanged(targetId, `images.${idx}.group.source_url`);
                         });
                         setData(prevData => prevData.map(mv => mv.id === targetId ? { ...mv, images: newImages } : mv));
                         setSelectedImageIndices(new Set());
                         setIsSelectionMode(false);
-                        toast.success(`成功將 ${selectedImageIndices.size} 張圖片分為一組`);
+                        toast.success(`已為 ${selectedImageIndices.size} 張圖片設定推文來源`);
                       }}
                     >
-                      <i className="hn hn-link text-base mr-2" /> 設為同組
+                      <i className="hn hn-link text-base mr-2" /> 設定推文
                     </Button>
                   )}
                   <Button 
@@ -2329,6 +2421,8 @@ const currentMV = data[activeIndex];
                   {visibleImages.map(({ img, originalIndex: imgIdx }) => {
                     const isGif = img.url?.match(/\.gif$/i) || img.url?.includes('tweet_video_thumb');
                     const isVideo = isMediaVideo(img.url, img.type);
+                    const groupKey = getGroupKey(img);
+                    const groupHue = groupKey ? Array.from(groupKey).reduce((acc, char) => acc + char.charCodeAt(0), 0) % 360 : 0;
                     return (
                       <div
                         key={imgIdx}
@@ -2337,16 +2431,15 @@ const currentMV = data[activeIndex];
                         onDragOver={(e) => handleDragOver(e, imgIdx)}
                         onDragEnd={handleDragEnd}
                         onDrop={(e) => handleDrop(e, imgIdx)}
-                        onMouseEnter={() => img.groupId && setHoveredGroupId(img.groupId)}
-                        onMouseLeave={() => img.groupId && setHoveredGroupId(null)}
+                        onMouseEnter={() => groupKey && setHoveredGroupKey(groupKey)}
+                        onMouseLeave={() => groupKey && setHoveredGroupKey(null)}
                         className={`group relative flex flex-col border-4 transition-all duration-200 bg-card ${
                           draggedImageIdx === imgIdx ? 'opacity-50 scale-[0.98] z-50 border-dashed border-black/30' : 'hover:-translate-y-1 hover:shadow-neo-sm'
                         } ${dragOverImageIdx === imgIdx ? 'border-dashed border-blue-500 bg-blue-50/50' : ''} ${
-                          hoveredGroupId && img.groupId === hoveredGroupId ? 'ring-4 ring-offset-2 z-20 scale-[1.02]' : ''
+                          hoveredGroupKey && groupKey === hoveredGroupKey ? 'ring-4 ring-offset-2 z-20 scale-[1.02]' : ''
                         }`}
                         style={{
-                          borderColor: img.groupId ? `hsl(${Array.from(img.groupId).reduce((acc, char) => acc + char.charCodeAt(0), 0) % 360}, 70%, 50%)` : 'black',
-                          ringColor: img.groupId ? `hsl(${Array.from(img.groupId).reduce((acc, char) => acc + char.charCodeAt(0), 0) % 360}, 70%, 50%)` : undefined
+                          borderColor: groupKey ? `hsl(${groupHue}, 70%, 50%)` : 'black',
                         }}
                       >
                         {/* 拖曳把手 */}
@@ -2384,7 +2477,7 @@ const currentMV = data[activeIndex];
                         </div>
 
                         {/* 縮圖區域 */}
-                        <div className="aspect-square bg-black/5 border-b-4 border-black/10 flex items-center justify-center overflow-hidden relative cursor-pointer group/thumb" onClick={() => !isSelectionMode && setEditingImageIdx(imgIdx)} style={{ borderBottomColor: img.groupId ? `hsl(${Array.from(img.groupId).reduce((acc, char) => acc + char.charCodeAt(0), 0) % 360}, 70%, 50%)` : undefined }}>
+                        <div className="aspect-square bg-black/5 border-b-4 border-black/10 flex items-center justify-center overflow-hidden relative cursor-pointer group/thumb" onClick={() => !isSelectionMode && setEditingImageIdx(imgIdx)} style={{ borderBottomColor: groupKey ? `hsl(${groupHue}, 70%, 50%)` : undefined }}>
                           {isSelectionMode && (
                             <div 
                               className={`absolute inset-0 z-20 flex items-start justify-start p-2 transition-all ${selectedImageIndices.has(imgIdx) ? 'bg-blue-500/20' : 'hover:bg-black/10'}`}
@@ -2403,9 +2496,9 @@ const currentMV = data[activeIndex];
                           )}
                           
                         {/* 顯示群組色塊邊框指示 (讓同一組的圖片有相同顏色或特徵) */}
-                          {img.groupId && (
+                          {groupKey && (
                             <div className="absolute top-0 right-0 w-8 h-8 rounded-bl-full pointer-events-none z-10 opacity-70" 
-                                 style={{ backgroundColor: `hsl(${Array.from(img.groupId).reduce((acc, char) => acc + char.charCodeAt(0), 0) % 360}, 70%, 50%)` }}>
+                                 style={{ backgroundColor: `hsl(${groupHue}, 70%, 50%)` }}>
                             </div>
                           )}
                           {img.url ? (
@@ -2429,14 +2522,14 @@ const currentMV = data[activeIndex];
 
                         {/* 狀態資訊列 */}
                         <div className="p-2 text-[10px] flex flex-col gap-1 bg-secondary text-secondary-foreground relative">
-                          {img.groupId && (
+                          {groupKey && (
                             <div 
                               className="absolute -top-3 -right-2 text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-sm flex items-center gap-1 z-10"
-                              title={`已分組: ${img.groupId}`}
-                              style={{ backgroundColor: `hsl(${Array.from(img.groupId).reduce((acc, char) => acc + char.charCodeAt(0), 0) % 360}, 70%, 40%)` }}
+                              title={`已分組: ${groupKey}`}
+                              style={{ backgroundColor: `hsl(${groupHue}, 70%, 40%)` }}
                             >
                               <i className="hn hn-link text-[8px] shrink-0" /> 
-                              Group {getGroupLetter(img.groupId, currentMV.images)}
+                              Group {getGroupLetter(groupKey, currentMV.images)}
                             </div>
                           )}
                           <div className="flex justify-between items-center font-mono">
@@ -2457,8 +2550,8 @@ const currentMV = data[activeIndex];
                                 try { return new URL(img.url).pathname.split('/').pop() } catch { return '無效網址' }
                               })() : '未設定 URL'}
                             </span>
-                            {img.tweetUrl && (
-                              <a href={img.tweetUrl} target="_blank" rel="noreferrer" className="text-blue-500 hover:text-blue-700 ml-1 flex-shrink-0" title="開啟原始推文" onClick={e => e.stopPropagation()}>
+                            {img.group?.source_url && (
+                              <a href={img.group.source_url} target="_blank" rel="noreferrer" className="text-blue-500 hover:text-blue-700 ml-1 flex-shrink-0" title="開啟原始推文" onClick={e => e.stopPropagation()}>
                                 <i className="hn hn-twitter" />
                               </a>
                             )}
@@ -2488,11 +2581,11 @@ const currentMV = data[activeIndex];
                         </DialogHeader>
                         
                         <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-secondary-background space-y-6">
-                          {currentMV.images[editingImageIdx].groupId && (
+                          {getGroupKey(currentMV.images[editingImageIdx]) && (
                             <div className="bg-blue-50 border-l-4 border-blue-500 p-3 text-sm text-blue-700 flex items-start gap-2 rounded shadow-sm">
                                 <i className="hn hn-info-circle text-lg mt-0.5" />
                                 <div>
-                                  <p className="font-bold">此圖片已分組 (Group {getGroupLetter(currentMV.images[editingImageIdx].groupId, currentMV.images)})</p>
+                                  <p className="font-bold">此圖片已分組 (Group {getGroupLetter(getGroupKey(currentMV.images[editingImageIdx]), currentMV.images)})</p>
                                   <p className="opacity-80">修改下方表單的「推文連結」、「富文本」與「自訂欄位」，將自動同步至同群組的其他圖片。「說明文字」與「替代文字」則單獨保存。</p>
                                 </div>
                               </div>
@@ -2556,14 +2649,7 @@ const currentMV = data[activeIndex];
                             {/* 右側：表單 */}
                             <div className="space-y-4 lg:col-span-7 xl:col-span-8">
                               <div className="space-y-1">
-                                <label className="text-[10px] font-bold opacity-60 uppercase flex justify-between">
-                                  <span>圖片 URL 或 推文連結</span>
-                                  {currentMV.images[editingImageIdx].tweetUrl && (
-                                    <span className="text-blue-600 truncate max-w-[200px]" title={currentMV.images[editingImageIdx].tweetUrl}>
-                                      已解析: <a href={currentMV.images[editingImageIdx].tweetUrl} target="_blank" rel="noreferrer" className="underline">{currentMV.images[editingImageIdx].tweetUrl}</a>
-                                    </span>
-                                  )}
-                                </label>
+                                <label className="text-[10px] font-bold opacity-60 uppercase">圖片 URL</label>
                                 <Input 
                                   placeholder="https://..." 
                                   value={currentMV.images[editingImageIdx].url} 
@@ -2573,11 +2659,91 @@ const currentMV = data[activeIndex];
                               </div>
                               
                               <div className="space-y-1">
-                                <label className="text-[10px] font-bold opacity-60 uppercase">原始推文連結 (自動解析來源)</label>
-                                <Input 
-                                  placeholder="https://x.com/..." 
-                                  value={currentMV.images[editingImageIdx].tweetUrl || ''} 
-                                  onChange={(e) => updateImage(editingImageIdx, 'tweetUrl', e.target.value)} 
+                                <label className="text-[10px] font-bold opacity-60 uppercase flex justify-between">
+                                  <span>推文連結 (source_url)</span>
+                                  {currentMV.images[editingImageIdx].group?.source_url ? (
+                                    <a
+                                      href={currentMV.images[editingImageIdx].group!.source_url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-blue-600 underline truncate max-w-[200px]"
+                                      title={currentMV.images[editingImageIdx].group!.source_url}
+                                    >
+                                      Open
+                                    </a>
+                                  ) : null}
+                                </label>
+                                <Input
+                                  placeholder="https://x.com/.../status/..."
+                                  value={currentMV.images[editingImageIdx].group?.source_url || ''}
+                                  onChange={(e) => updateImageGroupField(editingImageIdx, 'source_url', e.target.value)}
+                                />
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-bold opacity-60 uppercase">作者名稱 (author_name)</label>
+                                  <Input
+                                    value={currentMV.images[editingImageIdx].group?.author_name || ''}
+                                    onChange={(e) => updateImageGroupField(editingImageIdx, 'author_name', e.target.value)}
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-bold opacity-60 uppercase">作者帳號 (author_handle)</label>
+                                  <Input
+                                    value={currentMV.images[editingImageIdx].group?.author_handle || ''}
+                                    onChange={(e) => updateImageGroupField(editingImageIdx, 'author_handle', e.target.value)}
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-bold opacity-60 uppercase">發佈時間 (post_date)</label>
+                                  <Input
+                                    type="datetime-local"
+                                    value={(() => {
+                                      const raw = currentMV.images[editingImageIdx].group?.post_date
+                                      if (!raw) return ''
+                                      const d = new Date(raw)
+                                      if (Number.isNaN(d.getTime())) return ''
+                                      const pad = (n: number) => String(n).padStart(2, '0')
+                                      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+                                    })()}
+                                    onChange={(e) => {
+                                      const v = e.target.value
+                                      const d = v ? new Date(v) : null
+                                      updateImageGroupField(editingImageIdx, 'post_date', d ? d.toISOString() : null)
+                                    }}
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-bold opacity-60 uppercase">狀態 (status)</label>
+                                  <Select
+                                    value={currentMV.images[editingImageIdx].group?.status || "__none__"}
+                                    onValueChange={(v) => updateImageGroupField(editingImageIdx, 'status', v === "__none__" ? null : v)}
+                                  >
+                                    <SelectTrigger className="h-10 bg-white border-2 border-border shadow-none">
+                                      <SelectValue placeholder="status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="__none__">未設定</SelectItem>
+                                      <SelectItem value="organized">organized</SelectItem>
+                                      <SelectItem value="unorganized">unorganized</SelectItem>
+                                      <SelectItem value="pending">pending</SelectItem>
+                                      <SelectItem value="deleted">deleted</SelectItem>
+                                      <SelectItem value="rejected">rejected</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold opacity-60 uppercase">推文內容 (source_text)</label>
+                                <Textarea
+                                  value={currentMV.images[editingImageIdx].group?.source_text || ''}
+                                  onChange={(e) => updateImageGroupField(editingImageIdx, 'source_text', e.target.value)}
+                                  className="min-h-[80px] text-xs"
                                 />
                               </div>
                               
@@ -2606,39 +2772,28 @@ const currentMV = data[activeIndex];
                                 />
                               </div>
                               {/* 動態渲染擴充欄位 */}
-                              {Object.keys(currentMV.images[editingImageIdx]).filter(key => !['url', 'thumbnail', 'caption', 'alt', 'richText', 'width', 'height', 'tweetUrl', 'groupId'].includes(key)).map(key => {
-                                const isTweetField = ['tweetText', 'tweetAuthor', 'tweetHandle', 'tweetDate'].includes(key);
+                              {Object.keys(currentMV.images[editingImageIdx]).filter(key => !['id', 'type', 'media_type', 'original_url', 'thumbnail_url', 'usage', 'order_index', 'tags', 'group', 'url', 'thumbnail', 'caption', 'alt', 'richText', 'width', 'height'].includes(key)).map(key => {
                                 return (
                                 <div className="space-y-1" key={key}>
                                   <label className="text-[10px] font-bold opacity-60 uppercase flex justify-between">
-                                    <span>{key} {isTweetField ? '(推文資訊)' : '(自訂欄位)'}</span>
-                                    {!isTweetField && (
-                                      <button 
-                                        onClick={() => {
-                                          const newImages = [...currentMV.images!];
-                                          delete newImages[editingImageIdx][key];
-                                          setData(prevData => prevData.map(mv => mv.id === currentMV.id ? { ...mv, images: newImages } : mv));
-                                          markFieldChanged(currentMV.id, `images.${editingImageIdx}`);
-                                        }}
-                                        className="text-red-500 hover:text-red-700"
-                                        title="刪除此欄位"
-                                      >
-                                        <i className="hn hn-times" />
-                                      </button>
-                                    )}
+                                    <span>{key} (自訂欄位)</span>
+                                    <button 
+                                      onClick={() => {
+                                        const newImages = [...currentMV.images!];
+                                        delete newImages[editingImageIdx][key];
+                                        setData(prevData => prevData.map(mv => mv.id === currentMV.id ? { ...mv, images: newImages } : mv));
+                                        markFieldChanged(currentMV.id, `images.${editingImageIdx}`);
+                                      }}
+                                      className="text-red-500 hover:text-red-700"
+                                      title="刪除此欄位"
+                                    >
+                                      <i className="hn hn-times" />
+                                    </button>
                                   </label>
-                                  {key === 'tweetText' ? (
-                                    <Textarea 
-                                      value={currentMV.images![editingImageIdx][key] || ''} 
-                                      onChange={(e) => updateImage(editingImageIdx, key, e.target.value)}
-                                      className="min-h-[80px] text-xs" 
-                                    />
-                                  ) : (
-                                    <Input 
-                                      value={currentMV.images![editingImageIdx][key] || ''} 
-                                      onChange={(e) => updateImage(editingImageIdx, key, e.target.value)} 
-                                    />
-                                  )}
+                                  <Input 
+                                    value={currentMV.images![editingImageIdx][key] || ''} 
+                                    onChange={(e) => updateImage(editingImageIdx, key, e.target.value)} 
+                                  />
                                 </div>
                               );
                               })}

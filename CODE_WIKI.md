@@ -128,7 +128,7 @@ zutomayo-gallery/
 5. 前端接收資料後，經過本地過濾器，渲染出瀑布流卡片。
 
 ### 2. 後台資料更新 (Write Flow)
-1. 管理員進入 `/admin/db`，系統會先呼叫 `/api/auth/generate-authentication-options` 進行 Passkey 驗證。
+1. 管理員訪問 `/admin/*` 時，若尚未登入會被導向 `/admin/auth`，並可使用 Session 或 Passkey 完成登入。
 2. 驗證通過後，管理員在 Monaco Editor 中修改 JSON 資料，點擊儲存。
 3. 前端發送 POST 請求至 `/api/mvs/update`。
 4. 後端透過 `zod` 進行嚴格的格式驗證 (`validateMVs`)。

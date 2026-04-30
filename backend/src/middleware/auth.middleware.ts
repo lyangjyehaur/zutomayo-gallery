@@ -23,6 +23,8 @@ export const checkLegacyAdminHeader = async (req: Request): Promise<boolean> => 
 
   if (authService.isValidSessionToken(password)) return true;
 
+  if (!isLegacyAdminAllowed()) return false;
+
   const storedPassword = await authService.getPassword();
   if (!storedPassword) {
     const expectedPassword = process.env.ADMIN_PASSWORD || 'zutomayo';
@@ -61,8 +63,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
 };
 
 export const requireAdmin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const allowLegacy = isLegacyAdminAllowed();
-  if (allowLegacy && (await checkLegacyAdminHeader(req))) {
+  if (await checkLegacyAdminHeader(req)) {
     setReqUser(req, { id: 'legacy', username: 'legacy' });
     next();
     return;
@@ -90,8 +91,7 @@ export const requireAdmin = async (req: Request, res: Response, next: NextFuncti
 export const requirePermission = (perms: string | string[]) => {
   const required = Array.isArray(perms) ? perms : [perms];
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const allowLegacy = isLegacyAdminAllowed();
-    if (allowLegacy && (await checkLegacyAdminHeader(req))) {
+    if (await checkLegacyAdminHeader(req)) {
       setReqUser(req, { id: 'legacy', username: 'legacy' });
       next();
       return;

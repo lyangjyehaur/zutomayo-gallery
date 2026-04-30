@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MultiSelect, Option } from '@/components/ui/multi-select';
 import { adminFetch, getApiRoot } from '@/lib/admin-api';
+import { buildMvTagOptions } from '@/lib/admin-media';
 import { useConfirmDialog } from '@/components/admin/useConfirmDialog';
 import { DatePicker } from '@/components/ui/date-picker';
 import {
@@ -131,15 +132,7 @@ export function AdminStagingFanartPage() {
       const res = await adminFetch(`${baseApiUrl}/mvs`);
       const data = await res.json();
       if (data.success) {
-        const tagOptions: Option[] = [
-          { label: '綜合合繪', value: 'tag:collab' },
-          { label: 'ACAね', value: 'tag:acane' },
-          { label: '實物', value: 'tag:real' },
-          { label: '海膽栗子/生薑', value: 'tag:uniguri' },
-          { label: '其他', value: 'tag:other' },
-        ];
-        const mvOptions: Option[] = data.data.map((mv: any) => ({ label: mv.title, value: mv.id }));
-        setMvs([...tagOptions, ...mvOptions]);
+        setMvs(buildMvTagOptions(data.data) as Option[]);
       }
     } catch (error) {
       console.error('Failed to fetch MVs', error);
