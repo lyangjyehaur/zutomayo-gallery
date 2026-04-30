@@ -2837,7 +2837,7 @@ export default function RootApp() {
           <Route path="/debug/modal" element={<DebugMVModalLightbox />} />
           <Route path="*" element={<FallbackRedirect commonProps={commonProps} />} />
         </Routes>
-      <PWAPrompt />
+      {(import.meta.env.PROD || import.meta.env.VITE_PWA_DEV === 'true') ? <PWAPrompt /> : null}
       <Toaster position="top-center" />
     </>
   );

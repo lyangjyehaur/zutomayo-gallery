@@ -11,7 +11,9 @@ import './tailwind.css'
 import './i18n'
 
 // 強制舊版 PWA 檢查更新 (解決被 CDN / Nginx 快取卡住的問題)
-if ('serviceWorker' in navigator) {
+const enablePwa = import.meta.env.PROD || import.meta.env.VITE_PWA_DEV === 'true'
+
+if (enablePwa && 'serviceWorker' in navigator) {
   navigator.serviceWorker.ready.then((registration) => {
     // 每次打開網頁時，強制去伺服器拉最新的 sw.js，略過本地瀏覽器快取
     registration.update().catch((err) => {
