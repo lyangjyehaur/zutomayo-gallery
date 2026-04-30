@@ -9,7 +9,7 @@ echo.
 
 echo 正在啟動前後端服務...
 echo 前端：http://localhost:5173
-echo 後端：http://localhost:5000
+echo 後端：http://localhost:5010
 echo.
 echo 按 Ctrl+C 停止服務
 echo.

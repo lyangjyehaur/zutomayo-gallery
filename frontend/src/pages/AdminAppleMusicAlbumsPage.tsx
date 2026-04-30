@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { adminFetch, getApiRoot } from '@/lib/admin-api';
 
 export interface AppleMusicAlbum {
   id: number;
@@ -16,16 +16,13 @@ export interface AppleMusicAlbum {
 }
 
 export function AdminAppleMusicAlbumsPage() {
-  const navigate = useNavigate();
   const [albums, setAlbums] = useState<AppleMusicAlbum[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchData = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
-      const albumUrl = apiUrl.replace(/\/mvs$/, '/album/apple-music');
-      
-      const res = await fetch(albumUrl);
+      const albumUrl = `${getApiRoot()}/album/apple-music`;
+      const res = await adminFetch(albumUrl);
       const json = await res.json();
       
       if (json.success) {
@@ -41,23 +38,16 @@ export function AdminAppleMusicAlbumsPage() {
   };
 
   useEffect(() => {
-    const pwd = localStorage.getItem('ztmy_admin_pwd');
-    if (pwd) {
-      fetchData();
-    } else {
-      navigate('/admin');
-    }
-  }, [navigate]);
+    fetchData();
+  }, []);
 
   const handleSave = async () => {
-    const pwd = localStorage.getItem('ztmy_admin_pwd');
-    const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
-    const albumUrl = apiUrl.replace(/\/mvs$/, '/album/apple-music');
+    const albumUrl = `${getApiRoot()}/album/apple-music`;
     
     toast.promise(
-      fetch(albumUrl, {
+      adminFetch(albumUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-password': pwd || '' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ albums })
       }).then(r => r.json()),
       {

@@ -4,8 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MultiSelect, Option } from '@/components/ui/multi-select';
 import { getProxyImgUrl, isMediaVideo } from '@/lib/image';
+import { adminFetch, getApiRoot } from '@/lib/admin-api';
+import { useConfirmDialog } from '@/components/admin/useConfirmDialog';
 
 export function AdminFanArtPage() {
+  const [confirm, ConfirmDialog] = useConfirmDialog();
   const [activeTab, setActiveTab] = useState<string>('unorganized');
   const [unorganizedGroups, setUnorganizedGroups] = useState<any[]>([]);
   const [deletedGroups, setDeletedGroups] = useState<any[]>([]);
@@ -24,11 +27,11 @@ export function AdminFanArtPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [parseMvSelection, setParseMvSelection] = useState<string[]>([]);
 
-  const baseApiUrl = useMemo(() => (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, ''), []);
+  const baseApiUrl = useMemo(() => getApiRoot(), []);
 
   const fetchData = async () => {
     try {
-      const res = await fetch(`${baseApiUrl}/mvs`);
+      const res = await adminFetch(`${baseApiUrl}/mvs`);
       const data = await res.json();
       if (data.success) {
         setMvData(data.data);
@@ -40,9 +43,7 @@ export function AdminFanArtPage() {
 
   const fetchUnorganized = async () => {
     try {
-      const res = await fetch(`${baseApiUrl}/fanarts/unorganized`, {
-        headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
-      });
+      const res = await adminFetch(`${baseApiUrl}/fanarts/unorganized`);
       const data = await res.json();
       if (data.success) {
         setUnorganizedGroups(data.data);
@@ -54,9 +55,7 @@ export function AdminFanArtPage() {
 
   const fetchDeleted = async () => {
     try {
-      const res = await fetch(`${baseApiUrl}/fanarts/deleted`, {
-        headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
-      });
+      const res = await adminFetch(`${baseApiUrl}/fanarts/deleted`);
       const data = await res.json();
       if (data.success) {
         setDeletedGroups(data.data);
@@ -68,9 +67,7 @@ export function AdminFanArtPage() {
 
   const fetchLegacy = async () => {
     try {
-      const res = await fetch(`${baseApiUrl}/fanarts/legacy`, {
-        headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
-      });
+      const res = await adminFetch(`${baseApiUrl}/fanarts/legacy`);
       const data = await res.json();
       if (data.success) {
         setLegacyMedia(data.data);
@@ -82,9 +79,7 @@ export function AdminFanArtPage() {
 
   const fetchTagSummary = async () => {
     try {
-      const res = await fetch(`${baseApiUrl}/fanarts/tag-summary`, {
-        headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
-      });
+      const res = await adminFetch(`${baseApiUrl}/fanarts/tag-summary`);
       const data = await res.json();
       if (data.success) {
         setTagSummary(data.data || {});
@@ -96,9 +91,7 @@ export function AdminFanArtPage() {
 
   const fetchFanartsByTag = async (tagId: string) => {
     try {
-      const res = await fetch(`${baseApiUrl}/fanarts/by-tag/${encodeURIComponent(tagId)}`, {
-        headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
-      });
+      const res = await adminFetch(`${baseApiUrl}/fanarts/by-tag/${encodeURIComponent(tagId)}`);
       const data = await res.json();
       if (data.success) {
         setTagMedia(Array.isArray(data.data) ? data.data : []);
@@ -247,12 +240,9 @@ export function AdminFanArtPage() {
     if (mvs.length === 0) return toast.error('請至少選擇一個關聯的 MV 或標籤');
     
     try {
-      const res = await fetch(`${baseApiUrl}/fanarts/media/${mediaId}/assign`, {
+      const res = await adminFetch(`${baseApiUrl}/fanarts/media/${mediaId}/assign`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' 
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mvs, groupId })
       });
       const data = await res.json();
@@ -270,14 +260,17 @@ export function AdminFanArtPage() {
   };
 
   const handleDiscardGroup = async (groupId: string) => {
-    if (!window.confirm('確定要捨棄整篇推文嗎？這將不會保存到畫廊中。')) return;
+    const ok = await confirm({
+      title: '捨棄推文',
+      description: '確定要捨棄整篇推文嗎？這將不會保存到畫廊中。',
+      confirmText: '捨棄',
+      cancelText: '取消',
+    });
+    if (!ok) return;
     try {
-      const res = await fetch(`${baseApiUrl}/fanarts/${groupId}/status`, {
+      const res = await adminFetch(`${baseApiUrl}/fanarts/${groupId}/status`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'deleted' })
       });
       if (res.ok) {
@@ -292,12 +285,9 @@ export function AdminFanArtPage() {
 
   const handleRestoreGroup = async (groupId: string) => {
     try {
-      const res = await fetch(`${baseApiUrl}/fanarts/${groupId}/status`, {
+      const res = await adminFetch(`${baseApiUrl}/fanarts/${groupId}/status`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'unorganized' })
       });
       if (res.ok) {
@@ -313,12 +303,9 @@ export function AdminFanArtPage() {
   const handleUpdateAssociations = async (mediaId: string, mvs: string[]) => {
     if (mvs.length === 0) return toast.error('請至少選擇一個 MV 或標籤');
     try {
-      const res = await fetch(`${baseApiUrl}/fanarts/media/${mediaId}/sync`, {
+      const res = await adminFetch(`${baseApiUrl}/fanarts/media/${mediaId}/sync`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' 
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mvs })
       });
       const data = await res.json();
@@ -351,11 +338,10 @@ export function AdminFanArtPage() {
       const apiUrl = `${baseApiUrl}/mvs/twitter-resolve`;
       for (const url of urls) {
         try {
-          const response = await fetch(apiUrl, {
+          const response = await adminFetch(apiUrl, {
             method: 'POST',
             headers: { 
               'Content-Type': 'application/json',
-              'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
             },
             body: JSON.stringify({ url }),
           });
@@ -430,12 +416,9 @@ export function AdminFanArtPage() {
           images: [...(mv.images || []), ...imagesToSave]
         }));
 
-        const response = await fetch(`${baseApiUrl}/mvs/update`, {
+        const response = await adminFetch(`${baseApiUrl}/mvs/update`, {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ data: updatedMvs, partial: true }),
         });
 
@@ -790,6 +773,7 @@ export function AdminFanArtPage() {
           </div>
         )}
       </div>
+      <ConfirmDialog />
     </div>
   );
 }

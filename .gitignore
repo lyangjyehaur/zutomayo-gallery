@@ -165,3 +165,10 @@ frontend-memory.md
 backend/crawler/*.json
 
 frontend/memory.md
+.DS_Store
+frontend/.DS_Store
+frontend/src/.DS_Store
+frontend/dev-dist/
+frontend/public/version.json
+frontend/package-lock.json
+frontend/pnpm-lock.yaml

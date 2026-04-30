@@ -47,7 +47,7 @@ echo.
 echo ========================================
 echo Starting services...
 echo Frontend will run at: http://localhost:5173
-echo Backend will run at: http://localhost:5000
+echo Backend will run at: http://localhost:5010
 echo ========================================
 echo.
 echo Press Ctrl+C to stop both services

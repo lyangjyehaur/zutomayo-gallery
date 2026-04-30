@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { VERSION_CONFIG } from '@/config/version';
 import { toast } from "sonner"
+import { adminFetch } from "@/lib/admin-api";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -35,6 +36,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useConfirmDialog } from "@/components/admin/useConfirmDialog"
 import { Progress } from '@/components/ui/progress';
 import {
   DropdownMenu,
@@ -687,6 +689,7 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
   const [isSaving, setIsSaving] = useState(false);
   const [showOnlyIncomplete, setShowOnlyIncomplete] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [confirm, ConfirmDialog] = useConfirmDialog();
   
   // 刪除確認 Drawer 狀態
   const [deleteDrawerOpen, setDeleteDrawerOpen] = useState(false);
@@ -801,9 +804,7 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
     if (isMetadataDialogOpen) {
       const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
       const authApiUrl = apiUrl.replace(/\/mvs$/, '/auth');
-      fetch(`${authApiUrl}/passkeys`, {
-        headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
-      }).then(r => r.json()).then(data => {
+      adminFetch(`${authApiUrl}/passkeys`).then(r => r.json()).then(data => {
         if (Array.isArray(data)) setPasskeys(data);
       });
     }
@@ -816,15 +817,15 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
 
       const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
       const authApiUrl = apiUrl.replace(/\/mvs$/, '/auth');
-      const headers = { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '', 'Content-Type': 'application/json' };
+      const headers = { 'Content-Type': 'application/json' };
       
-      const resp = await fetch(`${authApiUrl}/generate-reg-options`, { headers });
+      const resp = await adminFetch(`${authApiUrl}/generate-reg-options`, { headers });
       const options = await resp.json();
       if (options.error) throw new Error(options.error);
 
       const attResp = await startRegistration({ optionsJSON: options });
       
-      const verifyResp = await fetch(`${authApiUrl}/verify-reg`, {
+      const verifyResp = await adminFetch(`${authApiUrl}/verify-reg`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ data: attResp, name })
@@ -833,7 +834,7 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
       
       if (verifyResult.success) {
         toast.success('Passkey 註冊成功！');
-        const listResp = await fetch(`${authApiUrl}/passkeys`, { headers });
+        const listResp = await adminFetch(`${authApiUrl}/passkeys`);
         setPasskeys(await listResp.json());
       } else {
         toast.error('Passkey 註冊失敗');
@@ -844,14 +845,17 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
   };
 
   const handleRemovePasskey = async (id: string) => {
-    if (!window.confirm('確定要刪除這個 Passkey 嗎？')) return;
+    const ok = await confirm({
+      title: "刪除 Passkey",
+      description: "確定要刪除這個 Passkey 嗎？",
+      confirmText: "刪除",
+      cancelText: "取消",
+    })
+    if (!ok) return;
     try {
       const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
       const authApiUrl = apiUrl.replace(/\/mvs$/, '/auth');
-      await fetch(`${authApiUrl}/passkeys/${encodeURIComponent(id)}`, {
-        method: 'DELETE',
-        headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
-      });
+      await adminFetch(`${authApiUrl}/passkeys/${encodeURIComponent(id)}`, { method: 'DELETE' });
       setPasskeys(prev => prev.filter(p => p.id !== id));
       toast.success('Passkey 已刪除');
     } catch (e) {
@@ -908,22 +912,20 @@ const currentMV = data[activeIndex];
     setIsSavingMetadata(true);
     try {
       const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
-      const response = await fetch(`${apiUrl}/metadata`, {
+      const response = await adminFetch(`${apiUrl}/metadata`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
         },
         body: JSON.stringify(localMetadata),
       });
       if (!response.ok) throw new Error('保存 Metadata 失敗');
 
       if (localMaintenance !== systemStatus?.maintenance || localMaintenanceType !== (systemStatus?.type || 'ui') || localMaintenanceEta !== (systemStatus?.eta || '')) {
-        const sysResponse = await fetch(`${apiUrl.replace('/mvs', '/system')}/maintenance`, {
+        const sysResponse = await adminFetch(`${apiUrl.replace('/mvs', '/system')}/maintenance`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
           },
           body: JSON.stringify({ maintenance: localMaintenance, type: localMaintenanceType, eta: localMaintenanceEta })
         });
@@ -945,12 +947,9 @@ const currentMV = data[activeIndex];
     setIsClearingRedisCache(true);
     try {
       const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
-      const res = await fetch(`${apiUrl.replace('/mvs', '/system')}/cache/clear`, {
+      const res = await adminFetch(`${apiUrl.replace('/mvs', '/system')}/cache/clear`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
-        }
+        headers: { 'Content-Type': 'application/json' }
       });
       const data = await res.json();
       if (!res.ok || !data?.success) throw new Error(data?.error || '清除快取失敗');
@@ -1150,12 +1149,9 @@ const currentMV = data[activeIndex];
     const proxiedUrl = getProxyImgUrl(url, 'full');
     try {
       const apiUrl = (import.meta.env.VITE_API_URL || '/api/mvs').replace(/\/mvs$/, '/mvs/probe');
-      const response = await fetch(apiUrl, {
+      const response = await adminFetch(apiUrl, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: proxiedUrl }),
       });
       if (!response.ok) throw new Error('Network Error');
@@ -1249,9 +1245,9 @@ const currentMV = data[activeIndex];
       const url = urls[i];
       try {
         const apiUrl = (import.meta.env.VITE_API_URL || '/api').replace(/\/mvs$/, '') + '/mvs/twitter-resolve';
-        const response = await fetch(apiUrl, {
+        const response = await adminFetch(apiUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url }),
         });
         
@@ -1425,12 +1421,9 @@ const currentMV = data[activeIndex];
       try {
         // 使用相對路徑加上後端代理的 VITE_API_URL 邏輯，避免跨域和環境變數問題
         const apiUrl = (import.meta.env.VITE_API_URL || '/api').replace(/\/mvs$/, '') + '/mvs/twitter-resolve';
-        const response = await fetch(apiUrl, {
+        const response = await adminFetch(apiUrl, {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url }),
         });
         if (!response.ok) throw new Error('推文解析請求失敗');
@@ -1793,12 +1786,9 @@ const currentMV = data[activeIndex];
     
     // 使用 Promise toast 處理非同步狀態
     toast.promise(
-      fetch(apiUrl, {
+      adminFetch(apiUrl, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           data: changedData,
           deletedIds: changedData._deleted || [],
@@ -3144,6 +3134,7 @@ const currentMV = data[activeIndex];
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog />
     </div>
   );
 }

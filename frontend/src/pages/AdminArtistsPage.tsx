@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,9 +6,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { ArtistMeta, MVItem, MVMedia } from '@/lib/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { adminFetch, getApiRoot } from '@/lib/admin-api';
 
 export function AdminArtistsPage() {
-  const navigate = useNavigate();
   const [artistMeta, setArtistMeta] = useState<Record<string, ArtistMeta>>({});
   const [mvData, setMvData] = useState<MVItem[]>([]);
   const [selectedArtist, setSelectedArtist] = useState<string | null>(null);
@@ -21,36 +20,31 @@ export function AdminArtistsPage() {
 
   const fetchData = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
+      const apiUrl = `${getApiRoot()}/mvs`;
       const [metaRes, mvRes] = await Promise.all([
-        fetch(`${apiUrl}/metadata`),
-        fetch(`${apiUrl}?limit=1000`)
+        adminFetch(`${apiUrl}/metadata`),
+        adminFetch(`${apiUrl}?limit=1000`)
       ]);
       const metaData = await metaRes.json();
       const mvs = await mvRes.json();
-      setArtistMeta(metaData.data?.artistMeta || metaData.artistMeta || {});
-      setMvData(mvs.data || []);
+      const meta = (metaData?.data ?? metaData)?.artistMeta ?? metaData?.artistMeta ?? {};
+      setArtistMeta(meta);
+      setMvData(mvs?.data || []);
     } catch (e) {
       toast.error('載入資料失敗');
     }
   };
 
   useEffect(() => {
-    const pwd = localStorage.getItem('ztmy_admin_pwd');
-    if (pwd) {
-      fetchData();
-    } else {
-      navigate('/admin');
-    }
+    fetchData();
   }, []);
 
   const handleSave = async () => {
-    const pwd = localStorage.getItem('ztmy_admin_pwd');
-    const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
+    const apiUrl = `${getApiRoot()}/mvs`;
     toast.promise(
-      fetch(`${apiUrl}/metadata`, {
+      adminFetch(`${apiUrl}/metadata`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-password': pwd || '' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ artistMeta })
       }).then(r => r.json()),
       {
@@ -75,15 +69,14 @@ export function AdminArtistsPage() {
     let allNewImages: any[] = [];
 
     try {
-      const apiUrl = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, '') + '/mvs/twitter-resolve';
+      const apiUrl = `${getApiRoot()}/mvs/twitter-resolve`;
       
       for (const url of urls) {
         try {
-          const response = await fetch(apiUrl, {
+          const response = await adminFetch(apiUrl, {
             method: 'POST',
             headers: { 
               'Content-Type': 'application/json',
-              'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || ''
             },
             body: JSON.stringify({ url }),
           });

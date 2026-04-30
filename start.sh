@@ -44,8 +44,8 @@ function show_processes() {
     echo "前端 (Port 5173):"
     lsof -i :5173 | grep LISTEN || echo "  (無運行中的前端服務)"
     echo "----------------------------------------"
-    echo "後端 (Port 5000):"
-    lsof -i :5000 | grep LISTEN || echo "  (無運行中的後端服務)"
+    echo "後端 (Port 5010):"
+    lsof -i :5010 | grep LISTEN || echo "  (無運行中的後端服務)"
     echo "========================================"
     echo
 }
@@ -54,7 +54,7 @@ function show_processes() {
 function kill_processes() {
     echo "正在檢查並停止已運行的服務..."
     local frontend_pids=$(lsof -t -i :5173)
-    local backend_pids=$(lsof -t -i :5000)
+    local backend_pids=$(lsof -t -i :5010)
     local stopped=0
 
     if [ ! -z "$frontend_pids" ]; then
@@ -64,7 +64,7 @@ function kill_processes() {
     fi
 
     if [ ! -z "$backend_pids" ]; then
-        echo "停止後端服務 (Port 5000, PIDs: $(echo $backend_pids | tr '\n' ' '))..."
+        echo "停止後端服務 (Port 5010, PIDs: $(echo $backend_pids | tr '\n' ' '))..."
         echo "$backend_pids" | xargs kill -9 2>/dev/null
         stopped=1
     fi
@@ -94,7 +94,7 @@ case $choice in
         kill_processes
         echo "正在啟動前後端服務..."
         echo "前端: http://localhost:5173"
-        echo "後端: http://localhost:5000"
+        echo "後端: http://localhost:5010"
         echo
         echo "按 Ctrl+C 停止服務"
         echo
@@ -110,7 +110,7 @@ case $choice in
     3)
         kill_processes
         echo "正在啟動後端服務..."
-        echo "位址: http://localhost:5000"
+        echo "位址: http://localhost:5010"
         echo
         npm run start:backend
         ;;

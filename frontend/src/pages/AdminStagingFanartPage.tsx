@@ -1,8 +1,20 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { format, parse } from 'date-fns';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MultiSelect, Option } from '@/components/ui/multi-select';
+import { adminFetch, getApiRoot } from '@/lib/admin-api';
+import { useConfirmDialog } from '@/components/admin/useConfirmDialog';
+import { DatePicker } from '@/components/ui/date-picker';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 
 interface StagingFanart {
   id: string;
@@ -37,6 +49,16 @@ interface ProgressData {
 
 export function AdminStagingFanartPage() {
   const settingsKey = 'ztmy_admin_staging_fanart_settings';
+  const [confirm, ConfirmDialog] = useConfirmDialog();
+  const parseDate = (s: any) => {
+    if (typeof s !== 'string' || !s) return null;
+    try {
+      const d = parse(s, 'yyyy-MM-dd', new Date());
+      return Number.isNaN(d.getTime()) ? null : d;
+    } catch {
+      return null;
+    }
+  };
 
   const readSettings = () => {
     if (typeof window === 'undefined') return null;
@@ -70,8 +92,8 @@ export function AdminStagingFanartPage() {
       ? initialSettings.searchTerms
       : 'from:zutomayo_art filter:media include:nativeretweets';
   });
-  const [startDate, setStartDate] = useState(() => (typeof initialSettings?.startDate === 'string' ? initialSettings.startDate : ''));
-  const [endDate, setEndDate] = useState(() => (typeof initialSettings?.endDate === 'string' ? initialSettings.endDate : ''));
+  const [startDate, setStartDate] = useState<Date | null>(() => parseDate(initialSettings?.startDate));
+  const [endDate, setEndDate] = useState<Date | null>(() => parseDate(initialSettings?.endDate));
   const [isTriggering, setIsTriggering] = useState(false);
   const [maxItems, setMaxItems] = useState<number>(() => {
     const n = Number(initialSettings?.maxItems);
@@ -82,20 +104,20 @@ export function AdminStagingFanartPage() {
   const [selectedMvs, setSelectedMvs] = useState<Record<string, string[]>>({});
   const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
   const [batchSelectedMvs, setBatchSelectedMvs] = useState<string[]>([]);
+  const gotoPage = (p: number) => setPage(() => Math.min(Math.max(1, p), totalPages || 1));
 
-  const baseApiUrl = useMemo(
-    () => (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/mvs$/, ''),
-    []
-  );
+  const baseApiUrl = useMemo(() => getApiRoot(), []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    const startDateStr = startDate ? format(startDate, 'yyyy-MM-dd') : '';
+    const endDateStr = endDate ? format(endDate, 'yyyy-MM-dd') : '';
     const next = {
       page,
       viewStatus,
       searchTerms,
-      startDate,
-      endDate,
+      startDate: startDateStr,
+      endDate: endDateStr,
       maxItems
     };
     try {
@@ -106,7 +128,7 @@ export function AdminStagingFanartPage() {
 
   const fetchMvs = useCallback(async () => {
     try {
-      const res = await fetch(`${baseApiUrl}/mvs`);
+      const res = await adminFetch(`${baseApiUrl}/mvs`);
       const data = await res.json();
       if (data.success) {
         const tagOptions: Option[] = [
@@ -127,9 +149,7 @@ export function AdminStagingFanartPage() {
   const fetchProgress = useCallback(async () => {
     setIsProgressLoading(true);
     try {
-      const res = await fetch(`${baseApiUrl}/staging-fanarts/progress`, {
-        headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
-      });
+      const res = await adminFetch(`${baseApiUrl}/staging-fanarts/progress`);
       const data = await res.json();
       if (data.success) {
         setProgress(data.data);
@@ -144,9 +164,7 @@ export function AdminStagingFanartPage() {
   const fetchFanarts = useCallback(async (p: number, status: 'pending' | 'rejected') => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${baseApiUrl}/staging-fanarts?page=${p}&limit=60&status=${status}`, {
-        headers: { 'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' }
-      });
+      const res = await adminFetch(`${baseApiUrl}/staging-fanarts?page=${p}&limit=60&status=${status}`);
       const data = await res.json();
       if (data.success) {
         setFanarts(data.data);
@@ -201,23 +219,22 @@ export function AdminStagingFanartPage() {
       return;
     }
 
-    if (startDate > endDate) {
+    if (startDate.getTime() > endDate.getTime()) {
       toast.error('開始日期不能大於結束日期');
       return;
     }
     
     setIsTriggering(true);
     try {
-      const res = await fetch(`${baseApiUrl}/staging-fanarts/trigger`, {
+      const startDateStr = format(startDate, 'yyyy-MM-dd');
+      const endDateStr = format(endDate, 'yyyy-MM-dd');
+      const res = await adminFetch(`${baseApiUrl}/staging-fanarts/trigger`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' 
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           searchTerms,
-          startDate: startDate,
-          endDate: endDate,
+          startDate: startDateStr,
+          endDate: endDateStr,
           maxItems
         })
       });
@@ -242,12 +259,9 @@ export function AdminStagingFanartPage() {
       const payload = isApprove ? { mvs: selectedMvs[id] || [] } : undefined;
       const endpointAction = isRestore ? 'restore' : action;
 
-      const res = await fetch(`${baseApiUrl}/staging-fanarts/${id}/${endpointAction}`, {
+      const res = await adminFetch(`${baseApiUrl}/staging-fanarts/${id}/${endpointAction}`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' 
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: payload ? JSON.stringify(payload) : undefined
       });
       const data = await res.json();
@@ -296,9 +310,13 @@ export function AdminStagingFanartPage() {
   const handleBatchAction = async (action: 'approve' | 'reject') => {
     if (selectedCards.size === 0) return;
     
-    if (!window.confirm(`確定要批次${action === 'approve' ? '核准' : '拒絕'}這 ${selectedCards.size} 張卡片嗎？`)) {
-      return;
-    }
+    const ok = await confirm({
+      title: action === 'approve' ? '批次核准' : '批次拒絕',
+      description: `確定要批次${action === 'approve' ? '核准' : '拒絕'}這 ${selectedCards.size} 張卡片嗎？`,
+      confirmText: action === 'approve' ? '核准' : '拒絕',
+      cancelText: '取消',
+    });
+    if (!ok) return;
 
     setIsLoading(true);
     let successCount = 0;
@@ -311,12 +329,9 @@ export function AdminStagingFanartPage() {
         const cardMvs = selectedMvs[id] || [];
         const combinedMvs = Array.from(new Set([...cardMvs, ...batchSelectedMvs]));
         const payload = action === 'approve' ? { mvs: combinedMvs } : {};
-        const res = await fetch(`${baseApiUrl}/staging-fanarts/${id}/${action}`, {
+        const res = await adminFetch(`${baseApiUrl}/staging-fanarts/${id}/${action}`, {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' 
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
         
@@ -344,18 +359,19 @@ export function AdminStagingFanartPage() {
 
   const handleBatchRestore = async () => {
     if (selectedCards.size === 0) return;
-    if (!window.confirm(`確定要將這 ${selectedCards.size} 筆已拒絕資料還原回待審核嗎？`)) {
-      return;
-    }
+    const ok = await confirm({
+      title: '批次還原',
+      description: `確定要將這 ${selectedCards.size} 筆已拒絕資料還原回待審核嗎？`,
+      confirmText: '還原',
+      cancelText: '取消',
+    });
+    if (!ok) return;
 
     setIsLoading(true);
     try {
-      const res = await fetch(`${baseApiUrl}/staging-fanarts/batch-restore`, {
+      const res = await adminFetch(`${baseApiUrl}/staging-fanarts/batch-restore`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-admin-password': localStorage.getItem('ztmy_admin_pwd') || '' 
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: Array.from(selectedCards) })
       });
       const data = await res.json();
@@ -399,25 +415,39 @@ export function AdminStagingFanartPage() {
               已拒絕 ({progress?.statusCounts?.rejected || 0})
             </Button>
           </div>
-          <span className="text-sm font-bold font-mono">Page {page} of {totalPages}</span>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              className="border-2 border-black font-bold shadow-neo-sm"
-              disabled={page === 1}
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-            >
-              上一頁
-            </Button>
-            <Button 
-              variant="outline" 
-              className="border-2 border-black font-bold shadow-neo-sm"
-              disabled={page === totalPages || totalPages === 0}
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-            >
-              下一頁
-            </Button>
-          </div>
+          <Pagination className="w-auto">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    gotoPage(page - 1)
+                  }}
+                />
+              </PaginationItem>
+              {totalPages > 0 ? (
+                <PaginationItem>
+                  <PaginationLink
+                    href="#"
+                    isActive
+                    onClick={(e) => e.preventDefault()}
+                  >
+                    {page}
+                  </PaginationLink>
+                </PaginationItem>
+              ) : null}
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    gotoPage(page + 1)
+                  }}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       </div>
 
@@ -439,19 +469,13 @@ export function AdminStagingFanartPage() {
                     placeholder="e.g. from:zutomayo_art filter:media include:nativeretweets"
                   />
                   <div className="flex items-center gap-1">
-                    <Input 
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="border-2 border-black font-bold shadow-neo-sm h-8 w-[140px] bg-background"
-                    />
+                    <div className="w-[160px]">
+                      <DatePicker value={startDate} onChange={setStartDate} placeholder="開始日期" />
+                    </div>
                     <span className="font-bold">-</span>
-                    <Input 
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="border-2 border-black font-bold shadow-neo-sm h-8 w-[140px] bg-background"
-                    />
+                    <div className="w-[160px]">
+                      <DatePicker value={endDate} onChange={setEndDate} placeholder="結束日期" />
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold uppercase shrink-0">最大抓取數量:</span>
@@ -471,7 +495,7 @@ export function AdminStagingFanartPage() {
                   onClick={handleTriggerCrawler}
                   disabled={isTriggering}
                 >
-                  <i className={`hn ${isTriggering ? 'hn-refresh animate-spin' : 'hn-play'} mr-2`} /> 抓取 {startDate && endDate ? `${startDate}~${endDate}` : '指定區間'} 的推文
+                  <i className={`hn ${isTriggering ? 'hn-refresh animate-spin' : 'hn-play'} mr-2`} /> 抓取 {startDate && endDate ? `${format(startDate, 'yyyy-MM-dd')}~${format(endDate, 'yyyy-MM-dd')}` : '指定區間'} 的推文
                 </Button>
                 <Button 
                   variant="outline" 
@@ -698,6 +722,7 @@ export function AdminStagingFanartPage() {
         </div>
         )}
         </div>
+        <ConfirmDialog />
       </div>
     </div>
   );

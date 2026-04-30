@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { adminFetch, getApiRoot } from '@/lib/admin-api';
 
 import {
   Select,
@@ -31,7 +31,6 @@ export interface Album {
 }
 
 export function AdminAlbumsPage() {
-  const navigate = useNavigate();
   const [albums, setAlbums] = useState<Album[]>([]);
   const [dicts, setDicts] = useState<DictItem[]>([]);
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
@@ -39,13 +38,12 @@ export function AdminAlbumsPage() {
 
   const fetchData = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
-      const albumUrl = apiUrl.replace(/\/mvs$/, '/album');
-      const dictUrl = apiUrl.replace(/\/mvs$/, '/system/dicts');
+      const albumUrl = `${getApiRoot()}/album`;
+      const dictUrl = `${getApiRoot()}/system/dicts`;
       
       const [albumRes, dictRes] = await Promise.all([
-        fetch(albumUrl),
-        fetch(dictUrl)
+        adminFetch(albumUrl),
+        adminFetch(dictUrl)
       ]);
       
       const albumJson = await albumRes.json();
@@ -68,23 +66,16 @@ export function AdminAlbumsPage() {
   };
 
   useEffect(() => {
-    const pwd = localStorage.getItem('ztmy_admin_pwd');
-    if (pwd) {
-      fetchData();
-    } else {
-      navigate('/admin');
-    }
-  }, [navigate]);
+    fetchData();
+  }, []);
 
   const handleSave = async () => {
-    const pwd = localStorage.getItem('ztmy_admin_pwd');
-    const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
-    const albumUrl = apiUrl.replace(/\/mvs$/, '/album');
+    const albumUrl = `${getApiRoot()}/album`;
     
     toast.promise(
-      fetch(albumUrl, {
+      adminFetch(albumUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-password': pwd || '' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ albums, deletedIds })
       }).then(r => r.json()),
       {

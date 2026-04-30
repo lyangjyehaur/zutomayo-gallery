@@ -87,6 +87,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"), // 在 frontend 資料夾內，@ 指向自己的 src 是正確的
     },
+    dedupe: ["@tanstack/query-core", "@tanstack/react-query"],
   },
   test: {
     environment: "jsdom",

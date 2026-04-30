@@ -292,6 +292,50 @@ MediaModel.belongsTo(MediaGroupModel, { foreignKey: 'group_id', as: 'group' });
 AlbumModel.belongsTo(AppleMusicAlbumModel, { foreignKey: 'apple_music_album_id', as: 'appleMusicAlbum' });
 AppleMusicAlbumModel.hasMany(AlbumModel, { foreignKey: 'apple_music_album_id', as: 'albums' });
 
+export const AdminUserModel = sequelize.define('AdminUser', {
+  id: { type: DataTypes.STRING(36), primaryKey: true, defaultValue: generateShortId },
+  username: { type: DataTypes.STRING, allowNull: false, unique: true },
+  password_hash: { type: DataTypes.TEXT, allowNull: false },
+  is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+}, {
+  tableName: 'admin_users',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+});
+
+export const AdminRoleModel = sequelize.define('AdminRole', {
+  code: { type: DataTypes.STRING, primaryKey: true },
+  name: { type: DataTypes.STRING, allowNull: true },
+  description: { type: DataTypes.TEXT, allowNull: true },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+}, {
+  tableName: 'admin_roles',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+});
+
+export const AdminMenuModel = sequelize.define('AdminMenu', {
+  id: { type: DataTypes.STRING(36), primaryKey: true, defaultValue: generateShortId },
+  label: { type: DataTypes.STRING, allowNull: false },
+  path: { type: DataTypes.STRING, allowNull: false, unique: true },
+  icon: { type: DataTypes.STRING, allowNull: true },
+  sort: { type: DataTypes.INTEGER, defaultValue: 0 },
+  parent_id: { type: DataTypes.STRING(36), allowNull: true },
+  permission: { type: DataTypes.STRING, allowNull: true },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+}, {
+  tableName: 'admin_menus',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+});
+
 export const syncModels = async () => {
   await sequelize.sync({ alter: true });
 };

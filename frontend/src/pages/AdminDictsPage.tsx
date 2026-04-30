@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { adminFetch, getApiRoot } from '@/lib/admin-api';
 
 interface DictItem {
   id: string;
@@ -15,16 +15,13 @@ interface DictItem {
 }
 
 export function AdminDictsPage() {
-  const navigate = useNavigate();
   const [dicts, setDicts] = useState<DictItem[]>([]);
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchData = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
-      const systemUrl = apiUrl.replace(/\/mvs$/, '/system');
-      const res = await fetch(`${systemUrl}/dicts`);
+      const res = await adminFetch(`${getApiRoot()}/system/dicts`);
       const json = await res.json();
       if (json.success) {
         setDicts(json.data);
@@ -39,23 +36,14 @@ export function AdminDictsPage() {
   };
 
   useEffect(() => {
-    const pwd = localStorage.getItem('ztmy_admin_pwd');
-    if (pwd) {
-      fetchData();
-    } else {
-      navigate('/admin');
-    }
-  }, [navigate]);
+    fetchData();
+  }, []);
 
   const handleSave = async () => {
-    const pwd = localStorage.getItem('ztmy_admin_pwd');
-    const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
-    const systemUrl = apiUrl.replace(/\/mvs$/, '/system');
-    
     toast.promise(
-      fetch(`${systemUrl}/dicts`, {
+      adminFetch(`${getApiRoot()}/system/dicts`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-password': pwd || '' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dicts, deletedIds })
       }).then(r => r.json()),
       {

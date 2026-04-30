@@ -1,8 +1,13 @@
 import { Router } from 'express';
 import { generateRegOptions, verifyReg, generateAuthOptions, verifyAuth, listPasskeys, removePasskey, changePassword } from '../controllers/auth.controller.js';
-import { requireAdmin } from '../middleware/auth.middleware.js';
+import { login, logout, me } from '../controllers/auth-session.controller.js';
+import { requireAdmin, requireAuth } from '../middleware/auth.middleware.js';
 
 const router = Router();
+
+router.post('/login', login);
+router.post('/logout', logout);
+router.get('/me', me);
 
 // Passkey authentication (public)
 router.get('/generate-auth-options', generateAuthOptions);

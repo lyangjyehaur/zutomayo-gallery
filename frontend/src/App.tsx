@@ -2784,6 +2784,21 @@ export default function RootApp() {
                 />
               }
             />
+            <Route
+              path="mvs"
+              element={
+                <AdminPage
+                  mvData={mvData || []}
+                  metadata={normalizedMetadata}
+                  systemStatus={systemStatus}
+                  onRefresh={() => {
+                    mutate();
+                    mutateMetadata();
+                    mutateSystemStatus();
+                  }}
+                />
+              }
+            />
             <Route path="artists" element={<AdminArtistsPage />} />
             <Route path="albums" element={<AdminAlbumsPage />} />
             <Route path="apple-music-albums" element={<AdminAppleMusicAlbumsPage />} />
