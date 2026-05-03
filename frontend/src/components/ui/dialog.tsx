@@ -28,8 +28,8 @@ const DialogOverlay = React.forwardRef<
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { overlayClassName?: string }
->(({ className, children, overlayClassName, ...props }, ref) => {
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { overlayClassName?: string; showClose?: boolean }
+>(({ className, children, overlayClassName, showClose = true, ...props }, ref) => {
   return (
     <DialogPortal>
       <DialogOverlay className={overlayClassName} />
@@ -42,10 +42,12 @@ const DialogContent = React.forwardRef<
         {...props}
       >
         {children}
-        <DialogPrimitive.Close data-slot="dialog-close" className="absolute top-4 right-4 md:top-6 md:right-8 z-[110] bg-background text-foreground border-3 border-foreground shadow-neo-sm hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all w-10 h-10 flex items-center justify-center rounded-none focus:outline-none disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-          <i className="hn hn-times text-xl leading-none" />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
+        {showClose ? (
+          <DialogPrimitive.Close data-slot="dialog-close" className="absolute top-4 right-4 md:top-6 md:right-8 z-[110] bg-background text-foreground border-3 border-foreground shadow-neo-sm hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all w-10 h-10 flex items-center justify-center rounded-none focus:outline-none disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+            <i className="hn hn-times text-xl leading-none" />
+            <span className="sr-only">Close</span>
+          </DialogPrimitive.Close>
+        ) : null}
       </DialogPrimitive.Content>
     </DialogPortal>
   )

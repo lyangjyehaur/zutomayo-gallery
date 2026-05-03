@@ -1931,26 +1931,46 @@ function App({
 
             <DialogContent
               overlayClassName={MODAL_THEME.overlay.dialog}
+              showClose={false}
               className={`!w-screen !h-[100dvh] md:!w-screen md:!h-[100dvh] !max-w-none md:!max-w-none overflow-hidden flex flex-col p-0 border-0 ${MODAL_THEME.content.dialog} !rounded-none shadow-none fixed top-0 left-0 !translate-x-0 !translate-y-0 z-[100]`}
             >
               <div className={MODAL_THEME.crt}></div>
-              <div className="relative z-10 flex-1 min-h-0 overflow-hidden">
-                <div className="h-12 md:h-14 border-b-4 border-black bg-black text-white flex items-center justify-between px-4 md:px-6">
-                  <div className="font-black tracking-widest uppercase">{t("submit.title", "FanArt 投稿")}</div>
+              <div className="relative z-10 flex flex-col h-full min-h-0 overflow-hidden">
+                <div className="shrink-0 border-b-4 border-black bg-black text-white px-4 md:px-6 pt-3 pb-2 md:pt-4 md:pb-3 flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 md:w-9 md:h-9 border-2 border-white/20 bg-white/10 flex items-center justify-center">
+                        <i className="hn hn-edit text-lg md:text-xl"></i>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-black tracking-widest uppercase leading-tight">
+                          {t("submit.title", "FanArt 投稿")}
+                        </div>
+                        <div className="text-[10px] font-mono opacity-70 leading-tight">
+                          /fanart/submit
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs opacity-75 leading-relaxed max-w-[60ch]">
+                      匿名或登入皆可投稿；上傳與 Tweet 來源支援混用。
+                    </div>
+                  </div>
                   <Button
                     onClick={() => navigate(`${basePath}/fanart`)}
                     variant="neutral"
                     size="icon"
-                    className="w-9 h-9 md:w-10 md:h-10 rounded-none hover:bg-main hover:text-black"
+                    className="shrink-0 w-10 h-10 md:w-11 md:h-11 rounded-none hover:bg-main hover:text-black"
+                    aria-label="Close"
                   >
-                    <i className="hn hn-times text-xl"></i>
+                    <i className="hn hn-times text-xl md:text-2xl"></i>
                   </Button>
                 </div>
-                <ScrollArea className="flex-1 min-h-0 w-full">
-                  <div className="p-4 md:p-6">
+
+                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+                  <div className="px-4 md:px-6 py-4 md:py-6 pb-[calc(1rem+env(safe-area-inset-bottom))]">
                     <SubmitFanArtPage mvData={mvData} />
                   </div>
-                </ScrollArea>
+                </div>
               </div>
             </DialogContent>
           </Dialog>
