@@ -39,9 +39,10 @@ export function MultiSelect({
   className,
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false)
+  const safeSelected = Array.isArray(selected) ? selected : []
 
   const handleUnselect = (item: string) => {
-    onChange(selected.filter((i) => i !== item))
+    onChange(safeSelected.filter((i) => i !== item))
   }
 
   const getChipStyle = (value: string) => {
@@ -66,10 +67,10 @@ export function MultiSelect({
           onClick={() => setOpen(!open)}
         >
           <div className="flex flex-wrap gap-1">
-            {selected.length === 0 && (
+            {safeSelected.length === 0 && (
               <span className="text-black/50">{placeholder}</span>
             )}
-            {selected.map((item) => {
+            {safeSelected.map((item) => {
               const option = options.find((opt) => opt.value === item)
               return (
                 <Badge
@@ -120,20 +121,20 @@ export function MultiSelect({
                   value={option.label}
                   onSelect={() => {
                     onChange(
-                      selected.includes(option.value)
-                        ? selected.filter((item) => item !== option.value)
-                        : [...selected, option.value]
+                      safeSelected.includes(option.value)
+                        ? safeSelected.filter((item) => item !== option.value)
+                        : [...safeSelected, option.value]
                     )
                   }}
                   className={cn(
                     "font-bold",
-                    selected.includes(option.value) ? "bg-ztmy-green/20" : ""
+                    safeSelected.includes(option.value) ? "bg-ztmy-green/20" : ""
                   )}
                 >
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      selected.includes(option.value) ? "opacity-100" : "opacity-0"
+                      safeSelected.includes(option.value) ? "opacity-100" : "opacity-0"
                     )}
                   />
                   {option.label}

@@ -270,7 +270,7 @@ export function SubmitFanArtPage({ mvData }: SubmitFanArtPageProps) {
             <div className="text-sm font-black">關聯 MV（可多選，可為空）</div>
             <MultiSelect
               options={mvOptions}
-              value={mvIds}
+              selected={mvIds}
               onChange={setMvIds}
               placeholder="選擇 MV…"
             />
@@ -279,7 +279,7 @@ export function SubmitFanArtPage({ mvData }: SubmitFanArtPageProps) {
             <div className="text-sm font-black">特殊標籤（可多選，可為空）</div>
             <MultiSelect
               options={allowedTags}
-              value={specialTags}
+              selected={specialTags}
               onChange={setSpecialTags}
               placeholder="選擇標籤…"
             />
@@ -401,4 +401,3 @@ export function SubmitFanArtPage({ mvData }: SubmitFanArtPageProps) {
     </div>
   );
 }
-
