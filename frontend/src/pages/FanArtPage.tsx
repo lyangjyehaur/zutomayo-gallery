@@ -4,6 +4,7 @@ import { MVItem } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { WalineComments } from '@/components/WalineComments';
 import FancyboxViewer from '@/components/FancyboxViewer';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 interface FanArtPageProps {
   mvData: MVItem[];
@@ -11,6 +12,14 @@ interface FanArtPageProps {
 
 export function FanArtPage({ mvData }: FanArtPageProps) {
   const { t } = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const activeLang = useMemo(() => {
+    const parts = (location.pathname || '/').split('/');
+    const maybeLng = parts[1];
+    return maybeLng && maybeLng.length > 0 ? maybeLng : 'zh-TW';
+  }, [location.pathname]);
 
   const normalizeTag = (tag: any) => {
     if (!tag) return '';
@@ -522,6 +531,17 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
             reactionTitle={t("waline.reactionTitleFeature", "您期待這個功能嗎？")} 
           />
         </div>
+      </div>
+
+      <div className="fixed bottom-6 right-6 z-50">
+        <button
+          type="button"
+          onClick={() => navigate(`/${activeLang}/submit`)}
+          className="bg-black text-white w-12 h-12 flex items-center justify-center border-2 border-black hover:bg-main hover:text-black transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-y-1 hover:translate-x-1"
+          aria-label="投稿"
+        >
+          <i className="hn hn-edit text-lg"></i>
+        </button>
       </div>
     </div>
   );
