@@ -2,11 +2,80 @@ import crypto from 'crypto';
 import fetch from 'node-fetch';
 
 type AuthMailPurpose = 'login' | 'verify_email' | 'reset_password';
+type MailLocale = 'zh-TW' | 'zh-CN' | 'zh-HK' | 'en' | 'ja';
 
 const tcSecretId = process.env.TENCENT_SECRET_ID;
 const tcSecretKey = process.env.TENCENT_SECRET_KEY;
 const tcRegion = process.env.TENCENT_SES_REGION || 'ap-guangzhou';
 const tcEndpoint = process.env.TENCENT_SES_ENDPOINT || 'ses.tencentcloudapi.com';
+const defaultLocale = (process.env.TENCENT_SES_DEFAULT_LANG || 'zh-TW') as MailLocale;
+
+const supportedLocales: MailLocale[] = ['zh-TW', 'zh-CN', 'zh-HK', 'en', 'ja'];
+
+const normalizeLocale = (v: string | null | undefined): MailLocale | null => {
+  const s = String(v || '').trim();
+  if (!s) return null;
+  const hit = supportedLocales.find((x) => x.toLowerCase() === s.toLowerCase());
+  return hit || null;
+};
+
+const inferLocaleFromLink = (link: string): MailLocale | null => {
+  try {
+    const u = new URL(link);
+    const redirect = u.searchParams.get('redirect');
+    if (!redirect) return null;
+    const decoded = decodeURIComponent(redirect);
+    const maybeUrl = decoded.startsWith('http://') || decoded.startsWith('https://') ? new URL(decoded) : null;
+    const path = maybeUrl ? maybeUrl.pathname : decoded;
+    const m = String(path || '').match(/^\/(zh-TW|zh-CN|zh-HK|en|ja)(\/|$)/);
+    return normalizeLocale(m?.[1]);
+  } catch {
+    return null;
+  }
+};
+
+const envTemplateId = (purpose: AuthMailPurpose, locale: MailLocale): number | null => {
+  const base = purpose === 'verify_email' ? 'VERIFY' : purpose === 'reset_password' ? 'RESET' : 'LOGIN';
+  const suffix = `_${locale.replace('-', '_').toUpperCase()}`;
+  const key = `TENCENT_SES_TEMPLATE_${base}_ID${suffix}`;
+  const value = (process.env as any)[key] as string | undefined;
+  if (value && String(value).trim()) return Number(value);
+
+  if (locale === 'zh-HK') {
+    const fallback = `TENCENT_SES_TEMPLATE_${base}_ID_ZH_TW`;
+    const fallbackValue = (process.env as any)[fallback] as string | undefined;
+    if (fallbackValue && String(fallbackValue).trim()) return Number(fallbackValue);
+  }
+  if (locale === 'zh-TW') {
+    const fallback = `TENCENT_SES_TEMPLATE_${base}_ID_ZH_HK`;
+    const fallbackValue = (process.env as any)[fallback] as string | undefined;
+    if (fallbackValue && String(fallbackValue).trim()) return Number(fallbackValue);
+  }
+
+  const defaultKey = `TENCENT_SES_TEMPLATE_${base}_ID`;
+  const defaultValue = (process.env as any)[defaultKey] as string | undefined;
+  if (defaultValue && String(defaultValue).trim()) return Number(defaultValue);
+  return null;
+};
+
+const subjectByPurpose = (purpose: AuthMailPurpose, locale: MailLocale) => {
+  if (purpose === 'verify_email') {
+    if (locale === 'en') return 'ZTMY Gallery Email Verification';
+    if (locale === 'ja') return 'ZTMY Gallery メール認証';
+    if (locale === 'zh-CN') return 'ZTMY Gallery 注册验证';
+    return 'ZTMY Gallery 註冊驗證';
+  }
+  if (purpose === 'reset_password') {
+    if (locale === 'en') return 'ZTMY Gallery Password Reset';
+    if (locale === 'ja') return 'ZTMY Gallery パスワード再設定';
+    if (locale === 'zh-CN') return 'ZTMY Gallery 重置密码';
+    return 'ZTMY Gallery 重設密碼';
+  }
+  if (locale === 'en') return 'ZTMY Gallery Login Link';
+  if (locale === 'ja') return 'ZTMY Gallery ログインリンク';
+  if (locale === 'zh-CN') return 'ZTMY Gallery 登录链接';
+  return 'ZTMY Gallery 登入連結';
+};
 
 const getFromByPurpose = (purpose: AuthMailPurpose) => {
   const commonEmail = process.env.TENCENT_SES_FROM_EMAIL;
@@ -39,7 +108,24 @@ export const isMailConfigured = () => {
       process.env.TENCENT_SES_FROM_VERIFY_EMAIL ||
       process.env.TENCENT_SES_FROM_RESET_EMAIL,
   );
-  const templateOk = Boolean(process.env.TENCENT_SES_TEMPLATE_VERIFY_ID && process.env.TENCENT_SES_TEMPLATE_RESET_ID);
+  const hasAny = (keys: string[]) => keys.some((k) => Boolean((process.env as any)[k] && String((process.env as any)[k]).trim()));
+  const verifyKeys = [
+    'TENCENT_SES_TEMPLATE_VERIFY_ID',
+    'TENCENT_SES_TEMPLATE_VERIFY_ID_ZH_TW',
+    'TENCENT_SES_TEMPLATE_VERIFY_ID_ZH_CN',
+    'TENCENT_SES_TEMPLATE_VERIFY_ID_ZH_HK',
+    'TENCENT_SES_TEMPLATE_VERIFY_ID_EN',
+    'TENCENT_SES_TEMPLATE_VERIFY_ID_JA',
+  ];
+  const resetKeys = [
+    'TENCENT_SES_TEMPLATE_RESET_ID',
+    'TENCENT_SES_TEMPLATE_RESET_ID_ZH_TW',
+    'TENCENT_SES_TEMPLATE_RESET_ID_ZH_CN',
+    'TENCENT_SES_TEMPLATE_RESET_ID_ZH_HK',
+    'TENCENT_SES_TEMPLATE_RESET_ID_EN',
+    'TENCENT_SES_TEMPLATE_RESET_ID_JA',
+  ];
+  const templateOk = hasAny(verifyKeys) && hasAny(resetKeys);
   return Boolean(tcSecretId && tcSecretKey && tcRegion && fromAny && templateOk);
 };
 
@@ -172,25 +258,17 @@ export const sendAuthLinkEmail = async (to: string, args: { purpose: AuthMailPur
   const from = getFromByPurpose(args.purpose);
   if (!from) return false;
 
-  const mail = buildAuthMail(args.purpose, args.link);
-
-  const templateIdEnv =
-    args.purpose === 'verify_email'
-      ? process.env.TENCENT_SES_TEMPLATE_VERIFY_ID
-      : args.purpose === 'reset_password'
-        ? process.env.TENCENT_SES_TEMPLATE_RESET_ID
-        : process.env.TENCENT_SES_TEMPLATE_LOGIN_ID;
-  const templateId = templateIdEnv ? Number(templateIdEnv) : null;
+  const inferredLocale = inferLocaleFromLink(args.link) || defaultLocale;
+  const templateId = envTemplateId(args.purpose, inferredLocale);
   if (!templateId) {
-    throw new Error('TENCENT_SES_TEMPLATE_ID_MISSING');
+    throw new Error(`TENCENT_SES_TEMPLATE_ID_MISSING:${args.purpose}:${inferredLocale}`);
   }
 
   await sendTencentSesEmail({
     to,
     from,
-    subject: mail.subject,
-    text: mail.text,
-    html: mail.html,
+    subject: subjectByPurpose(args.purpose, inferredLocale),
+    text: '',
     template: { id: templateId, data: { link: args.link } },
   });
 
