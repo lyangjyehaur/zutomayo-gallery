@@ -45,6 +45,9 @@ import { AdminMediaGroupRepairPage } from "@/pages/AdminMediaGroupRepairPage";
 import { AdminAccountPage } from "@/pages/AdminAccountPage";
 import { AppleMusicGalleryPage } from "@/pages/AppleMusicGalleryPage";
 import { SubmitFanArtPage } from "@/pages/SubmitFanArtPage";
+import { PublicLoginPage } from "@/pages/PublicLoginPage";
+import { MySubmissionsPage } from "@/pages/MySubmissionsPage";
+import { AuthMagicCallbackPage } from "@/pages/AuthMagicCallbackPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { Demo3DCardPage } from "@/pages/Demo3DCardPage";
 import { DemoCDCasePage } from "@/pages/DemoCDCasePage";
@@ -456,7 +459,9 @@ function App({
   const isFanArtRoute = pathnameWithoutLang === "/fanart";
   const isAppleMusicGalleryRoute = pathnameWithoutLang === "/albums";
   const isSubmitRoute = pathnameWithoutLang === "/submit";
-  const isNotFound = pathnameWithoutLang !== "/" && pathnameWithoutLang !== "/favorites" && !isIllustratorsRoute && !isFanArtRoute && !isAppleMusicGalleryRoute && !isSubmitRoute && !is404Route && !isDemo3DCard && !mvIdMatch;
+  const isLoginRoute = pathnameWithoutLang === "/login";
+  const isMeSubmissionsRoute = pathnameWithoutLang === "/me/submissions";
+  const isNotFound = pathnameWithoutLang !== "/" && pathnameWithoutLang !== "/favorites" && !isIllustratorsRoute && !isFanArtRoute && !isAppleMusicGalleryRoute && !isSubmitRoute && !isLoginRoute && !isMeSubmissionsRoute && !is404Route && !isDemo3DCard && !mvIdMatch;
 
   // 動態獲取唯一的年份、專輯與藝術家清單，並處理分組
   const {
@@ -1301,6 +1306,10 @@ function App({
           <AppleMusicGalleryPage />
         ) : isSubmitRoute ? (
           <SubmitFanArtPage mvData={mvData} />
+        ) : isLoginRoute ? (
+          <PublicLoginPage redirectUrl={`/${activeLang}/submit`} />
+        ) : isMeSubmissionsRoute ? (
+          <MySubmissionsPage />
         ) : (
           <>
             {/* 篩選欄定位錨點（非 sticky），用來計算篩選欄原始位置，放在這裡會剛好和 filterBarRef 的頂部對齊 */}
@@ -2894,6 +2903,7 @@ export default function RootApp() {
       <>
         <Routes>
             <Route path="/" element={<RootLocaleRedirect commonProps={commonProps} />} />
+            <Route path="/auth/magic" element={<AuthMagicCallbackPage />} />
             <Route path="/:lng" element={<LocalizedAppLayout commonProps={commonProps} />}>
               <Route index element={null} />
               <Route path="favorites" element={null} />
@@ -2901,6 +2911,8 @@ export default function RootApp() {
               <Route path="illustrators/:artistId" element={<IllustratorRouteBoundary />} />
               <Route path="fanart" element={null} />
               <Route path="submit" element={null} />
+              <Route path="login" element={null} />
+              <Route path="me/submissions" element={null} />
               <Route path="albums" element={null} />
               <Route path="mv/:id" element={<MVRouteBoundary />} />
               <Route path="404" element={null} />

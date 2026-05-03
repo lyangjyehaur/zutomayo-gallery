@@ -124,3 +124,59 @@ export const logout = async (req: Request, res: Response) => {
   }
 };
 
+export const updateMe = async (req: Request, res: Response) => {
+  try {
+    const userId = (req.session as any)?.publicUserId;
+    if (!userId) {
+      res.status(401).json({ success: false, error: 'PUBLIC_UNAUTHORIZED' });
+      return;
+    }
+
+    const user = await PublicUserModel.findByPk(userId);
+    if (!user) {
+      res.status(404).json({ success: false, error: 'USER_NOT_FOUND' });
+      return;
+    }
+
+    const update: any = {};
+
+    if (typeof (req.body as any)?.display_name === 'string') {
+      const v = String((req.body as any).display_name).trim();
+      update.display_name = v.slice(0, 64);
+    }
+
+    const rawSocials = (req.body as any)?.social_links;
+    if (rawSocials && typeof rawSocials === 'object' && !Array.isArray(rawSocials)) {
+      const allowedKeys = ['x', 'instagram', 'pixiv', 'youtube', 'website'];
+      const next: any = {};
+      allowedKeys.forEach((k) => {
+        const val = (rawSocials as any)[k];
+        if (typeof val === 'string') {
+          const s = val.trim();
+          if (s) next[k] = s.slice(0, 200);
+        }
+      });
+      update.social_links = next;
+    }
+
+    if (typeof (req.body as any)?.public_profile_enabled === 'boolean') {
+      update.public_profile_enabled = (req.body as any).public_profile_enabled;
+    }
+
+    const rawFields = (req.body as any)?.public_profile_fields;
+    if (rawFields && typeof rawFields === 'object' && !Array.isArray(rawFields)) {
+      const next = {
+        display_name: Boolean((rawFields as any).display_name),
+        socials: Boolean((rawFields as any).socials),
+        email_masked: Boolean((rawFields as any).email_masked),
+      };
+      update.public_profile_fields = next;
+    }
+
+    await (user as any).update(update);
+
+    res.json({ success: true, data: (user as any).toJSON() });
+  } catch (e: any) {
+    res.status(500).json({ success: false, error: e?.message || 'PUBLIC_UPDATE_ME_FAILED' });
+  }
+};

@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MultiSelect, Option } from '@/components/ui/multi-select';
 import { toast } from 'sonner';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { usePublicMe } from '@/lib/public-auth';
 
 type LocalTokenItem = { id: string; token: string };
 
@@ -52,6 +54,15 @@ interface SubmitFanArtPageProps {
 export function SubmitFanArtPage({ mvData }: SubmitFanArtPageProps) {
   const { t } = useTranslation();
   const baseApiUrl = useMemo(() => (import.meta.env.VITE_API_URL || '/api').replace(/\/mvs$/, ''), []);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { data: me } = usePublicMe();
+
+  const activeLang = React.useMemo(() => {
+    const parts = (location.pathname || '/').split('/');
+    const maybeLng = parts[1];
+    return maybeLng && maybeLng.length > 0 ? maybeLng : 'zh-TW';
+  }, [location.pathname]);
 
   const mvOptions = useMemo<Option[]>(() => {
     return mvData
@@ -258,7 +269,14 @@ export function SubmitFanArtPage({ mvData }: SubmitFanArtPageProps) {
       <div className="border-4 border-black bg-card shadow-shadow p-6">
         <div className="flex items-center justify-between gap-4">
           <h2 className="text-xl font-black tracking-widest uppercase">{t('submit.title', 'FanArt 投稿')}</h2>
-          <div className="text-xs font-mono opacity-70">{draftId ? `#${draftId} · ${status}` : 'No draft'}</div>
+          <div className="flex items-center gap-2">
+            {me ? (
+              <Button variant="outline" onClick={() => navigate(`/${activeLang}/me/submissions`)}>我的投稿</Button>
+            ) : (
+              <Button variant="outline" onClick={() => navigate(`/${activeLang}/login`)}>登入</Button>
+            )}
+            <div className="text-xs font-mono opacity-70">{draftId ? `#${draftId} · ${status}` : 'No draft'}</div>
+          </div>
         </div>
 
         <div className="mt-3 text-sm opacity-80">
