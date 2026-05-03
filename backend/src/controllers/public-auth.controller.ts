@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import { PublicAuthTokenModel, PublicUserModel } from '../models/index.js';
 import { generateToken, sha256Hex } from '../utils/submission.js';
-import { isMailConfigured, sendMagicLinkEmail } from '../services/mail.service.js';
+import { isMailConfigured, sendAuthLinkEmail, sendMagicLinkEmail } from '../services/mail.service.js';
 
 const magicTokenTtlMs = 15 * 60 * 1000;
 const verifyTokenTtlMs = 60 * 60 * 1000;
@@ -243,7 +243,7 @@ export const register = async (req: Request, res: Response) => {
     const redirect = typeof (req.body as any)?.redirectUrl === 'string' ? (req.body as any).redirectUrl : '/';
     const link = `${origin.replace(/\/$/, '')}/auth/verify-email?token=${encodeURIComponent(token)}&redirect=${encodeURIComponent(redirect)}`;
 
-    const sent = await sendMagicLinkEmail(email, link).catch(() => false);
+    const sent = await sendAuthLinkEmail(email, { purpose: 'verify_email', link }).catch(() => false);
     if (!sent) {
       const isProd = process.env.NODE_ENV === 'production';
       if (isProd) {
@@ -363,7 +363,7 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
 
     const origin = process.env.PUBLIC_APP_ORIGIN || 'http://localhost:5173';
     const link = `${origin.replace(/\/$/, '')}/auth/reset-password?token=${encodeURIComponent(token)}&redirect=${encodeURIComponent(redirect)}`;
-    await sendMagicLinkEmail(email, link).catch(() => false);
+    await sendAuthLinkEmail(email, { purpose: 'reset_password', link }).catch(() => false);
   } catch {
   }
 };
