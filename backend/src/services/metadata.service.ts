@@ -213,10 +213,21 @@ export const getMetadata = async (): Promise<MetadataResponse> => {
     push('default', raw);
   });
 
+  const legacyAnnouncements = configMap.announcements;
+  const normalizedLegacy = normalizeMetadata({ announcements: legacyAnnouncements }).announcements;
+  const announcementsValue =
+    Object.keys(announcementMap).length > 0
+      ? announcementMap
+      : Array.isArray(normalizedLegacy) && normalizedLegacy.length > 0
+        ? normalizedLegacy
+        : normalizedLegacy && typeof normalizedLegacy === 'object' && Object.keys(normalizedLegacy).length > 0
+          ? normalizedLegacy
+          : [];
+
   return {
     artistMeta,
     albumMeta,
-    announcements: Object.keys(announcementMap).length > 0 ? announcementMap : [],
+    announcements: announcementsValue,
     ...(() => {
       const next = { ...configMap };
       delete (next as any).announcements;

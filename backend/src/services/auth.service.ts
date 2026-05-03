@@ -1,6 +1,4 @@
-import crypto from 'crypto';
-import { AuthPasskey, AuthSetting, sequelize } from './pg.service.js';
-import { redisClient } from './redis.service.js';
+import { AuthPasskey, AuthSetting } from './pg.service.js';
 
 export interface Passkey {
   id: string;
@@ -21,42 +19,6 @@ interface AuthData {
 const defaultAuthData: AuthData = { passkeys: [] };
 
 export class AuthService {
-  private sessionTokens: Set<string> = new Set();
-  private sessionTokenTtlSeconds = 24 * 60 * 60;
-
-  private getRedisTokenKey(token: string) {
-    return `auth:session-token:${token}`;
-  }
-
-  public generateSessionToken(): string {
-    const token = crypto.randomBytes(32).toString('hex');
-    if (redisClient.isOpen) {
-      void redisClient.setEx(this.getRedisTokenKey(token), this.sessionTokenTtlSeconds, '1');
-      return token;
-    }
-    this.sessionTokens.add(token);
-    setTimeout(() => {
-      this.sessionTokens.delete(token);
-    }, this.sessionTokenTtlSeconds * 1000);
-    return token;
-  }
-
-  public async isValidSessionToken(token: string): Promise<boolean> {
-    if (redisClient.isOpen) {
-      const exists = await redisClient.exists(this.getRedisTokenKey(token));
-      return exists === 1;
-    }
-    return this.sessionTokens.has(token);
-  }
-
-  public async revokeSessionToken(token: string): Promise<boolean> {
-    if (redisClient.isOpen) {
-      const deleted = await redisClient.del(this.getRedisTokenKey(token));
-      return deleted > 0;
-    }
-    return this.sessionTokens.delete(token);
-  }
-
   async getPasskeys(userId?: string): Promise<Passkey[]> {
     const rows = await AuthPasskey.findAll(userId ? ({ where: { user_id: userId } } as any) : undefined);
     return rows.map(r => {

@@ -2,8 +2,6 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import { AdminMenuModel, AdminUserModel } from '../models/index.js';
 import { getEnforcer } from '../rbac/enforcer.js';
-import { checkLegacyAdminHeader } from '../middleware/auth.middleware.js';
-import { authService } from '../services/auth.service.js';
 import { getSessionCookieOptions, sessionCookieName } from '../config/session.js';
 
 const serializeMenus = async (username: string, permissions: Set<string>) => {
@@ -91,11 +89,6 @@ export const login = async (req: Request, res: Response) => {
 };
 
 export const logout = async (req: Request, res: Response) => {
-  const header = req.headers['x-admin-password'];
-  if (typeof header === 'string' && await authService.isValidSessionToken(header)) {
-    await authService.revokeSessionToken(header);
-  }
-
   const destroy = () =>
     new Promise<void>((resolve) => {
       req.session.destroy(() => resolve());
@@ -113,16 +106,6 @@ export const logout = async (req: Request, res: Response) => {
 export const me = async (req: Request, res: Response) => {
   const username = (req.session as any)?.username;
   if (typeof username !== 'string') {
-    if (await checkLegacyAdminHeader(req)) {
-      const payload = {
-        username: 'legacy',
-        roles: ['role:super_admin'],
-        permissions: ['*'],
-        menus: await serializeMenus('legacy', new Set(['*'])),
-      };
-      res.json({ success: true, data: payload });
-      return;
-    }
     res.status(401).json({ success: false, error: 'Unauthorized' });
     return;
   }

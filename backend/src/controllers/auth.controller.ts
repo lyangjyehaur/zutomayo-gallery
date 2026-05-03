@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { generateRegistrationOptions, verifyRegistrationResponse, generateAuthenticationOptions, verifyAuthenticationResponse } from '@simplewebauthn/server';
 import { authService } from '../services/auth.service.js';
-import bcrypt from 'bcrypt';
 import { AdminUserModel } from '../models/index.js';
 
 // V10 SimpleWebAuthn API 變更：不再使用 isoBase64URL，而是使用 Uint8Array 處理。
@@ -180,42 +179,4 @@ export const removePasskey = async (req: Request, res: Response) => {
   res.json({ success: true });
 };
 
-export const changePassword = async (req: Request, res: Response) => {
-  const { oldPassword, newPassword } = req.body;
-  const storedPassword = await authService.getPassword();
-
-  if (storedPassword) {
-    // 已經有設定過密碼，必須驗證舊密碼
-    if (!oldPassword) {
-      return res.status(400).json({ error: '請輸入舊密碼' });
-    }
-    
-    const isMatch = await bcrypt.compare(oldPassword, storedPassword);
-
-    if (!isMatch) {
-      return res.status(400).json({ error: '舊密碼驗證失敗' });
-    }
-  } else {
-    // 沒有設定過密碼，如果前端有傳舊密碼過來，才去驗證預設密碼 (通常前端如果發現是預設密碼，不會強制要求填寫舊密碼)
-    if (oldPassword) {
-      const currentPassword = process.env.ADMIN_PASSWORD || 'zutomayo';
-      if (oldPassword !== currentPassword) {
-        return res.status(400).json({ error: '舊密碼驗證失敗' });
-      }
-    }
-  }
-
-  if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 4) {
-    return res.status(400).json({ error: '密碼無效，至少需要4個字元' });
-  }
-
-  if (newPassword === 'zutomayo') {
-    return res.status(400).json({ error: '不能修改回初始密碼' });
-  }
-
-  const saltRounds = 10;
-  const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
-
-  await authService.setPassword(hashedPassword);
-  res.json({ success: true });
-};
+ 

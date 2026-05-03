@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { startAuthentication } from "@simplewebauthn/browser"
 import { VERSION_CONFIG } from "@/config/version"
-import { adminFetch, getAuthApiBase, getMvsApiBase } from "@/lib/admin-api"
+import { adminFetch, getAuthApiBase } from "@/lib/admin-api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -24,14 +24,6 @@ const fetchMe = async (): Promise<MePayload | null> => {
   return json.data
 }
 
-const verifyLegacy = async (password: string) => {
-  const res = await adminFetch(`${getMvsApiBase()}/verify-admin`, {
-    method: "POST",
-    headers: { "x-admin-password": password },
-  })
-  return res.ok
-}
-
 const getTo = (raw: string | null) => {
   const v = typeof raw === "string" ? raw : ""
   if (!v) return "/admin"
@@ -42,13 +34,11 @@ const getTo = (raw: string | null) => {
 export function AdminAuthPage() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const allowLegacy = Boolean((import.meta as any).env?.DEV)
   const [isInitializing, setIsInitializing] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
 
   const [username, setUsername] = React.useState("")
   const [password, setPassword] = React.useState("")
-  const [legacyPassword, setLegacyPassword] = React.useState("")
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
   const to = React.useMemo(() => getTo(params.get("to")), [params])
@@ -72,10 +62,6 @@ export function AdminAuthPage() {
     setIsSubmitting(true)
     setError(null)
     try {
-      try {
-        localStorage.removeItem("ztmy_admin_pwd")
-      } catch {
-      }
       const res = await adminFetch(`${getAuthApiBase()}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -91,22 +77,6 @@ export function AdminAuthPage() {
       setIsSubmitting(false)
     }
   }, [navigate, password, to, username])
-
-  const handleLegacyLogin = React.useCallback(async () => {
-    setIsSubmitting(true)
-    setError(null)
-    try {
-      const ok = await verifyLegacy(legacyPassword)
-      if (!ok) throw new Error("LEGACY_LOGIN_FAILED")
-      localStorage.setItem("ztmy_admin_pwd", legacyPassword)
-      toast.success("登入成功")
-      navigate(to, { replace: true })
-    } catch (e) {
-      setError("存取碼驗證失敗。")
-    } finally {
-      setIsSubmitting(false)
-    }
-  }, [legacyPassword, navigate, to])
 
   const handlePasskeyLogin = React.useCallback(async () => {
     if (isSubmitting) return
@@ -128,10 +98,6 @@ export function AdminAuthPage() {
       const verifyResult = await verifyResp.json().catch(() => null)
       if (!verifyResp.ok || !verifyResult?.success) {
         throw new Error(String((verifyResult as any)?.error || "PASSKEY_VERIFY_FAILED"))
-      }
-      try {
-        localStorage.removeItem("ztmy_admin_pwd")
-      } catch {
       }
       toast.success("Passkey 登入成功")
       navigate(to, { replace: true })
@@ -221,48 +187,6 @@ export function AdminAuthPage() {
               </span>
             </div>
           </div>
-
-          {allowLegacy ? (
-            <>
-              <div className="space-y-2">
-                <div className="text-xs font-black uppercase tracking-widest flex flex-col leading-tight">
-                  <span className="tracking-normal opacity-70">存取碼</span>
-                  <span className="text-[10px] font-mono opacity-40 normal-case">ACCESS_CODE</span>
-                </div>
-                <Input
-                  value={legacyPassword}
-                  onChange={(e) => setLegacyPassword(e.target.value)}
-                  placeholder="admin password"
-                  type="password"
-                  className="font-mono bg-black/5 border-2 border-black focus-visible:ring-black rounded-none h-12"
-                />
-              </div>
-              <Button
-                type="button"
-                variant="neutral"
-                className="w-full h-12 font-black tracking-widest flex items-center justify-center gap-2 border-2 border-black rounded-none"
-                onClick={() => void handleLegacyLogin()}
-                disabled={isSubmitting || !legacyPassword}
-              >
-                <span className="flex flex-col items-center leading-tight">
-                  <span className="tracking-normal">Legacy 登入</span>
-                  <span className="text-[10px] font-mono opacity-60 normal-case">LEGACY LOGIN</span>
-                </span>
-              </Button>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-black/20"></span>
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-black/50 font-bold flex flex-col items-center leading-tight">
-                    <span className="tracking-normal">或</span>
-                    <span className="text-[10px] font-mono opacity-60 normal-case">OR</span>
-                  </span>
-                </div>
-              </div>
-            </>
-          ) : null}
 
           <Button
             type="button"

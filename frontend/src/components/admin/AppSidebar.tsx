@@ -1,7 +1,27 @@
 import React from "react"
 import { Link, useLocation } from "react-router-dom"
 
-import { ChevronsUpDown, ChevronRight, LogOut, Settings2 } from "lucide-react"
+import {
+  Album,
+  BookOpen,
+  ChevronsUpDown,
+  ChevronRight,
+  ExternalLink,
+  FileText,
+  Film,
+  Image,
+  Images,
+  Inbox,
+  Layers,
+  Link2,
+  LogOut,
+  Megaphone,
+  Settings2,
+  SlidersHorizontal,
+  UserCog,
+  Users,
+  Wrench,
+} from "lucide-react"
 
 import {
   Sidebar,
@@ -33,6 +53,26 @@ type MenuItem = {
   label?: string
   path?: string
   sort?: number
+}
+
+const iconForPath = (path: string) => {
+  const p = String(path || "")
+  if (p === "/admin" || p === "/admin/mvs") return Film
+  if (p === "/admin/artists") return Users
+  if (p === "/admin/albums") return Album
+  if (p === "/admin/apple-music-albums") return Album
+  if (p === "/admin/dicts") return BookOpen
+  if (p === "/admin/fanart") return Image
+  if (p === "/admin/staging-fanarts") return Images
+  if (p === "/admin/submissions") return Inbox
+  if (p === "/admin/system/announcements") return Megaphone
+  if (p === "/admin/mvs/settings") return SlidersHorizontal
+  if (p === "/admin/system/group-repair") return Wrench
+  if (p === "/admin/system/media-groups") return Layers
+  if (p === "/admin/system/orphans") return Link2
+  if (p === "/admin/system/users") return UserCog
+  if (p.startsWith("/admin/system/")) return Settings2
+  return FileText
 }
 
 export function AppSidebar({
@@ -165,8 +205,17 @@ export function AppSidebar({
     <Sidebar collapsible="icon">
       <SidebarHeader className="flex flex-col gap-2">
         <div className="px-1">
-          <div className="font-heading">ZTMY Admin</div>
-          <div className="text-xs font-mono opacity-70 break-all">{userLabel}</div>
+          <div className="flex items-center gap-2">
+            <img
+              src="/icon/favicon.svg"
+              alt="ZTMY"
+              className="size-6 border-2 border-black bg-[var(--admin-panel-bg)] shadow-[var(--admin-shadow-sm)] rounded-[calc(var(--admin-radius)-4px)]"
+            />
+            <div className="min-w-0">
+              <div className="font-heading leading-none truncate">ZTMY Admin</div>
+              <div className="text-xs font-mono opacity-70 break-all truncate">{userLabel}</div>
+            </div>
+          </div>
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -176,6 +225,7 @@ export function AppSidebar({
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={location.pathname === mvListPath}>
                 <Link to={mvListPath}>
+                  <Film />
                   <span>{mvLabel}</span>
                 </Link>
               </SidebarMenuButton>
@@ -195,7 +245,8 @@ export function AppSidebar({
                   <SidebarMenuItem key={`${path}-${idx}`}>
                     <SidebarMenuButton asChild isActive={active}>
                       <Link to={path}>
-                          <span>{labelForMenu(m)}</span>
+                        {React.createElement(iconForPath(path))}
+                        <span>{labelForMenu(m)}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -232,6 +283,7 @@ export function AppSidebar({
                         <SidebarMenuSubItem key={`${path}-${idx}`}>
                           <SidebarMenuSubButton asChild isActive={active}>
                             <Link to={path}>
+                              {React.createElement(iconForPath(path))}
                               <span>{labelForMenu(m)}</span>
                             </Link>
                           </SidebarMenuSubButton>
@@ -247,6 +299,7 @@ export function AppSidebar({
                         <SidebarMenuSubItem key={`${path}-${idx}`}>
                           <SidebarMenuSubButton asChild isActive={active}>
                             <Link to={path}>
+                              {React.createElement(iconForPath(path))}
                               <span>{labelForMenu(m)}</span>
                             </Link>
                           </SidebarMenuSubButton>
@@ -272,6 +325,7 @@ export function AppSidebar({
                   <SidebarMenuItem key={`${path}-${idx}`}>
                     <SidebarMenuButton asChild isActive={active}>
                       <Link to={path}>
+                        {React.createElement(iconForPath(path))}
                         <span>{labelForMenu(m)}</span>
                       </Link>
                     </SidebarMenuButton>
@@ -289,18 +343,18 @@ export function AppSidebar({
               <SidebarMenuButton
                 asChild
                 size="lg"
-                className="group-data-[state=collapsed]:hover:outline-0 group-data-[state=collapsed]:hover:bg-transparent overflow-visible"
+                className="group-data-[state=collapsed]:hover:outline-0 group-data-[state=collapsed]:hover:bg-transparent overflow-hidden"
               >
-                <DropdownMenuTrigger className="focus-visible:ring-0">
+                <DropdownMenuTrigger className="flex w-full items-center gap-2 focus-visible:ring-0 group-data-[collapsible=icon]:justify-center">
                   <Avatar className="h-8 w-8">
                     {resolvedAvatar ? <AvatarImage src={resolvedAvatar} alt={userLabel} /> : null}
                     <AvatarFallback>{userInitials}</AvatarFallback>
                   </Avatar>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
+                  <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                     <span className="truncate font-heading">{userLabel}</span>
                     <span className="truncate text-xs opacity-70">{email || username}</span>
                   </div>
-                  <ChevronsUpDown className="ml-auto size-4" />
+                  <ChevronsUpDown className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
                 </DropdownMenuTrigger>
               </SidebarMenuButton>
               <DropdownMenuContent
@@ -311,11 +365,15 @@ export function AppSidebar({
               >
                 <DropdownMenuItem asChild>
                   <a href="/" target="_blank" rel="noreferrer">
+                    <ExternalLink />
                     Open Site
                   </a>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to="/admin/account">帳戶設定</Link>
+                  <Link to="/admin/account">
+                    <Settings2 />
+                    帳戶設定
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onLogout}>

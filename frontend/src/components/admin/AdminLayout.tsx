@@ -91,10 +91,6 @@ export default function AdminLayout() {
         const json = await res.json().catch(() => null)
         throw new Error(String(json?.error || json?.message || "LOGOUT_FAILED"))
       }
-      try {
-        localStorage.removeItem("ztmy_admin_pwd")
-      } catch {
-      }
       toast.success("已登出")
     } catch (e: any) {
       setLogoutError(`登出失敗：${String(e?.message || e)}`)

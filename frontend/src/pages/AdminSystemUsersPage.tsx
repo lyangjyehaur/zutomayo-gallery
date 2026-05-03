@@ -149,19 +149,26 @@ export function AdminSystemUsersPage() {
   const submitResetPassword = React.useCallback(async () => {
     if (!pwUser) return
     const pwd = pwValue
-    await custom.mutateAsync({
-      url: `/api/admin/system/users/${encodeURIComponent(pwUser.id)}/reset-password`,
-      method: "post",
-      values: { new_password: pwd },
-      successNotification: { message: "已更新密碼", type: "success" },
-      errorNotification: (err: any) => ({ message: "更新失敗", description: err?.message, type: "error" }),
-    })
-    toast.success("已更新密碼")
-    setPwConfirmOpen(false)
-    setPwDialogOpen(false)
-    setPwUser(null)
-    setPwValue("")
-    setPwConfirmValue("")
+    try {
+      await toast.promise(
+        custom.mutateAsync({
+          url: `/api/admin/system/users/${encodeURIComponent(pwUser.id)}/reset-password`,
+          method: "post",
+          values: { new_password: pwd },
+        }) as any,
+        {
+          loading: "更新中...",
+          success: "已更新密碼",
+          error: (err: any) => `更新失敗：${String(err?.message || err)}`,
+        },
+      )
+      setPwConfirmOpen(false)
+      setPwDialogOpen(false)
+      setPwUser(null)
+      setPwValue("")
+      setPwConfirmValue("")
+    } catch {
+    }
   }, [custom, pwUser, pwValue])
 
   const openRoles = React.useCallback((row: UserRow) => {

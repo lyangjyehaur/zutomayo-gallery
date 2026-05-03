@@ -264,7 +264,7 @@ function App({
       return selected.filter((v) => typeof v === "string" && v.trim() !== "") as string[];
     }
     return [];
-  }, [metadata?.settings?.announcements, i18n.language]);
+  }, [metadata?.settings?.announcements, metadata?.announcements, i18n.language]);
 
   // 過濾狀態
   const [search, setSearch] = useState(() => {

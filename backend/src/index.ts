@@ -82,7 +82,7 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-admin-password'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   maxAge: 86400, // 24小時
 };
 
@@ -199,7 +199,7 @@ app.use('/api/', apiLimiter);
 // 針對寫入路由套用 writeLimiter，但排除需要頻繁操作的 admin 路由
 app.use('/api/', (req, res, next) => {
   // 放行驗證與探測相關的路由，避免卡住正常管理操作
-  if (req.path.includes('/verify-admin') || req.path.includes('/probe') || req.path.includes('/twitter-resolve')) {
+  if (req.path.includes('/probe') || req.path.includes('/twitter-resolve')) {
     return next();
   }
   
