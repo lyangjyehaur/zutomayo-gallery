@@ -89,11 +89,10 @@ zutomayo-gallery/
     前端的核心過濾引擎。每次 `mvData`、搜尋字詞 (`search`)、或標籤 (`yearFilter`, `albumFilter`, `artistFilter`) 變更時，會重新計算並排序出應顯示的 MV 列表。
 
 ### 後端關鍵函數
-*   `initDB()` (in `backend/src/services/db.service.ts`):
-    建立 SQLite 連線並啟用 `WAL` (Write-Ahead Logging) 模式以提升併發效能。執行 `CREATE TABLE IF NOT EXISTS` 並動態檢查表結構 (`PRAGMA table_info`) 以進行結構同步。
-*   `MVService.updateAllMVs()` (in `backend/src/services/mv.service.ts`):
-    接收前端 Monaco Editor 送來的 JSON 資料，進行資料庫寫入。
-    使用 `db.transaction()` 保證資料寫入的原子性。會自動將物件中的 `album`, `coverImages`, `keywords` 等陣列屬性 `JSON.stringify` 後存入 SQLite。寫入成功後，即時更新 `runtimeData` 記憶體快取。
+*   `sequelize` (in `backend/src/services/pg.service.ts`):
+    透過 Sequelize 連線 PostgreSQL，並提供主站資料表（如 `mvs`、`fanarts`）的 ORM 入口。
+*   `migrate` (in `backend/src/scripts/migrate.ts`):
+    使用 Umzug 執行 migrations（`backend/src/migrations`），用於資料表結構演進。
 *   `probeImage()` (in `backend/src/controllers/mv.controller.ts`):
     利用 `probe-image-size` 套件，在不下載完整圖片的情況下，讀取遠端圖片的標頭 (Header) 以獲取圖片的寬高尺寸。這對於前端瀑布流佈局的預先佔位非常重要。
 
@@ -105,13 +104,13 @@ zutomayo-gallery/
 *   **UI 框架**: `react` (18.3.1), `react-dom`
 *   **路由與狀態**: `react-router-dom` (6.22), `swr` (2.4)
 *   **樣式與組件**: `tailwindcss` (4.0), `shadcn/ui` (Radix UI)
-*   **視覺展示**: `@fancyapps/ui` (6.1), `lightgallery` (2.9), `masonry-layout`
+*   **視覺展示**: `@fancyapps/ui` (6.1), `lightgallery` (2.9, debug/測試用途), `masonry-layout`
 *   **認證與編輯**: `@simplewebauthn/browser` (WebAuthn), `@monaco-editor/react` (程式碼編輯器)
 *   **多語言**: `i18next`, `react-i18next`
 
 ### 後端 (Backend)
 *   **伺服器框架**: `express` (4.19), `cors`, `helmet` (資安防護)
-*   **資料庫**: `better-sqlite3` (12.9)
+*   **資料庫**: PostgreSQL（`pg` + `sequelize`），`better-sqlite3` 主要用於遺留資料/遷移腳本
 *   **認證與安全**: `@simplewebauthn/server` (13.3), `bcrypt`, `express-rate-limit` (防刷機制)
 *   **資料驗證**: `zod`
 *   **工具**: `probe-image-size` (獲取遠端圖片尺寸), `geoip-lite` (IP 地理位置解析)

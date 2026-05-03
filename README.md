@@ -2,12 +2,14 @@
 
 一個 ZUTOMAYO MV 資料庫。
 
-繁體中文 (Traditional Chinese) | [简体中文 (Simplified Chinese)](README.zh-Hans.md)
+[繁體中文](README.md) | [简体中文](README.zh-Hans.md) | [English](README.en.md) | [日本語](README.ja.md)
 
 ![Version](https://img.shields.io/badge/version-3.6.2-blue)
 ![React](https://img.shields.io/badge/React-18.3-61dafb)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.3-3178c6)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-38b2ac)
+
+修訂日期：2026-05-03
 
 ---
 
@@ -25,16 +27,17 @@
 
 ## 簡介
 
-本專案是一個展示 ZUTOMAYO MV 設定圖的線上畫廊，同時提供管理後台用於資料維護。前端使用 React + TypeScript 構建，後端採用 Express + Node.js。支援多種燈箱展示模式（Fancybox、LightGallery）及瀑布流佈局。
+本專案是一個展示 ZUTOMAYO MV 設定圖的線上畫廊，同時提供管理後台用於資料維護。前端使用 React + TypeScript 構建；後端採用 Express + TypeScript，主資料庫使用 PostgreSQL（Sequelize + Umzug migrations）。燈箱正式功能目前使用 Fancybox；LightGallery 僅保留在 debug/除錯頁面。
 
 ---
 
 ## 特色功能
 
-- 🖼️ **沉浸式畫廊體驗**：支援 Fancybox 與 LightGallery 雙燈箱模式切換，提供無縫的圖片瀏覽體驗。
+- 🖼️ **沉浸式畫廊體驗**：正式功能使用 Fancybox 提供無縫的圖片瀏覽體驗（LightGallery 目前僅保留於 debug/除錯用途）。
 - 🧱 **瀑布流佈局**：採用高效能的 Masonry 瀑布流設計，自動適應不同尺寸的 MV 設定圖。
 - 🔐 **現代化安全登入**：支援 WebAuthn (通行密鑰 / Passkeys) 與生物辨識登入管理後台，無須記憶密碼。
-- 📊 **資料可視化與編輯**：內建 Monaco Editor 支援直接編輯 JSON 資料，並提供完善的資料庫管理介面。
+- 🧑‍💻 **管理與權限**：管理後台支援資料維護，並提供角色/權限（RBAC）與多種管理 API。
+- 📊 **資料可視化與編輯**：內建 Monaco Editor 支援直接編輯/檢視資料，並提供完善的管理介面。
 - 💬 **互動留言系統**：整合 Waline 留言板，支援自定義 Emoji、Reaction 表態與 Pageview 瀏覽量統計。
 - ⚡ **極致效能優化**：嚴格的 React.memo 渲染控制、組件懶加載與 Vite Chunk 拆分，確保頁面載入如絲般順滑。
 
@@ -53,7 +56,7 @@
 | [shadcn/ui](https://ui.shadcn.com/) | 4.2 | UI 組件庫 |
 | [Neobrutalism](https://www.neobrutalism.dev/) | - | 設計風格與主題 |
 | [Fancybox](https://fancyapps.com/fancybox/) | 6.1 | 燈箱組件 |
-| [LightGallery](https://www.lightgalleryjs.com/) | 2.9 | 燈箱組件 (備用) |
+| [LightGallery](https://www.lightgalleryjs.com/) | 2.9 | 燈箱組件（debug/除錯用途） |
 | [Masonry](https://masonry.desandro.com/) | 4.2 | 瀑布流佈局 |
 | [Monaco Editor](https://microsoft.github.io/monaco-editor/) | 4.7 | 代碼編輯器 |
 | [Waline](https://waline.js.org/) | 3.5.0 | 留言系統 |
@@ -67,14 +70,20 @@
 |------|------|------|
 | [Express](https://expressjs.com/) | 4.19 | Web 框架 |
 | [TypeScript](https://www.typescriptlang.org/) | 5.3 | 類型安全 |
+| [PostgreSQL](https://www.postgresql.org/) | - | 主資料庫 |
+| [Sequelize](https://sequelize.org/) | 6.37.8 | ORM |
+| [Umzug](https://github.com/sequelize/umzug) | 3.8.0 | 資料庫 migrations |
 | [Zod](https://zod.dev/) | 3.22 | 輸入驗證 |
 | [probe-image-size](https://github.com/nodeca/probe-image-size) | 7.2 | 圖片尺寸偵測 |
 | [Helmet](https://helmetjs.github.io/) | 7.1.0 | 安全 headers |
 | [express-rate-limit](https://github.com/express-rate-limit/express-rate-limit) | 7.1.5 | 請求限流 |
 | [CORS](https://github.com/expressjs/cors) | 2.8.5 | 跨域支援 |
 | [bcrypt](https://github.com/kelektiv/node.bcrypt.js) | 6.0.0 | 密碼雜湊 |
-| [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) | 12.9 | 高效能同步 SQLite 驅動 |
+| [Redis](https://redis.io/) | - | Session / 限流 / 佇列等（選配） |
+| [BullMQ](https://docs.bullmq.io/) | 5.76.2 | 任務佇列（選配） |
+| [Meilisearch](https://www.meilisearch.com/) | 0.57.0 | 搜尋（選配） |
 | [@simplewebauthn/server](https://simplewebauthn.dev/) | 13.3 | WebAuthn (Passkeys) |
+| [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) | 12.9 | SQLite（遺留資料/遷移腳本用途） |
 
 ---
 
@@ -99,8 +108,7 @@ zutomayo-gallery/
 │   └── package.json
 │
 ├── backend/                     # 後端 API (Node.js)
-│   ├── data/
-│   │   └── database.sqlite      # SQLite 資料庫（自動建立/更新）
+│   ├── data/                    # 本地資料/快取/遺留資料（ip2region、SQLite 舊資料等）
 │   ├── src/
 │   │   ├── controllers/         # 路由控制器
 │   │   ├── routes/              # API 路由
@@ -108,6 +116,9 @@ zutomayo-gallery/
 │   │   ├── validators/          # Zod 驗證器
 │   │   ├── middleware/          # Express 中間件
 │   │   └── index.ts             # 入口文件
+│   └── package.json
+│
+├── image-hosting/               # (可選) 獨立 Next.js 圖床/上傳服務
 │   └── package.json
 │
 ├── package.json                 # 根目錄 workspace 配置
@@ -139,6 +150,8 @@ zutomayo-gallery/
 - Node.js >= 18
 - npm 或 pnpm
 - Git
+- PostgreSQL（主資料庫）
+- Redis / Meilisearch（選配，用於 session / 搜尋 / 佇列等；未配置時部分功能會自動降級或停用）
 
 ### 安裝
 
@@ -166,7 +179,7 @@ cd ../backend && npm install
 ```bash
 # 方法一：一鍵啟動（推薦）
 npm run dev
-# 這個命令會同時啟動前端（localhost:5173）和後端（localhost:5000）
+# 這個命令會同時啟動前端（localhost:5173）和後端（localhost:5010）
 
 # 方法二：分別啟動
 # 啟動前端
@@ -218,7 +231,8 @@ cp backend/.env.example backend/.env
 | `IMGPROXY_URL` | Imgproxy 伺服器位址 | `https://img.ztmr.club` |
 | `IMGPROXY_KEY` | Imgproxy 簽名用的 Hex 金鑰 | 無 |
 | `IMGPROXY_SALT` | Imgproxy 簽名用的 Hex 鹽值 | 無 |
-| `R2_*` / `MEILI_*` / `REDIS_*` / `TWITTER_*` | (選填) 進階功能配置（爬蟲/搜尋/快取/通知） | 參考 `backend/.env.example` |
+| `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASS` | PostgreSQL 連線設定（主資料庫） | 參考 `backend/.env.example` |
+| `R2_*` / `MEILI_*` / `REDIS_*` / `TWITTER_*` | (選填) 進階功能配置（圖床/搜尋/快取/爬蟲/通知） | 參考 `backend/.env.example` |
 
 ---
 
@@ -227,7 +241,7 @@ cp backend/.env.example backend/.env
 ### ⚠️ 部署注意事項與優化建議
 1. **密碼安全性**：務必在後端環境變數中修改 `ADMIN_PASSWORD`，否則後台會有被未授權存取的風險。
 2. **通行密鑰 (Passkeys)**：專案引入了 `@simplewebauthn`。如果要使用生物辨識或通行密鑰登入，必須正確設定 `EXPECTED_ORIGIN`（例如 `https://gallery.ztmy.com`）與 `RP_ID`（例如 `gallery.ztmy.com`），並且**必須在 HTTPS 環境下**運行。
-3. **資料持久化 (Data Persistence)**：後端使用 SQLite，資料檔案預設位於 `backend/data/database.sqlite`。如果是使用 Docker 或無狀態容器（如 Render / Railway）部署，**請務必掛載 Volume (磁碟空間)** 至 `backend/data/` 目錄，避免每次重啟後資料丟失。
+3. **資料持久化 (Data Persistence)**：主資料庫為 PostgreSQL，請確保資料庫本身具備持久化（例如使用受管 DB 或自行配置磁碟/Volume）。`backend/data/` 主要用於快取與遺留資料（如 ip2region、SQLite 舊資料、備份檔等），不作為主資料庫。
 4. **CORS 設定**：前端若部署於 Vercel / Netlify 等平台，後端部署於另一台主機，請記得在後端設定 `ALLOWED_ORIGINS=https://你的前端網址.com`。
 5. **原生套件編譯**：後端依賴 `better-sqlite3` 與 `bcrypt`（native addon）。Linux 伺服器需具備基本編譯工具鏈（常見為 `python3` / `make` / `g++`）。本專案的 `deploy.sh` 會自動 `rebuild` 相關套件。
 
@@ -244,12 +258,29 @@ cp backend/.env.example backend/.env
    - `FRONTEND_DEPLOY_PATH`：Nginx 等 Web 伺服器的靜態網站目錄。
    - `FRONTEND_BACKUP_PATH`：部署前的檔案與資料庫備份目錄。
 3. 再次執行腳本，選擇要部署的項目（前端、後端、或兩者皆是），腳本將自動完成剩餘工作。
+4. 若為首次部署或有資料表結構變更，請在伺服器上補跑 migrations：
+   ```bash
+   cd backend && npm run migrate
+   ```
 
-**選項 B：手動分離部署**
+**選項 B：線上增量更新腳本 (推薦日常更新)**
+本專案提供 `update.sh`，會自動 `git pull`、安裝依賴、build、執行 migrations 並重啟 PM2：
+```bash
+./update.sh
+```
+
+**選項 C：手動分離部署**
 - **前端**：執行 `npm run build:frontend`，將 `frontend/dist` 的靜態檔案部署至 Vercel、Netlify 或 GitHub Pages。
-- **後端**：將 `backend` 資料夾上傳至 Node.js 伺服器 (如 VPS、Render 等)，執行 `npm install`、`npm run build`，並用 `npm start` 啟動。記得設定上述環境變數及持久化 `backend/data` 目錄。
+- **後端**：將 `backend` 上傳至 Node.js 伺服器 (如 VPS、Render 等)，確保 PostgreSQL 可連線並設定 `DB_*` 環境變數；再執行：
+  ```bash
+  cd backend
+  npm install
+  npm run build
+  npm run migrate
+  npm start
+  ```
 
-**選項 C：整合部署 (使用 Nginx)**
+**選項 D：整合部署 (使用 Nginx)**
 1. 前端編譯出 `dist`，由 Nginx 提供靜態文件服務。
 2. Nginx 配置 `/api` 路徑反向代理 (Reverse Proxy) 至本地後端 `http://localhost:5010`。
 3. 後端可使用 `pm2` 或 `systemd` 常駐運行。
