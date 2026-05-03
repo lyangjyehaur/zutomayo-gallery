@@ -395,7 +395,8 @@ const buildAuthMail = (purpose: AuthMailPurpose, link: string) => {
 
 export const sendAuthLinkEmail = async (to: string, args: { purpose: AuthMailPurpose; link: string }) => {
   const provider = resolveProvider(to);
-  const inferredLocale = inferLocaleFromLink(args.link) || defaultLocale;
+  const normalizedLink = String(args.link || '').trim().replaceAll('`', '');
+  const inferredLocale = inferLocaleFromLink(normalizedLink) || defaultLocale;
 
   if (provider === 'tencent_ses') {
     if (!isTencentConfigured()) return false;
@@ -410,7 +411,7 @@ export const sendAuthLinkEmail = async (to: string, args: { purpose: AuthMailPur
       from,
       subject: subjectByPurpose(args.purpose, inferredLocale),
       text: '',
-      template: { id: templateId, data: { link: args.link } },
+      template: { id: templateId, data: { link: normalizedLink } },
     });
     return true;
   }
@@ -418,7 +419,7 @@ export const sendAuthLinkEmail = async (to: string, args: { purpose: AuthMailPur
   if (!isBrevoConfigured()) return false;
   const sender = getBrevoSenderByPurpose(args.purpose);
   if (!sender) return false;
-  const html = htmlByPurpose(args.purpose, inferredLocale).replaceAll('{{link}}', args.link);
+  const html = htmlByPurpose(args.purpose, inferredLocale).replaceAll('{{link}}', normalizedLink);
   await sendBrevoEmail({
     to,
     sender,

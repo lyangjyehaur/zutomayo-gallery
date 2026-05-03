@@ -5,7 +5,8 @@ type Purpose = 'login' | 'verify_email' | 'reset_password';
 
 const to = String(process.argv[2] || '').trim();
 const purpose = (String(process.argv[3] || 'verify_email').trim() || 'verify_email') as Purpose;
-const link = String(process.argv[4] || 'https://ztmy.art').trim() || 'https://ztmy.art';
+const rawLink = String(process.argv[4] || 'https://ztmy.art').trim() || 'https://ztmy.art';
+const link = rawLink.replaceAll('`', '');
 
 const isPurpose = (p: string): p is Purpose => p === 'login' || p === 'verify_email' || p === 'reset_password';
 
@@ -31,4 +32,3 @@ run().catch((e) => {
   console.error(e);
   process.exit(1);
 });
-
