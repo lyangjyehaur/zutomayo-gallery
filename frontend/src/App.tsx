@@ -362,6 +362,14 @@ function App({
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" ? window.innerWidth < 1024 : false,
   );
+
+  const isMac = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    const isMacOs = /Mac/i.test(navigator.userAgent) || navigator.platform?.toUpperCase().indexOf("MAC") >= 0;
+    const isMobileOrTouch =
+      /(iPhone|iPod|iPad)/i.test(navigator.userAgent) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+    return isMacOs && !isMobileOrTouch;
+  }, []);
   
   const geoInfo = useGeoLabel();
 
@@ -1936,8 +1944,24 @@ function App({
             >
               <div className={MODAL_THEME.crt}></div>
               <div className="relative z-10 flex flex-col h-full min-h-0 overflow-hidden">
-                <div className="shrink-0 border-b-4 border-black bg-black text-white px-4 md:px-6 pt-3 pb-2 md:pt-4 md:pb-3 flex items-start justify-between gap-4">
-                  <div className="min-w-0">
+                <div className="shrink-0 border-b-4 border-black bg-black text-white px-4 md:px-6 pt-3 pb-2 md:pt-4 md:pb-3 relative">
+                  <button
+                    type="button"
+                    onClick={() => navigate(`${basePath}/fanart`)}
+                    className={`absolute top-3 md:top-4 z-[110] bg-background text-foreground border-3 border-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all ${isMac ? "left-4 md:left-6 w-auto px-3" : "right-4 md:right-6 w-10"} h-10 flex items-center justify-center rounded-none font-black uppercase tracking-widest text-xs gap-1.5 hover:bg-main hover:text-black`}
+                    aria-label={isMac ? "Back" : "Close"}
+                  >
+                    {isMac ? (
+                      <>
+                        <i className="hn hn-angle-left text-xs leading-none"></i>
+                        <span>返回</span>
+                      </>
+                    ) : (
+                      <i className="hn hn-times text-xl leading-none"></i>
+                    )}
+                  </button>
+
+                  <div className={`min-w-0 ${isMac ? "pl-16 md:pl-20 pr-4" : "pr-16 md:pr-20"}`}>
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 md:w-9 md:h-9 border-2 border-white/20 bg-white/10 flex items-center justify-center">
                         <i className="hn hn-edit text-lg md:text-xl"></i>
@@ -1955,15 +1979,6 @@ function App({
                       匿名或登入皆可投稿；上傳與 Tweet 來源支援混用。
                     </div>
                   </div>
-                  <Button
-                    onClick={() => navigate(`${basePath}/fanart`)}
-                    variant="neutral"
-                    size="icon"
-                    className="shrink-0 w-10 h-10 md:w-11 md:h-11 rounded-none hover:bg-main hover:text-black"
-                    aria-label="Close"
-                  >
-                    <i className="hn hn-times text-xl md:text-2xl"></i>
-                  </Button>
                 </div>
 
                 <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
