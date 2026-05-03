@@ -13,6 +13,7 @@ import {
   useNavigate,
   useLocation,
   useParams,
+  Outlet,
 } from "react-router-dom";
 import { MVItem } from "@/lib/types";
 import { initAnalytics } from "@/lib/analytics";
@@ -21,6 +22,7 @@ import { initGeo, getGeoInfo } from "@/lib/geo";
 import { useGeoLabel } from "@/hooks/useGeoLabel";
 import { MVCard } from "@/components/MVCard";
 import { MVDetailsModal } from "@/components/MVDetailsModal";
+import { IllustratorDetailsModal } from "@/components/IllustratorDetailsModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AdminPage } from "@/pages/AdminPage";
@@ -30,18 +32,23 @@ import { AdminAppleMusicAlbumsPage } from "@/pages/AdminAppleMusicAlbumsPage";
 import { AdminDictsPage } from "@/pages/AdminDictsPage";
 import { AdminFanArtPage } from "@/pages/AdminFanArtPage";
 import { AdminStagingFanartPage } from "@/pages/AdminStagingFanartPage";
+import { AdminSubmissionsPage } from "@/pages/AdminSubmissionsPage";
 import { AdminSystemUsersPage } from "@/pages/AdminSystemUsersPage";
 import { AdminSystemRolesPage } from "@/pages/AdminSystemRolesPage";
 import { AdminSystemMenusPage } from "@/pages/AdminSystemMenusPage";
 import { AdminAuthPage } from "@/pages/AdminAuthPage";
+import { AdminSystemAnnouncementsPage } from "@/pages/AdminSystemAnnouncementsPage";
 import { AdminMVSettingsPage } from "@/pages/AdminMVSettingsPage";
 import { AdminOrphanMediaPage } from "@/pages/AdminOrphanMediaPage";
 import { AdminMediaGroupsPage } from "@/pages/AdminMediaGroupsPage";
 import { AdminMediaGroupRepairPage } from "@/pages/AdminMediaGroupRepairPage";
+import { AdminAccountPage } from "@/pages/AdminAccountPage";
 import { AppleMusicGalleryPage } from "@/pages/AppleMusicGalleryPage";
+import { SubmitFanArtPage } from "@/pages/SubmitFanArtPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { Demo3DCardPage } from "@/pages/Demo3DCardPage";
 import { DemoCDCasePage } from "@/pages/DemoCDCasePage";
+import { DemoTraeFooterHoverPage } from "@/pages/DemoTraeFooterHoverPage";
 import { PageNavigation } from "@/components/PageNavigation";
 import { IllustratorsPage } from "@/pages/IllustratorsPage";
 import { FanArtPage } from "@/pages/FanArtPage";
@@ -114,6 +121,9 @@ import { MODAL_THEME } from "@/lib/theme";
 import { MaintenancePage } from "@/pages/MaintenancePage";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { useTranslation } from 'react-i18next';
+import { RouteDataProvider, useRouteData } from "@/lib/routeData";
+import { MVRouteBoundary } from "@/routes/MVRouteBoundary";
+import { IllustratorRouteBoundary } from "@/routes/IllustratorRouteBoundary";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { isSupportedLang, normalizeLang } from "@/i18n";
 
@@ -217,8 +227,16 @@ function App({
   }), []);
 
   const { t, i18n } = useTranslation();
+  const titleRef = useRef<HTMLSpanElement | null>(null);
+  const titlePointerRef = useRef<{ x: number; y: number } | null>(null);
+  const titleRafRef = useRef<number | null>(null);
+  const lastTitleBurstAtRef = useRef(0);
+  const [isTitleHovering, setIsTitleHovering] = useState(false);
+  const [titleBurstKey, setTitleBurstKey] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
+  const backgroundLocation = (location.state as any)?.backgroundLocation as undefined | { pathname: string; search?: string; hash?: string; state?: any; key?: string };
+  const { mvRoute } = useRouteData();
 
   const marqueeAnnouncements = useMemo(() => {
     // 檢查 API 結構，因為 announcements 從 settings 移動到根目錄了
@@ -385,7 +403,8 @@ function App({
 
   // 從路由派生狀態
   const { activeLang, pathnameWithoutLang } = useMemo(() => {
-    const parts = location.pathname.split("/");
+    const pathname = backgroundLocation?.pathname || location.pathname;
+    const parts = pathname.split("/");
     const maybeLng = parts[1];
     if (isSupportedLang(maybeLng)) {
       const rest = "/" + parts.slice(2).join("/");
@@ -398,21 +417,46 @@ function App({
       activeLang: normalizeLang(i18n.language),
       pathnameWithoutLang: location.pathname || "/",
     };
-  }, [i18n.language, location.pathname]);
+  }, [backgroundLocation?.pathname, i18n.language, location.pathname]);
 
   const basePath = `/${activeLang}`;
 
-  const showFavOnly = pathnameWithoutLang === "/favorites" || location.state?.fromFav;
+  const showFavOnly = pathnameWithoutLang === "/favorites" || (location.state as any)?.fromFav;
   // 從路由中解析 id，避免依賴 useParams() 以支援 layout 模式不卸載元件
   const mvIdMatch = pathnameWithoutLang.match(/^\/mv\/([^/]+)/);
-  const selectedMvId = mvIdMatch ? mvIdMatch[1] : null;
+  const modalPathnameWithoutLang = useMemo(() => {
+    const parts = location.pathname.split("/");
+    const maybeLng = parts[1];
+    if (isSupportedLang(maybeLng)) {
+      const rest = "/" + parts.slice(2).join("/");
+      return rest === "/" ? "/" : rest;
+    }
+    return location.pathname || "/";
+  }, [location.pathname]);
+  const modalMvIdMatch = modalPathnameWithoutLang.match(/^\/mv\/([^/]+)/);
+  const backgroundPathnameWithoutLang = useMemo(() => {
+    const pathname = backgroundLocation?.pathname;
+    if (!pathname) return null;
+    const parts = pathname.split("/");
+    const maybeLng = parts[1];
+    if (isSupportedLang(maybeLng)) {
+      const rest = "/" + parts.slice(2).join("/");
+      return rest === "/" ? "/" : rest;
+    }
+    return pathname || "/";
+  }, [backgroundLocation?.pathname]);
+  const bgMvIdMatch = backgroundPathnameWithoutLang ? backgroundPathnameWithoutLang.match(/^\/mv\/([^/]+)/) : null;
+  const selectedMvId = (modalMvIdMatch ? modalMvIdMatch[1] : null) || (bgMvIdMatch ? bgMvIdMatch[1] : null);
+  const modalIllustratorIdMatch = modalPathnameWithoutLang.match(/^\/illustrators\/([^/]+)/);
+  const selectedIllustratorId = modalIllustratorIdMatch ? modalIllustratorIdMatch[1] : null;
 
   const is404Route = pathnameWithoutLang === "/404";
   const isDemo3DCard = pathnameWithoutLang === "/demo/3d-card";
   const isIllustratorsRoute = pathnameWithoutLang === "/illustrators" || pathnameWithoutLang.startsWith("/illustrators/");
   const isFanArtRoute = pathnameWithoutLang === "/fanart";
   const isAppleMusicGalleryRoute = pathnameWithoutLang === "/albums";
-  const isNotFound = pathnameWithoutLang !== "/" && pathnameWithoutLang !== "/favorites" && !isIllustratorsRoute && !isFanArtRoute && !isAppleMusicGalleryRoute && !is404Route && !isDemo3DCard && !mvIdMatch;
+  const isSubmitRoute = pathnameWithoutLang === "/submit";
+  const isNotFound = pathnameWithoutLang !== "/" && pathnameWithoutLang !== "/favorites" && !isIllustratorsRoute && !isFanArtRoute && !isAppleMusicGalleryRoute && !isSubmitRoute && !is404Route && !isDemo3DCard && !mvIdMatch;
 
   // 動態獲取唯一的年份、專輯與藝術家清單，並處理分組
   const {
@@ -658,8 +702,9 @@ function App({
   ]);
 
   const handleMVClick = useCallback((id: string) => {
-    navigate(`${basePath}/mv/${id}`, { state: { fromFav: showFavOnly } });
-  }, [navigate, basePath, showFavOnly]);
+    const bg = (location.state as any)?.backgroundLocation || location;
+    navigate(`${basePath}/mv/${id}`, { state: { fromFav: showFavOnly, backgroundLocation: bg } });
+  }, [navigate, basePath, location, showFavOnly]);
 
   // 返回頂部顯示狀態
   const [scrolled, setScrolled] = useState(false);
@@ -779,10 +824,41 @@ function App({
   }, [search, yearFilter, albumFilter, artistFilter]); // Dependency 確保過濾條件改變時重新綁定或觸發
 
   // 獲取當前選中的 MV 對象
-  const selectedMv = useMemo(
-    () => mvData.find((m) => m.id === selectedMvId) || null,
-    [selectedMvId, mvData],
-  );
+  const selectedMv = useMemo(() => {
+    const fromList = mvData.find((m) => m.id === selectedMvId) || null;
+    if (fromList) return fromList;
+    if (selectedMvId && mvRoute.status === 'success' && mvRoute.id === selectedMvId) return mvRoute.mv;
+    return null;
+  }, [mvData, mvRoute, selectedMvId]);
+
+  const selectedIllustrator = useMemo(() => {
+    if (!selectedIllustratorId) return null;
+    const decodedId = decodeURIComponent(selectedIllustratorId);
+    const artistsMap = new Map<string, { name: string; twitter?: string; mvs: MVItem[]; meta?: any }>();
+    mvData.forEach((mv) => {
+      mv.creators?.forEach((c: any) => {
+        const a = typeof c === 'object' ? c.name : c;
+        if (!a || typeof a !== 'string' || a.trim() === '') return;
+        if (!artistsMap.has(a)) {
+          const meta = (metadata as any)?.artistMeta?.[a];
+          artistsMap.set(a, {
+            name: a,
+            twitter: meta?.hideId ? undefined : (meta?.twitter || meta?.id),
+            meta,
+            mvs: [],
+          });
+        }
+        artistsMap.get(a)?.mvs.push(mv);
+      });
+    });
+    const illustrators = Array.from(artistsMap.values());
+    const found = illustrators.find(a =>
+      a.meta?.dataId === decodedId ||
+      a.meta?.id?.replace('@', '') === decodedId ||
+      a.name === decodedId
+    );
+    return found || null;
+  }, [metadata, mvData, selectedIllustratorId]);
 
   const [isAboutOpen, setIsAboutOpen] = useState(false);
 
@@ -795,11 +871,11 @@ function App({
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
 
-  const isGlobalPaused = !!selectedMvId || (isFeedbackOpen && isMobile) || (isAboutOpen && isMobile) || !isTabActive;
+  const isGlobalPaused = !!selectedMvId || !!selectedIllustratorId || (isFeedbackOpen && isMobile) || (isAboutOpen && isMobile) || !isTabActive;
 
   // 控制背景滾動
   useEffect(() => {
-    if (isFeedbackOpen || !!selectedMvId || isAboutOpen) {
+    if (isFeedbackOpen || !!selectedMvId || !!selectedIllustratorId || isAboutOpen) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "auto";
@@ -808,13 +884,13 @@ function App({
     return () => {
       document.body.style.overflow = "auto";
     };
-  }, [isFeedbackOpen, selectedMvId, isAboutOpen]);
+  }, [isFeedbackOpen, selectedIllustratorId, selectedMvId, isAboutOpen]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
         const titleEl = document.querySelector(
-          ".ztmy-cyber-title",
+          ".ztmy-cyber-title-crt",
         ) as HTMLElement;
         const pulseEl = document.querySelector(
           "header .animate-pulse",
@@ -842,7 +918,7 @@ function App({
     } else {
       // 確保即使 IntersectionObserver 沒觸發，只要 modal 開啟就強制暫停
       const titleEl = document.querySelector(
-        ".ztmy-cyber-title",
+        ".ztmy-cyber-title-crt",
       ) as HTMLElement;
       const pulseEl = document.querySelector(
         "header .animate-pulse",
@@ -1129,7 +1205,8 @@ function App({
 
         <h1 className="text-3xl sm:text-4xl md:text-6xl font-black flex flex-col md:flex-row items-center justify-center gap-2 sm:gap-4 px-2">
           <span 
-            className="ztmy-cyber-title-crt ztmy-cyber-title-glow whitespace-nowrap relative z-10 inline-block pb-[0.2em] -mb-[0.2em] px-[0.1em] -mx-[0.1em] will-change-transform"
+            ref={titleRef}
+            className={`ztmy-cyber-title-crt ztmy-cyber-title-glow whitespace-nowrap relative z-10 inline-block pb-[0.2em] -mb-[0.2em] px-[0.1em] -mx-[0.1em] will-change-transform ${isTitleHovering ? 'ztmy-cyber-title-hovering' : ''}`}
             data-text="ZUTOMAYO Gallery"
             style={{ 
               animation: 'cyber-jitter var(--jitter-dur, 3.5s) infinite linear',
@@ -1137,10 +1214,47 @@ function App({
               animationPlayState: isGlobalPaused ? "paused" : "running",
               ...glitchStyleVars
             } as React.CSSProperties}
+            onMouseEnter={() => {
+              setIsTitleHovering(true);
+              if (isGlobalPaused) return;
+              const now = Date.now();
+              if (now - lastTitleBurstAtRef.current < 1200) return;
+              lastTitleBurstAtRef.current = now;
+              setTitleBurstKey((v) => v + 1);
+            }}
+            onMouseMove={(e) => {
+              const el = titleRef.current;
+              if (!el) return;
+              titlePointerRef.current = { x: e.clientX, y: e.clientY };
+              if (titleRafRef.current != null) return;
+              titleRafRef.current = window.requestAnimationFrame(() => {
+                titleRafRef.current = null;
+                const p = titlePointerRef.current;
+                if (!p) return;
+                const r = el.getBoundingClientRect();
+                const dx = (p.x - (r.left + r.width / 2)) / Math.max(1, r.width / 2);
+                const dy = (p.y - (r.top + r.height / 2)) / Math.max(1, r.height / 2);
+                const clamp = (v: number) => Math.max(-1, Math.min(1, v));
+                el.style.setProperty("--mx", String(clamp(dx)));
+                el.style.setProperty("--my", String(clamp(dy)));
+              });
+            }}
+            onMouseLeave={() => {
+              setIsTitleHovering(false);
+              const el = titleRef.current;
+              if (el) {
+                el.style.setProperty("--mx", "0");
+                el.style.setProperty("--my", "0");
+              }
+              titlePointerRef.current = null;
+            }}
           >
-            <span className="ztmy-cyber-title-scan will-change-transform" data-text="ZUTOMAYO Gallery"></span>
-            <span className="ztmy-cyber-text-aberration will-change-transform" data-text="ZUTOMAYO Gallery">
-              ZUTOMAYO Gallery
+            <span className="ztmy-cyber-hover-layer will-change-transform">
+              <span key={titleBurstKey} className="ztmy-cyber-hover-burst" data-text="ZUTOMAYO Gallery"></span>
+              <span className="ztmy-cyber-title-scan will-change-transform" data-text="ZUTOMAYO Gallery"></span>
+              <span className="ztmy-cyber-text-aberration will-change-transform" data-text="ZUTOMAYO Gallery">
+                ZUTOMAYO Gallery
+              </span>
             </span>
           </span>
           <span
@@ -1185,6 +1299,8 @@ function App({
           <FanArtPage mvData={mvData} />
         ) : isAppleMusicGalleryRoute ? (
           <AppleMusicGalleryPage />
+        ) : isSubmitRoute ? (
+          <SubmitFanArtPage mvData={mvData} />
         ) : (
           <>
             {/* 篩選欄定位錨點（非 sticky），用來計算篩選欄原始位置，放在這裡會剛好和 filterBarRef 的頂部對齊 */}
@@ -2411,6 +2527,7 @@ function App({
 
       <MVDetailsModal
         mv={selectedMv}
+        metadata={metadata}
         isFav={selectedMv ? favorites.includes(selectedMv.id) : false}
         onToggleFav={() => selectedMv && toggleFav(selectedMv.id)}
         onClose={() => {
@@ -2422,6 +2539,17 @@ function App({
           } else {
             navigate(showFavOnly ? `${basePath}/favorites` : basePath, { replace: true });
           }
+        }}
+      />
+
+      <IllustratorDetailsModal
+        illustrator={selectedIllustrator}
+        onClose={() => {
+          if ((location.state as any)?.backgroundLocation) {
+            navigate(-1);
+            return;
+          }
+          navigate(`/${activeLang}/illustrators`, { replace: true });
         }}
       />
 
@@ -2641,7 +2769,12 @@ function LocalizedAppLayout({ commonProps }: { commonProps: AppCommonProps }) {
     );
   }
 
-  return <App {...commonProps} />;
+  return (
+    <>
+      <App {...commonProps} />
+      <Outlet context={commonProps} />
+    </>
+  );
 }
 
 // 全域儲存 PWA 事件，讓子組件可以存取
@@ -2757,88 +2890,80 @@ export default function RootApp() {
   }
 
   return (
-    <>
-      <Routes>
-          <Route path="/" element={<RootLocaleRedirect commonProps={commonProps} />} />
-          <Route path="/:lng" element={<LocalizedAppLayout commonProps={commonProps} />}>
-            <Route index element={null} />
-            <Route path="favorites" element={null} />
-            <Route path="illustrators" element={null} />
-            <Route path="illustrators/:artistId" element={null} />
-            <Route path="fanart" element={null} />
-            <Route path="albums" element={null} />
-            <Route path="mv/:id" element={null} />
-            <Route path="404" element={null} />
-            <Route path="*" element={null} />
-          </Route>
-          <Route path="/demo/3d-card" element={<Demo3DCardPage />} />
-          <Route path="/demo/cd-case" element={<DemoCDCasePage />} />
-          <Route path="/admin/auth" element={<AdminAuthPage />} />
-          <Route path="/admin" element={<AdminLayout />}>
+    <RouteDataProvider>
+      <>
+        <Routes>
+            <Route path="/" element={<RootLocaleRedirect commonProps={commonProps} />} />
+            <Route path="/:lng" element={<LocalizedAppLayout commonProps={commonProps} />}>
+              <Route index element={null} />
+              <Route path="favorites" element={null} />
+              <Route path="illustrators" element={null} />
+              <Route path="illustrators/:artistId" element={<IllustratorRouteBoundary />} />
+              <Route path="fanart" element={null} />
+              <Route path="submit" element={null} />
+              <Route path="albums" element={null} />
+              <Route path="mv/:id" element={<MVRouteBoundary />} />
+              <Route path="404" element={null} />
+              <Route path="*" element={null} />
+            </Route>
+            <Route path="/demo/3d-card" element={<Demo3DCardPage />} />
+            <Route path="/demo/cd-case" element={<DemoCDCasePage />} />
             <Route
-              index
-              element={
-                <AdminPage
-                  mvData={mvData || []}
-                  metadata={normalizedMetadata}
-                  systemStatus={systemStatus}
-                  onRefresh={() => {
-                    mutate();
-                    mutateMetadata();
-                    mutateSystemStatus();
-                  }}
-                />
-              }
+              path="/demo/trae-footer-glitch"
+              element={<DemoTraeFooterHoverPage />}
             />
-            <Route
-              path="mvs"
-              element={
-                <AdminPage
-                  mvData={mvData || []}
-                  metadata={normalizedMetadata}
-                  systemStatus={systemStatus}
-                  onRefresh={() => {
-                    mutate();
-                    mutateMetadata();
-                    mutateSystemStatus();
-                  }}
-                />
-              }
-            />
-            <Route
-              path="mvs/settings"
-              element={
-                <AdminMVSettingsPage
-                  metadata={normalizedMetadata}
-                  systemStatus={systemStatus}
-                  onRefresh={() => {
-                    mutate();
-                    mutateMetadata();
-                    mutateSystemStatus();
-                  }}
-                />
-              }
-            />
-            <Route path="artists" element={<AdminArtistsPage />} />
-            <Route path="albums" element={<AdminAlbumsPage />} />
-            <Route path="apple-music-albums" element={<AdminAppleMusicAlbumsPage />} />
-            <Route path="dicts" element={<AdminDictsPage />} />
-            <Route path="fanart" element={<AdminFanArtPage />} />
-            <Route path="staging-fanarts" element={<AdminStagingFanartPage />} />
-            <Route path="system" element={<Navigate to="/admin/system/users" replace />} />
-            <Route path="system/users" element={<AdminSystemUsersPage />} />
-            <Route path="system/roles" element={<AdminSystemRolesPage />} />
-            <Route path="system/menus" element={<AdminSystemMenusPage />} />
-            <Route path="system/media-groups" element={<AdminMediaGroupsPage />} />
-            <Route path="system/group-repair" element={<AdminMediaGroupRepairPage />} />
-            <Route path="system/orphans" element={<AdminOrphanMediaPage />} />
-          </Route>
-          <Route path="/debug/fb/:mvid?" element={<DebugFancyboxMasonry />} />
-          <Route path="/debug/modal" element={<DebugMVModalLightbox />} />
-          <Route path="*" element={<FallbackRedirect commonProps={commonProps} />} />
-        </Routes>
-      {(import.meta.env.PROD || import.meta.env.VITE_PWA_DEV === 'true') ? <PWAPrompt /> : null}
-      <Toaster position="top-center" />
-    </>
+            <Route path="/admin/auth" element={<AdminAuthPage />} />
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route
+                index
+                element={
+                  <AdminPage />
+                }
+              />
+              <Route
+                path="mvs"
+                element={
+                  <AdminPage />
+                }
+              />
+              <Route
+                path="mvs/settings"
+                element={
+                  <AdminMVSettingsPage
+                    metadata={normalizedMetadata}
+                    systemStatus={systemStatus}
+                    onRefresh={() => {
+                      mutate();
+                      mutateMetadata();
+                      mutateSystemStatus();
+                    }}
+                  />
+                }
+              />
+              <Route path="account" element={<AdminAccountPage />} />
+              <Route path="artists" element={<AdminArtistsPage />} />
+              <Route path="albums" element={<AdminAlbumsPage />} />
+              <Route path="apple-music-albums" element={<AdminAppleMusicAlbumsPage />} />
+              <Route path="dicts" element={<AdminDictsPage />} />
+              <Route path="fanart" element={<AdminFanArtPage />} />
+              <Route path="staging-fanarts" element={<AdminStagingFanartPage />} />
+            <Route path="submissions" element={<AdminSubmissionsPage />} />
+              <Route path="system" element={<Navigate to="/admin/system/users" replace />} />
+              <Route path="system/users" element={<AdminSystemUsersPage />} />
+              <Route path="system/roles" element={<AdminSystemRolesPage />} />
+              <Route path="system/menus" element={<AdminSystemMenusPage />} />
+              <Route path="system/announcements" element={<AdminSystemAnnouncementsPage />} />
+              <Route path="system/media-groups" element={<AdminMediaGroupsPage />} />
+              <Route path="system/group-repair" element={<AdminMediaGroupRepairPage />} />
+              <Route path="system/orphans" element={<AdminOrphanMediaPage />} />
+            </Route>
+            <Route path="/debug/fb/:mvid?" element={<DebugFancyboxMasonry />} />
+            <Route path="/debug/modal" element={<DebugMVModalLightbox />} />
+            <Route path="*" element={<FallbackRedirect commonProps={commonProps} />} />
+          </Routes>
+        {(import.meta.env.PROD || import.meta.env.VITE_PWA_DEV === 'true') ? <PWAPrompt /> : null}
+        <Toaster position="top-center" />
+      </>
+    </RouteDataProvider>
   );
 }

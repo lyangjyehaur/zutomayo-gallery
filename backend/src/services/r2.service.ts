@@ -1,5 +1,6 @@
 import { S3Client, PutObjectCommand, HeadObjectCommand, CopyObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
+import type { Readable } from 'stream';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -117,6 +118,57 @@ export const uploadBufferToR2 = async (
         return null;
       }
       // 等待一段時間後重試 (1s, 2s, 3s...)
+      await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+    }
+  }
+  return null;
+};
+
+export const uploadStreamToR2 = async (
+  body: Readable,
+  fileName: string,
+  contentType: string,
+  options?: R2UploadOptions & { sizeBytes?: number }
+): Promise<string | null> => {
+  if (!s3Client) return null;
+
+  const retryCount = options?.retryCount ?? 3;
+  let attempt = 0;
+
+  while (attempt < retryCount) {
+    try {
+      if (!options?.forceUpdate) {
+        const exists = await checkImageExists(fileName);
+        if (exists) {
+          console.log(`[R2] File already exists: ${fileName}`);
+          return `${R2_PUBLIC_DOMAIN}/${fileName}`;
+        }
+      }
+
+      const metadata: Record<string, string> = {
+        'uploaded-by': 'ztmy-gallery-backend',
+        'upload-timestamp': new Date().toISOString()
+      };
+      if (options?.metadata) Object.assign(metadata, options.metadata);
+
+      console.log(`[R2] Uploading stream to R2 (Attempt ${attempt + 1}/${retryCount}): ${fileName} (${options?.sizeBytes ? `${(options.sizeBytes / 1024 / 1024).toFixed(2)} MB` : 'unknown size'})`);
+      await s3Client.send(new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: fileName,
+        Body: body,
+        ContentType: contentType,
+        CacheControl: 'public, max-age=31536000, immutable',
+        Metadata: metadata
+      }));
+
+      return `${R2_PUBLIC_DOMAIN}/${fileName}`;
+    } catch (error) {
+      attempt++;
+      console.error(`[R2] Error uploading stream ${fileName} (Attempt ${attempt}/${retryCount}):`, error);
+      if (attempt >= retryCount) {
+        console.error(`[R2] Max retries reached for ${fileName}. Giving up.`);
+        return null;
+      }
       await new Promise(resolve => setTimeout(resolve, attempt * 1000));
     }
   }

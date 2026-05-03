@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useCustomMutation, useInvalidate, useList } from "@refinedev/core"
 import { VERSION_CONFIG } from '@/config/version';
 import { toast } from "sonner"
-import { adminFetch } from "@/lib/admin-api";
+import { adminFetch, getApiRoot } from "@/lib/admin-api";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { MultiSelect, type Option } from "@/components/ui/multi-select"
 import {
   Select,
   SelectContent,
@@ -13,11 +15,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MVItem } from '@/lib/types';
 import { getProxyImgUrl, isMediaVideo } from '@/lib/image';
 import Editor from '@monaco-editor/react';
-import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
 import {
   Dialog,
   DialogContent,
@@ -36,9 +39,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useConfirmDialog } from "@/components/admin/useConfirmDialog"
 import { materializeGroupAndStripLegacy } from "@/lib/admin-media"
 import { Progress } from '@/components/ui/progress';
+import { AdminSplitView, type AdminSplitGroup } from "@/components/admin/AdminSplitView"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,6 +60,20 @@ interface Template {
 }
 
 const STORAGE_KEY = 'ztmy_richtext_templates';
+
+const mergeEntityOptions = (base: Option[], entities: Array<{ id?: string; name?: string }>) => {
+  const seen = new Set(base.map((o) => o.value))
+  const out = [...base]
+  entities.forEach((e) => {
+    const id = e?.id ? String(e.id).trim() : ""
+    const name = e?.name ? String(e.name).trim() : ""
+    if (!id || !name) return
+    if (seen.has(id)) return
+    seen.add(id)
+    out.push({ label: name, value: id })
+  })
+  return out
+}
 
 // 從 localStorage 讀取模板
 const loadTemplates = (): Template[] => {
@@ -335,8 +352,8 @@ function RichTextEditor({ value, onChange }: RichTextEditorProps) {
 
       {/* 模板管理彈窗 */}
       <Dialog open={showTemplateManager} onOpenChange={setShowTemplateManager}>
-        <DialogContent className="max-w-lg border-4 border-black shadow-neo p-0 overflow-hidden bg-white text-black">
-          <DialogHeader className="p-4 bg-ztmy-green border-b-4 border-black">
+        <DialogContent className="max-w-lg border-2 border-black shadow-[var(--admin-shadow)] rounded-[var(--admin-radius)] p-0 overflow-hidden bg-[var(--admin-panel-bg)] text-foreground">
+          <DialogHeader className="p-4 bg-ztmy-green border-b-2 border-black">
             <DialogTitle className="text-xl font-black uppercase flex items-center gap-2">
               <i className="hn hn-grid text-xl" /> 模板管理
             </DialogTitle>
@@ -437,7 +454,7 @@ function RichTextEditor({ value, onChange }: RichTextEditorProps) {
             </div>
           </div>
           
-          <DialogFooter className="p-4 bg-secondary-background border-t-2 border-black">
+          <DialogFooter className="p-4 bg-[var(--admin-panel-bg)] border-t-2 border-black">
             <Button variant="neutral" onClick={() => setShowTemplateManager(false)} className="w-full">
               關閉
             </Button>
@@ -470,8 +487,8 @@ function RichTextEditor({ value, onChange }: RichTextEditorProps) {
 
       {/* 模板處理器彈窗 */}
       <Dialog open={showTemplateProcessor} onOpenChange={setShowTemplateProcessor}>
-        <DialogContent className="max-w-2xl border-4 border-black shadow-neo p-0 overflow-hidden bg-white text-black">
-          <DialogHeader className="p-4 bg-purple-500 border-b-4 border-black">
+        <DialogContent className="max-w-2xl border-2 border-black shadow-[var(--admin-shadow)] rounded-[var(--admin-radius)] p-0 overflow-hidden bg-[var(--admin-panel-bg)] text-foreground">
+          <DialogHeader className="p-4 bg-purple-500 border-b-2 border-black">
             <DialogTitle className="text-xl font-black uppercase flex items-center gap-2 text-white">
               <i className="hn hn-edit text-xl mr-2" /> 模板填充器
             </DialogTitle>
@@ -672,25 +689,20 @@ function RichTextEditor({ value, onChange }: RichTextEditorProps) {
   );
 }
 
-interface AdminPageProps {
-  mvData: MVItem[];
-  metadata: {
-    albumMeta: Record<string, { date?: string; hideDate?: boolean }>;
-    artistMeta: Record<string, { id?: string; hideId?: boolean }>;
-    settings: { showAutoAlbumDate: boolean };
-  };
-  systemStatus?: { maintenance: boolean; type?: 'data' | 'ui'; eta?: string | null; buildTime?: string | null; version?: string | null };
-  onRefresh?: () => void;
-}
+type SystemStatus = { maintenance: boolean; type?: "data" | "ui"; eta?: string | null; buildTime?: string | null; version?: string | null }
 
-export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPageProps) {
+export function AdminPage() {
+  const invalidate = useInvalidate()
+  const mvList = useList<MVItem>({ resource: "mvs", pagination: { current: 1, pageSize: 1000 } })
+  const mvUpdateMutation = useCustomMutation()
+  const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null)
 
   const [data, setData] = useState<MVItem[]>([]);
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const [isSaving, setIsSaving] = useState(false);
   const [showOnlyIncomplete, setShowOnlyIncomplete] = useState(false);
+  const [mvQuery, setMvQuery] = useState("");
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [confirm, ConfirmDialog] = useConfirmDialog();
   
   // 刪除確認 Drawer 狀態
   const [deleteDrawerOpen, setDeleteDrawerOpen] = useState(false);
@@ -714,6 +726,12 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
   const [batchAddStatus, setBatchAddStatus] = useState<{ total: number, current: number, failedUrls: string[], isProcessing: boolean } | null>(null);
   const [selectedImageIndices, setSelectedImageIndices] = useState<Set<number>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [sourceUrlDialogOpen, setSourceUrlDialogOpen] = useState(false)
+  const [sourceUrlDraft, setSourceUrlDraft] = useState("")
+  const [sourceUrlTarget, setSourceUrlTarget] = useState<{ mvId: string; indices: number[] } | null>(null)
+  const [customFieldDialogOpen, setCustomFieldDialogOpen] = useState(false)
+  const [customFieldDraft, setCustomFieldDraft] = useState("")
+  const [customFieldTarget, setCustomFieldTarget] = useState<number | null>(null)
 
   const toggleImageExpand = (idx: number) => {
     setExpandedImageIndices(prev => {
@@ -747,126 +765,43 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
   // 保存原始數據用於比較
   const originalDataRef = useRef<MVItem[]>([]);
 
-  // Metadata 狀態
-  const [localMetadata, setLocalMetadata] = useState<{
-    albumMeta: Record<string, { date?: string; hideDate?: boolean }>;
-    artistMeta: Record<string, { id?: string; hideId?: boolean }>;
-    settings: { showAutoAlbumDate: boolean; announcements?: string[] | Record<string, string[]> };
-  }>({ albumMeta: {}, artistMeta: {}, settings: { showAutoAlbumDate: false, announcements: [] } });
-  const [localMaintenance, setLocalMaintenance] = useState(false);
-  const [localMaintenanceType, setLocalMaintenanceType] = useState<'data' | 'ui'>('ui');
-  const [localMaintenanceEta, setLocalMaintenanceEta] = useState<string>('');
-  const [isMetadataDialogOpen, setIsMetadataDialogOpen] = useState(false);
-  const [isSavingMetadata, setIsSavingMetadata] = useState(false);
-  const [isClearingRedisCache, setIsClearingRedisCache] = useState(false);
-  const [announcementLang, setAnnouncementLang] = useState<string>('zh-TW');
+  const mvs = useMemo(() => mvList.data?.data || [], [mvList.data])
 
   useEffect(() => {
-    setLocalMetadata(JSON.parse(JSON.stringify(metadata)));
-  }, [metadata]);
-
-  useEffect(() => {
-    setLocalMaintenance(systemStatus?.maintenance || false);
-    setLocalMaintenanceType(systemStatus?.type || 'ui');
-    setLocalMaintenanceEta(systemStatus?.eta || '');
-  }, [systemStatus]);
-
-  const availableAlbums = useMemo(() => {
-    const set = new Set<string>();
-    mvData.forEach((mv) => {
-      if (Array.isArray(mv.albums)) {
-        mv.albums.forEach((a: any) => {
-          const name = a.name || a;
-          if (typeof name === 'string' && name.trim() !== '') set.add(name);
-        });
+    const run = async () => {
+      try {
+        const base = getApiRoot()
+        const res = await adminFetch(`${base.replace("/mvs", "/system")}/status`)
+        const json = await res.json().catch(() => null)
+        if (json && typeof json === "object" && "maintenance" in json) {
+          setSystemStatus(json as any)
+        }
+      } catch {
       }
-    });
-    return Array.from(set).sort();
-  }, [mvData]);
-
-  const availableArtists = useMemo(() => {
-    const set = new Set<string>();
-    mvData.forEach((mv) => {
-      if (Array.isArray(mv.creators)) {
-        mv.creators.forEach((a: any) => {
-          const name = a.name || a;
-          if (typeof name === 'string' && name.trim() !== '') set.add(name);
-        });
-      } else if (typeof mv.creators === 'string' && (mv.creators as string).trim() !== '') {
-        set.add(mv.creators as string);
-      }
-    });
-    return Array.from(set).sort();
-  }, [mvData]);
-
-  const [passkeys, setPasskeys] = useState<{id: string, name?: string, createdAt: string}[]>([]);
-
-  useEffect(() => {
-    if (isMetadataDialogOpen) {
-      const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
-      const authApiUrl = apiUrl.replace(/\/mvs$/, '/auth');
-      adminFetch(`${authApiUrl}/passkeys`).then(r => r.json()).then(data => {
-        if (Array.isArray(data)) setPasskeys(data);
-      });
     }
-  }, [isMetadataDialogOpen]);
+    run()
+  }, [])
 
-  const handleRegisterPasskey = async () => {
-    try {
-      const name = window.prompt('請為此設備的 Passkey 命名 (例如: My MacBook):');
-      if (!name) return;
+  const albumsQuery = useList<any>({ resource: "albums", hasPagination: false })
+  const artistsQuery = useList<any>({ resource: "artists", hasPagination: false })
 
-      const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
-      const authApiUrl = apiUrl.replace(/\/mvs$/, '/auth');
-      const headers = { 'Content-Type': 'application/json' };
-      
-      const resp = await adminFetch(`${authApiUrl}/generate-reg-options`, { headers });
-      const options = await resp.json();
-      if (options.error) throw new Error(options.error);
+  const albumOptions = useMemo(() => {
+    const rows = albumsQuery.data?.data || []
+    return rows
+      .map((a: any) => ({ label: String(a.name), value: String(a.id) }))
+      .filter((o: any) => o.value && o.label)
+  }, [albumsQuery.data])
 
-      const attResp = await startRegistration({ optionsJSON: options });
-      
-      const verifyResp = await adminFetch(`${authApiUrl}/verify-reg`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ data: attResp, name })
-      });
-      const verifyResult = await verifyResp.json();
-      
-      if (verifyResult.success) {
-        toast.success('Passkey 註冊成功！');
-        const listResp = await adminFetch(`${authApiUrl}/passkeys`);
-        setPasskeys(await listResp.json());
-      } else {
-        toast.error('Passkey 註冊失敗');
-      }
-    } catch (e: any) {
-      toast.error('Passkey 註冊錯誤: ' + e.message);
-    }
-  };
-
-  const handleRemovePasskey = async (id: string) => {
-    const ok = await confirm({
-      title: "刪除 Passkey",
-      description: "確定要刪除這個 Passkey 嗎？",
-      confirmText: "刪除",
-      cancelText: "取消",
-    })
-    if (!ok) return;
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
-      const authApiUrl = apiUrl.replace(/\/mvs$/, '/auth');
-      await adminFetch(`${authApiUrl}/passkeys/${encodeURIComponent(id)}`, { method: 'DELETE' });
-      setPasskeys(prev => prev.filter(p => p.id !== id));
-      toast.success('Passkey 已刪除');
-    } catch (e) {
-      toast.error('刪除失敗');
-    }
-  };
+  const artistOptions = useMemo(() => {
+    const rows = artistsQuery.data?.data || []
+    return rows
+      .map((a: any) => ({ label: String(a.name), value: String(a.id) }))
+      .filter((o: any) => o.value && o.label)
+  }, [artistsQuery.data])
 
   const albumDefaultDateMap = useMemo(() => {
     const map: Record<string, string> = {};
-    mvData.forEach((mv) => {
+    mvs.forEach((mv) => {
       if (!mv.date) return;
       mv.albums?.forEach((a: any) => {
         const name = a.name || a;
@@ -874,7 +809,7 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
       });
     });
     return map;
-  }, [mvData]);
+  }, [mvs]);
 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -888,9 +823,9 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
   }, [searchParams]);
 
   useEffect(() => {
-    if (mvData && mvData.length > 0) {
+    if (mvs && mvs.length > 0) {
       // 按年份和日期降序排序（最新的排在最前）
-      const sortedData = [...mvData].sort((a, b) => {
+      const sortedData = [...mvs].sort((a, b) => {
         const dateA = `${a.year}-${a.date || ''}`;
         const dateB = `${b.year}-${b.date || ''}`;
         return dateB.localeCompare(dateA);
@@ -902,7 +837,7 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
       // 重置變動追蹤
       setChangedFields(new Map());
     }
-  }, [mvData]);
+  }, [mvs]);
 
   useEffect(() => {
     if (!pendingJump) return;
@@ -941,62 +876,52 @@ export function AdminPage({ mvData, metadata, systemStatus, onRefresh }: AdminPa
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-const currentMV = data[activeIndex];
+  const currentMV = data[activeIndex];
 
-  // 保存 Metadata
-  const handleSaveMetadata = async () => {
-    setIsSavingMetadata(true);
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
-      const response = await adminFetch(`${apiUrl}/metadata`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(localMetadata),
-      });
-      if (!response.ok) throw new Error('保存 Metadata 失敗');
+  const mvIndexById = useMemo(() => {
+    const map = new Map<string, number>()
+    data.forEach((mv, idx) => map.set(String(mv.id), idx))
+    return map
+  }, [data])
 
-      if (localMaintenance !== systemStatus?.maintenance || localMaintenanceType !== (systemStatus?.type || 'ui') || localMaintenanceEta !== (systemStatus?.eta || '')) {
-        const sysResponse = await adminFetch(`${apiUrl.replace('/mvs', '/system')}/maintenance`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ maintenance: localMaintenance, type: localMaintenanceType, eta: localMaintenanceEta })
-        });
-        if (!sysResponse.ok) throw new Error('保存系統狀態失敗');
-      }
-      
-      toast.success('全局設定 (Metadata) 已保存！');
-      setIsMetadataDialogOpen(false);
-      onRefresh?.();
-    } catch (error) {
-      console.error(error);
-      toast.error('保存全局設定失敗！');
-    } finally {
-      setIsSavingMetadata(false);
-    }
-  };
+  const filteredMvs = useMemo(() => {
+    const q = mvQuery.trim().toLowerCase()
+    return data
+      .filter((mv) => (!showOnlyIncomplete ? true : isMVIncomplete(mv)))
+      .filter((mv) => {
+        if (!q) return true
+        const hay = `${mv.id} ${mv.title} ${mv.year} ${mv.date || ""}`.toLowerCase()
+        return hay.includes(q)
+      })
+  }, [data, mvQuery, showOnlyIncomplete])
 
-  const handleClearRedisCache = async () => {
-    setIsClearingRedisCache(true);
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
-      const res = await adminFetch(`${apiUrl.replace('/mvs', '/system')}/cache/clear`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      const data = await res.json();
-      if (!res.ok || !data?.success) throw new Error(data?.error || '清除快取失敗');
-      const cleared = data?.data?.cleared;
-      toast.success(typeof cleared === 'number' ? `已清除 Redis 快取 ${cleared} 筆` : '已清除 Redis 快取');
-    } catch (e: any) {
-      toast.error(e?.message || '清除快取失敗');
-    } finally {
-      setIsClearingRedisCache(false);
-    }
-  };
+  const mvGroups: AdminSplitGroup<MVItem>[] = useMemo(() => {
+    const map = new Map<string, MVItem[]>()
+    filteredMvs.forEach((mv) => {
+      const key = String(mv.year || "Unknown")
+      const list = map.get(key) || []
+      list.push(mv)
+      map.set(key, list)
+    })
+    return Array.from(map.entries())
+      .sort((a, b) => String(b[0]).localeCompare(String(a[0])))
+      .map(([k, items]) => ({ key: k, items }))
+  }, [filteredMvs])
+
+  const editingGroupKey = useMemo(() => {
+    if (editingImageIdx === null) return '';
+    const img: any = currentMV?.images?.[editingImageIdx];
+    if (!img) return '';
+    return getGroupKey(img);
+  }, [currentMV?.images, editingImageIdx]);
+
+  const editingGroupItems = useMemo(() => {
+    const images: any[] = Array.isArray(currentMV?.images) ? currentMV.images : [];
+    if (!editingGroupKey) return [];
+    return images
+      .map((img, idx) => ({ img, idx }))
+      .filter(({ img }) => getGroupKey(img) === editingGroupKey);
+  }, [currentMV?.images, editingGroupKey]);
   useEffect(() => {
     setImageDisplayLimit(24);
   }, [activeIndex]);
@@ -1609,11 +1534,11 @@ const currentMV = data[activeIndex];
     setDraggableIdx(null);
   };
 
-  const getGroupKey = (img: any) => {
-    const v = img?.group?.source_url;
-    if (typeof v !== 'string') return '';
-    return v.trim();
-  };
+  function getGroupKey(img: any) {
+    const v = img?.group?.source_url
+    if (typeof v !== "string") return ""
+    return v.trim()
+  }
 
   const getGroupLetter = (groupKey: string | undefined, allImages: MVMedia[] | undefined) => {
     if (!groupKey || !allImages) return '';
@@ -1839,6 +1764,7 @@ const currentMV = data[activeIndex];
   const handleSave = async () => {
     if (isSaving) return;
     setIsConfirmOpen(false); // 關閉確認視窗
+    setIsSaving(true)
     
     // 只獲取變動的字段數據
     const changedData = getChangedData();
@@ -1847,10 +1773,11 @@ const currentMV = data[activeIndex];
     // 如果沒有實質變動，直接提示成功
     if (!hasChanges) {
       toast.success('沒有檢測到變動，無需保存');
+      setIsSaving(false)
       return;
     }
     
-    const apiUrl = (import.meta.env.VITE_API_URL || '/api/mvs').replace(/(\/mvs)?$/, '/mvs/update');
+    const apiUrl = `${getApiRoot()}/mvs/update`
     
     // 將管理員的實質寫入操作上報至 Umami
     if ((window as any).umami && typeof (window as any).umami.track === 'function') {
@@ -1874,58 +1801,76 @@ const currentMV = data[activeIndex];
       : changedData;
     (normalizedChangedData as any)._deleted = (changedData as any)._deleted;
 
-    toast.promise(
-      adminFetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          data: normalizedChangedData,
-          deletedIds: (normalizedChangedData as any)._deleted || [],
-          partial: true // 標記為部分更新
-        }),
-      }).then(async response => {
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: '未知錯誤' }));
-          throw new Error(errorData.error || `儲存失敗 (${response.status})`);
+    try {
+      await toast.promise(
+        mvUpdateMutation.mutateAsync({
+          url: apiUrl,
+          method: "post",
+          values: {
+            data: normalizedChangedData,
+            deletedIds: (normalizedChangedData as any)._deleted || [],
+            partial: true,
+          },
+        }) as any,
+        {
+          loading: '正在同步數據到服務器...',
+          success: (result: any) => {
+            const payload = result?.data ?? result
+            originalDataRef.current = JSON.parse(JSON.stringify(data));
+            setChangedFields(new Map());
+            setDeletedIds(new Set());
+            invalidate({ resource: "mvs", invalidates: ["list"] })
+            invalidate({ resource: "albums", invalidates: ["list"] })
+            invalidate({ resource: "artists", invalidates: ["list"] })
+            mvList.refetch?.()
+            
+            const { details } = payload || {};
+            if (details) {
+              const parts: string[] = [];
+              if (details.totalUpdated > 0) {
+                parts.push(`已更新 ${details.totalUpdated} 條`);
+              }
+              if (details.totalDeleted > 0) {
+                parts.push(`已刪除 ${details.totalDeleted} 條`);
+              }
+              return parts.join(' | ') || '數據回寫成功';
+            }
+            return '數據回寫成功';
+          },
+          error: (err: any) => {
+            return `儲存失敗: ${err.message}`;
+          },
         }
-        return response.json();
-      }),
-      {
-        loading: '正在同步數據到服務器...',
-        success: (result) => {
-          // 更新成功後，重置變動追蹤並同步原始數據
-          originalDataRef.current = JSON.parse(JSON.stringify(data));
-          setChangedFields(new Map());
-          setDeletedIds(new Set());
-          
-          if (onRefresh) onRefresh();
-          
-          // 根據後端返回的詳細信息生成提示
-          const { details } = result;
-          if (details) {
-            const parts: string[] = [];
-            if (details.totalUpdated > 0) {
-              parts.push(`已更新 ${details.totalUpdated} 條`);
-            }
-            if (details.totalDeleted > 0) {
-              parts.push(`已刪除 ${details.totalDeleted} 條`);
-            }
-            return parts.join(' | ') || '數據回寫成功';
-          }
-          return '數據回寫成功';
-        },
-        error: (err) => {
-          return `儲存失敗: ${err.message}`;
-        },
-      }
-    );
+      );
+    } finally {
+      setIsSaving(false)
+    }
   };
+
+  if (mvList.isLoading) {
+    return (
+      <div className="h-full bg-background text-foreground flex flex-col font-mono font-normal overflow-hidden">
+        <div className="h-20 border-b-2 border-black bg-[var(--admin-header-bg)] flex items-center justify-between px-8 shadow-[var(--admin-shadow-sm)] shrink-0">
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className="text-xl font-black uppercase tracking-widest leading-none">管理員控制台</h1>
+              <div className="text-[10px] font-bold opacity-40 font-mono normal-case tracking-widest">ZTMY.ADMIN.PANEL</div>
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center opacity-50">
+          <i className="hn hn-refresh text-4xl mb-4 animate-spin" />
+          <h2 className="text-xl font-black mb-2">載入中...</h2>
+        </div>
+      </div>
+    );
+  }
 
   if (!currentMV) {
     return (
       <div className="h-full bg-background text-foreground flex flex-col font-mono font-normal overflow-hidden">
         {/* 頂部控制欄 */}
-        <div className="h-20 border-b-4 border-black bg-card flex items-center justify-between px-8 shadow-neo-sm shrink-0">
+        <div className="h-20 border-b-2 border-black bg-[var(--admin-header-bg)] flex items-center justify-between px-8 shadow-[var(--admin-shadow-sm)] shrink-0">
           <div className="flex items-center gap-4">
             <div>
               <h1 className="text-xl font-black uppercase tracking-widest leading-none">管理員控制台</h1>
@@ -1943,111 +1888,114 @@ const currentMV = data[activeIndex];
   }
 
   return (
-
-    <div className="h-full bg-background text-foreground flex flex-col font-mono font-normal overflow-hidden">
-      {/* 頂部控制欄 */}
-      <div className="h-20 border-b-4 border-black bg-card flex items-center justify-between px-8 shadow-neo-sm z-40 shrink-0">
-        <div className="flex items-center gap-4">
-          <h1 className="font-black uppercase tracking-tighter text-xl pl-4">
-            數據管理後台 V{VERSION_CONFIG.app}
-            <span className="text-[10px] font-mono opacity-50 ml-2 normal-case tracking-normal align-middle">
-              (🕒 {VERSION_CONFIG.buildDate.replace(/-/g, '')})
-            </span>
-          </h1>
-          {systemStatus?.version && (
-            <span className="hidden md:inline-flex items-center gap-1.5 text-xs font-mono px-2 py-1 bg-muted border-2 border-black/10 rounded-sm ml-2">
-              <i className="hn hn-server" />
-              BE: {systemStatus.version}
-              {systemStatus?.buildTime && ` | 🕒 ${new Date(systemStatus.buildTime).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(/\//g, '')}`}
-            </span>
-          )}
-        </div>
-        <div className="flex gap-4">
-          <Button 
-            variant="neutral" 
-            size="sm" 
-            onClick={() => setIsMetadataDialogOpen(true)}
-            className="border-2 border-black font-bold bg-white"
-          >
-            全局設定 (Metadata)
-          </Button>
-          <Button 
-            variant={showOnlyIncomplete ? "default" : "neutral"} 
-            size="sm" 
-            onClick={() => setShowOnlyIncomplete(!showOnlyIncomplete)}
-            className={showOnlyIncomplete ? "bg-red-500 text-white shadow-neo" : ""}
-          >
-            <i className="hn hn-filter text-base mr-2" /> 
-            <span className="hidden md:inline">
-              {showOnlyIncomplete ? '正在查看待完善' : '只看待完善'}
-            </span>
-          </Button>
-          <Button variant="default" size="sm" onClick={addNewMV} className="bg-main text-main-foreground shadow-neo hover:translate-x-0 hover:translate-y-0">
-            <i className="hn hn-plus text-base mr-2" /> 新增條目
-          </Button>
-          <Button 
-            variant="default" 
-            size="sm" 
-            onClick={() => setIsConfirmOpen(true)} 
-            disabled={isSaving}
-            className="bg-ztmy-green text-black shadow-neo hover:translate-x-0 hover:translate-y-0"
-          >
-            <i className="hn hn-save text-base mr-2" /> {isSaving ? '同步中...' : '儲存回寫 (COMMIT)'}
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex flex-1 overflow-hidden relative">
-        {/* 左側列表 */}
-        <div className="w-80 border-r-4 border-black bg-card h-full flex flex-col">
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
-            {data.filter(mv => !showOnlyIncomplete || isMVIncomplete(mv)).map((mv) => {
-              const isIncomplete = isMVIncomplete(mv);
-              const originalIndex = data.findIndex(item => item.id === mv.id);
-              
-              return (
-            <div 
-              key={mv.id}
-              onClick={() => setActiveIndex(originalIndex)}
-              className={`p-4 border-b-2 border-black cursor-pointer transition-colors group flex justify-between items-center ${
-                originalIndex === activeIndex ? 'bg-black text-ztmy-green' : 'hover:bg-main/10'
-              } ${isIncomplete ? 'border-l-4 border-l-red-500' : ''}`}
-            >
-              <div className="truncate pr-2">
-                <div className="text-[10px] opacity-50 mb-1 flex items-center gap-1">
-                  #{mv.id} {isIncomplete && <i className="hn hn-exclamation-triangle text-sm text-red-500" />}
-                </div>
-                <div className="font-bold text-sm truncate" lang="ja">{mv.title}</div>
+    <>
+      <AdminSplitView
+        title={`數據管理後台 V${VERSION_CONFIG.app}`}
+        description={
+          systemStatus?.version
+            ? `BE: ${systemStatus.version}${systemStatus?.buildTime ? ` | ${new Date(systemStatus.buildTime).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(/\//g, '')}` : ""}`
+            : undefined
+        }
+        actions={
+          <>
+            <Button variant={showOnlyIncomplete ? "default" : "neutral"} size="sm" onClick={() => setShowOnlyIncomplete(!showOnlyIncomplete)}>
+              <i className="hn hn-filter text-base mr-2" />
+              <span className="hidden md:inline">{showOnlyIncomplete ? "正在查看待完善" : "只看待完善"}</span>
+            </Button>
+            <Button variant="default" size="sm" onClick={addNewMV} className="bg-main text-main-foreground">
+              <i className="hn hn-plus text-base mr-2" /> 新增條目
+            </Button>
+            <Button variant="default" size="sm" onClick={() => setIsConfirmOpen(true)} disabled={isSaving} className="bg-ztmy-green text-black">
+              <i className="hn hn-save text-base mr-2" /> {isSaving ? "同步中..." : "儲存回寫 (COMMIT)"}
+            </Button>
+          </>
+        }
+        leftSearchValue={mvQuery}
+        onLeftSearchValueChange={setMvQuery}
+        leftSearchPlaceholder="搜尋標題 / ID / 年份..."
+        groups={mvGroups}
+        getKey={(mv) => String(mv.id)}
+        renderItemTitle={(mv) => (
+          <div className="flex items-start gap-2">
+            <div className="min-w-0">
+              <div className="text-[10px] opacity-60 mb-1 flex items-center gap-1">
+                #{mv.id}
+                {isMVIncomplete(mv) ? <i className="hn hn-exclamation-triangle text-sm text-red-500" /> : null}
               </div>
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openDeleteMVDrawer(mv);
-                }}
-                className="opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity"
-              >
-                <i className="hn hn-trash text-base" />
-              </button>
+              <div className="font-bold text-sm truncate" lang="ja">
+                {mv.title}
+              </div>
             </div>
-              );
-            })}
           </div>
-        </div>
+        )}
+        renderItemSubtitle={(mv) => {
+          const dirty = (changedFields.get(String(mv.id)) || new Set()).size > 0
+          return `${mv.year || ""}${mv.date ? ` · ${mv.date}` : ""}${dirty ? " · edited" : ""}`
+        }}
+        renderItemEnd={(mv) => (
+          <button
+            onClick={() => openDeleteMVDrawer(mv)}
+            className="opacity-70 hover:opacity-100 hover:text-red-500 transition-opacity"
+            title="刪除"
+          >
+            <i className="hn hn-trash text-base" />
+          </button>
+        )}
+        selectedKey={currentMV?.id ? String(currentMV.id) : null}
+        onSelect={(id) => {
+          const idx = mvIndexById.get(String(id))
+          if (typeof idx === "number") setActiveIndex(idx)
+        }}
+        rightEmpty={<div className="text-xs font-mono opacity-60">選擇左側項目以編輯</div>}
+        right={
+          <div className="h-[calc(100dvh-220px)] overflow-y-auto custom-scrollbar p-1">
+            <div className="max-w-6xl mx-auto flex flex-col gap-6 pb-24">
+              <div className="border-2 border-black bg-[var(--admin-panel-bg)] shadow-[var(--admin-shadow-sm)] rounded-[var(--admin-radius)] p-4 flex flex-col gap-1">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-lg font-black break-words" lang="ja">
+                      {currentMV.title}
+                    </div>
+                    <div className="text-[10px] font-mono opacity-60 break-all">
+                      MV: {currentMV.id} {currentMV.year ? `· ${currentMV.year}` : ""} {currentMV.date ? `· ${currentMV.date}` : ""}
+                    </div>
+                  </div>
+                  <div className="text-[10px] font-mono opacity-60 whitespace-nowrap">
+                    {(changedFields.get(String(currentMV.id)) || new Set()).size > 0 ? "edited" : "saved"}
+                  </div>
+                </div>
+              </div>
 
-        {/* 右側表單 */}
-        <div className="flex-1 h-full overflow-y-auto p-4 md:p-12 custom-scrollbar bg-card/50">
-          <div className="max-w-6xl mx-auto space-y-12 pb-24">
-            
-            {/* 分頁導航列 */}
-            <div className="flex gap-2 mb-8 border-b-4 border-black/20 pb-4 overflow-x-auto sticky top-0 z-20 bg-background/80 backdrop-blur pt-2">
-              <button onClick={() => setActiveSection('basic')} className={`px-4 py-2 font-black uppercase border-2 transition-all shrink-0 ${activeSection === 'basic' ? 'bg-main text-main-foreground border-main shadow-neo' : 'bg-card text-card-foreground border-border hover:bg-main/10'}`}>01 基礎資訊</button>
-              <button onClick={() => setActiveSection('media')} className={`px-4 py-2 font-black uppercase border-2 transition-all shrink-0 ${activeSection === 'media' ? 'bg-main text-main-foreground border-main shadow-neo' : 'bg-card text-card-foreground border-border hover:bg-main/10'}`}>02 媒體關聯</button>
-              <button onClick={() => setActiveSection('images')} className={`px-4 py-2 font-black uppercase border-2 transition-all shrink-0 ${activeSection === 'images' ? 'bg-ztmy-green text-black border-ztmy-green shadow-neo' : 'bg-card text-card-foreground border-border hover:bg-ztmy-green/20'}`}>03 設定圖庫</button>
-              <button onClick={() => setActiveSection('schema')} className={`px-4 py-2 font-black uppercase border-2 transition-all shrink-0 ${activeSection === 'schema' ? 'bg-foreground text-background border-foreground shadow-neo' : 'bg-card text-card-foreground border-border hover:bg-foreground/10'}`}>00 資料架構</button>
-            </div>
+              <Tabs value={activeSection} onValueChange={setActiveSection}>
+                <TabsList className="w-full justify-start gap-1 p-1 border-2 border-black bg-[var(--admin-panel-bg)] shadow-[var(--admin-shadow-sm)] rounded-[var(--admin-radius)] overflow-x-auto sticky top-0 z-20">
+                  <TabsTrigger
+                    value="basic"
+                    className="px-4 py-2 text-xs font-black uppercase tracking-[0.12em] border-2 border-transparent rounded-[calc(var(--admin-radius)-4px)] hover:bg-black/5 data-[state=active]:border-black data-[state=active]:bg-main data-[state=active]:text-black data-[state=active]:shadow-neo"
+                  >
+                    01 基礎資訊
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="media"
+                    className="px-4 py-2 text-xs font-black uppercase tracking-[0.12em] border-2 border-transparent rounded-[calc(var(--admin-radius)-4px)] hover:bg-black/5 data-[state=active]:border-black data-[state=active]:bg-main data-[state=active]:text-black data-[state=active]:shadow-neo"
+                  >
+                    02 媒體關聯
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="images"
+                    className="px-4 py-2 text-xs font-black uppercase tracking-[0.12em] border-2 border-transparent rounded-[calc(var(--admin-radius)-4px)] hover:bg-ztmy-green/15 data-[state=active]:border-black data-[state=active]:bg-ztmy-green data-[state=active]:text-black data-[state=active]:shadow-neo data-[state=active]:hover:bg-ztmy-green"
+                  >
+                    03 設定圖庫
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="schema"
+                    className="px-4 py-2 text-xs font-black uppercase tracking-[0.12em] border-2 border-transparent rounded-[calc(var(--admin-radius)-4px)] hover:bg-foreground/10 data-[state=active]:border-black data-[state=active]:bg-foreground data-[state=active]:text-background data-[state=active]:shadow-neo data-[state=active]:hover:bg-foreground"
+                  >
+                    00 資料架構
+                  </TabsTrigger>
+                </TabsList>
 
             {/* 基礎資訊區塊 */}
-            <div className={activeSection !== 'basic' ? 'hidden' : ''}>
+            <TabsContent value="basic">
             <section className="space-y-6">
               <div className="flex flex-col gap-1">
                 <h3 className="text-sm font-black uppercase text-main bg-main/10 inline-block px-2">01 基礎資訊</h3>
@@ -2126,10 +2074,10 @@ const currentMV = data[activeIndex];
                 </div>
               </div>
             </section>
-            </div>
+            </TabsContent>
 
             {/* 媒體與關聯區塊 */}
-            <div className={activeSection !== 'media' ? 'hidden' : ''}>
+            <TabsContent value="media">
             <section className="space-y-6">
               <div className="flex flex-col gap-1">
                 <h3 className="text-sm font-black uppercase text-main bg-main/10 inline-block px-2">02 媒體與關聯</h3>
@@ -2168,14 +2116,38 @@ const currentMV = data[activeIndex];
                   <label className="text-xs font-bold uppercase flex items-start gap-2">
                     <i className="hn hn-disc text-base mr-2" />
                     <span className="flex flex-col leading-tight">
-                      <span className="opacity-70">專輯（每行一個項目）</span>
+                      <span className="opacity-70">專輯（下拉多選）</span>
                       <span className="text-[10px] font-mono opacity-40 normal-case">Albums</span>
                     </span>
                   </label>
-                  <Textarea 
-                    value={currentMV.albums?.map((a: any) => a.name || a).join('\n') || ''} 
-                    onChange={(e) => updateField('albums', e.target.value.split('\n').map(s => s.trim()).filter(s => s !== '').map(name => ({ name })))} 
-                    className={`min-h-[50px] font-sans text-sm ${getErrorClass(currentMV.albums)}`}
+                  <MultiSelect
+                    options={mergeEntityOptions(
+                      albumOptions,
+                      (currentMV.albums || []).map((a: any) => (a && typeof a === "object" ? a : null)).filter(Boolean),
+                    )}
+                    selected={(currentMV.albums || [])
+                      .map((a: any) => (a && typeof a === "object" && a.id ? String(a.id) : ""))
+                      .filter((v: any) => typeof v === "string" && v.trim() !== "")}
+                    onChange={(selected) => {
+                      const map = new Map(albumOptions.map((o) => [o.value, o.label]))
+                      const existing = new Map(
+                        (currentMV.albums || [])
+                          .filter((a: any) => a && typeof a === "object" && a.id && a.name)
+                          .map((a: any) => [String(a.id), String(a.name)]),
+                      )
+                      updateField(
+                        "albums",
+                        selected
+                          .map((id) => {
+                            const name = map.get(id) || existing.get(id) || ""
+                            if (!name) return null
+                            return { id, name }
+                          })
+                          .filter(Boolean),
+                      )
+                    }}
+                    placeholder="搜尋並選擇專輯..."
+                    className={getErrorClass(currentMV.albums)}
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
@@ -2191,10 +2163,10 @@ const currentMV = data[activeIndex];
                       <div key={idx} className="flex items-center gap-2">
                         <Input 
                           placeholder="輸入關鍵字..."
-                          value={kw.text}
+                          value={(kw.name ?? kw.text) || ""}
                           onChange={(e) => {
                             const newKeywords = [...(currentMV.keywords || [])];
-                            newKeywords[idx] = { ...kw, text: e.target.value };
+                            newKeywords[idx] = { ...kw, name: e.target.value, text: e.target.value };
                             updateField('keywords', newKeywords);
                           }}
                           className="flex-1 bg-white font-sans text-sm h-10"
@@ -2244,7 +2216,7 @@ const currentMV = data[activeIndex];
                       size="sm"
                       className="w-full mt-2 border-dashed border-2 bg-white shadow-none hover:bg-black/5"
                       onClick={() => {
-                        const newKeywords = [...(currentMV.keywords || []), { text: '', lang: 'zh-Hant' }];
+                        const newKeywords = [...(currentMV.keywords || []), { name: '', lang: 'zh-Hant' }];
                         updateField('keywords', newKeywords);
                       }}
                     >
@@ -2273,21 +2245,47 @@ const currentMV = data[activeIndex];
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-xs font-bold uppercase flex flex-col leading-tight">
-                    <span className="opacity-70">畫師 / 動畫師（每行一個項目）</span>
+                    <span className="opacity-70">畫師 / 動畫師（下拉多選）</span>
                     <span className="text-[10px] font-mono opacity-40 normal-case">Artist / Animator</span>
                   </label>
-                  <Textarea 
-                    value={currentMV.creators?.map((a: any) => a.name || a).join('\n') || ''} 
-                    onChange={(e) => updateField('creators', e.target.value.split('\n').map(s => s.trim()).filter(s => s !== '').map(name => ({ name })))} 
-                    className={`min-h-[50px] font-sans text-sm ${getErrorClass(currentMV.creators)}`}
+                  <MultiSelect
+                    options={mergeEntityOptions(
+                      artistOptions,
+                      (currentMV.creators || [])
+                        .map((a: any) => (a && typeof a === "object" ? a : null))
+                        .filter(Boolean),
+                    )}
+                    selected={(currentMV.creators || [])
+                      .map((a: any) => (a && typeof a === "object" && a.id ? String(a.id) : ""))
+                      .filter((v: any) => typeof v === "string" && v.trim() !== "")}
+                    onChange={(selected) => {
+                      const map = new Map(artistOptions.map((o) => [o.value, o.label]))
+                      const existing = new Map(
+                        (currentMV.creators || [])
+                          .filter((a: any) => a && typeof a === "object" && a.id && a.name)
+                          .map((a: any) => [String(a.id), String(a.name)]),
+                      )
+                      updateField(
+                        "creators",
+                        selected
+                          .map((id) => {
+                            const name = map.get(id) || existing.get(id) || ""
+                            if (!name) return null
+                            return { id, name }
+                          })
+                          .filter(Boolean),
+                      )
+                    }}
+                    placeholder="搜尋並選擇畫師..."
+                    className={getErrorClass(currentMV.creators)}
                   />
                 </div>
               </div>
             </section>
-            </div>
+            </TabsContent>
 
             {/* 設定圖管理 (瀑布流數據源) */}
-            <div className={activeSection !== 'images' ? 'hidden' : ''}>
+            <TabsContent value="images">
             <section className="space-y-6">
               <div className="flex flex-col gap-4">
                 <div className="flex justify-between items-center flex-wrap gap-4">
@@ -2326,20 +2324,11 @@ const currentMV = data[activeIndex];
                       size="sm" 
                       className="bg-blue-500 text-white hover:bg-blue-600 border-2 border-black"
                       onClick={() => {
-                        const sourceUrl = window.prompt('請輸入推文網址 (source_url)');
-                        if (!sourceUrl || !sourceUrl.trim()) return;
-                        const targetId = currentMV.id;
-                        const newImages = [...(currentMV.images || [])];
-                        selectedImageIndices.forEach(idx => {
-                          const img: any = newImages[idx];
-                          const g = (img && typeof img.group === 'object' && img.group) ? img.group : {};
-                          newImages[idx] = { ...img, group: { ...g, source_url: sourceUrl.trim(), status: g.status || 'organized' } };
-                          markFieldChanged(targetId, `images.${idx}.group.source_url`);
-                        });
-                        setData(prevData => prevData.map(mv => mv.id === targetId ? { ...mv, images: newImages } : mv));
-                        setSelectedImageIndices(new Set());
-                        setIsSelectionMode(false);
-                        toast.success(`已為 ${selectedImageIndices.size} 張圖片設定推文來源`);
+                        const indices = Array.from(selectedImageIndices)
+                        if (indices.length === 0) return
+                        setSourceUrlTarget({ mvId: currentMV.id, indices })
+                        setSourceUrlDraft("")
+                        setSourceUrlDialogOpen(true)
                       }}
                     >
                       <i className="hn hn-link text-base mr-2" /> 設定推文
@@ -2381,7 +2370,7 @@ const currentMV = data[activeIndex];
 
               {/* 批處理進度條 */}
               {batchStatus && (
-                <div className="border-4 border-black p-4 bg-secondary-background shadow-neo-sm space-y-3">
+                <div className="border-2 border-black p-4 bg-[var(--admin-panel-bg)] shadow-[var(--admin-shadow-sm)] rounded-[var(--admin-radius)] flex flex-col gap-3">
                   <div className="flex justify-between items-center text-xs font-black uppercase">
                     <div className="flex items-center gap-2">
                       <i className={`hn hn-refresh text-base mr-2 ${batchStatus.current < batchStatus.total ? 'animate-spin' : ''}`} />
@@ -2568,42 +2557,70 @@ const currentMV = data[activeIndex];
                 
                 {/* 圖片編輯彈窗 */}
                 <Dialog open={editingImageIdx !== null} onOpenChange={(open) => !open && setEditingImageIdx(null)}>
-                  <DialogContent className="max-w-[95vw] w-full border-4 border-black shadow-neo p-0 overflow-hidden bg-card text-card-foreground h-[95vh]">
+                  <DialogContent className="w-screen h-[100dvh] max-w-none md:left-0 md:top-0 md:w-screen md:h-[100dvh] md:max-w-none md:!translate-x-0 md:!translate-y-0 border-0 md:border-0 shadow-none md:shadow-none p-0 overflow-hidden bg-card text-card-foreground [&_[data-slot=dialog-close]]:top-3 [&_[data-slot=dialog-close]]:right-3 [&_[data-slot=dialog-close]]:md:top-3 [&_[data-slot=dialog-close]]:md:right-3">
                     {editingImageIdx !== null && currentMV.images && currentMV.images[editingImageIdx] && (
-                        <div className="flex flex-col h-full">
-                        <DialogHeader className="p-4 bg-ztmy-green border-b-4 border-black flex-shrink-0 text-black">
-                          <DialogTitle className="text-xl font-black uppercase flex items-center gap-2">
-                            <i className="hn hn-image text-xl" /> 編輯圖片資訊 (索引: {editingImageIdx})
-                          </DialogTitle>
-                          <DialogDescription className="text-black font-bold opacity-80 text-xs">
-                            設定圖片的 URL、尺寸、說明與富文本內容
-                          </DialogDescription>
+                      <div className="flex flex-col h-full">
+                        <DialogHeader className="p-4 pr-16 bg-ztmy-green border-b-4 border-black flex-shrink-0 text-black">
+                          <div className="flex flex-col md:flex-row gap-3 md:items-start md:justify-between">
+                            <div className="min-w-0">
+                              <DialogTitle className="text-xl font-black uppercase flex items-center gap-2">
+                                <i className="hn hn-image text-xl" /> 圖片編輯
+                              </DialogTitle>
+                              <DialogDescription className="text-black font-bold opacity-80 text-xs">
+                                索引 {editingImageIdx} · {currentMV.images[editingImageIdx].id}
+                              </DialogDescription>
+                            </div>
+                            <div className="flex flex-wrap gap-2 justify-end pr-2">
+                              <Button
+                                variant="neutral"
+                                size="sm"
+                                onClick={() => setEditingImageIdx((v) => (typeof v === "number" ? Math.max(0, v - 1) : v))}
+                                disabled={editingImageIdx <= 0}
+                                className="border-2 border-black"
+                              >
+                                <i className="hn hn-arrow-left" /> Prev
+                              </Button>
+                              <Button
+                                variant="neutral"
+                                size="sm"
+                                onClick={() =>
+                                  setEditingImageIdx((v) =>
+                                    typeof v === "number" ? Math.min((currentMV.images?.length || 1) - 1, v + 1) : v,
+                                  )
+                                }
+                                disabled={editingImageIdx >= (currentMV.images?.length || 1) - 1}
+                                className="border-2 border-black"
+                              >
+                                Next <i className="hn hn-arrow-right" />
+                              </Button>
+                            </div>
+                          </div>
                         </DialogHeader>
-                        
-                        <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-secondary-background space-y-6">
-                          {getGroupKey(currentMV.images[editingImageIdx]) && (
-                            <div className="bg-blue-50 border-l-4 border-blue-500 p-3 text-sm text-blue-700 flex items-start gap-2 rounded shadow-sm">
-                                <i className="hn hn-info-circle text-lg mt-0.5" />
-                                <div>
-                                  <p className="font-bold">此圖片已分組 (Group {getGroupLetter(getGroupKey(currentMV.images[editingImageIdx]), currentMV.images)})</p>
-                                  <p className="opacity-80">修改下方表單的「推文連結」、「富文本」與「自訂欄位」，將自動同步至同群組的其他圖片。「說明文字」與「替代文字」則單獨保存。</p>
-                                </div>
-                              </div>
-                          )}
-                          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                            {/* 左側：預覽與尺寸 */}
-                            <div className="space-y-4 lg:col-span-5 xl:col-span-4">
+
+                        <div className="flex-1 min-h-0 bg-secondary-background">
+                          <div className="h-full grid grid-cols-1 lg:grid-cols-[340px_1fr] xl:grid-cols-[380px_1fr]">
+                            <div className="border-b-4 lg:border-b-0 lg:border-r-4 border-black bg-card p-4 flex flex-col gap-3 overflow-auto">
                               <div className="aspect-square bg-black/5 border-2 border-dashed border-black/20 flex items-center justify-center overflow-hidden relative rounded">
                                 {currentMV.images[editingImageIdx].url ? (
                                   <>
-                                    <img src={getAdminImagePreviewUrl(currentMV.images[editingImageIdx])} className="w-full h-full object-contain" alt="預覽" />
-                                    {/* GIF 標籤 */}
-                                    {currentMV.images[editingImageIdx].url?.match(/\.gif$/i) || currentMV.images[editingImageIdx].url?.includes('tweet_video_thumb') ? (
+                                    <img
+                                      src={getAdminImagePreviewUrl(currentMV.images[editingImageIdx])}
+                                      className="w-full h-full object-contain"
+                                      alt="預覽"
+                                    />
+                                    {currentMV.images[editingImageIdx].url?.match(/\.gif$/i) || currentMV.images[editingImageIdx].url?.includes("tweet_video_thumb") ? (
                                       <div className="absolute top-2 left-2 flex items-center justify-center bg-black/60 text-white rounded px-2 py-0.5 shadow-sm backdrop-blur-sm border border-white/10 z-10 pointer-events-none">
                                         <span className="font-black text-[10px] tracking-widest">GIF</span>
                                       </div>
                                     ) : null}
-                                    {((currentMV.images[editingImageIdx].url?.match(/\.(mp4|webm)$/i) || currentMV.images[editingImageIdx].url?.includes('video.twimg.com') || (currentMV.images[editingImageIdx].thumbnail && currentMV.images[editingImageIdx].thumbnail !== currentMV.images[editingImageIdx].url)) && !(currentMV.images[editingImageIdx].url?.match(/\.gif$/i) || currentMV.images[editingImageIdx].url?.includes('tweet_video_thumb'))) && (
+                                    {((currentMV.images[editingImageIdx].url?.match(/\.(mp4|webm)$/i) ||
+                                      currentMV.images[editingImageIdx].url?.includes("video.twimg.com") ||
+                                      (currentMV.images[editingImageIdx].thumbnail &&
+                                        currentMV.images[editingImageIdx].thumbnail !== currentMV.images[editingImageIdx].url)) &&
+                                      !(
+                                        currentMV.images[editingImageIdx].url?.match(/\.gif$/i) ||
+                                        currentMV.images[editingImageIdx].url?.includes("tweet_video_thumb")
+                                      )) && (
                                       <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
                                         <div className="bg-black/80 text-white rounded-full p-2 border-2 border-white/20">
                                           <i className="hn hn-play text-2xl ml-1" />
@@ -2615,205 +2632,364 @@ const currentMV = data[activeIndex];
                                   <span className="text-xs font-bold opacity-40 uppercase">No Preview</span>
                                 )}
                               </div>
-                              
-                              <div className="grid grid-cols-2 gap-2">
-                                <div className="space-y-1">
-                                  <label className="text-[10px] font-bold opacity-60 uppercase">Width (寬)</label>
-                                  <Input 
-                                    type="number" 
-                                    value={currentMV.images[editingImageIdx].width || ''} 
-                                    onChange={(e) => updateImage(editingImageIdx, 'width', parseInt(e.target.value))} 
-                                    className={`h-8 text-sm ${!currentMV.images[editingImageIdx].width ? 'border-red-500 bg-red-50' : ''}`} 
-                                  />
-                                </div>
-                                <div className="space-y-1">
-                                  <label className="text-[10px] font-bold opacity-60 uppercase">Height (高)</label>
-                                  <Input 
-                                    type="number" 
-                                    value={currentMV.images[editingImageIdx].height || ''} 
-                                    onChange={(e) => updateImage(editingImageIdx, 'height', parseInt(e.target.value))} 
-                                    className={`h-8 text-sm ${!currentMV.images[editingImageIdx].height ? 'border-red-500 bg-red-50' : ''}`} 
-                                  />
-                                </div>
-                              </div>
-                              
-                              <Button 
-                                variant="outline" 
-                                className="w-full border-2 border-black hover:bg-black hover:text-white transition-colors"
-                                onClick={() => handleProbe(editingImageIdx, currentMV.images![editingImageIdx].url)}
-                              >
-                                <i className="hn hn-expand mr-2" /> 自動偵測尺寸 / 解析推文
-                              </Button>
-                            </div>
-                            
-                            {/* 右側：表單 */}
-                            <div className="space-y-4 lg:col-span-7 xl:col-span-8">
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-bold opacity-60 uppercase">圖片 URL</label>
-                                <Input 
-                                  placeholder="https://..." 
-                                  value={currentMV.images[editingImageIdx].url} 
-                                  onChange={(e) => updateImage(editingImageIdx, 'url', e.target.value)} 
-                                  className={`${!currentMV.images[editingImageIdx].url?.trim() ? 'border-red-500 bg-red-50' : ''}`} 
-                                />
-                              </div>
-                              
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-bold opacity-60 uppercase flex justify-between">
-                                  <span>推文連結 (source_url)</span>
+
+                              <div className="flex flex-col gap-2">
+                                <div className="text-xs font-mono opacity-70 break-all">{currentMV.images[editingImageIdx].url || "-"}</div>
+                                <div className="flex flex-wrap gap-2">
                                   {currentMV.images[editingImageIdx].group?.source_url ? (
-                                    <a
-                                      href={currentMV.images[editingImageIdx].group!.source_url}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="text-blue-600 underline truncate max-w-[200px]"
-                                      title={currentMV.images[editingImageIdx].group!.source_url}
-                                    >
-                                      Open
-                                    </a>
+                                    <Button variant="neutral" size="sm" asChild className="border-2 border-black">
+                                      <a href={currentMV.images[editingImageIdx].group!.source_url} target="_blank" rel="noreferrer">
+                                        <i className="hn hn-twitter" /> Open Tweet
+                                      </a>
+                                    </Button>
                                   ) : null}
-                                </label>
-                                <Input
-                                  placeholder="https://x.com/.../status/..."
-                                  value={currentMV.images[editingImageIdx].group?.source_url || ''}
-                                  onChange={(e) => updateImageGroupField(editingImageIdx, 'source_url', e.target.value)}
-                                />
-                              </div>
-
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                <div className="space-y-1">
-                                  <label className="text-[10px] font-bold opacity-60 uppercase">作者名稱 (author_name)</label>
-                                  <Input
-                                    value={currentMV.images[editingImageIdx].group?.author_name || ''}
-                                    onChange={(e) => updateImageGroupField(editingImageIdx, 'author_name', e.target.value)}
-                                  />
-                                </div>
-                                <div className="space-y-1">
-                                  <label className="text-[10px] font-bold opacity-60 uppercase">作者帳號 (author_handle)</label>
-                                  <Input
-                                    value={currentMV.images[editingImageIdx].group?.author_handle || ''}
-                                    onChange={(e) => updateImageGroupField(editingImageIdx, 'author_handle', e.target.value)}
-                                  />
+                                  {currentMV.images[editingImageIdx].url ? (
+                                    <Button variant="neutral" size="sm" asChild className="border-2 border-black">
+                                      <a href={currentMV.images[editingImageIdx].url} target="_blank" rel="noreferrer">
+                                        Open Media
+                                      </a>
+                                    </Button>
+                                  ) : null}
                                 </div>
                               </div>
 
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                <div className="space-y-1">
-                                  <label className="text-[10px] font-bold opacity-60 uppercase">發佈時間 (post_date)</label>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[10px] font-bold opacity-60 uppercase">Width</label>
                                   <Input
-                                    type="datetime-local"
-                                    value={(() => {
-                                      const raw = currentMV.images[editingImageIdx].group?.post_date
-                                      if (!raw) return ''
-                                      const d = new Date(raw)
-                                      if (Number.isNaN(d.getTime())) return ''
-                                      const pad = (n: number) => String(n).padStart(2, '0')
-                                      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-                                    })()}
-                                    onChange={(e) => {
-                                      const v = e.target.value
-                                      const d = v ? new Date(v) : null
-                                      updateImageGroupField(editingImageIdx, 'post_date', d ? d.toISOString() : null)
-                                    }}
+                                    type="number"
+                                    value={currentMV.images[editingImageIdx].width || ""}
+                                    onChange={(e) => updateImage(editingImageIdx, "width", parseInt(e.target.value))}
+                                    className={`h-9 text-sm ${!currentMV.images[editingImageIdx].width ? "border-red-500 bg-red-50" : ""}`}
                                   />
                                 </div>
-                                <div className="space-y-1">
-                                  <label className="text-[10px] font-bold opacity-60 uppercase">狀態 (status)</label>
-                                  <Select
-                                    value={currentMV.images[editingImageIdx].group?.status || "__none__"}
-                                    onValueChange={(v) => updateImageGroupField(editingImageIdx, 'status', v === "__none__" ? null : v)}
-                                  >
-                                    <SelectTrigger className="h-10 bg-white border-2 border-border shadow-none">
-                                      <SelectValue placeholder="status" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="__none__">未設定</SelectItem>
-                                      <SelectItem value="organized">organized</SelectItem>
-                                      <SelectItem value="unorganized">unorganized</SelectItem>
-                                      <SelectItem value="pending">pending</SelectItem>
-                                      <SelectItem value="deleted">deleted</SelectItem>
-                                      <SelectItem value="rejected">rejected</SelectItem>
-                                    </SelectContent>
-                                  </Select>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[10px] font-bold opacity-60 uppercase">Height</label>
+                                  <Input
+                                    type="number"
+                                    value={currentMV.images[editingImageIdx].height || ""}
+                                    onChange={(e) => updateImage(editingImageIdx, "height", parseInt(e.target.value))}
+                                    className={`h-9 text-sm ${!currentMV.images[editingImageIdx].height ? "border-red-500 bg-red-50" : ""}`}
+                                  />
                                 </div>
                               </div>
 
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-bold opacity-60 uppercase">推文內容 (source_text)</label>
-                                <Textarea
-                                  value={currentMV.images[editingImageIdx].group?.source_text || ''}
-                                  onChange={(e) => updateImageGroupField(editingImageIdx, 'source_text', e.target.value)}
-                                  className="min-h-[80px] text-xs"
-                                />
-                              </div>
-                              
-                              <div className="space-y-1">
-                                  <label className="text-[10px] font-bold opacity-60 uppercase">說明文字 (Caption)</label>
-                                  <Input 
-                                    placeholder="可選填，此項不會同步至群組" 
-                                    value={currentMV.images[editingImageIdx].caption || ''} 
-                                    onChange={(e) => updateImage(editingImageIdx, 'caption', e.target.value)} 
-                                  />
+                              <Button
+                                variant="neutral"
+                                className="w-full border-2 border-black"
+                                onClick={() => handleProbe(editingImageIdx, currentMV.images![editingImageIdx].url)}
+                                disabled={!currentMV.images[editingImageIdx].url}
+                              >
+                                <i className="hn hn-expand" /> 自動偵測尺寸 / 解析推文
+                              </Button>
+
+                              {editingGroupKey ? (
+                                <div className="border-2 border-black bg-white p-3 flex flex-col gap-1">
+                                  <div className="text-xs font-black uppercase tracking-widest">Sync</div>
+                                  <div className="text-xs font-mono opacity-70">
+                                    Group {getGroupLetter(editingGroupKey, currentMV.images)} · {editingGroupKey}
+                                  </div>
+                                  <div className="text-xs opacity-70">會同步：推文 / 富文本 / 自訂欄位</div>
+                                  <div className="text-xs opacity-70">不會同步：URL / 尺寸 / Caption / Alt</div>
                                 </div>
-                                
-                                <div className="space-y-1">
-                                  <label className="text-[10px] font-bold opacity-60 uppercase">替代文字 (Alt)</label>
-                                  <Input 
-                                    placeholder="可選填，此項不會同步至群組" 
-                                    value={currentMV.images[editingImageIdx].alt || ''} 
-                                    onChange={(e) => updateImage(editingImageIdx, 'alt', e.target.value)} 
-                                  />
+                              ) : (
+                                <div className="border-2 border-black bg-white p-3 flex flex-col gap-1">
+                                  <div className="text-xs font-black uppercase tracking-widest">Scope</div>
+                                  <div className="text-xs opacity-70">未分組：所有修改只影響本張圖片。</div>
                                 </div>
-                              
-                              <div className="space-y-1 pt-2">
-                                <RichTextEditor
-                                  value={currentMV.images[editingImageIdx].richText || ''}
-                                  onChange={(value) => updateImage(editingImageIdx, 'richText', value)}
-                                />
-                              </div>
-                              {/* 動態渲染擴充欄位 */}
-                              {Object.keys(currentMV.images[editingImageIdx]).filter(key => !['id', 'type', 'media_type', 'original_url', 'thumbnail_url', 'usage', 'order_index', 'tags', 'group', 'url', 'thumbnail', 'caption', 'alt', 'richText', 'width', 'height'].includes(key)).map(key => {
-                                return (
-                                <div className="space-y-1" key={key}>
-                                  <label className="text-[10px] font-bold opacity-60 uppercase flex justify-between">
-                                    <span>{key} (自訂欄位)</span>
-                                    <button 
-                                      onClick={() => {
-                                        const newImages = [...currentMV.images!];
-                                        delete newImages[editingImageIdx][key];
-                                        setData(prevData => prevData.map(mv => mv.id === currentMV.id ? { ...mv, images: newImages } : mv));
-                                        markFieldChanged(currentMV.id, `images.${editingImageIdx}`);
-                                      }}
-                                      className="text-red-500 hover:text-red-700"
-                                      title="刪除此欄位"
-                                    >
-                                      <i className="hn hn-times" />
-                                    </button>
-                                  </label>
-                                  <Input 
-                                    value={currentMV.images![editingImageIdx][key] || ''} 
-                                    onChange={(e) => updateImage(editingImageIdx, key, e.target.value)} 
-                                  />
+                              )}
+
+                              {editingGroupKey ? (
+                                <div className="border-2 border-black bg-white p-3 flex flex-col gap-2">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="text-xs font-black uppercase tracking-widest">同組圖片</div>
+                                    <div className="text-xs font-mono opacity-70">{editingGroupItems.length}</div>
+                                  </div>
+                                  <div className="grid grid-cols-4 gap-2">
+                                    {editingGroupItems.slice(0, 12).map(({ img, idx }) => {
+                                      const rawUrl = String(img?.url || '')
+                                      const isVideo = isMediaVideo(rawUrl, img?.type)
+                                      const active = idx === editingImageIdx
+                                      return (
+                                        <button
+                                          key={`${String(img?.id || idx)}-${idx}`}
+                                          type="button"
+                                          onClick={() => setEditingImageIdx(idx)}
+                                          className={`relative size-16 border-2 border-black overflow-hidden bg-black ${active ? 'outline outline-4 outline-ztmy-green' : 'hover:outline hover:outline-4 hover:outline-black/40'}`}
+                                          title={String(img?.id || idx)}
+                                        >
+                                          {rawUrl ? (
+                                            <>
+                                              <img src={getAdminImagePreviewUrl(img)} className="w-full h-full object-cover" alt={String(img?.id || idx)} />
+                                              {isVideo ? (
+                                                <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
+                                                  <div className="bg-black/80 text-white rounded-full p-1 border border-white/20">
+                                                    <i className="hn hn-play text-sm ml-0.5" />
+                                                  </div>
+                                                </div>
+                                              ) : null}
+                                            </>
+                                          ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-white/70 text-[10px] font-mono">No</div>
+                                          )}
+                                          <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[9px] font-mono px-1 py-0.5 truncate">
+                                            {String(img?.id || idx)}
+                                          </div>
+                                        </button>
+                                      )
+                                    })}
+                                  </div>
+                                  {editingGroupItems.length > 12 ? (
+                                    <div className="text-[10px] font-mono opacity-60">+{editingGroupItems.length - 12} more</div>
+                                  ) : null}
                                 </div>
-                              );
-                              })}
-                              
-                              <div className="pt-2 border-t-2 border-dashed border-black/10">
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  className="w-full text-xs border-dashed"
-                                  onClick={() => {
-                                    const fieldName = window.prompt('請輸入新欄位的名稱 (英文)');
-                                    if (fieldName && fieldName.trim()) {
-                                      updateImage(editingImageIdx, fieldName.trim(), '');
-                                    }
-                                  }}
-                                >
-                                  <i className="hn hn-plus mr-2" /> 新增自訂欄位
-                                </Button>
-                              </div>
+                              ) : null}
                             </div>
+
+                            <ScrollArea className="h-full">
+                              <div className="p-4 md:p-6 flex flex-col gap-4">
+                                <Tabs defaultValue="basic">
+                                  <TabsList className="w-full justify-start gap-1 p-1 border-2 border-black bg-[var(--admin-panel-bg)] shadow-[var(--admin-shadow-sm)] rounded-[var(--admin-radius)] overflow-x-auto">
+                                    <TabsTrigger
+                                      value="basic"
+                                      className="px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] border-2 border-transparent rounded-[calc(var(--admin-radius)-4px)] hover:bg-black/5 data-[state=active]:border-black data-[state=active]:bg-main data-[state=active]:text-black data-[state=active]:shadow-neo"
+                                    >
+                                      基本
+                                    </TabsTrigger>
+                                    <TabsTrigger
+                                      value="tweet"
+                                      className="px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] border-2 border-transparent rounded-[calc(var(--admin-radius)-4px)] hover:bg-black/5 data-[state=active]:border-black data-[state=active]:bg-main data-[state=active]:text-black data-[state=active]:shadow-neo"
+                                    >
+                                      推文
+                                    </TabsTrigger>
+                                    <TabsTrigger
+                                      value="rich"
+                                      className="px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] border-2 border-transparent rounded-[calc(var(--admin-radius)-4px)] hover:bg-black/5 data-[state=active]:border-black data-[state=active]:bg-main data-[state=active]:text-black data-[state=active]:shadow-neo"
+                                    >
+                                      富文本
+                                    </TabsTrigger>
+                                    <TabsTrigger
+                                      value="custom"
+                                      className="px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] border-2 border-transparent rounded-[calc(var(--admin-radius)-4px)] hover:bg-black/5 data-[state=active]:border-black data-[state=active]:bg-main data-[state=active]:text-black data-[state=active]:shadow-neo"
+                                    >
+                                      自訂
+                                    </TabsTrigger>
+                                  </TabsList>
+
+                                  <TabsContent value="basic">
+                                    <div className="flex flex-col gap-3">
+                                      <div className="text-xs font-mono opacity-60">本頁欄位只影響本張圖片（不會同步）。</div>
+                                      <div className="flex flex-col gap-1">
+                                        <label className="text-[10px] font-bold opacity-60 uppercase">圖片 URL</label>
+                                        <Input
+                                          placeholder="https://..."
+                                          value={currentMV.images[editingImageIdx].url}
+                                          onChange={(e) => updateImage(editingImageIdx, "url", e.target.value)}
+                                          className={`${!currentMV.images[editingImageIdx].url?.trim() ? "border-red-500 bg-red-50" : ""}`}
+                                        />
+                                      </div>
+
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div className="flex flex-col gap-1">
+                                          <label className="text-[10px] font-bold opacity-60 uppercase">Caption</label>
+                                          <Input
+                                            placeholder="可選填"
+                                            value={currentMV.images[editingImageIdx].caption || ""}
+                                            onChange={(e) => updateImage(editingImageIdx, "caption", e.target.value)}
+                                          />
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                          <label className="text-[10px] font-bold opacity-60 uppercase">Alt</label>
+                                          <Input
+                                            placeholder="可選填"
+                                            value={currentMV.images[editingImageIdx].alt || ""}
+                                            onChange={(e) => updateImage(editingImageIdx, "alt", e.target.value)}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </TabsContent>
+
+                                  <TabsContent value="tweet">
+                                    <div className="flex flex-col gap-3">
+                                      <div className="text-xs font-mono opacity-60">{editingGroupKey ? "本頁欄位會同步到同組圖片。" : "未分組：本頁欄位只影響本張圖片。"}</div>
+                                      <div className="flex flex-col gap-1">
+                                        <label className="text-[10px] font-bold opacity-60 uppercase flex justify-between">
+                                          <span>推文連結 (source_url)</span>
+                                          {currentMV.images[editingImageIdx].group?.source_url ? (
+                                            <a
+                                              href={currentMV.images[editingImageIdx].group!.source_url}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              className="text-blue-600 underline truncate max-w-[200px]"
+                                              title={currentMV.images[editingImageIdx].group!.source_url}
+                                            >
+                                              Open
+                                            </a>
+                                          ) : null}
+                                        </label>
+                                        <Input
+                                          placeholder="https://x.com/.../status/..."
+                                          value={currentMV.images[editingImageIdx].group?.source_url || ""}
+                                          onChange={(e) => updateImageGroupField(editingImageIdx, "source_url", e.target.value)}
+                                        />
+                                      </div>
+
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div className="flex flex-col gap-1">
+                                          <label className="text-[10px] font-bold opacity-60 uppercase">author_name</label>
+                                          <Input
+                                            value={currentMV.images[editingImageIdx].group?.author_name || ""}
+                                            onChange={(e) => updateImageGroupField(editingImageIdx, "author_name", e.target.value)}
+                                          />
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                          <label className="text-[10px] font-bold opacity-60 uppercase">author_handle</label>
+                                          <Input
+                                            value={currentMV.images[editingImageIdx].group?.author_handle || ""}
+                                            onChange={(e) => updateImageGroupField(editingImageIdx, "author_handle", e.target.value)}
+                                          />
+                                        </div>
+                                      </div>
+
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div className="flex flex-col gap-1">
+                                          <label className="text-[10px] font-bold opacity-60 uppercase">post_date</label>
+                                          <Input
+                                            type="datetime-local"
+                                            value={(() => {
+                                              const raw = currentMV.images[editingImageIdx].group?.post_date
+                                              if (!raw) return ""
+                                              const d = new Date(raw)
+                                              if (Number.isNaN(d.getTime())) return ""
+                                              const pad = (n: number) => String(n).padStart(2, "0")
+                                              return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+                                            })()}
+                                            onChange={(e) => {
+                                              const v = e.target.value
+                                              const d = v ? new Date(v) : null
+                                              updateImageGroupField(editingImageIdx, "post_date", d ? d.toISOString() : null)
+                                            }}
+                                          />
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                          <label className="text-[10px] font-bold opacity-60 uppercase">status</label>
+                                          <Select
+                                            value={currentMV.images[editingImageIdx].group?.status || "__none__"}
+                                            onValueChange={(v) => updateImageGroupField(editingImageIdx, "status", v === "__none__" ? null : v)}
+                                          >
+                                            <SelectTrigger className="h-10 bg-white border-2 border-border shadow-none">
+                                              <SelectValue placeholder="status" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="__none__">未設定</SelectItem>
+                                              <SelectItem value="organized">organized</SelectItem>
+                                              <SelectItem value="unorganized">unorganized</SelectItem>
+                                              <SelectItem value="pending">pending</SelectItem>
+                                              <SelectItem value="deleted">deleted</SelectItem>
+                                              <SelectItem value="rejected">rejected</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                      </div>
+
+                                      <div className="flex flex-col gap-1">
+                                        <label className="text-[10px] font-bold opacity-60 uppercase">source_text</label>
+                                        <Textarea
+                                          value={currentMV.images[editingImageIdx].group?.source_text || ""}
+                                          onChange={(e) => updateImageGroupField(editingImageIdx, "source_text", e.target.value)}
+                                          className="min-h-[120px] text-xs"
+                                        />
+                                      </div>
+                                    </div>
+                                  </TabsContent>
+
+                                  <TabsContent value="rich">
+                                    <div className="flex flex-col gap-3">
+                                      <div className="text-xs font-mono opacity-60">{editingGroupKey ? "本頁欄位會同步到同組圖片。" : "未分組：本頁欄位只影響本張圖片。"}</div>
+                                      <RichTextEditor
+                                        value={currentMV.images[editingImageIdx].richText || ""}
+                                        onChange={(value) => updateImage(editingImageIdx, "richText", value)}
+                                      />
+                                    </div>
+                                  </TabsContent>
+
+                                  <TabsContent value="custom">
+                                    <div className="flex flex-col gap-3">
+                                      <div className="text-xs font-mono opacity-60">{editingGroupKey ? "本頁欄位會同步到同組圖片。" : "未分組：本頁欄位只影響本張圖片。"}</div>
+                                      {Object.keys(currentMV.images[editingImageIdx])
+                                        .filter(
+                                          (key) =>
+                                            ![
+                                              "id",
+                                              "type",
+                                              "media_type",
+                                              "original_url",
+                                              "thumbnail_url",
+                                              "usage",
+                                              "order_index",
+                                              "tags",
+                                              "group",
+                                              "url",
+                                              "thumbnail",
+                                              "caption",
+                                              "alt",
+                                              "richText",
+                                              "width",
+                                              "height",
+                                            ].includes(key),
+                                        )
+                                        .map((key) => {
+                                          return (
+                                            <div className="flex flex-col gap-1" key={key}>
+                                              <label className="text-[10px] font-bold opacity-60 uppercase flex justify-between">
+                                                <span>{key}</span>
+                                                <button
+                                                  onClick={() => {
+                                                    const newImages = [...currentMV.images!]
+                                                    delete newImages[editingImageIdx][key]
+                                                    setData((prevData) =>
+                                                      prevData.map((mv) => (mv.id === currentMV.id ? { ...mv, images: newImages } : mv)),
+                                                    )
+                                                    markFieldChanged(currentMV.id, `images.${editingImageIdx}`)
+                                                  }}
+                                                  className="text-red-500 hover:text-red-700"
+                                                  title="刪除此欄位"
+                                                >
+                                                  <i className="hn hn-times" />
+                                                </button>
+                                              </label>
+                                              <Input
+                                                value={currentMV.images![editingImageIdx][key] || ""}
+                                                onChange={(e) => updateImage(editingImageIdx, key, e.target.value)}
+                                              />
+                                            </div>
+                                          )
+                                        })}
+
+                                      <div className="pt-2 border-t-2 border-dashed border-black/10 flex flex-col gap-2">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="w-full text-xs border-dashed"
+                                          onClick={() => {
+                                            setCustomFieldTarget(editingImageIdx)
+                                            setCustomFieldDraft("")
+                                            setCustomFieldDialogOpen(true)
+                                          }}
+                                        >
+                                          <i className="hn hn-plus mr-2" /> 新增自訂欄位
+                                        </Button>
+                                        <Button variant="outline" size="sm" onClick={handleCleanEmptyCustomFields} className="w-full text-xs border-dashed">
+                                          <i className="hn hn-refresh mr-2" /> 清理空值（整支 MV）
+                                        </Button>
+                                        <div className="text-[10px] font-mono opacity-60">清理會掃描此 MV 的所有圖片，不限同組。</div>
+                                      </div>
+                                    </div>
+                                  </TabsContent>
+                                </Tabs>
+                              </div>
+                            </ScrollArea>
                           </div>
                         </div>
                         
@@ -2821,9 +2997,6 @@ const currentMV = data[activeIndex];
                           <div className="flex gap-2">
                             <Button variant="neutral" onClick={() => removeImage(editingImageIdx)} className="bg-red-100 text-red-600 hover:bg-red-500 hover:text-white border-red-200">
                               <i className="hn hn-trash mr-2" /> 刪除此圖片
-                            </Button>
-                            <Button variant="outline" onClick={handleCleanEmptyCustomFields} className="border-dashed text-black/60 hover:text-black">
-                              <i className="hn hn-refresh mr-2" /> 清理空值欄位
                             </Button>
                           </div>
                           <div className="flex gap-2">
@@ -2891,10 +3064,10 @@ const currentMV = data[activeIndex];
               </div>
               </div>
             </section>
-            </div>
+            </TabsContent>
 
             {/* 數據架構維護工具 (Schema Maintenance) */}
-            <div className={activeSection !== 'schema' ? 'hidden' : ''}>
+            <TabsContent value="schema">
               <section className="p-6 border-4 border-dashed border-black bg-main/5 space-y-4">
                 <div className="flex items-start gap-2">
                   <div className="flex flex-col gap-1">
@@ -2937,15 +3110,17 @@ const currentMV = data[activeIndex];
                   </Button>
                 </div>
               </section>
+            </TabsContent>
+            </Tabs>
             </div>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* 批量推文解析 Dialog */}
       <Dialog open={isBatchAddOpen} onOpenChange={(open) => !batchAddStatus?.isProcessing && setIsBatchAddOpen(open)}>
-        <DialogContent className="max-w-2xl border-4 border-black shadow-neo p-0 overflow-hidden bg-card text-card-foreground">
-          <DialogHeader className="p-6 bg-blue-600 text-white border-b-4 border-black">
+        <DialogContent className="max-w-2xl border-2 border-black shadow-[var(--admin-shadow)] rounded-[var(--admin-radius)] p-0 overflow-hidden bg-[var(--admin-panel-bg)] text-foreground">
+          <DialogHeader className="p-6 bg-blue-600 text-white border-b-2 border-black">
             <DialogTitle className="text-xl font-black uppercase flex items-center gap-2">
               <i className="hn hn-twitter text-2xl" /> 批量推文解析
             </DialogTitle>
@@ -2979,7 +3154,7 @@ const currentMV = data[activeIndex];
               </div>
             )}
           </div>
-          <DialogFooter className="p-4 bg-secondary border-t-4 border-black flex gap-2">
+          <DialogFooter className="p-4 bg-[var(--admin-panel-bg)] border-t-2 border-black flex gap-2">
             <Button variant="outline" onClick={() => setIsBatchAddOpen(false)} disabled={batchAddStatus?.isProcessing}>
               取消
             </Button>
@@ -3040,256 +3215,95 @@ const currentMV = data[activeIndex];
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Metadata 全局設定 Dialog */}
-      <Dialog open={isMetadataDialogOpen} onOpenChange={setIsMetadataDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0 border-4 border-black rounded-none shadow-neo overflow-hidden">
-          <DialogHeader className="p-6 bg-black text-white border-b-4 border-black shrink-0">
-            <DialogTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-2">
-              <i className="hn hn-disc text-xl" /> 全局設定 (Metadata)
-            </DialogTitle>
-            <DialogDescription className="text-white/70 font-mono text-xs">
-              手動維護專輯的發布年份與畫師 ID 等全局變數。這會影響首頁篩選器的顯示。
-            </DialogDescription>
+      <Dialog open={sourceUrlDialogOpen} onOpenChange={setSourceUrlDialogOpen}>
+        <DialogContent className="max-w-md border-2 border-black shadow-[var(--admin-shadow)] rounded-[var(--admin-radius)] bg-[var(--admin-panel-bg)] text-foreground">
+          <DialogHeader>
+            <DialogTitle>設定推文來源</DialogTitle>
           </DialogHeader>
-
-          <div className="flex-1 overflow-y-auto p-6 bg-background space-y-12 font-mono custom-scrollbar">
-
-            <div className="flex flex-col gap-3 border-2 border-black p-3 bg-yellow-500/20">
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col">
-                  <div className="text-xs font-black tracking-widest text-yellow-600">系統維護模式</div>
-                  <div className="text-[10px] font-bold opacity-40 font-mono normal-case">Maintenance Mode</div>
-                  <div className="text-[10px] font-bold opacity-60">開啟後所有訪客將看到維護頁面</div>
-                </div>
-                <Switch
-                  checked={localMaintenance}
-                  onCheckedChange={(checked) => setLocalMaintenance(checked)}
-                />
-              </div>
-              
-              {localMaintenance && (
-                <div className="flex flex-col gap-3 pt-3 border-t-2 border-yellow-500/30">
-                  <div className="flex flex-col gap-2">
-                    <div className="flex flex-col">
-                      <div className="text-xs font-black tracking-widest text-yellow-600">維護類型</div>
-                      <div className="text-[10px] font-bold opacity-40 font-mono normal-case">Maintenance Type</div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="maintenanceType"
-                          value="ui"
-                          checked={localMaintenanceType === 'ui'}
-                          onChange={() => setLocalMaintenanceType('ui')}
-                          className="accent-yellow-500"
-                        />
-                        <span className="text-xs font-bold text-yellow-600">介面升級 (UI Upgrade)</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="maintenanceType"
-                          value="data"
-                          checked={localMaintenanceType === 'data'}
-                          onChange={() => setLocalMaintenanceType('data')}
-                          className="accent-yellow-500"
-                        />
-                        <span className="text-xs font-bold text-yellow-600">數據維護 (Data Maintenance)</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2 mt-2">
-                    <div className="flex flex-col">
-                      <div className="text-xs font-black tracking-widest text-yellow-600">預估恢復時間 (選填)</div>
-                      <div className="text-[10px] font-bold opacity-40 font-mono normal-case">Estimated Time to Recovery</div>
-                    </div>
-                    <Input 
-                      type="datetime-local" 
-                      value={localMaintenanceEta} 
-                      onChange={(e) => setLocalMaintenanceEta(e.target.value)} 
-                      className="font-mono text-sm bg-background border-2 border-black focus-visible:ring-black h-8"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between border-2 border-black p-3 bg-card">
-              <div className="flex flex-col">
-                <div className="text-xs font-black tracking-widest">清除 Redis API 快取</div>
-                <div className="text-[10px] font-bold opacity-40 font-mono normal-case">Clear Redis Cache</div>
-                <div className="text-[10px] font-bold opacity-60">維護期資料頻繁變動時可手動刷新所有 GET API 快取</div>
-              </div>
-              <Button
-                onClick={handleClearRedisCache}
-                disabled={isClearingRedisCache}
-                className="border-2 border-black bg-main text-black hover:bg-main/80 font-black shadow-neo-sm"
-              >
-                {isClearingRedisCache ? '清除中...' : '清除快取'}
-              </Button>
-            </div>
-
-            <div className="flex items-center justify-between border-2 border-black p-3 bg-card">
-              <div className="flex flex-col">
-                <div className="text-xs font-black tracking-widest">自動推算專輯日期</div>
-                <div className="text-[10px] font-bold opacity-40 font-mono normal-case">Auto Album Date</div>
-                <div className="text-[10px] font-bold opacity-60">未設定專輯發布日期時，是否顯示自動推算值</div>
-              </div>
-              <Switch
-                checked={!!localMetadata.settings?.showAutoAlbumDate}
-                onCheckedChange={(checked) => {
-                  setLocalMetadata((prev) => ({
-                    ...prev,
-                    settings: { ...(prev.settings || { showAutoAlbumDate: false }), showAutoAlbumDate: checked },
-                  }));
-                }}
-              />
-            </div>
-            
-            {/* 首頁跑馬燈公告 */}
-            <section className="space-y-4">
-              <div className="flex items-center justify-between border-b-2 border-black pb-2">
-                <div className="flex items-center gap-2">
-                  <div className="flex flex-col gap-1">
-                    <h3 className="text-sm font-black uppercase bg-main text-main-foreground px-2 py-1">00 公告</h3>
-                    <span className="text-[10px] font-bold opacity-50 font-mono normal-case ml-2">00_Announcements</span>
-                  </div>
-                  <span className="text-[10px] font-bold opacity-50">首頁跑馬燈公告維護 (多語言支援)</span>
-                </div>
-              </div>
-              <div className="flex flex-col gap-2 border-2 border-black p-4 bg-card">
-                <div className="flex gap-2 border-b-2 border-black/10 pb-2 mb-2 overflow-x-auto">
-                  {['zh-TW', 'zh-CN', 'zh-HK', 'ja', 'ko', 'en', 'es'].map(lang => (
-                    <button
-                      key={lang}
-                      className={`px-3 py-1 text-xs font-bold border-2 transition-colors ${announcementLang === lang ? 'border-black bg-main text-black' : 'border-transparent opacity-50 hover:opacity-100'}`}
-                      onClick={() => setAnnouncementLang(lang)}
-                    >
-                      {lang}
-                    </button>
-                  ))}
-                </div>
-                <div className="text-xs font-bold opacity-60">
-                  請輸入跑馬燈公告內容 ({announcementLang})，每行一則公告。若為空則不顯示跑馬燈。
-                </div>
-                <Textarea 
-                  value={(() => {
-                    const ann = localMetadata.settings?.announcements;
-                    if (!ann) return "";
-                    if (Array.isArray(ann)) {
-                      return announcementLang === 'zh-TW' ? ann.join('\n') : "";
-                    }
-                    return (ann[announcementLang] || []).join('\n');
-                  })()}
-                  onChange={(e) => {
-                    const lines = e.target.value.split('\n');
-                    setLocalMetadata(prev => {
-                      let currentAnn = prev.settings?.announcements || {};
-                      if (Array.isArray(currentAnn)) {
-                        currentAnn = { 'zh-TW': currentAnn };
-                      }
-                      return {
-                        ...prev,
-                        settings: { 
-                          ...(prev.settings || { showAutoAlbumDate: false }), 
-                          announcements: {
-                            ...currentAnn,
-                            [announcementLang]: lines
-                          }
-                        }
-                      };
-                    });
-                  }}
-                  placeholder="例如：
-【最新】ZUTOMAYO 新專輯發布！
-網站功能更新公告..."
-                  className="w-full min-h-[120px] text-sm font-bold border-2 border-black/20 bg-black/5"
-                />
-              </div>
-            </section>
-            
-            <section className="space-y-4">
-              <div className="flex flex-col gap-2 border-2 border-black p-4 bg-card shadow-neo-sm">
-                <span className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
-                  <i className="hn hn-link" /> 其他管理頁面
-                </span>
-                <div className="flex gap-4 mt-2">
-                  <Button variant="neutral" onClick={() => window.open('/admin/albums', '_blank')} className="border-2 border-black bg-white">
-                    前往專輯管理 <i className="hn hn-arrow-right ml-2" />
-                  </Button>
-                  <Button variant="neutral" onClick={() => window.open('/admin/artists', '_blank')} className="border-2 border-black bg-white">
-                    前往畫師管理 <i className="hn hn-arrow-right ml-2" />
-                  </Button>
-                  <Button variant="neutral" onClick={() => window.open('/admin/dicts', '_blank')} className="border-2 border-black bg-white">
-                    前往字典管理 <i className="hn hn-arrow-right ml-2" />
-                  </Button>
-                </div>
-              </div>
-            </section>
+          <div className="flex flex-col gap-2">
+            <div className="text-xs font-mono opacity-60">source_url</div>
+            <Input value={sourceUrlDraft} onChange={(e) => setSourceUrlDraft(e.target.value)} placeholder="https://x.com/.../status/..." />
           </div>
-            <div className="space-y-4 pt-4 border-t-2 border-black">
-              <div className="flex items-start justify-between border-b-2 border-black pb-2">
-                <div className="flex items-start gap-2">
-                  <div className="flex flex-col gap-1">
-                    <h3 className="text-sm font-black uppercase bg-main text-main-foreground px-2 py-1">03 Passkeys</h3>
-                    <span className="text-[10px] font-bold opacity-50 font-mono normal-case ml-2">03_Passkeys</span>
-                  </div>
-                  <span className="text-[10px] font-bold opacity-50">生物辨識 / 設備登入管理</span>
-                </div>
-                <Button variant="neutral" size="sm" className="h-7 px-2 text-[10px] font-bold bg-ztmy-green border-2 border-black text-black hover:bg-ztmy-green/80" onClick={handleRegisterPasskey}>
-                  <i className="hn hn-plus text-base mr-2" /> 註冊新設備 (Passkey)
-                </Button>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {passkeys.length === 0 && (
-                  <div className="col-span-full p-4 border-2 border-dashed border-black/30 text-center opacity-50 text-xs">
-                    目前沒有註冊任何 Passkey，請點擊右上方按鈕新增。
-                  </div>
-                )}
-                {passkeys.map((pk) => (
-                  <div key={pk.id} className="flex flex-col gap-1 border-2 border-black p-3 bg-card relative">
-                    <div className="font-bold text-sm flex items-center gap-2">
-                      <i className="hn hn-user text-base mr-2" /> {pk.name || '未命名設備 (Unnamed Device)'}
-                    </div>
-                    <div className="text-[10px] opacity-60 font-mono">ID: {pk.id.slice(0, 16)}...</div>
-                    <div className="text-[10px] opacity-60 font-mono">建立於: {new Date(pk.createdAt).toLocaleString()}</div>
-                    <Button 
-                      variant="neutral" 
-                      size="icon" 
-                      className="absolute top-2 right-2 h-6 w-6 text-red-500 hover:bg-red-500 hover:text-white"
-                      onClick={() => handleRemovePasskey(pk.id)}
-                    >
-                      <i className="hn hn-trash text-base" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-
-          <DialogFooter className="p-4 bg-secondary-background border-t-4 border-black flex gap-4 sm:justify-end">
-            <Button 
-              variant="neutral" 
-              onClick={() => setIsMetadataDialogOpen(false)} 
-              className="flex-1 sm:flex-none"
-            >
+          <DialogFooter className="flex gap-2 sm:justify-end">
+            <Button variant="outline" onClick={() => setSourceUrlDialogOpen(false)}>
               取消
             </Button>
-            <Button 
-              onClick={handleSaveMetadata}
-              disabled={isSavingMetadata}
-              className="flex-1 sm:flex-none bg-black text-white hover:bg-ztmy-green hover:text-black font-bold border-2 border-transparent shadow-neo"
+            <Button
+              onClick={() => {
+                const url = sourceUrlDraft.trim()
+                if (!url) {
+                  toast.error("請輸入推文網址")
+                  return
+                }
+                if (!sourceUrlTarget) {
+                  setSourceUrlDialogOpen(false)
+                  return
+                }
+                const mvId = sourceUrlTarget.mvId
+                const indices = sourceUrlTarget.indices
+                setData((prevData) =>
+                  prevData.map((mv) => {
+                    if (mv.id !== mvId) return mv
+                    const newImages = [...(mv.images || [])]
+                    indices.forEach((idx) => {
+                      const img: any = newImages[idx]
+                      const g = img && typeof img.group === "object" && img.group ? img.group : {}
+                      newImages[idx] = { ...img, group: { ...g, source_url: url, status: g.status || "organized" } }
+                      markFieldChanged(mvId, `images.${idx}.group.source_url`)
+                    })
+                    return { ...mv, images: newImages }
+                  }),
+                )
+                setSelectedImageIndices(new Set())
+                setIsSelectionMode(false)
+                setSourceUrlDialogOpen(false)
+                setSourceUrlTarget(null)
+                toast.success(`已為 ${indices.length} 張圖片設定推文來源`)
+              }}
+              className="border-2 border-black"
             >
-              {isSavingMetadata ? <i className="hn hn-refresh text-base animate-spin mr-2" /> : <i className="hn hn-save text-base mr-2" />}
-              保存全局設定
+              套用
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <ConfirmDialog />
-    </div>
+
+      <Dialog open={customFieldDialogOpen} onOpenChange={setCustomFieldDialogOpen}>
+        <DialogContent className="max-w-md border-2 border-black shadow-[var(--admin-shadow)] rounded-[var(--admin-radius)] bg-[var(--admin-panel-bg)] text-foreground">
+          <DialogHeader>
+            <DialogTitle>新增自訂欄位</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-2">
+            <div className="text-xs font-mono opacity-60">僅允許英數與底線</div>
+            <Input value={customFieldDraft} onChange={(e) => setCustomFieldDraft(e.target.value)} placeholder="e.g. source_url / credit / note" />
+          </div>
+          <DialogFooter className="flex gap-2 sm:justify-end">
+            <Button variant="outline" onClick={() => setCustomFieldDialogOpen(false)}>
+              取消
+            </Button>
+            <Button
+              onClick={() => {
+                const name = customFieldDraft.trim()
+                if (!name) return
+                if (!/^[A-Za-z0-9_]+$/.test(name)) {
+                  toast.error("欄位名稱格式不正確")
+                  return
+                }
+                if (customFieldTarget === null) {
+                  setCustomFieldDialogOpen(false)
+                  return
+                }
+                updateImage(customFieldTarget, name, "")
+                setCustomFieldDialogOpen(false)
+                setCustomFieldTarget(null)
+              }}
+              className="border-2 border-black"
+            >
+              新增
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

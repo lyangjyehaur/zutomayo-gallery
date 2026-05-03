@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useLayoutEffect, useState, useRef, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,7 @@ import { CoverCarousel } from './MVCard';
 import './MVDetailsModal.css';
 import { MODAL_THEME } from '@/lib/theme';
 import { useTranslation } from 'react-i18next';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 
 // 圖標組件改為 pixelarticons 類名使用
@@ -30,6 +31,7 @@ interface MVDetailsModalProps {
   onClose: () => void;
   isFav?: boolean;
   onToggleFav?: () => void;
+  metadata?: any;
 }
 
 /**
@@ -40,14 +42,57 @@ interface MVDetailsModalProps {
  * 2. LightGallery 燈箱通過 Portal 渲染到 body，層級高於 Dialog
  * 3. 通過 CSS 和事件管理確保兩者正確協作
  */
-export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsModalProps) {
+export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata }: MVDetailsModalProps) {
   const { t } = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const suppressCloseNavigationRef = useRef(false);
 
   // 影片播放狀態
   const [videoPlatform, setVideoPlatform] = useState<'youtube' | 'bilibili'>('bilibili');
   const [isVideoActivated, setIsVideoActivated] = useState(false);
   const [isChinaIP, setIsChinaIP] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [infoTab, setInfoTab] = useState<'desc' | 'creators'>('desc');
+
+  useEffect(() => {
+    setInfoTab('desc');
+    suppressCloseNavigationRef.current = false;
+  }, [mv?.id]);
+
+  const activeLang = React.useMemo(() => {
+    const parts = (location.pathname || '/').split('/');
+    const maybeLng = parts[1];
+    return maybeLng && maybeLng.length > 0 ? maybeLng : 'zh-TW';
+  }, [location.pathname]);
+
+  const artistMetaMap = React.useMemo(() => {
+    return metadata?.artistMeta || {};
+  }, [metadata]);
+
+  const creators = React.useMemo(() => {
+    const list = Array.isArray(mv?.creators) ? mv!.creators : [];
+    const seen = new Set<string>();
+    return list
+      .map((c: any) => {
+        const name = typeof c === 'string' ? c : c?.name;
+        if (typeof name !== 'string' || !name.trim()) return null;
+        const key = name.trim();
+        if (seen.has(key)) return null;
+        seen.add(key);
+        const meta = (artistMetaMap as any)?.[key];
+        const displayName = typeof meta?.displayName === 'string' && meta.displayName.trim() ? meta.displayName : key;
+        const idToUse = meta?.dataId || (typeof meta?.id === 'string' ? meta.id.replace('@', '') : undefined) || key;
+        const twitter = meta?.hideId ? undefined : (meta?.twitter || meta?.id);
+        return { name: key, displayName, idToUse, twitter, meta };
+      })
+      .filter(Boolean) as { name: string; displayName: string; idToUse: string; twitter?: string; meta?: any }[];
+  }, [artistMetaMap, mv]);
+
+  const openIllustrator = useCallback((idToUse: string) => {
+    suppressCloseNavigationRef.current = true;
+    navigate(`/${activeLang}/illustrators/${encodeURIComponent(idToUse)}`, { state: { backgroundLocation: location } });
+  }, [activeLang, location, navigate]);
 
   useEffect(() => {
     initGeo().then(info => {
@@ -110,64 +155,112 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
   const [descHeight, setDescHeight] = useState<number | undefined>(undefined);
   const [scrollTop, setScrollTop] = useState(0);
   const [isDeferredReady, setIsDeferredReady] = useState(false);
-  const [marqueeState, setMarqueeState] = useState({
-    isMarquee: false,
-    distance: 0,
-    duration: 0,
-  });
+  const [marqueeState, setMarqueeState] = useState({ isMarquee: false, distance: 0, duration: 8 });
   const marqueeStateRef = useRef(marqueeState);
   const isScrolled = scrollTop > 20;
 
-  const titleMarqueeRef = useRef<HTMLSpanElement>(null);
+  const marqueeStyle = marqueeState.isMarquee
+    ? ({
+        "--marquee-distance": `${marqueeState.distance}px`,
+        "--marquee-duration": `${marqueeState.duration}s`,
+        animationName: "mv-modal-title-marquee",
+        animationDuration: `${marqueeState.duration}s`,
+        animationTimingFunction: "linear",
+        animationIterationCount: "infinite",
+        willChange: "transform",
+      } as React.CSSProperties)
+    : undefined;
 
-  // 處理標題跑馬燈的 ResizeObserver
-  useEffect(() => {
-    const node = titleMarqueeRef.current;
-    if (!node) return;
-    
-    const parent = node.parentElement;
-    if (!parent) return;
+  const titleMarqueeOuterRef = useRef<HTMLSpanElement>(null);
+  const titleMarqueeMeasureRef = useRef<HTMLSpanElement>(null);
 
-    let timeoutId: number;
+  useLayoutEffect(() => {
+    const MARQUEE_GAP = 32;
+    const MARQUEE_SPEED = 48;
+    const MIN_MARQUEE_DURATION = 8;
 
-    const handleResize = () => {
-      requestAnimationFrame(() => {
-        const firstChild = node.children[0] as HTMLElement;
-        if (!firstChild) return;
-        
-        const isCurrentlyMarquee = node.classList.contains('animate-card-title-marquee');
-        const textWidth = firstChild.offsetWidth - (isCurrentlyMarquee ? 32 : 0);
-        const parentWidth = parent.clientWidth;
+    let destroyed = false;
+    let observer: ResizeObserver | null = null;
+    let intervalId: number | null = null;
+    let timeoutId: number | null = null;
 
-        if (textWidth > parentWidth) {
-          const gap = 32;
-          const distance = textWidth + gap;
-          const duration = Math.max(distance / 48, 8);
-          
-          if (!marqueeStateRef.current.isMarquee || marqueeStateRef.current.distance !== distance || marqueeStateRef.current.duration !== duration) {
-            setMarqueeState({ isMarquee: true, distance, duration });
-          }
-        } else {
-          if (marqueeStateRef.current.isMarquee) {
-            setMarqueeState({ isMarquee: false, distance: 0, duration: 0 });
-          }
-        }
+    const apply = (outer: HTMLElement, measure: HTMLElement) => {
+      const textWidth = Math.ceil(measure.scrollWidth);
+      const containerWidth = Math.ceil(outer.clientWidth);
+      const overflow = textWidth > containerWidth;
+
+      if (!overflow) {
+        setMarqueeState((prev) => {
+          if (!prev.isMarquee) return prev;
+          const next = { isMarquee: false, distance: 0, duration: MIN_MARQUEE_DURATION };
+          marqueeStateRef.current = next;
+          return next;
+        });
+        return;
+      }
+
+      const distance = textWidth + MARQUEE_GAP;
+      const duration = Math.max(distance / MARQUEE_SPEED, MIN_MARQUEE_DURATION);
+      setMarqueeState((prev) => {
+        if (prev.isMarquee && prev.distance === distance && prev.duration === duration) return prev;
+        const next = { isMarquee: true, distance, duration };
+        marqueeStateRef.current = next;
+        return next;
       });
     };
 
-    const resizeObserver = new ResizeObserver(() => {
-      handleResize();
-    });
-    
-    resizeObserver.observe(parent);
-    resizeObserver.observe(node);
-    
-    // 延遲觸發，避免阻塞 Modal 開啟時的動畫
-    timeoutId = window.setTimeout(handleResize, 350);
+    const tryInit = () => {
+      if (destroyed) return;
+
+      const outer =
+        titleMarqueeOuterRef.current ??
+        (document.querySelector(
+          '[data-testid="mv-modal-title-outer"]',
+        ) as HTMLElement | null);
+      const measure =
+        titleMarqueeMeasureRef.current ??
+        (document.querySelector(
+          '[data-testid="mv-modal-title-measure"]',
+        ) as HTMLElement | null);
+
+      if (!outer || !measure) return;
+
+      apply(outer, measure);
+
+      if (typeof ResizeObserver !== "undefined") {
+        observer?.disconnect();
+        observer = new ResizeObserver(() => apply(outer, measure));
+        observer.observe(outer);
+        observer.observe(measure);
+      } else {
+        const onResize = () => apply(outer, measure);
+        window.addEventListener("resize", onResize, { passive: true });
+      }
+
+      if (intervalId != null) {
+        window.clearInterval(intervalId);
+        intervalId = null;
+      }
+      if (timeoutId != null) {
+        window.clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+    };
+
+    tryInit();
+    intervalId = window.setInterval(tryInit, 100);
+    timeoutId = window.setTimeout(tryInit, 350);
+
+    const fonts = "fonts" in document ? (document as any).fonts : null;
+    if (fonts?.ready) {
+      fonts.ready.then(tryInit).catch(() => {});
+    }
 
     return () => {
-      resizeObserver.disconnect();
-      window.clearTimeout(timeoutId);
+      destroyed = true;
+      if (intervalId != null) window.clearInterval(intervalId);
+      if (timeoutId != null) window.clearTimeout(timeoutId);
+      observer?.disconnect();
     };
   }, [mv?.title]);
 
@@ -181,7 +274,6 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
     if (mv) {
       setDescHeight(undefined);
       setScrollTop(0);
-      setMarqueeState({ isMarquee: false, distance: 0, duration: 0 });
       
       // 確保影片播放狀態被重置
       setIsVideoActivated(false);
@@ -312,6 +404,21 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
       {mv && (
         <Helmet>
           <title>{`${mv.title} | ZUTOMAYO Gallery`}</title>
+          <meta property="og:title" content={`${mv.title} | ZUTOMAYO Gallery`} />
+          <meta
+            property="og:description"
+            content={String(mv.description || '').replace(/\s+/g, ' ').trim().slice(0, 160)}
+          />
+          <meta property="og:type" content="website" />
+          {typeof window !== 'undefined' ? <meta property="og:url" content={window.location.href} /> : null}
+          {(() => {
+            const coverFromField = Array.isArray((mv as any).coverImages) ? (mv as any).coverImages[0] : null;
+            const coverFromImages = Array.isArray(mv.images)
+              ? mv.images.find((img: any) => img?.usage === 'cover')?.url
+              : null;
+            const ogImage = coverFromField || coverFromImages;
+            return ogImage ? <meta property="og:image" content={ogImage} /> : null;
+          })()}
         </Helmet>
       )}
       <Dialog modal={false} open={!!mv} onOpenChange={(open) => {
@@ -322,6 +429,10 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
         
         // 當點擊 X 按鈕或背景時，也會觸發這個事件，但 open 會是 false
         if (!open) {
+          if (suppressCloseNavigationRef.current) {
+            suppressCloseNavigationRef.current = false;
+            return;
+          }
           // 如果燈箱開著，我們不關閉 Modal
           if (document.body.classList.contains('fancybox__body') || document.querySelector('.fancybox__container') || isLightboxOpenRef.current) {
             return;
@@ -370,10 +481,20 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
           }
         }}
       >
+        <style>{`
+          @keyframes mv-modal-title-marquee {
+            from {
+              transform: translate3d(0, 0, 0);
+            }
+            to {
+              transform: translate3d(calc(0px - var(--marquee-distance, 0px)), 0, 0);
+            }
+          }
+        `}</style>
         {/* CRT 背景層 */}
         <div className={MODAL_THEME.crt}></div>
 
-        <DialogHeader className="relative z-30 pt-10 py-6 border-b-4 border-border shadow-md transition-all duration-200">
+        <DialogHeader className="relative z-30 pt-6 pb-4 md:pt-8 md:pb-5 border-b-4 border-border shadow-md transition-all duration-200">
           {/* 使用一般的 button 取代 DialogClose 來完全控制關閉行為 */}
           <div className={`absolute top-4 z-[110] ${isMac ? 'left-4 md:left-8 md:top-6' : 'right-4 md:right-8 md:top-6'}`}>
             <button 
@@ -399,7 +520,7 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
           </div>
           
           <DialogTitle 
-            className={`text-2xl cursor-default uppercase tracking-tighter font-black flex flex-col md:flex-row md:items-center gap-x-4 overflow-hidden w-full ${isMac ? 'pl-24 md:pl-32 pr-4' : 'pr-16 md:pr-20'}`} 
+            className={`text-2xl cursor-default uppercase tracking-tighter font-black flex flex-col overflow-hidden w-full ${isMac ? 'pl-24 md:pl-32 pr-4' : 'pr-16 md:pr-20'}`} 
             lang="ja"
             style={{
               rowGap: typeof window !== 'undefined' && window.innerWidth < 768
@@ -407,67 +528,114 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
                 : '8px'
             }}
           >
-            {/* MV Title & Favorite Button Wrapper */}
-            <div className="shrink-0 max-w-full md:max-w-[40%] flex items-center min-w-0 gap-3">
-              {/* Favorite Button */}
-              {onToggleFav && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleFav();
-                  }}
-                  className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-none hover:scale-110 hover:-translate-y-0.5 transition-all ${
-                    isFav 
-                      ? 'text-yellow-400 drop-shadow-[0_0_2px_rgba(250,204,21,0.5)]' 
-                      : 'text-foreground opacity-50 hover:opacity-100 hover:text-yellow-400'
-                  }`}
-                  data-umami-event="Z_Toggle_Favorite_Modal"
-                  data-umami-event-title={mv?.title}
-                  data-umami-event-id={mv?.id}
-                  data-umami-event-action={isFav ? 'remove' : 'add'}
-                  title={isFav ? t('app.unfavorited', '已取消收藏') : t('app.favorite', '收藏')}
+            <div className="flex flex-col md:flex-row md:items-center gap-x-4 gap-y-2 min-w-0 w-full">
+              <div className="shrink-0 max-w-full md:max-w-[40%] flex items-center min-w-0 gap-3">
+                {onToggleFav && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleFav();
+                    }}
+                    className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-none hover:scale-110 hover:-translate-y-0.5 transition-all ${
+                      isFav 
+                        ? 'text-yellow-400 drop-shadow-[0_0_2px_rgba(250,204,21,0.5)]' 
+                        : 'text-foreground opacity-50 hover:opacity-100 hover:text-yellow-400'
+                    }`}
+                    data-umami-event="Z_Toggle_Favorite_Modal"
+                    data-umami-event-title={mv?.title}
+                    data-umami-event-id={mv?.id}
+                    data-umami-event-action={isFav ? 'remove' : 'add'}
+                    title={isFav ? t('app.unfavorited', '已取消收藏') : t('app.favorite', '收藏')}
+                  >
+                    <i className={`hn ${isFav ? 'hn-star-solid' : 'hn-star'} text-2xl`}></i>
+                  </button>
+                )}
+                
+                <span
+                  ref={titleMarqueeOuterRef}
+                  className="ztmy-modal-title-outer relative flex min-w-0 overflow-hidden"
+                  data-testid="mv-modal-title-outer"
+                  lang="ja"
                 >
-                  <i className={`hn ${isFav ? 'hn-star-solid' : 'hn-star'} text-2xl`}></i>
-                </button>
-              )}
-              
-              {/* MV Title Text */}
-              <span className="flex min-w-0" data-text={mv?.title}>
-                <span className="ztmy-modal-glitch relative flex min-w-0 w-full overflow-hidden group" data-text={mv?.title}>
-                <span 
-                  className={`inline-block whitespace-nowrap ${marqueeState.isMarquee ? 'overflow-visible animate-card-title-marquee' : 'max-w-full truncate'}`}
-                  style={{
-                    '--marquee-distance': `${marqueeState.distance}px`,
-                    '--marquee-duration': `${marqueeState.duration}s`,
-                    animationName: marqueeState.isMarquee ? 'card-title-marquee' : 'none',
-                    animationTimingFunction: 'linear',
-                    animationIterationCount: 'infinite'
-                  } as React.CSSProperties}
-                  ref={titleMarqueeRef}
-                >
-                  <span style={{ display: 'inline-block', paddingRight: marqueeState.isMarquee ? '32px' : '0px' }}>{mv?.title}</span>
-                  <span style={{ display: marqueeState.isMarquee ? 'inline-block' : 'none', paddingRight: marqueeState.isMarquee ? '32px' : '0px' }} aria-hidden="true">{mv?.title}</span>
+                  <span
+                    ref={titleMarqueeMeasureRef}
+                    aria-hidden="true"
+                    data-testid="mv-modal-title-measure"
+                    className="ztmy-modal-title-measure pointer-events-none absolute invisible inline-block whitespace-nowrap text-2xl uppercase tracking-tighter font-black"
+                  >
+                    {mv?.title}
+                  </span>
+                  {marqueeState.isMarquee ? (
+                    <span className="relative flex min-w-0 w-full overflow-hidden group">
+                      <span
+                        data-testid="mv-modal-title-track"
+                        className="ztmy-modal-title-track flex w-max whitespace-nowrap"
+                        style={{ ...marqueeStyle, gap: "32px" }}
+                      >
+                        <span className="ztmy-modal-glitch shrink-0" data-text={mv?.title}>{mv?.title}</span>
+                        <span aria-hidden="true" className="ztmy-modal-glitch shrink-0" data-text={mv?.title}>{mv?.title}</span>
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="relative flex min-w-0 w-full overflow-hidden group">
+                      <span className="ztmy-modal-glitch block max-w-full truncate whitespace-nowrap" data-text={mv?.title}>{mv?.title}</span>
+                    </span>
+                  )}
                 </span>
-              </span>
-            </span>
+              </div>
+              {mv?.keywords && mv.keywords.length > 0 && (
+                <div 
+                  className="flex-1 flex flex-wrap items-center gap-2 italic text-sm font-bold tracking-normal normal-case md:pt-1.5 min-w-0 md:opacity-80 md:flex md:!max-h-full"
+                  style={{
+                    maxHeight: typeof window !== 'undefined' && window.innerWidth < 768 
+                      ? Math.max(0, 110 - scrollTop) + 'px' 
+                      : undefined,
+                    opacity: typeof window !== 'undefined' && window.innerWidth < 768 
+                      ? Math.max(0, 1 - scrollTop / 55) * 0.9
+                      : undefined,
+                    overflow: 'hidden',
+                    visibility: typeof window !== 'undefined' && window.innerWidth < 768 && scrollTop >= 110 ? 'hidden' : 'visible'
+                  }}
+                >
+                  {mv.keywords.map((k, i) => (
+                    <span key={i} lang={k.lang || undefined}>#{k.text}</span>
+                  ))}
+                </div>
+              )}
             </div>
-            {mv?.keywords && mv.keywords.length > 0 && (
-              <div 
-                className="flex-1 flex flex-wrap items-center gap-2 italic text-sm font-bold tracking-normal normal-case md:pt-1.5 min-w-0 md:opacity-80 md:flex md:!max-h-full"
-                style={{
-                  maxHeight: typeof window !== 'undefined' && window.innerWidth < 768 
-                    ? Math.max(0, 80 - scrollTop) + 'px' 
-                    : undefined,
-                  opacity: typeof window !== 'undefined' && window.innerWidth < 768 
-                    ? Math.max(0, 1 - scrollTop / 40) * 0.8
-                    : undefined,
-                  overflow: 'hidden',
-                  visibility: typeof window !== 'undefined' && window.innerWidth < 768 && scrollTop >= 80 ? 'hidden' : 'visible'
-                }}
-              >
-                {mv.keywords.map((k, i) => (
-                  <span key={i} lang={k.lang || undefined}>#{k.text}</span>
+            {creators.length > 0 && (
+              <div className="w-full flex items-center gap-2 pt-1 overflow-x-auto whitespace-nowrap">
+                {creators.slice(0, 3).map((c) => (
+                  <button
+                    key={c.name}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      openIllustrator(c.idToUse);
+                    }}
+                    className="shrink-0 text-[10px] font-black border-2 border-black px-2 py-1 bg-background hover:bg-main hover:text-black transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none"
+                    lang="ja"
+                    data-umami-event="Z_Open_Illustrator_From_MV"
+                    data-umami-event-mv={mv?.id}
+                    data-umami-event-artist={c.name}
+                  >
+                    {c.displayName}
+                  </button>
                 ))}
+                {creators.length > 3 && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setInfoTab('creators');
+                    }}
+                    className="shrink-0 text-[10px] font-black border-2 border-black px-2 py-1 bg-black text-white hover:bg-main hover:text-black transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none"
+                    data-umami-event="Z_Open_Illustrator_List_From_MV"
+                    data-umami-event-mv={mv?.id}
+                  >
+                    +{creators.length - 3}
+                  </button>
+                )}
               </div>
             )}
           </DialogTitle>
@@ -483,9 +651,9 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
             setScrollTop(target.scrollTop);
           }}
         >
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-screen-2xl mx-auto lg:h-full">
+          <div className="grid grid-cols-1 lg:grid-cols-10 gap-8 max-w-screen-2xl mx-auto lg:h-full">
             {/* 左側/上方區域：影片 + 描述 + 畫廊 */}
-            <div className="space-y-4 lg:sticky lg:top-0 flex flex-col min-h-0 lg:h-full" ref={leftColumnRef}>
+            <div className="space-y-4 lg:col-span-4 lg:sticky lg:top-0 flex flex-col min-h-0 lg:h-full" ref={leftColumnRef}>
               {/* 影片播放區 (Monitor) */}
               <div className="w-full flex flex-col border-4 border-black shadow-shadow bg-card" ref={playerRef}>
                 <Tabs 
@@ -652,25 +820,69 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav }: MVDetailsMod
                 className="flex flex-col bg-card border-4 border-border shadow-shadow relative overflow-hidden max-h-[50vh] lg:max-h-none min-h-0 transition-none"
                 style={{ height: descHeight ? `${descHeight}px` : 'auto' }}
               >
-                <div className="flex items-center justify-between px-3 min-[430px]:px-4 py-2 min-[430px]:py-4 border-b-4 border-black bg-black/5 shrink-0 z-10">
-                  <div className="flex items-center gap-2 min-[430px]:gap-3">
-                    <div className="w-2 h-2 min-[430px]:w-2.5 min-[430px]:h-2.5 bg-blue-500 animate-pulse shadow-[2px_2px_0_0_rgba(59,130,246,0.4)]"></div>
-                    <span className="text-[10px] font-black uppercase tracking-widest flex flex-col leading-tight">
-                      <span className="tracking-normal flex items-baseline gap-1 min-[430px]:gap-1.5 opacity-60">{t("app.video_info", "影像資訊")}<span className="text-[6px] min-[430px]:text-[8px] font-mono normal-case">Video_Description_v{VERSION_CONFIG.app}</span>
+                <Tabs value={infoTab} onValueChange={(val) => setInfoTab(val as any)} className="flex flex-col min-h-0">
+                  <div className="flex items-center justify-between px-3 min-[430px]:px-4 py-2 min-[430px]:py-4 border-b-4 border-black bg-black/5 shrink-0 z-10">
+                    <div className="flex items-center gap-2 min-[430px]:gap-3">
+                      <div className="w-2 h-2 min-[430px]:w-2.5 min-[430px]:h-2.5 bg-blue-500 animate-pulse shadow-[2px_2px_0_0_rgba(59,130,246,0.4)]"></div>
+                      <span className="text-[10px] font-black uppercase tracking-widest flex flex-col leading-tight">
+                        <span className="tracking-normal flex items-baseline gap-1 min-[430px]:gap-1.5 opacity-60">
+                          {t("app.video_info", "影像資訊")}
+                          <span className="text-[6px] min-[430px]:text-[8px] font-mono normal-case">Video_Description_v{VERSION_CONFIG.app}</span>
+                        </span>
                       </span>
-                    </span>
+                    </div>
+                    {creators.length > 0 && (
+                      <TabsList className="!bg-transparent !border-0 !p-0 h-auto !shadow-none flex gap-2">
+                        <TabsTrigger
+                          value="desc"
+                          className="px-2 py-1 text-[8px] min-[430px]:text-[10px] font-black uppercase transition-all border-2 border-black flex items-center gap-1 bg-card text-foreground shadow-[2px_2px_0_0_rgba(0,0,0,1)] data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:translate-y-[2px] data-[state=active]:translate-x-[2px] data-[state=active]:shadow-none"
+                        >
+                          INFO
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="creators"
+                          className="px-2 py-1 text-[8px] min-[430px]:text-[10px] font-black uppercase transition-all border-2 border-black flex items-center gap-1 bg-card text-foreground shadow-[2px_2px_0_0_rgba(0,0,0,1)] data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:translate-y-[2px] data-[state=active]:translate-x-[2px] data-[state=active]:shadow-none"
+                        >
+                          CREATORS
+                        </TabsTrigger>
+                      </TabsList>
+                    )}
                   </div>
-                </div>
-                <ScrollArea className="flex-1 min-h-0 custom-scrollbar w-full">
-                  <div className="p-4 min-[430px]:p-8 pt-4 min-[430px]:pt-6">
-                    <p className="text-xs min-[430px]:text-sm leading-relaxed whitespace-pre-wrap opacity-90 font-base" lang="ja">{mv?.description}</p>
-                  </div>
-                </ScrollArea>
+                  <TabsContent value="desc" className="flex-1 min-h-0 m-0 border-0 p-0 shadow-none outline-none">
+                    <ScrollArea className="flex-1 min-h-0 custom-scrollbar w-full">
+                      <div className="p-4 min-[430px]:p-8 pt-4 min-[430px]:pt-6">
+                        <p className="text-xs min-[430px]:text-sm leading-relaxed whitespace-pre-wrap opacity-90 font-base" lang="ja">{mv?.description}</p>
+                      </div>
+                    </ScrollArea>
+                  </TabsContent>
+                  <TabsContent value="creators" className="flex-1 min-h-0 m-0 border-0 p-0 shadow-none outline-none">
+                    <ScrollArea className="flex-1 min-h-0 custom-scrollbar w-full">
+                      <div className="p-4 min-[430px]:p-8 pt-4 min-[430px]:pt-6 flex flex-col gap-3">
+                        {creators.map((c) => (
+                          <button
+                            key={c.name}
+                            onClick={() => openIllustrator(c.idToUse)}
+                            className="w-full text-left border-3 border-black bg-background px-4 py-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
+                            data-umami-event="Z_Open_Illustrator_From_MV_Tab"
+                            data-umami-event-mv={mv?.id}
+                            data-umami-event-artist={c.name}
+                          >
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="font-black uppercase tracking-widest text-sm" lang="ja">{c.displayName}</span>
+                              <span className="text-[10px] font-mono opacity-50 normal-case">{c.twitter ? String(c.twitter) : ''}</span>
+                            </div>
+                            <div className="text-[10px] font-mono opacity-40 mt-1 normal-case">{c.name}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </TabsContent>
+                </Tabs>
               </div>
             </div>
 
             {/* 設定圖畫廊區與評論區 - 在左右布局時顯示在右側，在單欄時接在描述下方 */}
-            <ScrollArea className="lg:h-full custom-scrollbar w-full">
+            <ScrollArea className="lg:col-span-6 lg:h-full custom-scrollbar w-full">
               <div className="space-y-8 lg:space-y-4 lg:pr-4 lg:pb-8">
                 {isDeferredReady ? (
                   <>

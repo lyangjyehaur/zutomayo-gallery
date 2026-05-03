@@ -29,10 +29,11 @@ export function PageNavigation({ currentRoute, basePath }: PageNavigationProps) 
     { id: '/albums', label: t('nav.appleMusicGallery', '專輯'), icon: 'hn-music' },
     { id: '/illustrators', label: t('nav.illustrators', '畫師'), icon: 'hn-user' },
     { id: '/fanart', label: t('nav.fanart', 'FANART'), icon: 'hn-image' },
+    { id: '/submit', label: t('nav.submit', '投稿'), icon: 'hn-edit' },
   ];
 
   // We consider /favorites and /mv/:id as part of the MV Gallery
-  const activeTabId = currentRoute === '/illustrators' || currentRoute === '/fanart' || currentRoute === '/albums'
+  const activeTabId = currentRoute === '/illustrators' || currentRoute === '/fanart' || currentRoute === '/albums' || currentRoute === '/submit'
     ? currentRoute 
     : '/';
     

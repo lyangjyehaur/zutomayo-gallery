@@ -231,6 +231,24 @@ export const getDictionaries = async (req: Request, res: Response, next: NextFun
 export const updateDictionaries = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { dicts, deletedIds } = req.body;
+    if (dicts && Array.isArray(dicts)) {
+      const seen = new Set<string>();
+      for (const d of dicts) {
+        const category = typeof d?.category === 'string' ? d.category.trim() : '';
+        const code = typeof d?.code === 'string' ? d.code.trim() : '';
+        const label = typeof d?.label === 'string' ? d.label.trim() : '';
+        if (!category || !code || !label) {
+          res.status(400).json({ success: false, error: 'DICT_INVALID' });
+          return;
+        }
+        const key = `${category}::${code}`;
+        if (seen.has(key)) {
+          res.status(400).json({ success: false, error: 'DICT_DUPLICATE_CODE' });
+          return;
+        }
+        seen.add(key);
+      }
+    }
     
     await sequelize.transaction(async (t: any) => {
       if (deletedIds && deletedIds.length > 0) {
@@ -259,6 +277,84 @@ export const updateDictionaries = async (req: Request, res: Response, next: Next
     });
     
     res.json({ success: true, data: updatedDicts });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const createDictionary = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const category = typeof req.body?.category === 'string' ? req.body.category.trim() : '';
+    const code = typeof req.body?.code === 'string' ? req.body.code.trim() : '';
+    const label = typeof req.body?.label === 'string' ? req.body.label.trim() : '';
+    const description = typeof req.body?.description === 'string' ? req.body.description : '';
+    const sort_order = typeof req.body?.sort_order === 'number' ? req.body.sort_order : 0;
+    if (!category || !code || !label) {
+      res.status(400).json({ success: false, error: 'DICT_INVALID' });
+      return;
+    }
+
+    const dup = await SysDictionaryModel.findOne({ where: { category, code } as any });
+    if (dup) {
+      res.status(400).json({ success: false, error: 'DICT_DUPLICATE_CODE' });
+      return;
+    }
+
+    const row = await SysDictionaryModel.create({ category, code, label, description, sort_order } as any);
+    res.json({ success: true, data: row });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const patchDictionary = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = String(req.params.id || '');
+    const row = await SysDictionaryModel.findByPk(id);
+    if (!row) {
+      res.status(404).json({ success: false, error: 'NOT_FOUND' });
+      return;
+    }
+    const update: any = {};
+    if (req.body && 'category' in req.body) update.category = typeof req.body.category === 'string' ? req.body.category.trim() : '';
+    if (req.body && 'code' in req.body) update.code = typeof req.body.code === 'string' ? req.body.code.trim() : '';
+    if (req.body && 'label' in req.body) update.label = typeof req.body.label === 'string' ? req.body.label.trim() : '';
+    if (req.body && 'description' in req.body) update.description = typeof req.body.description === 'string' ? req.body.description : '';
+    if (req.body && 'sort_order' in req.body) update.sort_order = typeof req.body.sort_order === 'number' ? req.body.sort_order : 0;
+
+    const nextCategory = 'category' in update ? update.category : (row as any).category;
+    const nextCode = 'code' in update ? update.code : (row as any).code;
+    const nextLabel = 'label' in update ? update.label : (row as any).label;
+    if (!nextCategory || !nextCode || !nextLabel) {
+      res.status(400).json({ success: false, error: 'DICT_INVALID' });
+      return;
+    }
+
+    if ('category' in update || 'code' in update) {
+      const dup = await SysDictionaryModel.findOne({ where: { category: nextCategory, code: nextCode } as any });
+      if (dup && String((dup as any).id) !== id) {
+        res.status(400).json({ success: false, error: 'DICT_DUPLICATE_CODE' });
+        return;
+      }
+    }
+
+    await row.update(update);
+    res.json({ success: true, data: row });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteDictionary = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = String(req.params.id || '');
+    const row = await SysDictionaryModel.findByPk(id);
+    if (!row) {
+      res.status(404).json({ success: false, error: 'NOT_FOUND' });
+      return;
+    }
+    await row.destroy();
+    res.json({ success: true, data: { id } });
   } catch (error) {
     next(error);
   }

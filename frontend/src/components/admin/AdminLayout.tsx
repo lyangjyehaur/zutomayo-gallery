@@ -126,7 +126,10 @@ export default function AdminLayout() {
 
   const staticLabelByPath = React.useMemo(() => {
     return new Map<string, string>([
+      ["/admin/account", "帳戶設定"],
       ["/admin/mvs/settings", "全局設定"],
+      ["/admin/system/announcements", "公告管理"],
+      ["/admin/submissions", "投稿審核"],
       ["/admin/system/group-repair", "推文修復"],
       ["/admin/system/media-groups", "推文分組"],
       ["/admin/system/orphans", "未歸屬媒體"],
@@ -226,12 +229,15 @@ export default function AdminLayout() {
                 <MenubarItem asChild>
                   <Link to={mvListPath}>{mvLabel}</Link>
                 </MenubarItem>
-                <MenubarItem asChild>
-                  <Link to="/admin/mvs/settings">全局設定</Link>
-                </MenubarItem>
                 <MenubarSeparator />
                 <MenubarItem asChild>
                   <Link to={systemRootPath}>系統管理</Link>
+                </MenubarItem>
+                <MenubarItem asChild>
+                  <Link to="/admin/mvs/settings">全局設定</Link>
+                </MenubarItem>
+                <MenubarItem asChild>
+                  <Link to="/admin/system/announcements">公告管理</Link>
                 </MenubarItem>
                 <MenubarItem asChild>
                   <Link to="/admin/system/group-repair">推文修復</Link>

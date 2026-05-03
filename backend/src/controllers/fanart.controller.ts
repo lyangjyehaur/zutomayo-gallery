@@ -128,8 +128,10 @@ export const getFanartGallery = async (req: Request, res: Response) => {
     const tagsAny = parseCsv(req.query.tags);
     const mvIds = parseCsv(req.query.mvIds);
     const onlyCollab = String(req.query.onlyCollab || '').toLowerCase() === '1' || String(req.query.onlyCollab || '').toLowerCase() === 'true';
+    const source = String(req.query.source || '').trim();
 
     const andConditions: any[] = [{ type: 'fanart' }];
+    if (source) andConditions.push({ source });
     if (onlyCollab) andConditions.push({ tags: { [Op.contains]: ['tag:collab'] } });
     if (tagsAny.length > 0) {
       andConditions.push({
@@ -208,11 +210,12 @@ export const getFanartGallery = async (req: Request, res: Response) => {
 export const getFanartGallerySummary = async (req: Request, res: Response) => {
   try {
     const tags = ['tag:collab', 'tag:acane', 'tag:real', 'tag:uniguri', 'tag:other'];
+    const source = String(req.query.source || '').trim();
 
     const tagCounts: Record<string, number> = {};
     for (const tag of tags) {
       tagCounts[tag] = await MediaModel.count({
-        where: { type: 'fanart', tags: { [Op.contains]: [tag] } },
+        where: { ...(source ? { source } : {}), type: 'fanart', tags: { [Op.contains]: [tag] } },
         include: [{ model: MediaGroupModel, as: 'group', where: { status: 'organized' }, required: true }],
         distinct: true,
         col: 'id'
@@ -227,6 +230,10 @@ export const getFanartGallerySummary = async (req: Request, res: Response) => {
       `g.status = 'organized'`
     ];
     const replacements: Record<string, any> = {};
+    if (source) {
+      whereParts.push(`m.source = :source`);
+      replacements.source = source;
+    }
 
     if (onlyCollab) {
       whereParts.push(`m.tags @> :collabTag::jsonb`);

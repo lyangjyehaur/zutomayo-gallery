@@ -1,8 +1,10 @@
 import crypto from 'crypto';
 import { AuthPasskey, AuthSetting, sequelize } from './pg.service.js';
+import { redisClient } from './redis.service.js';
 
 export interface Passkey {
   id: string;
+  user_id?: string;
   publicKey: string;
   counter: number;
   transports?: string[];
@@ -20,27 +22,43 @@ const defaultAuthData: AuthData = { passkeys: [] };
 
 export class AuthService {
   private sessionTokens: Set<string> = new Set();
+  private sessionTokenTtlSeconds = 24 * 60 * 60;
+
+  private getRedisTokenKey(token: string) {
+    return `auth:session-token:${token}`;
+  }
 
   public generateSessionToken(): string {
     const token = crypto.randomBytes(32).toString('hex');
+    if (redisClient.isOpen) {
+      void redisClient.setEx(this.getRedisTokenKey(token), this.sessionTokenTtlSeconds, '1');
+      return token;
+    }
     this.sessionTokens.add(token);
-    // Token 過期時間：24 小時
     setTimeout(() => {
       this.sessionTokens.delete(token);
-    }, 24 * 60 * 60 * 1000);
+    }, this.sessionTokenTtlSeconds * 1000);
     return token;
   }
 
-  public isValidSessionToken(token: string): boolean {
+  public async isValidSessionToken(token: string): Promise<boolean> {
+    if (redisClient.isOpen) {
+      const exists = await redisClient.exists(this.getRedisTokenKey(token));
+      return exists === 1;
+    }
     return this.sessionTokens.has(token);
   }
 
-  public revokeSessionToken(token: string): boolean {
+  public async revokeSessionToken(token: string): Promise<boolean> {
+    if (redisClient.isOpen) {
+      const deleted = await redisClient.del(this.getRedisTokenKey(token));
+      return deleted > 0;
+    }
     return this.sessionTokens.delete(token);
   }
 
-  async getPasskeys(): Promise<Passkey[]> {
-    const rows = await AuthPasskey.findAll();
+  async getPasskeys(userId?: string): Promise<Passkey[]> {
+    const rows = await AuthPasskey.findAll(userId ? ({ where: { user_id: userId } } as any) : undefined);
     return rows.map(r => {
       const data = r.toJSON() as any;
       let transports;
@@ -53,6 +71,7 @@ export class AuthService {
       }
       return {
         id: data.id,
+        user_id: data.user_id ? String(data.user_id) : undefined,
         publicKey: data.publicKey,
         counter: data.counter,
         transports,
@@ -65,6 +84,7 @@ export class AuthService {
   async savePasskey(passkey: Passkey) {
     await AuthPasskey.upsert({
       id: passkey.id,
+      user_id: passkey.user_id || null,
       publicKey: passkey.publicKey,
       counter: passkey.counter,
       transports: passkey.transports ? passkey.transports : null,
@@ -73,8 +93,12 @@ export class AuthService {
     } as any);
   }
 
-  async removePasskey(id: string) {
-    await AuthPasskey.destroy({ where: { id } });
+  async removePasskey(id: string, userId?: string) {
+    if (userId) {
+      await AuthPasskey.destroy({ where: { id, user_id: userId } as any });
+      return;
+    }
+    await AuthPasskey.destroy({ where: { id } as any });
   }
 
   async setCurrentChallenge(challenge: string) {

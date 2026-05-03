@@ -29,6 +29,11 @@
   --ring: oklch(0% 0 0);
   --overlay: oklch(0% 0 0 / 0.8);
   --shadow: 4px 4px 0px 0px var(--border);
+  --admin-radius: 8px;
+  --admin-shadow: 3px 3px 0px 0px var(--border);
+  --admin-shadow-sm: 2px 2px 0px 0px var(--border);
+  --admin-panel-bg: var(--secondary-background);
+  --admin-header-bg: var(--secondary-background);
   --chart-1: #A985FF;
   --chart-2: #00D696;
   --chart-3: #FACC00;
@@ -47,12 +52,54 @@
   --border: oklch(0% 0 0);
   --ring: oklch(100% 0 0);
   --shadow: 4px 4px 0px 0px var(--border);
+  --admin-radius: 8px;
+  --admin-shadow: 3px 3px 0px 0px var(--border);
+  --admin-shadow-sm: 2px 2px 0px 0px var(--border);
+  --admin-panel-bg: var(--secondary-background);
+  --admin-header-bg: var(--secondary-background);
   --chart-1: #A985FF;
   --chart-2: #00BD84;
   --chart-3: #E0B700;
   --chart-4: #FF6669;
   --chart-5: #008AE5;
   --chart-active-dot: #fff;
+}
+
+body.is-admin {
+  --admin-shadow: 2px 2px 0px 0px var(--border);
+  --admin-shadow-sm: 1px 1px 0px 0px var(--border);
+  --admin-panel-bg: color-mix(in oklab, var(--secondary-background) 88%, var(--background));
+  --admin-header-bg: color-mix(in oklab, var(--secondary-background) 96%, var(--background));
+  --shadow: var(--admin-shadow);
+  --shadow-shadow: var(--admin-shadow);
+}
+
+body.is-admin .shadow-neo {
+  box-shadow: var(--admin-shadow) !important;
+}
+
+body.is-admin .shadow-neo-sm {
+  box-shadow: var(--admin-shadow-sm) !important;
+}
+
+body.is-admin .border-4 {
+  border-width: 2px !important;
+}
+
+body.is-admin .border-b-4 {
+  border-bottom-width: 2px !important;
+}
+
+body.is-admin .border-t-4 {
+  border-top-width: 2px !important;
+}
+
+body.is-admin .border-r-4 {
+  border-right-width: 2px !important;
+}
+
+body.is-admin .border-l-4 {
+  border-left-width: 2px !important;
 }
 
 @theme inline {
@@ -542,7 +589,7 @@ body.cursor-native * {
       transform: translate3d(0, 0, 0);
     }
     to {
-      transform: translate3d(calc(var(--marquee-distance, 0px) * -1), 0, 0);
+      transform: translate3d(calc(0px - var(--marquee-distance, 0px)), 0, 0);
     }
   }
   .animate-card-title-marquee {
@@ -651,6 +698,79 @@ body.cursor-native * {
     animation: cyber-jitter var(--jitter-dur, 3.5s) var(--g-del-1, 0s) infinite linear;
     animation-play-state: var(--anim-state, running);
     z-index: 1; /* 確保偽元素層級正確 */
+  }
+
+  .ztmy-cyber-hover-layer {
+    position: relative;
+    display: inline-block;
+    transform: translate(calc(var(--mx, 0) * 6px), calc(var(--my, 0) * 4px));
+    transition: transform 120ms cubic-bezier(0.2, 0.9, 0.2, 1), filter 120ms cubic-bezier(0.2, 0.9, 0.2, 1);
+  }
+
+  .ztmy-cyber-title-hovering .ztmy-cyber-hover-layer {
+    transform: translate(calc(var(--mx, 0) * 10px), calc(var(--my, 0) * 6px)) scale(1.01);
+    filter: drop-shadow(0 0 14px rgba(255, 0, 255, 0.25)) drop-shadow(0 0 10px rgba(0, 255, 255, 0.18));
+  }
+
+  .ztmy-cyber-title-hovering .ztmy-cyber-title-scan {
+    filter: saturate(1.25) brightness(1.1);
+  }
+
+  .ztmy-cyber-title-hovering .ztmy-cyber-text-aberration {
+    filter: saturate(1.15) brightness(1.05);
+  }
+
+  .ztmy-cyber-hover-burst {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 12;
+  }
+
+  .ztmy-cyber-hover-burst::before,
+  .ztmy-cyber-hover-burst::after {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    filter: saturate(1.6) brightness(1.2);
+  }
+
+  .ztmy-cyber-hover-burst::before {
+    color: rgba(255, 0, 255, 0.9);
+    text-shadow: calc(var(--glitch-random, 1) * -6px) 0 0 rgba(255, 0, 0, 0.85), calc(var(--glitch-random, 1) * 6px) 0 0 rgba(0, 255, 255, 0.85);
+    animation: cyber-hover-burst-a 420ms steps(2, end) 1 both;
+    animation-play-state: var(--anim-state, running);
+  }
+
+  .ztmy-cyber-hover-burst::after {
+    color: rgba(0, 255, 255, 0.9);
+    text-shadow: calc(var(--glitch-random, 1) * 6px) 0 0 rgba(255, 0, 0, 0.85), calc(var(--glitch-random, 1) * -6px) 0 0 rgba(0, 0, 255, 0.85);
+    animation: cyber-hover-burst-b 480ms steps(2, end) 1 both;
+    animation-delay: 40ms;
+    animation-play-state: var(--anim-state, running);
+  }
+
+  @keyframes cyber-hover-burst-a {
+    0% { opacity: 0; clip-path: inset(50% 0 50% 0); transform: translate(0, 0) skewX(0deg); }
+    8% { opacity: 1; }
+    18% { clip-path: inset(10% 0 70% 0); transform: translate(calc(var(--glitch-random, 1) * -16px), -2px) skewX(calc(var(--glitch-random, 1) * -10deg)); }
+    34% { clip-path: inset(55% 0 25% 0); transform: translate(calc(var(--glitch-random, 1) * 12px), 1px) skewX(calc(var(--glitch-random, 1) * 8deg)); }
+    54% { clip-path: inset(78% 0 10% 0); transform: translate(calc(var(--glitch-random, 1) * -10px), 2px) skewX(calc(var(--glitch-random, 1) * -6deg)); }
+    72% { opacity: 0.8; clip-path: inset(35% 0 45% 0); transform: translate(calc(var(--glitch-random, 1) * 8px), -1px) skewX(calc(var(--glitch-random, 1) * 6deg)); }
+    100% { opacity: 0; clip-path: inset(50% 0 50% 0); transform: translate(0, 0) skewX(0deg); }
+  }
+
+  @keyframes cyber-hover-burst-b {
+    0% { opacity: 0; clip-path: inset(50% 0 50% 0); transform: translate(0, 0) skewX(0deg); }
+    10% { opacity: 1; }
+    22% { clip-path: inset(65% 0 20% 0); transform: translate(calc(var(--glitch-random, 1) * 18px), 1px) skewX(calc(var(--glitch-random, 1) * 12deg)); }
+    40% { clip-path: inset(22% 0 58% 0); transform: translate(calc(var(--glitch-random, 1) * -14px), -2px) skewX(calc(var(--glitch-random, 1) * -10deg)); }
+    60% { clip-path: inset(45% 0 35% 0); transform: translate(calc(var(--glitch-random, 1) * 10px), 2px) skewX(calc(var(--glitch-random, 1) * 8deg)); }
+    78% { opacity: 0.75; clip-path: inset(80% 0 10% 0); transform: translate(calc(var(--glitch-random, 1) * -8px), -1px) skewX(calc(var(--glitch-random, 1) * -6deg)); }
+    100% { opacity: 0; clip-path: inset(50% 0 50% 0); transform: translate(0, 0) skewX(0deg); }
   }
 
   /* 加上CRT螢幕閃爍層 */
@@ -1043,7 +1163,6 @@ body.cursor-native * {
   /* 專為 Modal 標題設計的獨立 Glitch 特效（避免與外層排版/跑馬燈衝突） */
   .ztmy-modal-glitch {
     position: relative;
-    display: inline-block;
     /* 輕微常駐色像差 */
     text-shadow: 1px 0 0 rgba(255, 0, 0, 0.5), -1px 0 0 rgba(0, 255, 255, 0.5);
     animation: 

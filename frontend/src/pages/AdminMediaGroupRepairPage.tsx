@@ -4,9 +4,12 @@ import { Link } from "react-router-dom"
 
 import { adminFetch, getApiRoot } from "@/lib/admin-api"
 import { getProxyImgUrl, isMediaVideo } from "@/lib/image"
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader"
+import { AdminPanel } from "@/components/admin/AdminPanel"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { SearchSelect, type SearchSelectOption } from "@/components/ui/search-select"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -82,9 +85,42 @@ export function AdminMediaGroupRepairPage() {
   const [mergeRow, setMergeRow] = React.useState<RepairGroupRow | null>(null)
   const [mergeTargetUrl, setMergeTargetUrl] = React.useState("")
   const [mergeTargetId, setMergeTargetId] = React.useState("")
+  const [mergeTargetOptions, setMergeTargetOptions] = React.useState<SearchSelectOption[]>([])
+  const [mergeTargetLoading, setMergeTargetLoading] = React.useState(false)
 
   const [unassignConfirmOpen, setUnassignConfirmOpen] = React.useState(false)
   const [unassignRow, setUnassignRow] = React.useState<RepairGroupRow | null>(null)
+
+  React.useEffect(() => {
+    if (!mergeOpen) return
+    if (mergeTargetOptions.length > 0) return
+    const run = async () => {
+      try {
+        setMergeTargetLoading(true)
+        const url = `${base}/system/media/groups?limit=200&offset=0`
+        const res = await adminFetch(url)
+        const json = await res.json().catch(() => null)
+        const rows = Array.isArray(json?.items) ? json.items : Array.isArray(json?.data) ? json.data : []
+        setMergeTargetOptions(
+          rows
+            .map((r: any) => {
+              const id = r?.id ? String(r.id) : ""
+              if (!id) return null
+              const handle = r?.author_handle ? String(r.author_handle) : ""
+              const date = r?.post_date ? new Date(String(r.post_date)).toLocaleDateString() : ""
+              const sourceUrl = r?.source_url ? String(r.source_url) : ""
+              const label = [id, handle, date, sourceUrl].filter(Boolean).join(" · ")
+              return { value: id, label }
+            })
+            .filter(Boolean) as any,
+        )
+      } catch {
+      } finally {
+        setMergeTargetLoading(false)
+      }
+    }
+    run()
+  }, [base, mergeOpen, mergeTargetOptions.length])
 
   const infer = React.useCallback((row: RepairGroupRow) => {
     const handle = String(row.author_handle || "").trim().replace(/^@/, "")
@@ -258,10 +294,7 @@ export function AdminMediaGroupRepairPage() {
 
   return (
     <div className="p-6 flex flex-col gap-4">
-      <div className="border-4 border-black bg-card shadow-neo p-4 flex flex-col gap-1">
-        <div className="text-lg font-black uppercase tracking-widest">推文修復</div>
-        <div className="text-xs font-mono opacity-60">列出缺少 source_url / post_date 的 media_groups，集中修正或合併。</div>
-      </div>
+      <AdminPageHeader title="推文修復" description="列出缺少 source_url / post_date 的 media_groups，集中修正或合併。" />
 
       {error ? (
         <Alert variant="destructive">
@@ -270,7 +303,7 @@ export function AdminMediaGroupRepairPage() {
         </Alert>
       ) : null}
 
-      <div className="border-4 border-black bg-card shadow-neo p-4 flex flex-col gap-3">
+      <AdminPanel className="flex flex-col gap-3">
         <div className="flex flex-col md:flex-row gap-3">
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜尋 id / url / author / text" />
           <Button
@@ -294,7 +327,7 @@ export function AdminMediaGroupRepairPage() {
             </div>
           </div>
         </div>
-      </div>
+      </AdminPanel>
 
       <Table>
         <TableHeader>
@@ -480,7 +513,12 @@ export function AdminMediaGroupRepairPage() {
             <div className="text-xs font-mono opacity-70 break-all">Source: {mergeRow?.id}</div>
             <Input value={mergeTargetUrl} onChange={(e) => setMergeTargetUrl(e.target.value)} placeholder="target_source_url（推薦）" />
             <div className="text-xs font-mono opacity-60">或使用 group id</div>
-            <Input value={mergeTargetId} onChange={(e) => setMergeTargetId(e.target.value)} placeholder="target_group_id" />
+            <SearchSelect
+              options={mergeTargetOptions}
+              value={mergeTargetId || null}
+              onChange={(v) => setMergeTargetId(v || "")}
+              placeholder={mergeTargetLoading ? "載入中..." : "搜尋 target_group_id"}
+            />
             <div className="text-xs font-mono opacity-60">合併會搬移所有 media 到 target group，並刪除 source group。</div>
             <div className="flex justify-end gap-2">
               <Button variant="neutral" onClick={() => setMergeOpen(false)} className="border-2 border-black">

@@ -1,120 +1,123 @@
-import React, { useState, useEffect } from 'react';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { adminFetch, getApiRoot } from '@/lib/admin-api';
+import React, { useEffect, useMemo, useState } from "react"
+import { toast } from "sonner"
+import { useInvalidate, useList, useUpdate } from "@refinedev/core"
+
+import { AdminSplitView } from "@/components/admin/AdminSplitView"
+import { Switch } from "@/components/ui/switch"
 
 export interface AppleMusicAlbum {
-  id: number;
-  album_name: string;
-  artist_name: string;
-  release_date: string;
-  collection_type: string;
-  track_count: number;
-  is_hidden: boolean;
-  source_url: string;
+  id: string
+  album_name: string
+  artist_name: string
+  release_date: string
+  collection_type: string
+  track_count: number
+  is_hidden: boolean
+  source_url: string
 }
 
 export function AdminAppleMusicAlbumsPage() {
-  const [albums, setAlbums] = useState<AppleMusicAlbum[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const invalidate = useInvalidate()
+  const listQuery = useList<AppleMusicAlbum>({ resource: "appleMusicAlbums", hasPagination: false })
+  const updateOne = useUpdate()
 
-  const fetchData = async () => {
-    try {
-      const albumUrl = `${getApiRoot()}/album/apple-music`;
-      const res = await adminFetch(albumUrl);
-      const json = await res.json();
-      
-      if (json.success) {
-        setAlbums(json.data);
-      } else {
-        toast.error('載入 Apple Music 專輯失敗');
-      }
-    } catch (e) {
-      toast.error('載入資料失敗');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const [albums, setAlbums] = useState<AppleMusicAlbum[]>([])
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [query, setQuery] = useState("")
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    const rows = listQuery.data?.data || []
+    if (rows.length === 0) return
+    setAlbums((prev) => (prev.length > 0 ? prev : rows))
+    setSelectedId((prev) => (typeof prev === "string" ? prev : String(rows[0].id)))
+  }, [listQuery.data])
 
-  const handleSave = async () => {
-    const albumUrl = `${getApiRoot()}/album/apple-music`;
-    
-    toast.promise(
-      adminFetch(albumUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ albums })
-      }).then(r => r.json()),
-      {
-        loading: '儲存中...',
-        success: (res) => {
-          if (res.success) {
-            setAlbums(res.data);
-            return '儲存成功！';
-          }
-          throw new Error(res.error || '儲存失敗');
-        },
-        error: '儲存失敗'
-      }
-    );
-  };
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return albums
+    return albums.filter((a) => {
+      return (
+        String(a.album_name || "").toLowerCase().includes(q) ||
+        String(a.artist_name || "").toLowerCase().includes(q) ||
+        String(a.id).includes(q)
+      )
+    })
+  }, [albums, query])
 
-  const handleChange = (index: number, field: keyof AppleMusicAlbum, value: any) => {
-    const newAlbums = [...albums];
-    newAlbums[index] = { ...newAlbums[index], [field]: value };
-    setAlbums(newAlbums);
-  };
+  const groups = useMemo(() => {
+    const map = new Map<string, AppleMusicAlbum[]>()
+    filtered.forEach((a) => {
+      const key = a.collection_type || "unknown"
+      const list = map.get(key) || []
+      list.push(a)
+      map.set(key, list)
+    })
+    return Array.from(map.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([k, list]) => ({
+        key: k,
+        items: [...list].sort((a, b) => String(b.release_date || "").localeCompare(String(a.release_date || ""))),
+      }))
+  }, [filtered])
+
+  const selected = useMemo(() => {
+    if (typeof selectedId !== "string") return null
+    return albums.find((a) => String(a.id) === selectedId) || null
+  }, [albums, selectedId])
+
+  const updateSelected = (patch: Partial<AppleMusicAlbum>) => {
+    if (!selected) return
+    setAlbums((prev) => prev.map((a) => (String(a.id) === String(selected.id) ? ({ ...a, ...patch } as any) : a)))
+  }
 
   return (
-    <div className="h-full flex flex-col bg-background text-foreground overflow-hidden font-mono">
-      <div className="h-20 border-b-4 border-black bg-card flex items-center justify-between px-8 shadow-neo-sm shrink-0">
-        <div>
-          <h1 className="text-xl font-black uppercase tracking-widest leading-none">Apple Music 專輯管理</h1>
-          <div className="text-[10px] font-bold opacity-40">APPLE.MUSIC.ADMIN</div>
-        </div>
-        <div className="flex gap-4">
-          <Button onClick={handleSave} className="bg-main text-black hover:bg-main/80 border-2 border-black font-black shadow-neo-sm">
-            <i className="hn hn-save mr-2" /> 儲存所有變更
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-card/50">
-        <div className="max-w-6xl mx-auto space-y-4">
-          {isLoading ? (
-            <div className="text-center opacity-50 font-bold py-8">載入中...</div>
-          ) : albums.length === 0 ? (
-            <div className="text-center opacity-50 font-bold py-8">目前沒有 Apple Music 專輯項目。</div>
-          ) : (
-            <div className="grid gap-4">
-              {albums.map((album, idx) => (
-                <div key={album.id} className="bg-card border-4 border-black p-4 flex flex-col gap-4 shadow-neo">
-                  <div className="flex flex-wrap md:flex-nowrap gap-4 items-center">
-                    <div className="flex-1">
-                      <div className="font-bold text-lg">{album.album_name}</div>
-                      <div className="text-sm opacity-70">
-                        {album.artist_name} • {new Date(album.release_date).toLocaleDateString()} • {album.collection_type} • {album.track_count} 首
-                      </div>
-                      <a href={album.source_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">
-                        來源連結
-                      </a>
-                    </div>
-                    <div className="space-y-1 w-full md:w-[20%] flex flex-col items-center justify-center border-l-2 border-black/20 pl-4">
-                      <label className="text-[10px] font-black uppercase opacity-70">隱藏 (不在時間軸顯示)</label>
-                      <Switch checked={album.is_hidden || false} onCheckedChange={c => handleChange(idx, 'is_hidden', c)} className="mt-1" />
-                    </div>
-                  </div>
+    <AdminSplitView
+      title="Apple Music 專輯管理"
+      description="左側列表（搜尋+分組），右側維護顯示/隱藏與檢視資訊。"
+      leftSearchValue={query}
+      onLeftSearchValueChange={setQuery}
+      leftSearchPlaceholder="搜尋專輯/藝人..."
+      groups={groups}
+      getKey={(a) => a.id}
+      renderItemTitle={(a) => a.album_name}
+      renderItemSubtitle={(a) => a.artist_name}
+      selectedKey={selectedId || null}
+      onSelect={setSelectedId}
+      leftEmpty={<div className="p-3 text-xs font-mono opacity-60">{listQuery.isLoading ? "載入中..." : "無資料"}</div>}
+      rightEmpty={<div className="text-xs font-mono opacity-60">選擇左側項目以查看詳情</div>}
+      right={
+        !selected ? null : (
+          <>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-lg font-black break-words">{selected.album_name}</div>
+                <div className="text-xs font-mono opacity-60 break-words">{selected.artist_name}</div>
+                <div className="text-[10px] font-mono opacity-60">
+                  {new Date(selected.release_date).toLocaleDateString()} · {selected.collection_type} · {selected.track_count} tracks · ID {selected.id}
                 </div>
-              ))}
+                <a href={selected.source_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline break-all">
+                  來源連結
+                </a>
+              </div>
+              <div className="flex items-center gap-3 border-2 border-black p-3 bg-card">
+                <div className="text-xs font-black uppercase tracking-widest">Hidden</div>
+                <Switch
+                  checked={!!selected.is_hidden}
+                  onCheckedChange={(c) => {
+                    updateSelected({ is_hidden: c })
+                    toast.promise(
+                      updateOne
+                        .mutateAsync({ resource: "appleMusicAlbums", id: selected.id, values: { is_hidden: c } })
+                        .then(() => invalidate({ resource: "appleMusicAlbums", invalidates: ["list", "detail"] })),
+                      { loading: "儲存中...", success: "已更新", error: "更新失敗" },
+                    )
+                  }}
+                />
+              </div>
             </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+          </>
+        )
+      }
+    />
+  )
 }

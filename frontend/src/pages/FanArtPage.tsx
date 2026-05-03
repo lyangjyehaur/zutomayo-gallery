@@ -100,6 +100,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
   // 狀態：選中的 MV IDs
   const [selectedMvs, setSelectedMvs] = useState<string[]>([]);
   const [onlyCollab, setOnlyCollab] = useState<boolean>(false);
+  const [onlySubmitted, setOnlySubmitted] = useState<boolean>(false);
   const [onlyAcaNe, setOnlyAcaNe] = useState<boolean>(false);
   const [onlyReal, setOnlyReal] = useState<boolean>(false);
   const [onlyUniguri, setOnlyUniguri] = useState<boolean>(false);
@@ -176,8 +177,8 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
   const filterKey = useMemo(() => {
     const mvIds = [...selectedMvs].sort();
     const tags = [...selectedSpecialTags].sort();
-    return JSON.stringify({ mvIds, tags, onlyCollab });
-  }, [selectedMvs, selectedSpecialTags, onlyCollab]);
+    return JSON.stringify({ mvIds, tags, onlyCollab, onlySubmitted });
+  }, [selectedMvs, selectedSpecialTags, onlyCollab, onlySubmitted]);
 
   const mvFanArtCounts = useMemo(() => {
     const map = new Map<string, number>();
@@ -200,6 +201,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
   const fetchSummary = useCallback(async () => {
     try {
       const params = new URLSearchParams();
+      if (onlySubmitted) params.set('source', 'submission');
       if (onlyCollab) params.set('onlyCollab', '1');
       if (selectedSpecialTags.length > 0) params.set('tags', selectedSpecialTags.join(','));
       const res = await fetch(`${baseApiUrl}/fanarts/gallery/summary?${params.toString()}`);
@@ -209,7 +211,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
       }
     } catch {
     }
-  }, [baseApiUrl, onlyCollab, selectedSpecialTags]);
+  }, [baseApiUrl, onlyCollab, onlySubmitted, selectedSpecialTags]);
 
   const fetchGalleryPage = useCallback(
     async (nextOffset: number, append: boolean, withTotal: boolean) => {
@@ -219,6 +221,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
         params.set('limit', String(galleryMeta.limit));
         params.set('offset', String(nextOffset));
         if (withTotal) params.set('withTotal', '1');
+        if (onlySubmitted) params.set('source', 'submission');
         if (onlyCollab) params.set('onlyCollab', '1');
         if (selectedSpecialTags.length > 0) params.set('tags', selectedSpecialTags.join(','));
         if (selectedMvs.length > 0) params.set('mvIds', selectedMvs.join(','));
@@ -242,7 +245,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
         setIsLoadingGallery(false);
       }
     },
-    [baseApiUrl, galleryMeta.limit, onlyCollab, selectedMvs, selectedSpecialTags]
+    [baseApiUrl, galleryMeta.limit, onlyCollab, onlySubmitted, selectedMvs, selectedSpecialTags]
   );
 
   const loadMoreFromServer = useCallback(async () => {
@@ -292,8 +295,9 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
       let richText = art.richText || '';
       if (!richText) {
         const postContent = art.caption ? art.caption.replace(/\n/g, '<br/>') : '';
+        const submittedBadge = art.source === 'submission' ? `<div class="badge" style="display:inline-block;margin-bottom:6px;padding:2px 6px;border:2px solid #000;font-weight:800;letter-spacing:0.08em;background:#ffd400;color:#000;">SUBMITTED</div>` : '';
         const linkHtml = art.tweetUrl ? `<br/><br/><a href="${art.tweetUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">View Original Tweet <i class="hn hn-external-link"></i></a>` : '';
-        richText = `<div class="author">${authorText || 'FanArt'}</div><div class="post">${postContent}${linkHtml}</div>`;
+        richText = `${submittedBadge}<div class="author">${authorText || 'FanArt'}</div><div class="post">${postContent}${linkHtml}</div>`;
       }
 
       return {
@@ -339,6 +343,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
                 <div className="text-xs font-bold opacity-60 hidden md:block">
                   {selectedMvs.length > 0 ? `已選 ${selectedMvs.length} 個 MV` : '所有作品'} 
                   {onlyCollab ? ' (只看大合繪)' : ''}
+                  {onlySubmitted ? ' (只看投稿)' : ''}
                   {onlyAcaNe ? ' (ACAね)' : ''}
                   {onlyReal ? ' (實物)' : ''}
                   {onlyUniguri ? ' (海膽栗子/生薑)' : ''}
@@ -361,6 +366,13 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
                 {onlyCollab && <i className="hn hn-check text-xs font-black"></i>}
               </div>
               <Label className="font-bold cursor-pointer">{t('fanart.only_collab', '只看 綜合插畫 (多角色 / 大合繪)')} ({collabCount})</Label>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" onClick={() => setOnlySubmitted(!onlySubmitted)}>
+              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlySubmitted ? 'bg-main' : 'bg-card'}`}>
+                {onlySubmitted && <i className="hn hn-check text-xs font-black"></i>}
+              </div>
+              <Label className="font-bold cursor-pointer">只看 主動投稿</Label>
             </div>
 
             <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" onClick={() => setOnlyAcaNe(!onlyAcaNe)}>

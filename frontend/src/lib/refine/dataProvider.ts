@@ -33,7 +33,7 @@ const getResourceBaseUrl = (resource: string) => {
   const apiRoot = getApiRoot()
   const map: Record<string, string> = {
     mvs: `${apiRoot}/mvs`,
-    artists: `${apiRoot}/mvs/metadata`,
+    artists: `${apiRoot}/artist`,
     albums: `${apiRoot}/album`,
     appleMusicAlbums: `${apiRoot}/album/apple-music`,
     dicts: `${apiRoot}/system/dicts`,
@@ -45,6 +45,15 @@ const getResourceBaseUrl = (resource: string) => {
     systemPermissions: `${apiRoot}/admin/system/permissions`,
   }
   return map[resource]
+}
+
+const getResourceCreateUrl = (resource: string) => {
+  const base = getResourceBaseUrl(resource)
+  if (!base) return null
+  if (resource === 'albums') return `${base}/create`
+  if (resource === 'artists') return `${base}/create`
+  if (resource === 'dicts') return `${base}/create`
+  return base
 }
 
 export const adminDataProvider: DataProvider = {
@@ -98,9 +107,9 @@ export const adminDataProvider: DataProvider = {
   },
 
   create: async ({ resource, variables }) => {
-    const base = getResourceBaseUrl(resource)
-    if (!base) throw new Error(`UNKNOWN_RESOURCE:${resource}`)
-    const res = await adminFetch(base, {
+    const url = getResourceCreateUrl(resource)
+    if (!url) throw new Error(`UNKNOWN_RESOURCE:${resource}`)
+    const res = await adminFetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(variables || {}),
@@ -149,4 +158,3 @@ export const adminDataProvider: DataProvider = {
 
   getApiUrl: () => getApiRoot(),
 }
-

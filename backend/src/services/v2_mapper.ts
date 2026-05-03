@@ -114,6 +114,32 @@ export async function saveMVsToDB(mvs: MVItem[], transaction?: any): Promise<voi
       return albumCache.get(cleanName);
     };
 
+    const getArtistId = async (artist: any) => {
+      const id = artist && typeof artist === 'object' && artist.id ? String(artist.id) : '';
+      if (id) {
+        if (!artistCache.has(id)) {
+          const row = await ArtistModel.findByPk(id, { transaction: t });
+          if (row) artistCache.set(id, id);
+        }
+        if (artistCache.has(id)) return artistCache.get(id);
+      }
+      const name = artist && typeof artist === 'object' ? artist.name : artist;
+      return await getOrCreateArtist(name);
+    };
+
+    const getAlbumId = async (album: any) => {
+      const id = album && typeof album === 'object' && album.id ? String(album.id) : '';
+      if (id) {
+        if (!albumCache.has(id)) {
+          const row = await AlbumModel.findByPk(id, { transaction: t });
+          if (row) albumCache.set(id, id);
+        }
+        if (albumCache.has(id)) return albumCache.get(id);
+      }
+      const name = album && typeof album === 'object' ? album.name : album;
+      return await getOrCreateAlbum(name);
+    };
+
     const getOrCreateKeyword = async (name: string) => {
       const cleanName = String(name).trim();
       if (!cleanName) return null;
@@ -145,7 +171,7 @@ export async function saveMVsToDB(mvs: MVItem[], transaction?: any): Promise<voi
       // 3. Rebuild Artists
       const creators = Array.isArray(mv.creators) ? mv.creators : [];
       for (const artist of creators) {
-        const artistId = await getOrCreateArtist(artist.name);
+        const artistId = await getArtistId(artist);
         if (artistId) {
           await MVArtistModel.create({ mv_id: mv.id, artist_id: artistId, role: artist.role || 'unknown' }, { transaction: t });
         }
@@ -154,7 +180,7 @@ export async function saveMVsToDB(mvs: MVItem[], transaction?: any): Promise<voi
       // 4. Rebuild Albums
       const albums = Array.isArray(mv.albums) ? mv.albums : [];
       for (const album of albums) {
-        const albumId = await getOrCreateAlbum(album.name);
+        const albumId = await getAlbumId(album);
         if (albumId) {
           await MVAlbumModel.create({ mv_id: mv.id, album_id: albumId, track_number: 0 }, { transaction: t });
         }

@@ -1,8 +1,7 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { MVItem } from '@/lib/types';
-import { IllustratorDetailsModal } from '@/components/IllustratorDetailsModal';
 import { WalineComments } from '@/components/WalineComments';
 import { getProxyImgUrl } from '@/lib/image';
 
@@ -14,9 +13,7 @@ interface IllustratorsPageProps {
 export function IllustratorsPage({ mvData, metadata }: IllustratorsPageProps) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { artistId } = useParams();
-  
-  const [selectedIllustrator, setSelectedIllustrator] = useState<{ name: string; twitter?: string; mvs: MVItem[]; meta?: any } | null>(null);
+  const location = useLocation();
 
   const illustrators = useMemo(() => {
     const artistsMap = new Map<string, { name: string; twitter?: string; mvs: MVItem[]; meta?: any }>();
@@ -63,38 +60,11 @@ export function IllustratorsPage({ mvData, metadata }: IllustratorsPageProps) {
     });
   }, [mvData, metadata]);
 
-  // 監聽 URL 路由變化，打開或關閉對應畫師 Modal
-  useEffect(() => {
-    if (artistId) {
-      // 根據 URL 的 artistId 尋找對應的畫師，匹配邏輯：
-      // 1. dataId
-      // 2. snsId 去掉 '@'
-      // 3. encodeURIComponent 過的 name
-      const decodedId = decodeURIComponent(artistId);
-      const found = illustrators.find(a => 
-        a.meta?.dataId === decodedId || 
-        a.meta?.id?.replace('@', '') === decodedId || 
-        a.name === decodedId
-      );
-      if (found) {
-        setSelectedIllustrator(found);
-      } else {
-        setSelectedIllustrator(null);
-      }
-    } else {
-      setSelectedIllustrator(null);
-    }
-  }, [artistId, illustrators]);
-
   const handleOpenIllustrator = (artist: any) => {
     const idToUse = artist.meta?.dataId || artist.meta?.id?.replace('@', '') || artist.name;
     const activeLang = i18n.language ? (i18n.language === 'zh' ? 'zh-TW' : i18n.language) : 'zh-TW';
-    navigate(`/${activeLang}/illustrators/${encodeURIComponent(idToUse)}`);
-  };
-
-  const handleCloseModal = () => {
-    const activeLang = i18n.language ? (i18n.language === 'zh' ? 'zh-TW' : i18n.language) : 'zh-TW';
-    navigate(`/${activeLang}/illustrators`);
+    const bg = (location.state as any)?.backgroundLocation || location;
+    navigate(`/${activeLang}/illustrators/${encodeURIComponent(idToUse)}`, { state: { backgroundLocation: bg } });
   };
 
   return (
@@ -217,10 +187,6 @@ export function IllustratorsPage({ mvData, metadata }: IllustratorsPageProps) {
         </div>
       </div>
 
-      <IllustratorDetailsModal 
-        illustrator={selectedIllustrator} 
-        onClose={handleCloseModal} 
-      />
     </div>
   );
 }

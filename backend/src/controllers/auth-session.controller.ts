@@ -92,8 +92,8 @@ export const login = async (req: Request, res: Response) => {
 
 export const logout = async (req: Request, res: Response) => {
   const header = req.headers['x-admin-password'];
-  if (typeof header === 'string' && authService.isValidSessionToken(header)) {
-    authService.revokeSessionToken(header);
+  if (typeof header === 'string' && await authService.isValidSessionToken(header)) {
+    await authService.revokeSessionToken(header);
   }
 
   const destroy = () =>
@@ -126,6 +126,46 @@ export const me = async (req: Request, res: Response) => {
     res.status(401).json({ success: false, error: 'Unauthorized' });
     return;
   }
+  const payload = await buildMePayload(username);
+  res.json({ success: true, data: payload });
+};
+
+const normalizeOptionalString = (value: unknown) => {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'string') return null;
+  const v = value.trim();
+  return v.length > 0 ? v : null;
+};
+
+export const updateMeProfile = async (req: Request, res: Response) => {
+  const userId = (req.session as any)?.userId;
+  const username = (req.session as any)?.username;
+  if (typeof userId !== 'string' || typeof username !== 'string') {
+    res.status(401).json({ success: false, error: 'Unauthorized' });
+    return;
+  }
+
+  const email = normalizeOptionalString(req.body?.email);
+  const displayName = normalizeOptionalString(req.body?.display_name);
+  const avatarUrl = normalizeOptionalString(req.body?.avatar_url);
+
+  const update: any = {};
+  if (req.body && 'email' in req.body) update.email = email;
+  if (req.body && 'display_name' in req.body) update.display_name = displayName;
+  if (req.body && 'avatar_url' in req.body) update.avatar_url = avatarUrl;
+
+  if (Object.keys(update).length === 0) {
+    res.status(400).json({ success: false, error: 'NO_FIELDS_TO_UPDATE' });
+    return;
+  }
+
+  const user = await AdminUserModel.findOne({ where: { id: userId, username } as any });
+  if (!user) {
+    res.status(401).json({ success: false, error: 'Unauthorized' });
+    return;
+  }
+
+  await user.update(update as any);
   const payload = await buildMePayload(username);
   res.json({ success: true, data: payload });
 };

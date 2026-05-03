@@ -172,14 +172,56 @@ export const getMetadata = async (): Promise<MetadataResponse> => {
   }
 
   // 4. 取得公告
+  const rawOrder = configMap.announcement_order;
+  const order = Array.isArray(rawOrder) ? rawOrder.map((x: any) => String(x)).filter(Boolean) : [];
+  const rank = new Map<string, number>();
+  order.forEach((id, idx) => rank.set(String(id), idx));
+
   const announcements = await SysAnnouncementModel.findAll({ where: { is_active: true } });
-  const announcementTexts = announcements.map(a => (a.toJSON() as any).content);
+  const rows = announcements.map((a) => a.toJSON() as any);
+  rows.sort((a, b) => {
+    const ra = rank.has(String(a.id)) ? (rank.get(String(a.id)) as number) : Number.MAX_SAFE_INTEGER;
+    const rb = rank.has(String(b.id)) ? (rank.get(String(b.id)) as number) : Number.MAX_SAFE_INTEGER;
+    if (ra !== rb) return ra - rb;
+    return String(b.updated_at || '').localeCompare(String(a.updated_at || ''));
+  });
+
+  const announcementMap: Record<string, string[]> = {};
+  const push = (lang: string, text: string) => {
+    if (!announcementMap[lang]) announcementMap[lang] = [];
+    announcementMap[lang].push(text);
+  };
+
+  rows.forEach((r) => {
+    const raw = typeof r.content === 'string' ? r.content.trim() : '';
+    if (!raw) return;
+    if (raw.startsWith('{') && raw.endsWith('}')) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          Object.entries(parsed).forEach(([lang, v]) => {
+            if (!lang) return;
+            if (typeof v !== 'string') return;
+            const s = v.trim();
+            if (!s) return;
+            push(lang, s);
+          });
+          return;
+        }
+      } catch {}
+    }
+    push('default', raw);
+  });
 
   return {
     artistMeta,
     albumMeta,
-    announcements: announcementTexts,
-    ...configMap
+    announcements: Object.keys(announcementMap).length > 0 ? announcementMap : [],
+    ...(() => {
+      const next = { ...configMap };
+      delete (next as any).announcements;
+      return next;
+    })(),
   };
 };
 

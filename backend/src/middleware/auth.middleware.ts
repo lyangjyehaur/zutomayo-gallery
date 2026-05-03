@@ -21,7 +21,7 @@ export const checkLegacyAdminHeader = async (req: Request): Promise<boolean> => 
   const password = req.headers['x-admin-password'];
   if (typeof password !== 'string') return false;
 
-  if (authService.isValidSessionToken(password)) return true;
+  if (await authService.isValidSessionToken(password)) return true;
 
   if (!isLegacyAdminAllowed()) return false;
 

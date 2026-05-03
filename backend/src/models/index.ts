@@ -27,6 +27,7 @@ export const MediaModel = sequelize.define('Media', {
   id: { type: DataTypes.STRING(36), primaryKey: true, defaultValue: generateShortId, comment: '媒體唯一識別碼' },
   type: { type: DataTypes.STRING, comment: '媒體分類 (cover, official, fanart)' },
   media_type: { type: DataTypes.STRING, defaultValue: 'image', comment: '媒體格式類型 (image, video, gif)' },
+  source: { type: DataTypes.STRING, defaultValue: 'crawler', comment: '來源分類 (crawler/submission/...)' },
   url: { type: DataTypes.STRING, comment: '系統內實際使用的網址 (R2)' },
   original_url: { type: DataTypes.STRING, comment: '媒體的原始來源網址 (唯一鍵)' },
   thumbnail_url: { type: DataTypes.STRING, comment: '縮圖網址' },
@@ -34,6 +35,9 @@ export const MediaModel = sequelize.define('Media', {
   height: { type: DataTypes.INTEGER, comment: '媒體高度' },
   caption: { type: DataTypes.TEXT, comment: '媒體描述或圖說' },
   tags: { type: DataTypes.JSONB, defaultValue: [], comment: '媒體標籤 (JSONB Array)' },
+  submitter_user_id: { type: DataTypes.STRING(36), allowNull: true, comment: '投稿者帳號 (public_users.id)' },
+  submitter_public_snapshot: { type: DataTypes.JSONB, allowNull: true, comment: '投稿者公開資訊快照 (JSONB)' },
+  submission_id: { type: DataTypes.STRING(36), allowNull: true, comment: '關聯投稿單 fanart_submissions.id' },
   group_id: { type: DataTypes.STRING(36), comment: '關聯至 media_groups.id' },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '建立時間' },
 }, { tableName: 'media', timestamps: false, comment: '儲存系統中所有的媒體資源 (圖片、影片、GIF)' });
@@ -208,6 +212,105 @@ export const StagingFanartModel = sequelize.define('StagingFanart', {
   comment: '暫存從 Twitter 等來源爬取的二創圖，等待後續處理或人工審核'
 });
 
+export const PublicUserModel = sequelize.define('PublicUser', {
+  id: { type: DataTypes.STRING(36), primaryKey: true, defaultValue: generateShortId, comment: '投稿者帳號 ID' },
+  email: { type: DataTypes.STRING, comment: 'Email (唯一)' },
+  display_name: { type: DataTypes.STRING, comment: '顯示名稱' },
+  social_links: { type: DataTypes.JSONB, defaultValue: {}, comment: '社交連結 (JSONB)' },
+  public_profile_enabled: { type: DataTypes.BOOLEAN, defaultValue: false, comment: '是否公開個人頁' },
+  public_profile_fields: { type: DataTypes.JSONB, defaultValue: { display_name: true, socials: true, email_masked: true }, comment: '公開欄位選項' },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+}, {
+  tableName: 'public_users',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+  indexes: [{ unique: true, fields: ['email'] }],
+});
+
+export const PublicAuthTokenModel = sequelize.define('PublicAuthToken', {
+  id: { type: DataTypes.STRING(36), primaryKey: true, defaultValue: generateShortId },
+  user_id: { type: DataTypes.STRING(36), comment: 'public_users.id' },
+  token_hash: { type: DataTypes.STRING(64), comment: 'sha256(token)' },
+  expires_at: { type: DataTypes.DATE },
+  used_at: { type: DataTypes.DATE },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+}, {
+  tableName: 'public_auth_tokens',
+  timestamps: false,
+  indexes: [
+    { unique: true, fields: ['token_hash'] },
+    { fields: ['user_id'] },
+    { fields: ['expires_at'] },
+  ],
+});
+
+export const FanartSubmissionModel = sequelize.define('FanartSubmission', {
+  id: { type: DataTypes.STRING(36), primaryKey: true, defaultValue: generateShortId },
+  submitter_user_id: { type: DataTypes.STRING(36), allowNull: true, comment: 'public_users.id' },
+  anonymous_token_hash: { type: DataTypes.STRING(64), allowNull: true, comment: 'sha256(token)' },
+  status: { type: DataTypes.STRING, defaultValue: 'draft' },
+  note: { type: DataTypes.TEXT, allowNull: true },
+  contact: { type: DataTypes.TEXT, allowNull: true },
+  source_type: { type: DataTypes.STRING, defaultValue: 'mixed' },
+  special_tags: { type: DataTypes.JSONB, defaultValue: [] },
+  submitted_at: { type: DataTypes.DATE, allowNull: true },
+  review_reason: { type: DataTypes.TEXT, allowNull: true },
+  reviewed_by: { type: DataTypes.STRING, allowNull: true },
+  reviewed_at: { type: DataTypes.DATE, allowNull: true },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+}, {
+  tableName: 'fanart_submissions',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+  indexes: [
+    { fields: ['status'] },
+    { fields: ['submitter_user_id'] },
+    { fields: ['created_at'] },
+  ],
+});
+
+export const FanartSubmissionMediaModel = sequelize.define('FanartSubmissionMedia', {
+  id: { type: DataTypes.STRING(36), primaryKey: true, defaultValue: generateShortId },
+  submission_id: { type: DataTypes.STRING(36) },
+  media_type: { type: DataTypes.STRING, defaultValue: 'image' },
+  tweet_id: { type: DataTypes.STRING, allowNull: true },
+  original_url: { type: DataTypes.STRING, allowNull: true },
+  r2_key: { type: DataTypes.STRING, allowNull: true },
+  r2_url: { type: DataTypes.STRING, allowNull: true },
+  thumbnail_r2_key: { type: DataTypes.STRING, allowNull: true },
+  thumbnail_url: { type: DataTypes.STRING, allowNull: true },
+  sha256: { type: DataTypes.STRING(64), allowNull: true },
+  size_bytes: { type: DataTypes.INTEGER, allowNull: true },
+  width: { type: DataTypes.INTEGER, allowNull: true },
+  height: { type: DataTypes.INTEGER, allowNull: true },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+}, {
+  tableName: 'fanart_submission_media',
+  timestamps: false,
+  indexes: [
+    { fields: ['submission_id'] },
+    { fields: ['tweet_id'] },
+    { fields: ['sha256'] },
+  ],
+});
+
+export const FanartSubmissionMvModel = sequelize.define('FanartSubmissionMv', {
+  submission_id: { type: DataTypes.STRING(36), primaryKey: true },
+  mv_id: { type: DataTypes.STRING, primaryKey: true },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+}, {
+  tableName: 'fanart_submission_mv',
+  timestamps: false,
+  indexes: [
+    { fields: ['mv_id'] },
+    { fields: ['submission_id'] },
+  ],
+});
+
 export const CrawlerStateModel = sequelize.define('CrawlerState', {
   username: { type: DataTypes.STRING, primaryKey: true, comment: '爬蟲目標用戶名' },
   pagination_token: { type: DataTypes.STRING, allowNull: true, comment: '分頁 Token，用於接續爬取' },
@@ -292,6 +395,18 @@ MediaModel.belongsTo(MediaGroupModel, { foreignKey: 'group_id', as: 'group' });
 AlbumModel.belongsTo(AppleMusicAlbumModel, { foreignKey: 'apple_music_album_id', as: 'appleMusicAlbum' });
 AppleMusicAlbumModel.hasMany(AlbumModel, { foreignKey: 'apple_music_album_id', as: 'albums' });
 
+// Submission <-> MV
+FanartSubmissionModel.belongsToMany(MVModel, { through: FanartSubmissionMvModel, foreignKey: 'submission_id', otherKey: 'mv_id', as: 'mvs' });
+MVModel.belongsToMany(FanartSubmissionModel, { through: FanartSubmissionMvModel, foreignKey: 'mv_id', otherKey: 'submission_id', as: 'submissions' });
+
+// Submission <-> Media
+FanartSubmissionModel.hasMany(FanartSubmissionMediaModel, { foreignKey: 'submission_id', as: 'media' });
+FanartSubmissionMediaModel.belongsTo(FanartSubmissionModel, { foreignKey: 'submission_id', as: 'submission' });
+
+// PublicUser <-> Submission
+PublicUserModel.hasMany(FanartSubmissionModel, { foreignKey: 'submitter_user_id', as: 'submissions' });
+FanartSubmissionModel.belongsTo(PublicUserModel, { foreignKey: 'submitter_user_id', as: 'submitter' });
+
 export const AdminUserModel = sequelize.define('AdminUser', {
   id: { type: DataTypes.STRING(36), primaryKey: true, defaultValue: generateShortId },
   username: { type: DataTypes.STRING, allowNull: false, unique: true },
@@ -339,6 +454,6 @@ export const AdminMenuModel = sequelize.define('AdminMenu', {
   updatedAt: 'updated_at',
 });
 
-export const syncModels = async () => {
-  await sequelize.sync({ alter: true });
+export const syncModels = async (options: { alter?: boolean } = {}) => {
+  await sequelize.sync(options);
 };

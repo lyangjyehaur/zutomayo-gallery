@@ -5,6 +5,8 @@ import { Link, useSearchParams } from "react-router-dom"
 import { adminFetch, getApiRoot } from "@/lib/admin-api"
 import { buildMvTagOptions, normalizeTagId } from "@/lib/admin-media"
 import { getProxyImgUrl, isMediaVideo } from "@/lib/image"
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader"
+import { AdminPanel } from "@/components/admin/AdminPanel"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -461,10 +463,7 @@ export function AdminMediaGroupsPage() {
 
   return (
     <div className="p-6 flex flex-col gap-4">
-      <div className="border-4 border-black bg-card shadow-neo p-4 flex flex-col gap-1">
-        <div className="text-lg font-black uppercase tracking-widest">推文分組</div>
-        <div className="text-xs font-mono opacity-60">以 media_groups（推文）為第一級實體管理 media 與其 MV/tag 關聯。</div>
-      </div>
+      <AdminPageHeader title="推文分組" description="以 media_groups（推文）為第一級實體管理 media 與其 MV/tag 關聯。" />
 
       {error ? (
         <Alert variant="destructive">
@@ -475,7 +474,7 @@ export function AdminMediaGroupsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-4">
         <div className="flex flex-col gap-3">
-          <div className="border-4 border-black bg-card shadow-neo p-4 flex flex-col gap-3">
+          <AdminPanel className="flex flex-col gap-3">
             <div className="flex flex-col md:flex-row gap-3">
               <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜尋 source_url / author / text" />
               <Select
@@ -508,7 +507,7 @@ export function AdminMediaGroupsPage() {
               </Button>
             </div>
             <div className="text-xs font-mono opacity-60">Total: {total} | Offset: {offset}</div>
-          </div>
+          </AdminPanel>
 
           <Table>
             <TableHeader>
@@ -564,7 +563,7 @@ export function AdminMediaGroupsPage() {
         </div>
 
         <div className="flex flex-col gap-3">
-          <div className="border-4 border-black bg-card shadow-neo p-4 flex flex-col gap-3">
+          <AdminPanel className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-3">
               <div className="text-sm font-black uppercase tracking-widest">Group Meta</div>
               <div className="flex items-center gap-2">
@@ -635,9 +634,9 @@ export function AdminMediaGroupsPage() {
             ) : (
               <div className="text-xs font-mono opacity-60">選擇左側的 group 以查看詳情</div>
             )}
-          </div>
+          </AdminPanel>
 
-          <div className="border-4 border-black bg-card shadow-neo p-4 flex flex-col gap-3">
+          <AdminPanel className="flex flex-col gap-3">
             <div className="flex flex-col gap-3">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <div className="flex items-center gap-3">
@@ -771,7 +770,7 @@ export function AdminMediaGroupsPage() {
             ) : (
               <div className="text-xs font-mono opacity-60">{detailLoading ? "Loading..." : "No media"}</div>
             )}
-          </div>
+          </AdminPanel>
         </div>
       </div>
 

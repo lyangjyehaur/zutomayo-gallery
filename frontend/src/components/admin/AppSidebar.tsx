@@ -61,6 +61,8 @@ export function AppSidebar({
   const systemItems = React.useMemo(() => {
     const base = sorted.filter((m) => String(m.path || "").startsWith("/admin/system/"))
     const mediaTools = [
+      { label: "全局設定", path: "/admin/mvs/settings", sort: 9979 },
+      { label: "公告管理", path: "/admin/system/announcements", sort: 9980 },
       { label: "推文修復", path: "/admin/system/group-repair", sort: 9981 },
       { label: "推文分組", path: "/admin/system/media-groups", sort: 9982 },
       { label: "未歸屬媒體", path: "/admin/system/orphans", sort: 9983 },
@@ -123,6 +125,7 @@ export function AppSidebar({
       "/admin/dicts",
       "/admin/fanart",
       "/admin/staging-fanarts",
+      "/admin/submissions",
     ])
   }, [])
 
@@ -133,6 +136,16 @@ export function AppSidebar({
   const miscItems = React.useMemo(() => {
     return otherItems.filter((m) => !contentPaths.has(String(m.path || "")))
   }, [contentPaths, otherItems])
+
+  const labelForMenu = React.useCallback((m: any) => {
+    const raw = typeof m?.label === "string" ? m.label.trim() : ""
+    if (raw) return raw
+    const path = typeof m?.path === "string" ? m.path : ""
+    const seg = path.split("?")[0].split("/").filter(Boolean).slice(-1)[0] || path
+    if (!seg) return path
+    const spaced = seg.replace(/[-_]/g, " ")
+    return spaced.charAt(0).toUpperCase() + spaced.slice(1)
+  }, [])
 
   const userInitials = React.useMemo(() => {
     const raw = (displayName || username || "").trim()
@@ -167,15 +180,6 @@ export function AppSidebar({
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={location.pathname === globalSettingsPath}>
-                <Link to={globalSettingsPath}>
-                  <Settings2 />
-                  <span>全局設定</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
 
@@ -191,7 +195,7 @@ export function AppSidebar({
                   <SidebarMenuItem key={`${path}-${idx}`}>
                     <SidebarMenuButton asChild isActive={active}>
                       <Link to={path}>
-                        <span>{m.label || path}</span>
+                          <span>{labelForMenu(m)}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -228,7 +232,7 @@ export function AppSidebar({
                         <SidebarMenuSubItem key={`${path}-${idx}`}>
                           <SidebarMenuSubButton asChild isActive={active}>
                             <Link to={path}>
-                              <span>{m.label || path}</span>
+                              <span>{labelForMenu(m)}</span>
                             </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
@@ -243,7 +247,7 @@ export function AppSidebar({
                         <SidebarMenuSubItem key={`${path}-${idx}`}>
                           <SidebarMenuSubButton asChild isActive={active}>
                             <Link to={path}>
-                              <span>{m.label || path}</span>
+                              <span>{labelForMenu(m)}</span>
                             </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
@@ -268,7 +272,7 @@ export function AppSidebar({
                   <SidebarMenuItem key={`${path}-${idx}`}>
                     <SidebarMenuButton asChild isActive={active}>
                       <Link to={path}>
-                        <span>{m.label || path}</span>
+                        <span>{labelForMenu(m)}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -309,6 +313,9 @@ export function AppSidebar({
                   <a href="/" target="_blank" rel="noreferrer">
                     Open Site
                   </a>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/admin/account">帳戶設定</Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onLogout}>

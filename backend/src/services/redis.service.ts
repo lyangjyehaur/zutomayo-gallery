@@ -41,3 +41,22 @@ export const initRedis = async () => {
     console.log('[Redis] Skipped connection in development environment');
   }
 };
+
+export const isRedisAvailable = () => redisClient.isOpen;
+
+export const deleteKeysByPattern = async (pattern: string) => {
+  if (!redisClient.isOpen) return 0;
+  let deleted = 0;
+  const batch: string[] = [];
+  for await (const key of redisClient.scanIterator({ MATCH: pattern, COUNT: 200 })) {
+    batch.push(String(key));
+    if (batch.length >= 200) {
+      deleted += await redisClient.del(batch);
+      batch.length = 0;
+    }
+  }
+  if (batch.length > 0) {
+    deleted += await redisClient.del(batch);
+  }
+  return deleted;
+};

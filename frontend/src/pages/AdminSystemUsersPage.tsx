@@ -4,6 +4,8 @@ import { useCreate, useCustomMutation, useInvalidate, useList, useUpdate } from 
 import { toast } from "sonner"
 import type { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown } from "lucide-react"
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader"
+import { AdminPanel } from "@/components/admin/AdminPanel"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
@@ -265,13 +267,13 @@ export function AdminSystemUsersPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 flex flex-col gap-4">
       <Helmet>
-        <title>Admin Users</title>
+        <title>系統使用者</title>
       </Helmet>
-      <div className="text-xl font-semibold">Admin Users</div>
+      <AdminPageHeader title="系統使用者" description="管理後台登入帳號、角色與基本資料。" />
 
-      <div className="mt-6 border-4 border-black bg-card shadow-neo p-4 flex flex-col gap-3 max-w-2xl">
+      <AdminPanel className="flex flex-col gap-3 max-w-2xl">
         <div className="font-mono font-bold">新增使用者</div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           <Input value={newUsername} onChange={(e) => setNewUsername(e.target.value)} placeholder="username" />
@@ -289,17 +291,17 @@ export function AdminSystemUsersPage() {
         <Button onClick={() => void handleCreate()} disabled={createUser.isLoading || !newUsername.trim() || newPassword.length < 4}>
           建立
         </Button>
-      </div>
+      </AdminPanel>
 
-      <div className="mt-6 border-4 border-black bg-card shadow-neo p-4 overflow-auto">
-        <div className="font-mono font-bold mb-3">使用者列表</div>
+      <AdminPanel className="overflow-auto flex flex-col gap-3">
+        <div className="font-mono font-bold">使用者列表</div>
         <DataTable
           columns={columns}
           data={users}
           filterColumnId="username"
           filterPlaceholder="Filter usernames..."
         />
-      </div>
+      </AdminPanel>
 
       <Dialog open={rolesDialogOpen} onOpenChange={setRolesDialogOpen}>
         <DialogContent className="max-w-lg">

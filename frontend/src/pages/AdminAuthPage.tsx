@@ -128,7 +128,10 @@ export function AdminAuthPage() {
       if (!verifyResp.ok || !verifyResult?.success) {
         throw new Error(String((verifyResult as any)?.error || "PASSKEY_VERIFY_FAILED"))
       }
-      localStorage.setItem("ztmy_admin_pwd", String((verifyResult as any).token || ""))
+      try {
+        localStorage.removeItem("ztmy_admin_pwd")
+      } catch {
+      }
       toast.success("Passkey 登入成功")
       navigate(to, { replace: true })
     } catch (e: any) {

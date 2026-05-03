@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { generateRegistrationOptions, verifyRegistrationResponse, generateAuthenticationOptions, verifyAuthenticationResponse } from '@simplewebauthn/server';
 import { authService } from '../services/auth.service.js';
 import bcrypt from 'bcrypt';
+import { AdminUserModel } from '../models/index.js';
 
 // V10 SimpleWebAuthn API 變更：不再使用 isoBase64URL，而是使用 Uint8Array 處理。
 // 但為了簡化 JSON 儲存，我們將 base64URL 與 Uint8Array 進行轉換。
@@ -27,20 +28,25 @@ const getOriginInfo = (req: Request) => {
 
 export const generateRegOptions = async (req: Request, res: Response) => {
   try {
+    const user = (req as any).user as { id: string; username: string } | undefined;
+    if (!user?.id || !user?.username) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
     const { rpID } = getOriginInfo(req);
-    const passkeys = await authService.getPasskeys();
+    const passkeys = await authService.getPasskeys(user.id);
     const options = await generateRegistrationOptions({
       rpName,
       rpID,
-      userID: new Uint8Array(Buffer.from('admin-user-id')),
-      userName: 'admin',
+      userID: new Uint8Array(Buffer.from(user.id)),
+      userName: user.username,
       attestationType: 'none',
       excludeCredentials: passkeys.map(pk => ({
         id: pk.id,
         transports: pk.transports as any,
       })),
     });
-    await authService.setCurrentChallenge(options.challenge);
+    (req.session as any).passkeyChallenge = options.challenge;
     res.json(options);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -52,7 +58,12 @@ export const verifyReg = async (req: Request, res: Response) => {
     const body = req.body;
     const name = body.name || 'Unnamed Passkey';
     const { origin, rpID } = getOriginInfo(req);
-    const expectedChallenge = await authService.getCurrentChallenge();
+    const expectedChallenge = (req.session as any).passkeyChallenge as string | undefined;
+    const user = (req as any).user as { id: string; username: string } | undefined;
+    if (!user?.id) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
 
     if (!expectedChallenge) return res.status(400).json({ error: 'No active challenge' });
 
@@ -67,12 +78,14 @@ export const verifyReg = async (req: Request, res: Response) => {
       const { credential, credentialDeviceType, credentialBackedUp } = verification.registrationInfo;
       await authService.savePasskey({
         id: credential.id,
+        user_id: user.id,
         publicKey: bufferToBase64URL(credential.publicKey),
         counter: credential.counter,
         transports: credential.transports,
         name,
         createdAt: new Date().toISOString()
       });
+      (req.session as any).passkeyChallenge = null;
       return res.json({ success: true });
     }
     res.status(400).json({ success: false });
@@ -95,7 +108,7 @@ export const generateAuthOptions = async (req: Request, res: Response) => {
         transports: pk.transports as any,
       })),
     });
-    await authService.setCurrentChallenge(options.challenge);
+    (req.session as any).passkeyChallenge = options.challenge;
     res.json(options);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -106,13 +119,14 @@ export const verifyAuth = async (req: Request, res: Response) => {
   try {
     const body = req.body;
     const { origin, rpID } = getOriginInfo(req);
-    const expectedChallenge = await authService.getCurrentChallenge();
+    const expectedChallenge = (req.session as any).passkeyChallenge as string | undefined;
     if (!expectedChallenge) return res.status(400).json({ error: 'No active challenge' });
 
     const passkeys = await authService.getPasskeys();
     const passkey = passkeys.find(pk => pk.id === body.id);
 
     if (!passkey) return res.status(400).json({ error: '找不到對應的 Passkey' });
+    if (!passkey.user_id) return res.status(400).json({ error: 'Passkey 需要重新註冊' });
 
     const verification = await verifyAuthenticationResponse({
       response: body,
@@ -129,10 +143,16 @@ export const verifyAuth = async (req: Request, res: Response) => {
 
     if (verification.verified) {
       await authService.updatePasskeyCounter(passkey.id, verification.authenticationInfo.newCounter);
-      const isDefaultPassword = !(await authService.getPassword());
-      // 給前端一個安全的授權 token，以免把 hash 傳出去
-      const token = authService.generateSessionToken();
-      return res.json({ success: true, token, isDefaultPassword });
+      const user = await AdminUserModel.findByPk(passkey.user_id);
+      const data = user?.toJSON ? (user.toJSON() as any) : null;
+      if (!data?.id || !data?.username || !data?.is_active) {
+        res.status(403).json({ success: false, error: 'USER_DISABLED' });
+        return;
+      }
+      (req.session as any).userId = String(data.id);
+      (req.session as any).username = String(data.username);
+      (req.session as any).passkeyChallenge = null;
+      return res.json({ success: true });
     }
     res.status(400).json({ success: false });
   } catch (error: any) {
@@ -141,12 +161,22 @@ export const verifyAuth = async (req: Request, res: Response) => {
 };
 
 export const listPasskeys = async (req: Request, res: Response) => {
-  const passkeys = await authService.getPasskeys();
+  const user = (req as any).user as { id: string } | undefined;
+  if (!user?.id) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+  const passkeys = await authService.getPasskeys(user.id);
   res.json(passkeys.map(pk => ({ id: pk.id, name: pk.name, createdAt: pk.createdAt })));
 };
 
 export const removePasskey = async (req: Request, res: Response) => {
-  await authService.removePasskey(req.params.id);
+  const user = (req as any).user as { id: string } | undefined;
+  if (!user?.id) {
+    res.status(401).json({ success: false, error: 'Unauthorized' });
+    return;
+  }
+  await authService.removePasskey(req.params.id, user.id);
   res.json({ success: true });
 };
 

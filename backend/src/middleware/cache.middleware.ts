@@ -17,8 +17,11 @@ export const cacheMiddleware = (duration: number) => {
       return next();
     }
 
-    // 使用 URL 作為快取 Key
-    const key = `api-cache:${req.originalUrl || req.url}`;
+    const langHeader = req.headers['accept-language'];
+    const lang = typeof langHeader === 'string' ? langHeader.split(',')[0]?.trim() : '';
+    const userId = (req as any).session?.userId;
+    const userKey = typeof userId === 'string' && userId.length > 0 ? userId : 'anon';
+    const key = `api-cache:${req.originalUrl || req.url}:lng=${lang}:u=${userKey}`;
 
     try {
       const cachedResponse = await redisClient.get(key);
@@ -33,10 +36,11 @@ export const cacheMiddleware = (duration: number) => {
       // 覆寫 res.json 攔截回應內容
       const originalJson = res.json.bind(res);
       res.json = (body: any): Response => {
-        // 將結果存入 Redis
-        redisClient.setEx(key, duration, JSON.stringify(body)).catch(err => {
-          console.error('[Redis Cache] Failed to save cache:', err);
-        });
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          redisClient.setEx(key, duration, JSON.stringify(body)).catch(err => {
+            console.error('[Redis Cache] Failed to save cache:', err);
+          });
+        }
         
         // 恢復原本的 res.json 並回傳
         return originalJson(body);

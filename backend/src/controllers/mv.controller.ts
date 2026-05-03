@@ -10,6 +10,7 @@ import {
 } from '../validators/mv.validator.js';
 import { ZodError } from 'zod';
 import { getMetadata as getMeta, saveMetadata as saveMeta } from '../services/metadata.service.js';
+import { deleteKeysByPattern } from '../services/redis.service.js';
 
 import { TwitterService } from '../services/twitter.service.js';
 
@@ -121,6 +122,7 @@ export const updateMVs = async (req: Request, res: Response) => {
     
     // 執行更新（支持部分更新邏輯）
     const updateResult = await mvService.updateAllMVs(validatedData, partial === true, deletedIds);
+    await deleteKeysByPattern('api-cache:/api/mvs*');
     
     res.json({ 
       success: true,
@@ -172,6 +174,7 @@ export const updateMetadata = async (req: Request, res: Response) => {
   try {
     await saveMeta(req.body);
     const updated = await getMeta();
+    await deleteKeysByPattern('api-cache:/api/mvs*');
     res.json({ success: true, metadata: updated });
   } catch (error: any) {
     res.status(500).json({ error: error.message || '無法更新 Metadata' });

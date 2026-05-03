@@ -1,7 +1,19 @@
 import { Router } from 'express';
-import { getSystemStatus, toggleMaintenance, getClientGeo, saveGeoRaw, getDictionaries, updateDictionaries, clearRedisApiCache } from '../controllers/system.controller.js';
+import {
+  createDictionary,
+  deleteDictionary,
+  getClientGeo,
+  getDictionaries,
+  getSystemStatus,
+  patchDictionary,
+  saveGeoRaw,
+  toggleMaintenance,
+  updateDictionaries,
+  clearRedisApiCache,
+} from '../controllers/system.controller.js';
 import { assignOrphanMediaGroup, listOrphanMedia, unassignOrphanMediaGroup } from '../controllers/media-orphans.controller.js';
 import { getMediaGroup, listMediaGroups, listRepairMediaGroups, mergeMediaGroups, syncMediaRelations, unassignMediaGroup, updateMediaGroup } from '../controllers/media-groups.controller.js';
+import { createAnnouncement, deleteAnnouncement, listAnnouncements, updateAnnouncement, updateAnnouncementOrder } from '../controllers/announcements.controller.js';
 import { syncImagesToR2 } from '../controllers/r2.controller.js';
 import { rebuildR2 } from '../controllers/r2_rebuild.js';
 import { requireAuth, requirePermission } from '../middleware/auth.middleware.js';
@@ -62,6 +74,9 @@ router.get('/dicts', asyncHandler(getDictionaries));
 
 // Admin: Update dictionaries
 router.post('/dicts', requireAuth, requirePermission('admin.system.dicts.update'), asyncHandler(updateDictionaries));
+router.post('/dicts/create', requireAuth, requirePermission('admin.system.dicts.update'), asyncHandler(createDictionary));
+router.patch('/dicts/:id', requireAuth, requirePermission('admin.system.dicts.update'), asyncHandler(patchDictionary));
+router.delete('/dicts/:id', requireAuth, requirePermission('admin.system.dicts.update'), asyncHandler(deleteDictionary));
 
 router.post('/cache/clear', requireAuth, requirePermission('admin.system.cache.clear'), asyncHandler(clearRedisApiCache));
 
@@ -76,6 +91,12 @@ router.put('/media/groups/:id', requireAuth, asyncHandler(updateMediaGroup));
 router.post('/media/groups/:id/merge', requireAuth, asyncHandler(mergeMediaGroups));
 router.post('/media/groups/:id/unassign', requireAuth, asyncHandler(unassignMediaGroup));
 router.post('/media/:mediaId/relations/sync', requireAuth, asyncHandler(syncMediaRelations));
+
+router.get('/announcements', requireAuth, asyncHandler(listAnnouncements));
+router.post('/announcements', requireAuth, asyncHandler(createAnnouncement));
+router.put('/announcements/order', requireAuth, asyncHandler(updateAnnouncementOrder));
+router.put('/announcements/:id', requireAuth, asyncHandler(updateAnnouncement));
+router.delete('/announcements/:id', requireAuth, asyncHandler(deleteAnnouncement));
 
 // Admin: Sync existing Twitter images to R2 Bucket
 router.post('/r2-sync', requireR2SyncAuth('admin.system.r2.sync'), asyncHandler(syncImagesToR2));

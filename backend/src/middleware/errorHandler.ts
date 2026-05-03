@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
+import { logger } from '../utils/logger.js';
 
 // 自定義錯誤類
 export class AppError extends Error {
@@ -19,6 +20,7 @@ export const notFoundHandler = (req: Request, res: Response) => {
   res.status(404).json({
     success: false,
     error: `路由 ${req.originalUrl} 不存在`,
+    requestId: (req as any).id,
   });
 };
 
@@ -57,19 +59,21 @@ export const globalErrorHandler = (
   }
   
   // 記錄錯誤
-  console.error('[Global Error]:', {
-    message: err.message,
-    stack: isDev ? err.stack : undefined,
+  const reqLogger = (req as any).log || logger;
+  reqLogger.error({
+    err,
+    requestId: (req as any).id,
     url: req.originalUrl,
     method: req.method,
     ip: req.ip,
-    timestamp: new Date().toISOString(),
-  });
+    stack: isDev ? err.stack : undefined,
+  }, 'Unhandled error');
   
   // 發送響應
   res.status(statusCode).json({
     success: false,
     error: message,
+    requestId: (req as any).id,
     ...(details ? { details } : {}),
     ...(isDev && { 
       stack: err.stack,

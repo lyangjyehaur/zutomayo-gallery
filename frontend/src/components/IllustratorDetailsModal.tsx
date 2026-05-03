@@ -74,7 +74,7 @@ export function IllustratorDetailsModal({ illustrator, onClose }: IllustratorDet
     <Dialog open={!!illustrator} onOpenChange={(open) => !open && onClose()}>
       <DialogContent 
         overlayClassName={MODAL_THEME.overlay.dialog}
-        className={`w-screen h-[100dvh] max-w-none md:max-w-none md:w-full md:h-[100dvh] md:max-h-[100dvh] overflow-hidden flex flex-col p-0 border-0 ${MODAL_THEME.content.dialog} rounded-none shadow-none fixed top-0 left-0 md:top-0 md:left-0 !translate-x-0 !translate-y-0 md:!translate-x-0 md:!translate-y-0 z-[100] [&>button]:hidden`}
+        className={`w-screen h-[100dvh] max-w-none md:max-w-none md:w-full md:h-[100dvh] md:max-h-[100dvh] overflow-hidden flex flex-col p-0 border-0 ${MODAL_THEME.content.dialog} rounded-none shadow-none fixed top-0 left-0 md:top-0 md:left-0 !translate-x-0 !translate-y-0 md:!translate-x-0 md:!translate-y-0 z-[140] [&>button]:hidden`}
         onPointerDownOutside={(e) => {
           if (document.body.classList.contains('fancybox__body') || document.querySelector('.fancybox__container')) {
             e.preventDefault();

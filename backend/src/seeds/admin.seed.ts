@@ -25,24 +25,22 @@ export const seedAdminRBAC = async (): Promise<void> => {
     await enforcer.addRoleForUser(String((user.toJSON() as any).username), 'role:super_admin');
   }
 
-  const menuCount = await AdminMenuModel.count();
-  if (menuCount === 0) {
-    const defaults = [
-      { label: 'MV 管理', path: '/admin/mvs', sort: 10, permission: 'admin:mvs' },
-      { label: '畫師管理', path: '/admin/artists', sort: 20, permission: 'admin:artists' },
-      { label: '專輯管理', path: '/admin/albums', sort: 30, permission: 'admin:albums' },
-      { label: 'Apple Music', path: '/admin/apple-music-albums', sort: 40, permission: 'admin:albums' },
-      { label: 'FanArt 管理', path: '/admin/fanart', sort: 50, permission: 'admin:fanarts' },
-      { label: 'Staging FanArt', path: '/admin/staging-fanarts', sort: 60, permission: 'admin:staging-fanarts' },
-      { label: '字典管理', path: '/admin/dicts', sort: 70, permission: 'admin:system:menus' },
-      { label: '系統：使用者', path: '/admin/system/users', sort: 100, permission: 'admin:system:users' },
-      { label: '系統：角色', path: '/admin/system/roles', sort: 110, permission: 'admin:system:roles' },
-      { label: '系統：菜單', path: '/admin/system/menus', sort: 120, permission: 'admin:system:menus' },
-    ];
-    for (const m of defaults) {
-      const existing = await AdminMenuModel.findOne({ where: { path: m.path } as any });
-      if (!existing) await AdminMenuModel.create(m as any);
-    }
+  const defaults = [
+    { label: 'MV 管理', path: '/admin/mvs', sort: 10, permission: 'admin:mvs' },
+    { label: '畫師管理', path: '/admin/artists', sort: 20, permission: 'admin:artists' },
+    { label: '專輯管理', path: '/admin/albums', sort: 30, permission: 'admin:albums' },
+    { label: 'Apple Music', path: '/admin/apple-music-albums', sort: 40, permission: 'admin:albums' },
+    { label: 'FanArt 管理', path: '/admin/fanart', sort: 50, permission: 'admin:fanarts' },
+    { label: 'Staging FanArt', path: '/admin/staging-fanarts', sort: 60, permission: 'admin:staging-fanarts' },
+    { label: '投稿審核', path: '/admin/submissions', sort: 65, permission: 'admin:submissions' },
+    { label: '字典管理', path: '/admin/dicts', sort: 70, permission: 'admin:system:menus' },
+    { label: '系統：使用者', path: '/admin/system/users', sort: 100, permission: 'admin:system:users' },
+    { label: '系統：角色', path: '/admin/system/roles', sort: 110, permission: 'admin:system:roles' },
+    { label: '系統：菜單', path: '/admin/system/menus', sort: 120, permission: 'admin:system:menus' },
+  ];
+  for (const m of defaults) {
+    const existing = await AdminMenuModel.findOne({ where: { path: m.path } as any });
+    if (!existing) await AdminMenuModel.create(m as any);
   }
 
   await enforcer.savePolicy();

@@ -1,5 +1,4 @@
 import React from "react"
-import { startRegistration } from "@simplewebauthn/browser"
 import { toast } from "sonner"
 
 import { adminFetch } from "@/lib/admin-api"
@@ -8,7 +7,6 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { useConfirmDialog } from "@/components/admin/useConfirmDialog"
 
 type SystemStatus = {
   maintenance: boolean
@@ -19,7 +17,7 @@ type SystemStatus = {
 type MetadataShape = {
   albumMeta: Record<string, { date?: string; hideDate?: boolean }>
   artistMeta: Record<string, { id?: string; hideId?: boolean }>
-  settings: { showAutoAlbumDate: boolean; announcements?: string[] | Record<string, string[]> }
+  settings: { showAutoAlbumDate: boolean }
 }
 
 const toDatetimeLocal = (value: string | null | undefined) => {
@@ -34,7 +32,7 @@ const toDatetimeLocal = (value: string | null | undefined) => {
 const defaultMetadata: MetadataShape = {
   albumMeta: {},
   artistMeta: {},
-  settings: { showAutoAlbumDate: false, announcements: [] },
+  settings: { showAutoAlbumDate: false },
 }
 
 export function AdminMVSettingsPage({
@@ -46,13 +44,9 @@ export function AdminMVSettingsPage({
   systemStatus?: SystemStatus
   onRefresh?: () => void
 }) {
-  const [confirm, ConfirmDialog] = useConfirmDialog()
   const [error, setError] = React.useState<string | null>(null)
   const [isSaving, setIsSaving] = React.useState(false)
   const [isClearingRedisCache, setIsClearingRedisCache] = React.useState(false)
-  const [announcementLang, setAnnouncementLang] = React.useState<string>("zh-TW")
-  const [passkeys, setPasskeys] = React.useState<{ id: string; name?: string; createdAt: string }[]>([])
-  const [isLoadingPasskeys, setIsLoadingPasskeys] = React.useState(false)
 
   const [localMetadata, setLocalMetadata] = React.useState<MetadataShape>(defaultMetadata)
   const [localMaintenance, setLocalMaintenance] = React.useState(false)
@@ -74,70 +68,6 @@ export function AdminMVSettingsPage({
   }, [systemStatus?.eta, systemStatus?.maintenance, systemStatus?.type])
 
   const apiUrl = React.useMemo(() => import.meta.env.VITE_API_URL || "/api/mvs", [])
-  const authApiUrl = React.useMemo(() => apiUrl.replace(/\/mvs$/, "/auth"), [apiUrl])
-
-  const loadPasskeys = React.useCallback(async () => {
-    setIsLoadingPasskeys(true)
-    try {
-      const r = await adminFetch(`${authApiUrl}/passkeys`)
-      const data = await r.json().catch(() => null)
-      if (Array.isArray(data)) setPasskeys(data)
-    } finally {
-      setIsLoadingPasskeys(false)
-    }
-  }, [authApiUrl])
-
-  React.useEffect(() => {
-    loadPasskeys()
-  }, [loadPasskeys])
-
-  const handleRegisterPasskey = React.useCallback(async () => {
-    try {
-      const name = window.prompt("請為此設備的 Passkey 命名 (例如: My MacBook):")
-      if (!name) return
-
-      const headers = { "Content-Type": "application/json" }
-      const resp = await adminFetch(`${authApiUrl}/generate-reg-options`, { headers })
-      const options = await resp.json()
-      if ((options as any)?.error) throw new Error((options as any).error)
-
-      const attResp = await startRegistration({ optionsJSON: options })
-      const verifyResp = await adminFetch(`${authApiUrl}/verify-reg`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ data: attResp, name }),
-      })
-      const verifyResult = await verifyResp.json()
-      if (verifyResult?.success) {
-        toast.success("Passkey 註冊成功！")
-        await loadPasskeys()
-      } else {
-        setError("Passkey 註冊失敗。")
-      }
-    } catch (e: any) {
-      setError(`Passkey 註冊錯誤：${String(e?.message || e)}`)
-    }
-  }, [authApiUrl, loadPasskeys])
-
-  const handleRemovePasskey = React.useCallback(
-    async (id: string) => {
-      const ok = await confirm({
-        title: "刪除 Passkey",
-        description: "確定要刪除這個 Passkey 嗎？",
-        confirmText: "刪除",
-        cancelText: "取消",
-      })
-      if (!ok) return
-      try {
-        await adminFetch(`${authApiUrl}/passkeys/${encodeURIComponent(id)}`, { method: "DELETE" })
-        setPasskeys((prev) => prev.filter((p) => p.id !== id))
-        toast.success("Passkey 已刪除")
-      } catch {
-        setError("刪除 Passkey 失敗。")
-      }
-    },
-    [authApiUrl, confirm],
-  )
 
   const handleClearRedisCache = React.useCallback(async () => {
     setIsClearingRedisCache(true)
@@ -162,12 +92,14 @@ export function AdminMVSettingsPage({
     setIsSaving(true)
     setError(null)
     try {
+      const payload: any = JSON.parse(JSON.stringify(localMetadata))
+      if (payload?.settings) delete payload.settings.announcements
       const response = await adminFetch(`${apiUrl}/metadata`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(localMetadata),
+        body: JSON.stringify(payload),
       })
       if (!response.ok) throw new Error("保存 Metadata 失敗")
 
@@ -306,117 +238,6 @@ export function AdminMVSettingsPage({
             />
           </div>
 
-          <section className="space-y-4">
-            <div className="flex items-center justify-between border-b-2 border-black pb-2">
-              <div className="flex items-center gap-2">
-                <div className="flex flex-col gap-1">
-                  <h3 className="text-sm font-black uppercase bg-main text-main-foreground px-2 py-1">00 公告</h3>
-                  <span className="text-[10px] font-bold opacity-50 font-mono normal-case ml-2">00_Announcements</span>
-                </div>
-                <span className="text-[10px] font-bold opacity-50">首頁跑馬燈公告維護 (多語言支援)</span>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2 border-2 border-black p-4 bg-card">
-              <div className="flex gap-2 border-b-2 border-black/10 pb-2 mb-2 overflow-x-auto">
-                {["zh-TW", "zh-CN", "zh-HK", "ja", "ko", "en", "es"].map((lang) => (
-                  <button
-                    key={lang}
-                    className={`px-3 py-1 text-xs font-bold border-2 transition-colors ${announcementLang === lang ? "border-black bg-main text-black" : "border-transparent opacity-50 hover:opacity-100"}`}
-                    onClick={() => setAnnouncementLang(lang)}
-                  >
-                    {lang}
-                  </button>
-                ))}
-              </div>
-              <div className="text-xs font-bold opacity-60">
-                請輸入跑馬燈公告內容 ({announcementLang})，每行一則公告。若為空則不顯示跑馬燈。
-              </div>
-              <Textarea
-                value={(() => {
-                  const ann = localMetadata.settings?.announcements
-                  if (!ann) return ""
-                  if (Array.isArray(ann)) {
-                    return announcementLang === "zh-TW" ? ann.join("\n") : ""
-                  }
-                  return (ann[announcementLang] || []).join("\n")
-                })()}
-                onChange={(e) => {
-                  const lines = e.target.value.split("\n")
-                  setLocalMetadata((prev) => {
-                    let currentAnn: any = prev.settings?.announcements || {}
-                    if (Array.isArray(currentAnn)) {
-                      currentAnn = { "zh-TW": currentAnn }
-                    }
-                    return {
-                      ...prev,
-                      settings: {
-                        ...(prev.settings || { showAutoAlbumDate: false }),
-                        announcements: {
-                          ...currentAnn,
-                          [announcementLang]: lines,
-                        },
-                      },
-                    }
-                  })
-                }}
-                placeholder={`例如：\n【最新】ZUTOMAYO 新專輯發布！\n網站功能更新公告...`}
-                className="w-full min-h-[120px] text-sm font-bold border-2 border-black/20 bg-black/5"
-              />
-            </div>
-          </section>
-
-          <section className="space-y-4 pt-4 border-t-2 border-black">
-            <div className="flex items-start justify-between border-b-2 border-black pb-2">
-              <div className="flex items-start gap-2">
-                <div className="flex flex-col gap-1">
-                  <h3 className="text-sm font-black uppercase bg-main text-main-foreground px-2 py-1">03 Passkeys</h3>
-                  <span className="text-[10px] font-bold opacity-50 font-mono normal-case ml-2">03_Passkeys</span>
-                </div>
-                <span className="text-[10px] font-bold opacity-50">生物辨識 / 設備登入管理</span>
-              </div>
-              <Button
-                variant="neutral"
-                size="sm"
-                className="h-7 px-2 text-[10px] font-bold bg-ztmy-green border-2 border-black text-black hover:bg-ztmy-green/80"
-                onClick={() => void handleRegisterPasskey()}
-              >
-                <i className="hn hn-plus text-base mr-2" /> 註冊新設備 (Passkey)
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {isLoadingPasskeys ? (
-                <div className="col-span-full p-4 border-2 border-dashed border-black/30 text-center opacity-50 text-xs">
-                  Loading...
-                </div>
-              ) : passkeys.length === 0 ? (
-                <div className="col-span-full p-4 border-2 border-dashed border-black/30 text-center opacity-50 text-xs">
-                  目前沒有註冊任何 Passkey
-                </div>
-              ) : (
-                passkeys.map((pk) => (
-                  <div key={pk.id} className="flex flex-col gap-1 border-2 border-black p-3 bg-card relative">
-                    <div className="font-bold text-sm flex items-center gap-2">
-                      <i className="hn hn-user text-base mr-2" /> {pk.name || "未命名設備 (Unnamed Device)"}
-                    </div>
-                    <div className="text-[10px] opacity-60 font-mono">ID: {pk.id.slice(0, 16)}...</div>
-                    <div className="text-[10px] opacity-60 font-mono">
-                      建立於: {new Date(pk.createdAt).toLocaleString()}
-                    </div>
-                    <Button
-                      variant="neutral"
-                      size="icon"
-                      className="absolute top-2 right-2 h-6 w-6 text-red-500 hover:bg-red-500 hover:text-white"
-                      onClick={() => void handleRemovePasskey(pk.id)}
-                    >
-                      <i className="hn hn-trash text-base" />
-                    </Button>
-                  </div>
-                ))
-              )}
-            </div>
-          </section>
-
           <div className="pt-4 border-t-2 border-black flex flex-col sm:flex-row gap-4 sm:justify-end">
             <Button
               onClick={() => void handleSave()}
@@ -429,8 +250,6 @@ export function AdminMVSettingsPage({
           </div>
         </div>
       </div>
-      <ConfirmDialog />
     </div>
   )
 }
-

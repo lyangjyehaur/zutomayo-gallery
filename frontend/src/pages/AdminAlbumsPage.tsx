@@ -1,181 +1,270 @@
-import React, { useState, useEffect } from 'react';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import { adminFetch, getApiRoot } from '@/lib/admin-api';
+import React, { useEffect, useMemo, useState } from "react"
+import { toast } from "sonner"
+import { useCreate, useDelete, useInvalidate, useList, useUpdate } from "@refinedev/core"
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { AdminSplitView } from "@/components/admin/AdminSplitView"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SearchSelect, type SearchSelectOption } from "@/components/ui/search-select"
 
 interface DictItem {
-  id: string;
-  category: string;
-  code: string;
-  label: string;
-  description: string;
-  sort_order: number;
+  id: string
+  category: string
+  code: string
+  label: string
+  description: string
+  sort_order: number
 }
 
 export interface Album {
-  id: string;
-  name: string;
-  type: string;
-  apple_music_album_id?: string;
-  hide_date: boolean;
+  id: string
+  name: string
+  type: string
+  apple_music_album_id?: string
+  hide_date: boolean
 }
 
 export function AdminAlbumsPage() {
-  const [albums, setAlbums] = useState<Album[]>([]);
-  const [dicts, setDicts] = useState<DictItem[]>([]);
-  const [deletedIds, setDeletedIds] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const invalidate = useInvalidate()
+  const albumList = useList<Album>({ resource: "albums", hasPagination: false })
+  const dictList = useList<DictItem>({ resource: "dicts", hasPagination: false })
+  const amList = useList<any>({ resource: "appleMusicAlbums", hasPagination: false })
+  const createOne = useCreate()
+  const updateOne = useUpdate()
+  const deleteOne = useDelete()
 
-  const fetchData = async () => {
-    try {
-      const albumUrl = `${getApiRoot()}/album`;
-      const dictUrl = `${getApiRoot()}/system/dicts`;
-      
-      const [albumRes, dictRes] = await Promise.all([
-        adminFetch(albumUrl),
-        adminFetch(dictUrl)
-      ]);
-      
-      const albumJson = await albumRes.json();
-      const dictJson = await dictRes.json();
-      
-      if (albumJson.success) {
-        setAlbums(albumJson.data);
-      } else {
-        toast.error('載入專輯失敗');
-      }
-      
-      if (dictJson.success) {
-        setDicts(dictJson.data);
-      }
-    } catch (e) {
-      toast.error('載入資料失敗');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const [albums, setAlbums] = useState<Album[]>([])
+  const [dicts, setDicts] = useState<DictItem[]>([])
+  const [amOptions, setAmOptions] = useState<SearchSelectOption[]>([])
+  const [deletedIds, setDeletedIds] = useState<string[]>([])
+  const [selectedId, setSelectedId] = useState<string>("")
+  const [query, setQuery] = useState("")
+
+  const typeLabelByCode = useMemo(() => {
+    const map = new Map<string, string>()
+    dicts.filter((d) => d.category === "album_type").forEach((d) => map.set(d.code, d.label))
+    return map
+  }, [dicts])
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    const rows = albumList.data?.data || []
+    if (rows.length === 0) return
+    setAlbums((prev) => (prev.length > 0 ? prev : rows))
+    setSelectedId((prev) => (prev ? prev : String(rows[0].id)))
+  }, [albumList.data])
+
+  useEffect(() => {
+    const rows = dictList.data?.data || []
+    if (rows.length === 0) return
+    setDicts((prev) => (prev.length > 0 ? prev : rows))
+  }, [dictList.data])
+
+  useEffect(() => {
+    const rows = amList.data?.data || []
+    if (rows.length === 0) return
+    setAmOptions(
+      rows
+        .map((a: any) => ({
+          value: String(a.id),
+          label: `${String(a.album_name || "")} — ${String(a.artist_name || "")}`.trim(),
+        }))
+        .filter((o: any) => o.value && o.label),
+    )
+  }, [amList.data])
 
   const handleSave = async () => {
-    const albumUrl = `${getApiRoot()}/album`;
-    
-    toast.promise(
-      adminFetch(albumUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ albums, deletedIds })
-      }).then(r => r.json()),
+    const invalid = albums.filter((a) => !String(a.name || "").trim())
+    if (invalid.length > 0) {
+      toast.error(`有 ${invalid.length} 筆專輯缺少名稱`)
+      return
+    }
+
+    const toCreate = albums.filter((a) => String(a.id).startsWith("album-"))
+    const toUpdate = albums.filter((a) => !String(a.id).startsWith("album-"))
+    const toDelete = deletedIds.filter((id) => !String(id).startsWith("album-"))
+
+    await toast.promise(
+      (async () => {
+        for (const id of toDelete) {
+          await deleteOne.mutateAsync({ resource: "albums", id })
+        }
+        for (const row of toUpdate) {
+          await updateOne.mutateAsync({
+            resource: "albums",
+            id: row.id,
+            values: {
+              name: row.name,
+              type: row.type,
+              apple_music_album_id: row.apple_music_album_id || null,
+              hide_date: !!row.hide_date,
+            },
+          })
+        }
+        for (const row of toCreate) {
+          await createOne.mutateAsync({
+            resource: "albums",
+            values: {
+              name: row.name,
+              type: row.type,
+              apple_music_album_id: row.apple_music_album_id || null,
+              hide_date: !!row.hide_date,
+            },
+          })
+        }
+        await invalidate({ resource: "albums", invalidates: ["list"] })
+      })(),
       {
-        loading: '儲存中...',
-        success: (res) => {
-          if (res.success) {
-            setAlbums(res.data);
-            setDeletedIds([]);
-            return '儲存成功！';
-          }
-          throw new Error(res.error || '儲存失敗');
+        loading: "儲存中...",
+        success: () => {
+          setDeletedIds([])
+          return "儲存成功！"
         },
-        error: '儲存失敗'
-      }
-    );
-  };
+        error: (e) => `儲存失敗：${String((e as any)?.message || e)}`,
+      },
+    )
+  }
 
   const handleAdd = () => {
-    const newId = `album-${Date.now()}`;
-    setAlbums([...albums, { id: newId, name: '', type: '', hide_date: false }]);
-  };
+    const newId = `album-${Date.now()}`
+    const next: Album = { id: newId, name: "", type: "", hide_date: false }
+    setAlbums((prev) => [...prev, next])
+    setSelectedId(newId)
+    setQuery("")
+  }
 
-  const handleDelete = (id: string, index: number) => {
-    if (!id.startsWith('album-')) {
-      setDeletedIds([...deletedIds, id]);
-    }
-    const newAlbums = [...albums];
-    newAlbums.splice(index, 1);
-    setAlbums(newAlbums);
-  };
+  const handleDeleteSelected = () => {
+    if (!selectedId) return
+    setAlbums((prev) => {
+      const idx = prev.findIndex((a) => a.id === selectedId)
+      if (idx < 0) return prev
+      const row = prev[idx]
+      if (row && !String(row.id).startsWith("album-")) {
+        setDeletedIds((p) => [...p, String(row.id)])
+      }
+      const next = [...prev]
+      next.splice(idx, 1)
+      const fallback = next[idx]?.id || next[idx - 1]?.id || ""
+      setSelectedId(fallback ? String(fallback) : "")
+      return next
+    })
+  }
 
-  const handleChange = (index: number, field: keyof Album, value: any) => {
-    const newAlbums = [...albums];
-    newAlbums[index] = { ...newAlbums[index], [field]: value };
-    setAlbums(newAlbums);
-  };
+  const selected = useMemo(() => albums.find((a) => a.id === selectedId) || null, [albums, selectedId])
+
+  const updateSelected = (patch: Partial<Album>) => {
+    if (!selected) return
+    setAlbums((prev) => prev.map((a) => (a.id === selected.id ? { ...a, ...patch } : a)))
+  }
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return albums
+    return albums.filter((a) => {
+      return String(a.name || "").toLowerCase().includes(q) || String(a.id || "").toLowerCase().includes(q)
+    })
+  }, [albums, query])
+
+  const groups = useMemo(() => {
+    const map = new Map<string, Album[]>()
+    filtered.forEach((a) => {
+      const label = typeLabelByCode.get(a.type) || "未分類"
+      const list = map.get(label) || []
+      list.push(a)
+      map.set(label, list)
+    })
+    return Array.from(map.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([k, list]) => ({
+        key: k,
+        items: [...list].sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""))),
+      }))
+  }, [filtered, typeLabelByCode])
 
   return (
-    <div className="h-full flex flex-col bg-background text-foreground overflow-hidden font-mono">
-      <div className="h-20 border-b-4 border-black bg-card flex items-center justify-between px-8 shadow-neo-sm shrink-0">
-        <div>
-          <h1 className="text-xl font-black uppercase tracking-widest leading-none">專輯管理</h1>
-          <div className="text-[10px] font-bold opacity-40">ALBUM.ADMIN</div>
-        </div>
-        <div className="flex gap-4">
-          <Button onClick={handleAdd} className="bg-ztmy-green text-black hover:bg-ztmy-green/80 border-2 border-black font-black shadow-neo-sm">
-            <i className="hn hn-plus mr-2" /> 新增專輯
+    <AdminSplitView
+      title="專輯管理"
+      description="左側列表（搜尋+分組），右側維護專輯細節。"
+      actions={
+        <>
+          <Button variant="neutral" onClick={handleAdd} className="border-2 border-black">
+            新增
           </Button>
-          <Button onClick={handleSave} className="bg-main text-black hover:bg-main/80 border-2 border-black font-black shadow-neo-sm">
-            <i className="hn hn-save mr-2" /> 儲存所有變更
+          <Button onClick={handleSave} className="border-2 border-black" disabled={albumList.isLoading || dictList.isLoading || amList.isLoading}>
+            儲存
           </Button>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-card/50">
-        <div className="max-w-6xl mx-auto space-y-4">
-          {isLoading ? (
-            <div className="text-center opacity-50 font-bold py-8">載入中...</div>
-          ) : albums.length === 0 ? (
-            <div className="text-center opacity-50 font-bold py-8">目前沒有專輯項目。</div>
-          ) : (
-            <div className="grid gap-4">
-              {albums.map((album, idx) => (
-                <div key={album.id} className="bg-card border-4 border-black p-4 flex flex-col gap-4 shadow-neo">
-                  <div className="flex flex-wrap md:flex-nowrap gap-4 items-start">
-                    <div className="space-y-1 w-full md:w-1/3">
-                      <label className="text-[10px] font-black uppercase opacity-70">Album Name (專輯名稱)</label>
-                      <Input value={album.name} onChange={e => handleChange(idx, 'name', e.target.value)} className="border-2 border-black font-bold h-8" placeholder="e.g. 潛潛話" />
-                    </div>
-                    <div className="space-y-1 w-full md:w-1/4">
-                      <label className="text-[10px] font-black uppercase opacity-70">Type (分類)</label>
-                      <Select value={album.type || ''} onValueChange={v => handleChange(idx, 'type', v)}>
-                        <SelectTrigger className="border-2 border-black font-bold h-8 rounded-none">
-                          <SelectValue placeholder="選擇分類" />
-                        </SelectTrigger>
-                        <SelectContent className="border-2 border-black rounded-none">
-                          {dicts.filter(d => d.category === 'album_type').map(d => (
-                            <SelectItem key={d.id} value={d.code}>{d.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1 w-full md:w-[15%] flex flex-col items-center">
-                      <label className="text-[10px] font-black uppercase opacity-70">Hide Date (隱藏日期)</label>
-                      <Switch checked={album.hide_date} onCheckedChange={c => handleChange(idx, 'hide_date', c)} className="mt-1" />
-                    </div>
-                    <Button variant="destructive" size="icon" onClick={() => handleDelete(album.id, idx)} className="shrink-0 mt-5 border-2 border-black shadow-neo-sm rounded-none">
-                      <i className="hn hn-trash" />
-                    </Button>
-                  </div>
-                  <div className="space-y-1 w-full">
-                    <label className="text-[10px] font-black uppercase opacity-70">Apple Music Album ID</label>
-                    <Input value={album.apple_music_album_id || ''} onChange={e => handleChange(idx, 'apple_music_album_id', e.target.value)} className="border-2 border-black font-bold h-8" placeholder="輸入 apple_music_albums 表中的 ID" />
-                  </div>
-                </div>
-              ))}
+        </>
+      }
+      leftSearchValue={query}
+      onLeftSearchValueChange={setQuery}
+      leftSearchPlaceholder="搜尋專輯..."
+      groups={groups}
+      getKey={(a) => a.id}
+      renderItemTitle={(a) => a.name || "(未命名)"}
+      renderItemSubtitle={(a) => a.type || "none"}
+      selectedKey={selectedId || null}
+      onSelect={setSelectedId}
+      leftEmpty={<div className="p-3 text-xs font-mono opacity-60">{albumList.isLoading ? "載入中..." : "無資料"}</div>}
+      rightEmpty={<div className="text-xs font-mono opacity-60">選擇左側專輯以編輯</div>}
+      right={
+        !selected ? null : (
+          <>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-lg font-black break-words">{selected.name || "(未命名)"}</div>
+                <div className="text-[10px] font-mono opacity-60 break-all">ID: {selected.id}</div>
+              </div>
+              <Button variant="destructive" onClick={handleDeleteSelected} className="border-2 border-black">
+                刪除
+              </Button>
             </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1">
+                <div className="text-[10px] font-black uppercase opacity-70">Album Name</div>
+                <Input value={selected.name} onChange={(e) => updateSelected({ name: e.target.value })} className="border-2 border-black font-bold h-9" />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <div className="text-[10px] font-black uppercase opacity-70">Type</div>
+                <Select value={selected.type || ""} onValueChange={(v) => updateSelected({ type: v })}>
+                  <SelectTrigger className="border-2 border-black font-bold h-9 rounded-none">
+                    <SelectValue placeholder="選擇分類" />
+                  </SelectTrigger>
+                  <SelectContent className="border-2 border-black rounded-none">
+                    {dicts
+                      .filter((d) => d.category === "album_type")
+                      .map((d) => (
+                        <SelectItem key={d.id} value={d.code}>
+                          {d.label}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <div className="text-[10px] font-black uppercase opacity-70">Apple Music Album</div>
+                <SearchSelect
+                  options={amOptions}
+                  value={selected.apple_music_album_id || null}
+                  onChange={(v) => updateSelected({ apple_music_album_id: v || undefined })}
+                  placeholder="搜尋 Apple Music 專輯..."
+                />
+              </div>
+
+              <div className="flex items-center justify-between border-2 border-black p-3 bg-card">
+                <div className="flex flex-col">
+                  <div className="text-xs font-black tracking-widest">隱藏日期</div>
+                  <div className="text-[10px] font-mono opacity-60">hide_date</div>
+                </div>
+                <Switch checked={!!selected.hide_date} onCheckedChange={(c) => updateSelected({ hide_date: c })} />
+              </div>
+            </div>
+          </>
+        )
+      }
+    />
+  )
 }

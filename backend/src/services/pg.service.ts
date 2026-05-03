@@ -38,6 +38,7 @@ export const MV = sequelize.define('MV', {
 // Auth 相關
 export const AuthPasskey = sequelize.define('AuthPasskey', {
   id: { type: DataTypes.STRING, primaryKey: true },
+  user_id: DataTypes.STRING,
   publicKey: DataTypes.TEXT,
   counter: DataTypes.INTEGER,
   transports: DataTypes.JSONB,

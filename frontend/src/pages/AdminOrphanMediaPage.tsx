@@ -5,6 +5,7 @@ import { adminFetch, getApiRoot } from "@/lib/admin-api"
 import { getProxyImgUrl, isMediaVideo } from "@/lib/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { SearchSelect, type SearchSelectOption } from "@/components/ui/search-select"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
@@ -35,6 +36,37 @@ export function AdminOrphanMediaPage() {
   const limit = 50
 
   const [tweetUrlById, setTweetUrlById] = React.useState<Record<string, string>>({})
+  const [groupOptions, setGroupOptions] = React.useState<SearchSelectOption[]>([])
+  const [groupLoading, setGroupLoading] = React.useState(false)
+
+  React.useEffect(() => {
+    if (groupOptions.length > 0) return
+    const run = async () => {
+      try {
+        setGroupLoading(true)
+        const res = await adminFetch(`${base}/system/media/groups?limit=500&offset=0`)
+        const json = await res.json().catch(() => null)
+        const rows = Array.isArray(json?.items) ? json.items : Array.isArray(json?.data) ? json.data : []
+        setGroupOptions(
+          rows
+            .map((r: any) => {
+              const sourceUrl = r?.source_url ? String(r.source_url).trim() : ""
+              if (!sourceUrl) return null
+              const id = r?.id ? String(r.id) : ""
+              const handle = r?.author_handle ? String(r.author_handle) : ""
+              const date = r?.post_date ? new Date(String(r.post_date)).toLocaleDateString() : ""
+              const label = [handle, date, id, sourceUrl].filter(Boolean).join(" · ")
+              return { value: sourceUrl, label }
+            })
+            .filter(Boolean) as any,
+        )
+      } catch {
+      } finally {
+        setGroupLoading(false)
+      }
+    }
+    run()
+  }, [base, groupOptions.length])
 
   const fetchList = React.useCallback(async () => {
     setLoading(true)
@@ -191,10 +223,11 @@ export function AdminOrphanMediaPage() {
                 <TableCell className="text-xs font-mono">{Array.isArray(m.tags) ? m.tags.join(", ") : ""}</TableCell>
                 <TableCell className="text-xs font-mono">{mvNames.slice(0, 2).join(", ")}{mvNames.length > 2 ? ` +${mvNames.length - 2}` : ""}</TableCell>
                 <TableCell>
-                  <Input
-                    value={tweetUrlById[m.id] || ""}
-                    onChange={(e) => setTweetUrlById((prev) => ({ ...prev, [m.id]: e.target.value }))}
-                    placeholder="https://x.com/.../status/..."
+                  <SearchSelect
+                    options={groupOptions}
+                    value={tweetUrlById[m.id] || null}
+                    onChange={(v) => setTweetUrlById((prev) => ({ ...prev, [m.id]: v || "" }))}
+                    placeholder={groupLoading ? "載入分組中..." : "搜尋推文分組..."}
                   />
                 </TableCell>
                 <TableCell>
