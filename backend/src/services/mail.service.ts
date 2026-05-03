@@ -39,7 +39,8 @@ export const isMailConfigured = () => {
       process.env.TENCENT_SES_FROM_VERIFY_EMAIL ||
       process.env.TENCENT_SES_FROM_RESET_EMAIL,
   );
-  return Boolean(tcSecretId && tcSecretKey && tcRegion && fromAny);
+  const templateOk = Boolean(process.env.TENCENT_SES_TEMPLATE_VERIFY_ID && process.env.TENCENT_SES_TEMPLATE_RESET_ID);
+  return Boolean(tcSecretId && tcSecretKey && tcRegion && fromAny && templateOk);
 };
 
 const base64 = (s: string) => Buffer.from(s, 'utf8').toString('base64');
@@ -180,6 +181,9 @@ export const sendAuthLinkEmail = async (to: string, args: { purpose: AuthMailPur
         ? process.env.TENCENT_SES_TEMPLATE_RESET_ID
         : process.env.TENCENT_SES_TEMPLATE_LOGIN_ID;
   const templateId = templateIdEnv ? Number(templateIdEnv) : null;
+  if (!templateId) {
+    throw new Error('TENCENT_SES_TEMPLATE_ID_MISSING');
+  }
 
   await sendTencentSesEmail({
     to,
@@ -187,7 +191,7 @@ export const sendAuthLinkEmail = async (to: string, args: { purpose: AuthMailPur
     subject: mail.subject,
     text: mail.text,
     html: mail.html,
-    template: templateId ? { id: templateId, data: { link: args.link } } : undefined,
+    template: { id: templateId, data: { link: args.link } },
   });
 
   return true;

@@ -17,7 +17,8 @@
     "reparse-tweets": "tsx src/scripts/reparse-raw-apify.ts",
     "reparse-prod": "node dist/scripts/reparse-raw-apify.js",
     "migrate": "tsx src/scripts/migrate.ts up",
-    "migrate:down": "tsx src/scripts/migrate.ts down"
+    "migrate:down": "tsx src/scripts/migrate.ts down",
+    "mail:test": "tsx src/scripts/test-mail.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1036.0",
