@@ -1196,6 +1196,13 @@ function App({
     );
   }
 
+  const isPublicAuthStandalone = isLoginRoute || isRegisterRoute || isForgotRoute
+  if (isPublicAuthStandalone) {
+    if (isLoginRoute) return <PublicLoginPage />
+    if (isRegisterRoute) return <PublicRegisterPage />
+    return <PublicForgotPasswordPage />
+  }
+
   return (
     <div className={`min-h-screen bg-background text-foreground font-base font-normal selection:bg-main selection:text-main-foreground relative isolate flex flex-col`}>
       {/* 整個首頁的全局背景 CRT 濾鏡層 */}
