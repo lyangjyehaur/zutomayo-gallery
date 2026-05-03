@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import { PublicAuthTokenModel, PublicUserModel } from '../models/index.js';
 import { generateToken, sha256Hex } from '../utils/submission.js';
-import { isMailConfigured, sendAuthLinkEmail, sendMagicLinkEmail } from '../services/mail.service.js';
+import { isMailConfiguredFor, sendAuthLinkEmail, sendMagicLinkEmail } from '../services/mail.service.js';
 
 const magicTokenTtlMs = 15 * 60 * 1000;
 const verifyTokenTtlMs = 60 * 60 * 1000;
@@ -47,7 +47,7 @@ export const requestMagicLink = async (req: Request, res: Response) => {
     if (!sent) {
       const isProd = process.env.NODE_ENV === 'production';
       if (isProd) {
-        res.status(500).json({ success: false, error: isMailConfigured() ? 'MAIL_SEND_FAILED' : 'MAIL_NOT_CONFIGURED' });
+        res.status(500).json({ success: false, error: isMailConfiguredFor(email) ? 'MAIL_SEND_FAILED' : 'MAIL_NOT_CONFIGURED' });
         return;
       }
       res.json({ success: true, data: { link, token } });
@@ -247,7 +247,7 @@ export const register = async (req: Request, res: Response) => {
     if (!sent) {
       const isProd = process.env.NODE_ENV === 'production';
       if (isProd) {
-        res.status(500).json({ success: false, error: isMailConfigured() ? 'MAIL_SEND_FAILED' : 'MAIL_NOT_CONFIGURED' });
+        res.status(500).json({ success: false, error: isMailConfiguredFor(email) ? 'MAIL_SEND_FAILED' : 'MAIL_NOT_CONFIGURED' });
         return;
       }
       res.json({ success: true, data: { link, token } });
