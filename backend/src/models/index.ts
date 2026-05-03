@@ -215,6 +215,8 @@ export const StagingFanartModel = sequelize.define('StagingFanart', {
 export const PublicUserModel = sequelize.define('PublicUser', {
   id: { type: DataTypes.STRING(36), primaryKey: true, defaultValue: generateShortId, comment: '投稿者帳號 ID' },
   email: { type: DataTypes.STRING, comment: 'Email (唯一)' },
+  password_hash: { type: DataTypes.TEXT, allowNull: true, comment: '密碼 Hash (bcrypt)' },
+  email_verified_at: { type: DataTypes.DATE, allowNull: true, comment: 'Email 驗證時間' },
   display_name: { type: DataTypes.STRING, comment: '顯示名稱' },
   social_links: { type: DataTypes.JSONB, defaultValue: {}, comment: '社交連結 (JSONB)' },
   public_profile_enabled: { type: DataTypes.BOOLEAN, defaultValue: false, comment: '是否公開個人頁' },
@@ -232,6 +234,7 @@ export const PublicUserModel = sequelize.define('PublicUser', {
 export const PublicAuthTokenModel = sequelize.define('PublicAuthToken', {
   id: { type: DataTypes.STRING(36), primaryKey: true, defaultValue: generateShortId },
   user_id: { type: DataTypes.STRING(36), comment: 'public_users.id' },
+  purpose: { type: DataTypes.STRING, defaultValue: 'login', comment: '用途 (verify_email/reset_password/login)' },
   token_hash: { type: DataTypes.STRING(64), comment: 'sha256(token)' },
   expires_at: { type: DataTypes.DATE },
   used_at: { type: DataTypes.DATE },

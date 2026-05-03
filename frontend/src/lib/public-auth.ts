@@ -20,6 +20,46 @@ const fetchJson = async (url: string, init?: RequestInit) => {
   return json.data;
 };
 
+export const registerPublicUser = async (payload: { email: string; password: string; display_name?: string; redirectUrl: string }) => {
+  return fetchJson(`${baseApiUrl}/public-auth/register`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+};
+
+export const loginPublicUser = async (payload: { email: string; password: string }) => {
+  return fetchJson(`${baseApiUrl}/public-auth/login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+};
+
+export const verifyEmail = async (token: string) => {
+  return fetchJson(`${baseApiUrl}/public-auth/verify-email`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ token }),
+  });
+};
+
+export const requestPasswordReset = async (payload: { email: string; redirectUrl: string }) => {
+  return fetchJson(`${baseApiUrl}/public-auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+};
+
+export const resetPassword = async (payload: { token: string; password: string }) => {
+  return fetchJson(`${baseApiUrl}/public-auth/reset-password`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+};
+
 export const requestMagicLink = async (email: string, redirectUrl: string) => {
   return fetchJson(`${baseApiUrl}/public-auth/request-link`, {
     method: 'POST',
@@ -53,4 +93,3 @@ export const usePublicMe = () => {
     revalidateOnFocus: false,
   });
 };
-

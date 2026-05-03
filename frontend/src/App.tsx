@@ -47,7 +47,10 @@ import { AppleMusicGalleryPage } from "@/pages/AppleMusicGalleryPage";
 import { SubmitFanArtPage } from "@/pages/SubmitFanArtPage";
 import { PublicLoginPage } from "@/pages/PublicLoginPage";
 import { MySubmissionsPage } from "@/pages/MySubmissionsPage";
-import { AuthMagicCallbackPage } from "@/pages/AuthMagicCallbackPage";
+import { PublicRegisterPage } from "@/pages/PublicRegisterPage";
+import { PublicForgotPasswordPage } from "@/pages/PublicForgotPasswordPage";
+import { VerifyEmailCallbackPage } from "@/pages/VerifyEmailCallbackPage";
+import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { Demo3DCardPage } from "@/pages/Demo3DCardPage";
 import { DemoCDCasePage } from "@/pages/DemoCDCasePage";
@@ -460,8 +463,10 @@ function App({
   const isAppleMusicGalleryRoute = pathnameWithoutLang === "/albums";
   const isSubmitRoute = pathnameWithoutLang === "/submit";
   const isLoginRoute = pathnameWithoutLang === "/login";
+  const isRegisterRoute = pathnameWithoutLang === "/register";
+  const isForgotRoute = pathnameWithoutLang === "/forgot";
   const isMeSubmissionsRoute = pathnameWithoutLang === "/me/submissions";
-  const isNotFound = pathnameWithoutLang !== "/" && pathnameWithoutLang !== "/favorites" && !isIllustratorsRoute && !isFanArtRoute && !isAppleMusicGalleryRoute && !isSubmitRoute && !isLoginRoute && !isMeSubmissionsRoute && !is404Route && !isDemo3DCard && !mvIdMatch;
+  const isNotFound = pathnameWithoutLang !== "/" && pathnameWithoutLang !== "/favorites" && !isIllustratorsRoute && !isFanArtRoute && !isAppleMusicGalleryRoute && !isSubmitRoute && !isLoginRoute && !isRegisterRoute && !isForgotRoute && !isMeSubmissionsRoute && !is404Route && !isDemo3DCard && !mvIdMatch;
 
   // 動態獲取唯一的年份、專輯與藝術家清單，並處理分組
   const {
@@ -1307,7 +1312,11 @@ function App({
         ) : isSubmitRoute ? (
           <SubmitFanArtPage mvData={mvData} />
         ) : isLoginRoute ? (
-          <PublicLoginPage redirectUrl={`/${activeLang}/submit`} />
+          <PublicLoginPage />
+        ) : isRegisterRoute ? (
+          <PublicRegisterPage />
+        ) : isForgotRoute ? (
+          <PublicForgotPasswordPage />
         ) : isMeSubmissionsRoute ? (
           <MySubmissionsPage />
         ) : (
@@ -2903,7 +2912,8 @@ export default function RootApp() {
       <>
         <Routes>
             <Route path="/" element={<RootLocaleRedirect commonProps={commonProps} />} />
-            <Route path="/auth/magic" element={<AuthMagicCallbackPage />} />
+            <Route path="/auth/verify-email" element={<VerifyEmailCallbackPage />} />
+            <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
             <Route path="/:lng" element={<LocalizedAppLayout commonProps={commonProps} />}>
               <Route index element={null} />
               <Route path="favorites" element={null} />
@@ -2912,6 +2922,8 @@ export default function RootApp() {
               <Route path="fanart" element={null} />
               <Route path="submit" element={null} />
               <Route path="login" element={null} />
+              <Route path="register" element={null} />
+              <Route path="forgot" element={null} />
               <Route path="me/submissions" element={null} />
               <Route path="albums" element={null} />
               <Route path="mv/:id" element={<MVRouteBoundary />} />

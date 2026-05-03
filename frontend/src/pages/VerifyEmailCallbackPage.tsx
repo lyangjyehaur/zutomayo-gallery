@@ -1,9 +1,9 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { verifyMagicLink } from '@/lib/public-auth';
+import { verifyEmail } from '@/lib/public-auth';
 
-export function AuthMagicCallbackPage() {
+export function VerifyEmailCallbackPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -18,10 +18,10 @@ export function AuthMagicCallbackPage() {
         return;
       }
       try {
-        await verifyMagicLink(token);
-        toast.success('登入成功');
+        await verifyEmail(token);
+        toast.success('驗證成功，已登入');
       } catch (e: any) {
-        toast.error(`登入失敗：${String(e?.message || e)}`);
+        toast.error(`驗證失敗：${String(e?.message || e)}`);
       }
       navigate(redirect, { replace: true });
     };

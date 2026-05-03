@@ -1,9 +1,8 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { usePublicMe } from '@/lib/public-auth';
+import { logoutPublicUser, usePublicMe } from '@/lib/public-auth';
 
 const baseApiUrl = (import.meta.env.VITE_API_URL || '/api').replace(/\/mvs$/, '');
 
@@ -17,12 +16,11 @@ const fetchJson = async (url: string) => {
 };
 
 export function MySubmissionsPage() {
-  const { t } = useTranslation();
-  const { data: me, isLoading } = usePublicMe();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { data: me, isLoading, mutate } = usePublicMe();
   const [rows, setRows] = React.useState<any[]>([]);
   const [isBusy, setIsBusy] = React.useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
 
   const activeLang = React.useMemo(() => {
     const parts = (location.pathname || '/').split('/');
@@ -48,6 +46,20 @@ export function MySubmissionsPage() {
     void load();
   }, [load, me]);
 
+  const onLogout = React.useCallback(async () => {
+    setIsBusy(true);
+    try {
+      await logoutPublicUser();
+      await mutate(null, { revalidate: false });
+      toast.success('已登出');
+      navigate(`/${activeLang}/login`, { replace: true });
+    } catch (e: any) {
+      toast.error(`登出失敗：${String(e?.message || e)}`);
+    } finally {
+      setIsBusy(false);
+    }
+  }, [activeLang, mutate, navigate]);
+
   if (isLoading) {
     return (
       <div className="border-4 border-black bg-card shadow-shadow p-6">
@@ -59,7 +71,7 @@ export function MySubmissionsPage() {
   if (!me) {
     return (
       <div className="border-4 border-black bg-card shadow-shadow p-6 space-y-4">
-        <div className="text-xl font-black tracking-widest uppercase">{t('me.submissions', '我的投稿')}</div>
+        <div className="text-xl font-black tracking-widest uppercase">我的投稿</div>
         <div className="text-sm opacity-70">需先登入才能查看投稿記錄。</div>
         <Button onClick={() => navigate(`/${activeLang}/login`)}>前往登入</Button>
       </div>
@@ -70,10 +82,11 @@ export function MySubmissionsPage() {
     <div className="w-full max-w-5xl mx-auto space-y-6">
       <div className="border-4 border-black bg-card shadow-shadow p-6">
         <div className="flex items-center justify-between gap-3">
-          <div className="text-xl font-black tracking-widest uppercase">{t('me.submissions', '我的投稿')}</div>
+          <div className="text-xl font-black tracking-widest uppercase">我的投稿</div>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => navigate(`/${activeLang}/submit`)}>前往投稿</Button>
             <Button variant="outline" onClick={load} disabled={isBusy}>刷新</Button>
+            <Button variant="outline" onClick={onLogout} disabled={isBusy}>登出</Button>
           </div>
         </div>
 
@@ -88,14 +101,6 @@ export function MySubmissionsPage() {
                   <div className="text-xs font-mono opacity-70">{String(s.status || '')}</div>
                 </div>
                 {s.review_reason ? <div className="mt-2 text-xs opacity-70">退回原因：{String(s.review_reason)}</div> : null}
-                <div className="mt-3 flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => navigate(`/${activeLang}/submit`)}
-                  >
-                    去投稿頁
-                  </Button>
-                </div>
               </div>
             ))}
           </div>
