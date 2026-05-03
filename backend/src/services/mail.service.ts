@@ -1,17 +1,7 @@
 import crypto from 'crypto';
 import fetch from 'node-fetch';
-import nodemailer from 'nodemailer';
 
-type MailProvider = 'smtp' | 'tencent_ses';
 type AuthMailPurpose = 'login' | 'verify_email' | 'reset_password';
-
-const provider = (process.env.MAIL_PROVIDER || 'smtp') as MailProvider;
-
-const smtpHost = process.env.SMTP_HOST;
-const smtpPort = Number(process.env.SMTP_PORT || '587');
-const smtpUser = process.env.SMTP_USER;
-const smtpPass = process.env.SMTP_PASS;
-const smtpFrom = process.env.SMTP_FROM;
 
 const tcSecretId = process.env.TENCENT_SECRET_ID;
 const tcSecretKey = process.env.TENCENT_SECRET_KEY;
@@ -19,10 +9,6 @@ const tcRegion = process.env.TENCENT_SES_REGION || 'ap-guangzhou';
 const tcEndpoint = process.env.TENCENT_SES_ENDPOINT || 'ses.tencentcloudapi.com';
 
 const getFromByPurpose = (purpose: AuthMailPurpose) => {
-  if (provider === 'smtp') {
-    return smtpFrom;
-  }
-
   const commonEmail = process.env.TENCENT_SES_FROM_EMAIL;
   const commonName = process.env.TENCENT_SES_FROM_NAME;
 
@@ -47,16 +33,13 @@ const getFromByPurpose = (purpose: AuthMailPurpose) => {
 };
 
 export const isMailConfigured = () => {
-  if (provider === 'tencent_ses') {
-    const fromAny = Boolean(
-      process.env.TENCENT_SES_FROM_EMAIL ||
-        process.env.TENCENT_SES_FROM_LOGIN_EMAIL ||
-        process.env.TENCENT_SES_FROM_VERIFY_EMAIL ||
-        process.env.TENCENT_SES_FROM_RESET_EMAIL,
-    );
-    return Boolean(tcSecretId && tcSecretKey && tcRegion && fromAny);
-  }
-  return Boolean(smtpHost && smtpFrom);
+  const fromAny = Boolean(
+    process.env.TENCENT_SES_FROM_EMAIL ||
+      process.env.TENCENT_SES_FROM_LOGIN_EMAIL ||
+      process.env.TENCENT_SES_FROM_VERIFY_EMAIL ||
+      process.env.TENCENT_SES_FROM_RESET_EMAIL,
+  );
+  return Boolean(tcSecretId && tcSecretKey && tcRegion && fromAny);
 };
 
 const base64 = (s: string) => Buffer.from(s, 'utf8').toString('base64');
@@ -190,39 +173,21 @@ export const sendAuthLinkEmail = async (to: string, args: { purpose: AuthMailPur
 
   const mail = buildAuthMail(args.purpose, args.link);
 
-  if (provider === 'tencent_ses') {
-    const templateIdEnv =
-      args.purpose === 'verify_email'
-        ? process.env.TENCENT_SES_TEMPLATE_VERIFY_ID
-        : args.purpose === 'reset_password'
-          ? process.env.TENCENT_SES_TEMPLATE_RESET_ID
-          : process.env.TENCENT_SES_TEMPLATE_LOGIN_ID;
-    const templateId = templateIdEnv ? Number(templateIdEnv) : null;
+  const templateIdEnv =
+    args.purpose === 'verify_email'
+      ? process.env.TENCENT_SES_TEMPLATE_VERIFY_ID
+      : args.purpose === 'reset_password'
+        ? process.env.TENCENT_SES_TEMPLATE_RESET_ID
+        : process.env.TENCENT_SES_TEMPLATE_LOGIN_ID;
+  const templateId = templateIdEnv ? Number(templateIdEnv) : null;
 
-    await sendTencentSesEmail({
-      to,
-      from,
-      subject: mail.subject,
-      text: mail.text,
-      html: mail.html,
-      template: templateId ? { id: templateId, data: { link: args.link } } : undefined,
-    });
-    return true;
-  }
-
-  const transporter = nodemailer.createTransport({
-    host: smtpHost,
-    port: smtpPort,
-    secure: smtpPort === 465,
-    auth: smtpUser && smtpPass ? { user: smtpUser, pass: smtpPass } : undefined,
-  });
-
-  await transporter.sendMail({
-    from,
+  await sendTencentSesEmail({
     to,
+    from,
     subject: mail.subject,
     text: mail.text,
     html: mail.html,
+    template: templateId ? { id: templateId, data: { link: args.link } } : undefined,
   });
 
   return true;
