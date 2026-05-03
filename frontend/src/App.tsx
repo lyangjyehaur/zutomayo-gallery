@@ -459,7 +459,8 @@ function App({
   const is404Route = pathnameWithoutLang === "/404";
   const isDemo3DCard = pathnameWithoutLang === "/demo/3d-card";
   const isIllustratorsRoute = pathnameWithoutLang === "/illustrators" || pathnameWithoutLang.startsWith("/illustrators/");
-  const isFanArtRoute = pathnameWithoutLang === "/fanart";
+  const isFanArtRoute = pathnameWithoutLang === "/fanart" || pathnameWithoutLang === "/fanart/submit";
+  const isFanArtSubmitRoute = pathnameWithoutLang === "/fanart/submit";
   const isAppleMusicGalleryRoute = pathnameWithoutLang === "/albums";
   const isSubmitRoute = pathnameWithoutLang === "/submit";
   const isLoginRoute = pathnameWithoutLang === "/login";
@@ -871,7 +872,6 @@ function App({
   }, [metadata, mvData, selectedIllustratorId]);
 
   const [isAboutOpen, setIsAboutOpen] = useState(false);
-  const [isSubmitOpen, setIsSubmitOpen] = useState(false);
 
   const [isTabActive, setIsTabActive] = useState(() => typeof document !== 'undefined' ? !document.hidden : true);
 
@@ -886,7 +886,7 @@ function App({
 
   // 控制背景滾動
   useEffect(() => {
-    if (isFeedbackOpen || !!selectedMvId || !!selectedIllustratorId || isAboutOpen || isSubmitOpen) {
+    if (isFeedbackOpen || !!selectedMvId || !!selectedIllustratorId || isAboutOpen || isFanArtSubmitRoute) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "auto";
@@ -895,7 +895,7 @@ function App({
     return () => {
       document.body.style.overflow = "auto";
     };
-  }, [isFeedbackOpen, selectedIllustratorId, selectedMvId, isAboutOpen, isSubmitOpen]);
+  }, [isFeedbackOpen, selectedIllustratorId, selectedMvId, isAboutOpen, isFanArtSubmitRoute]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -1902,48 +1902,49 @@ function App({
           </Tooltip>
         )}
 
-        {pathnameWithoutLang === "/fanart" && (
-          <Dialog open={isSubmitOpen} onOpenChange={setIsSubmitOpen}>
+        {(pathnameWithoutLang === "/fanart" || pathnameWithoutLang === "/fanart/submit") && (
+          <Dialog
+            open={isFanArtSubmitRoute}
+            onOpenChange={(open) => {
+              if (!open) navigate(`${basePath}/fanart`);
+            }}
+          >
             <Tooltip>
               <TooltipTrigger asChild>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="neutral"
-                    size="icon"
-                    className={`z-20 w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-[0px_0px_0px_0px_var(--border)] hover:bg-main hover:text-black ${isSubmitOpen ? "bg-main text-black translate-x-[4px] translate-y-[4px] shadow-[0px_0px_0px_0px_var(--border)]" : ""}`}
-                    data-umami-event="Z_Open_Fanart_Submit"
-                  >
-                    <i className="hn hn-edit text-xl md:text-2xl"></i>
-                  </Button>
-                </DialogTrigger>
+                <Button
+                  onClick={() => navigate(`${basePath}/fanart/submit`)}
+                  variant="neutral"
+                  size="icon"
+                  className={`z-20 w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-[0px_0px_0px_0px_var(--border)] hover:bg-main hover:text-black ${isFanArtSubmitRoute ? "bg-main text-black translate-x-[4px] translate-y-[4px] shadow-[0px_0px_0px_0px_var(--border)]" : ""}`}
+                  data-umami-event="Z_Open_Fanart_Submit"
+                >
+                  <i className="hn hn-edit text-xl md:text-2xl"></i>
+                </Button>
               </TooltipTrigger>
               <TooltipContent side="left" align="center" sideOffset={10}>
                 <div className="flex flex-col gap-0.5">
                   <p className="text-xs font-black tracking-widest">{t("submit.title", "投稿")}</p>
-                  <p className="text-[10px] font-mono opacity-60 normal-case">
-                    SUBMIT
-                  </p>
+                  <p className="text-[10px] font-mono opacity-60 normal-case">SUBMIT</p>
                 </div>
               </TooltipContent>
             </Tooltip>
 
             <DialogContent
               overlayClassName={MODAL_THEME.overlay.dialog}
-              className={`w-screen h-[100dvh] max-w-none overflow-hidden flex flex-col p-0 border-0 md:border-4 border-black ${MODAL_THEME.content.dialog} sm:rounded-none rounded-none shadow-none md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] fixed top-0 left-0 !translate-x-0 !translate-y-0 z-[100]`}
+              className={`!w-screen !h-[100dvh] md:!w-screen md:!h-[100dvh] !max-w-none md:!max-w-none overflow-hidden flex flex-col p-0 border-0 ${MODAL_THEME.content.dialog} !rounded-none shadow-none fixed top-0 left-0 !translate-x-0 !translate-y-0 z-[100]`}
             >
               <div className={MODAL_THEME.crt}></div>
               <div className="relative z-10 flex-1 min-h-0 overflow-hidden">
                 <div className="h-12 md:h-14 border-b-4 border-black bg-black text-white flex items-center justify-between px-4 md:px-6">
                   <div className="font-black tracking-widest uppercase">{t("submit.title", "FanArt 投稿")}</div>
-                  <DialogClose asChild>
-                    <Button
-                      variant="neutral"
-                      size="icon"
-                      className="w-9 h-9 md:w-10 md:h-10 rounded-none hover:bg-main hover:text-black"
-                    >
-                      <i className="hn hn-times text-xl"></i>
-                    </Button>
-                  </DialogClose>
+                  <Button
+                    onClick={() => navigate(`${basePath}/fanart`)}
+                    variant="neutral"
+                    size="icon"
+                    className="w-9 h-9 md:w-10 md:h-10 rounded-none hover:bg-main hover:text-black"
+                  >
+                    <i className="hn hn-times text-xl"></i>
+                  </Button>
                 </div>
                 <ScrollArea className="flex-1 min-h-0 w-full">
                   <div className="p-4 md:p-6">
@@ -2981,6 +2982,7 @@ export default function RootApp() {
               <Route path="illustrators" element={null} />
               <Route path="illustrators/:artistId" element={<IllustratorRouteBoundary />} />
               <Route path="fanart" element={null} />
+              <Route path="fanart/submit" element={null} />
               <Route path="submit" element={null} />
               <Route path="login" element={null} />
               <Route path="register" element={null} />
