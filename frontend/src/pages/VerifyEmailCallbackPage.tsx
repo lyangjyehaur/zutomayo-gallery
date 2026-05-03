@@ -2,6 +2,7 @@ import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { verifyEmail } from '@/lib/public-auth';
+import { AuthCard } from '@/components/auth/AuthCard';
 
 export function VerifyEmailCallbackPage() {
   const location = useLocation();
@@ -29,11 +30,8 @@ export function VerifyEmailCallbackPage() {
   }, [location.search, navigate]);
 
   return (
-    <div className="min-h-[50vh] flex items-center justify-center">
-      <div className="border-4 border-black bg-card shadow-shadow px-6 py-4 font-black tracking-widest uppercase">
-        Verifying…
-      </div>
-    </div>
+    <AuthCard title="Email 驗證" code="VERIFY_EMAIL" iconClassName="hn hn-exclamation-triangle" bodyClassName="flex items-center justify-center">
+      <div className="font-black tracking-widest uppercase">Verifying…</div>
+    </AuthCard>
   );
 }
-

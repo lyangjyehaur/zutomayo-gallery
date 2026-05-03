@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { requestPasswordReset } from '@/lib/public-auth';
+import { AuthCard } from '@/components/auth/AuthCard';
 
 export function PublicForgotPasswordPage() {
   const location = useLocation();
@@ -35,22 +36,40 @@ export function PublicForgotPasswordPage() {
   }, [activeLang, email, navigate, redirectUrl]);
 
   return (
-    <div className="w-full max-w-xl mx-auto">
-      <div className="border-4 border-black bg-card shadow-shadow p-6 space-y-4">
-        <div className="text-2xl font-black tracking-widest uppercase">忘記密碼</div>
-        <div className="text-sm opacity-70">輸入 Email 後會寄出重設密碼連結。</div>
+    <AuthCard title="找回密碼" code="FORGOT_PASSWORD" iconClassName="hn hn-exclamation-triangle" bodyClassName="flex flex-col gap-6" maxWidthClassName="max-w-md">
+      <div className="text-sm opacity-70">輸入 Email 後會寄出重設密碼連結。</div>
 
-        <div className="space-y-2">
-          <div className="text-sm font-black">Email</div>
-          <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="email@example.com" />
+      <div className="space-y-2">
+        <div className="text-xs font-black uppercase tracking-widest flex flex-col leading-tight">
+          <span className="tracking-normal opacity-70">Email</span>
+          <span className="text-[10px] font-mono opacity-40 normal-case">EMAIL</span>
         </div>
-
-        <div className="flex flex-col md:flex-row gap-3 pt-2">
-          <Button onClick={onSubmit} disabled={isSubmitting}>寄送重設密碼信</Button>
-          <Button variant="outline" onClick={() => navigate(`/${activeLang}/login`)}>返回登入</Button>
-        </div>
+        <Input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="email@example.com"
+          type="email"
+          className="font-mono bg-black/5 border-2 border-black focus-visible:ring-black rounded-none h-12"
+          autoFocus
+        />
       </div>
-    </div>
+
+      <Button
+        type="button"
+        variant="default"
+        className="w-full bg-black text-white hover:bg-main hover:text-black shadow-neo border-2 border-transparent transition-colors rounded-none h-12 font-black tracking-widest"
+        onClick={onSubmit}
+        disabled={isSubmitting || !email.trim()}
+      >
+        <span className="flex flex-col items-center leading-tight">
+          <span className="tracking-normal">{isSubmitting ? '送出中...' : '寄送重設密碼信'}</span>
+          <span className="text-[10px] font-mono opacity-60 normal-case">{isSubmitting ? 'SENDING...' : 'SEND_'}</span>
+        </span>
+      </Button>
+
+      <Button variant="neutral" className="w-full h-12 font-black tracking-widest border-2 border-black rounded-none" onClick={() => navigate(`/${activeLang}/login`)}>
+        返回登入
+      </Button>
+    </AuthCard>
   );
 }
-

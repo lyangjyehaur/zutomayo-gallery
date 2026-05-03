@@ -7,6 +7,7 @@ import { adminFetch, getAuthApiBase, getMvsApiBase } from "@/lib/admin-api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { AuthCard } from "@/components/auth/AuthCard"
 
 type MePayload = {
   username?: string
@@ -146,24 +147,24 @@ export function AdminAuthPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center font-mono text-foreground crt-lines p-4 relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none opacity-5 crt-lines-global" />
-      <div className="w-full max-w-sm bg-card border-4 border-black shadow-neo flex flex-col z-10 relative">
-        <div className="h-10 bg-black text-white flex items-center justify-between px-4 border-b-4 border-black">
-          <span className="font-black uppercase tracking-widest text-xs flex items-center gap-2">
-            <i className="hn hn-exclamation-triangle text-base" />
-            <span className="flex flex-col leading-tight">
-              <span className="tracking-normal opacity-90">管理員驗證</span>
-              <span className="text-[10px] font-mono opacity-60 normal-case">ADMIN_AUTH</span>
+    <AuthCard
+      title="管理員驗證"
+      code="ADMIN_AUTH"
+      headerTone="admin"
+      iconClassName="hn hn-exclamation-triangle"
+      bodyClassName="flex flex-col gap-6"
+      footer={
+        <div className="bg-secondary-background border-t-4 border-black p-3 flex justify-between items-center text-[10px] opacity-70">
+          <span>SYS.AUTH.v{VERSION_CONFIG.app}</span>
+          <Link to="/" className="hover:underline hover:text-main transition-colors uppercase">
+            <span className="flex flex-col items-end leading-tight">
+              <span className="tracking-normal">{'<'} 返回首頁</span>
+              <span className="text-[10px] font-mono opacity-60 normal-case">Return_Home</span>
             </span>
-          </span>
-          <div className="flex gap-2">
-            <div className="size-3 rounded-full bg-main" />
-            <div className="size-3 rounded-full bg-ztmy-green" />
-            <div className="size-3 rounded-full bg-red-500" />
-          </div>
+          </Link>
         </div>
-        <div className="p-8 flex flex-col gap-6">
+      }
+    >
           {error ? (
             <Alert variant="destructive">
               <AlertTitle>登入失敗</AlertTitle>
@@ -276,17 +277,6 @@ export function AdminAuthPage() {
               <span className="text-[10px] font-mono opacity-60 normal-case">PASSKEY LOGIN</span>
             </span>
           </Button>
-        </div>
-        <div className="bg-secondary-background border-t-4 border-black p-3 flex justify-between items-center text-[10px] opacity-70">
-          <span>SYS.AUTH.v{VERSION_CONFIG.app}</span>
-          <Link to="/" className="hover:underline hover:text-main transition-colors uppercase">
-            <span className="flex flex-col items-end leading-tight">
-              <span className="tracking-normal">{'<'} 返回首頁</span>
-              <span className="text-[10px] font-mono opacity-60 normal-case">Return_Home</span>
-            </span>
-          </Link>
-        </div>
-      </div>
-    </div>
+    </AuthCard>
   )
 }

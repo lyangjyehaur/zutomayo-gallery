@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { registerPublicUser } from '@/lib/public-auth';
+import { AuthCard } from '@/components/auth/AuthCard';
 
 export function PublicRegisterPage() {
   const location = useLocation();
@@ -46,30 +47,67 @@ export function PublicRegisterPage() {
   }, [activeLang, displayName, email, navigate, password, redirectUrl]);
 
   return (
-    <div className="w-full max-w-xl mx-auto">
-      <div className="border-4 border-black bg-card shadow-shadow p-6 space-y-4">
-        <div className="text-2xl font-black tracking-widest uppercase">註冊</div>
-        <div className="text-sm opacity-70">註冊後會寄出 Email 驗證連結，完成驗證後即可登入。</div>
+    <AuthCard title="用戶註冊" code="USER_REGISTER" iconClassName="hn hn-edit" bodyClassName="flex flex-col gap-6" maxWidthClassName="max-w-md">
+      <div className="text-sm opacity-70">註冊後會寄出 Email 驗證連結，完成驗證後即可登入。</div>
 
-        <div className="space-y-2">
-          <div className="text-sm font-black">Email</div>
-          <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="email@example.com" />
+      <div className="space-y-2">
+        <div className="text-xs font-black uppercase tracking-widest flex flex-col leading-tight">
+          <span className="tracking-normal opacity-70">Email</span>
+          <span className="text-[10px] font-mono opacity-40 normal-case">EMAIL</span>
         </div>
-        <div className="space-y-2">
-          <div className="text-sm font-black">密碼（至少 8 碼）</div>
-          <Input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="••••••••" />
-        </div>
-        <div className="space-y-2">
-          <div className="text-sm font-black">顯示名稱（可選）</div>
-          <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="你的暱稱…" />
-        </div>
-
-        <div className="flex flex-col md:flex-row gap-3 pt-2">
-          <Button onClick={onRegister} disabled={isSubmitting}>送出註冊</Button>
-          <Button variant="outline" onClick={() => navigate(`/${activeLang}/login`)}>返回登入</Button>
-        </div>
+        <Input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="email@example.com"
+          type="email"
+          className="font-mono bg-black/5 border-2 border-black focus-visible:ring-black rounded-none h-12"
+          autoFocus
+        />
       </div>
-    </div>
+
+      <div className="space-y-2">
+        <div className="text-xs font-black uppercase tracking-widest flex flex-col leading-tight">
+          <span className="tracking-normal opacity-70">密碼</span>
+          <span className="text-[10px] font-mono opacity-40 normal-case">PASSWORD</span>
+        </div>
+        <Input
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="password"
+          type="password"
+          className="font-mono bg-black/5 border-2 border-black focus-visible:ring-black rounded-none h-12"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <div className="text-xs font-black uppercase tracking-widest flex flex-col leading-tight">
+          <span className="tracking-normal opacity-70">顯示名稱</span>
+          <span className="text-[10px] font-mono opacity-40 normal-case">DISPLAY_NAME</span>
+        </div>
+        <Input
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          placeholder="你的暱稱…"
+          className="font-mono bg-black/5 border-2 border-black focus-visible:ring-black rounded-none h-12"
+        />
+      </div>
+
+      <Button
+        type="button"
+        variant="default"
+        className="w-full bg-black text-white hover:bg-main hover:text-black shadow-neo border-2 border-transparent transition-colors rounded-none h-12 font-black tracking-widest"
+        onClick={onRegister}
+        disabled={isSubmitting || !email.trim() || !password}
+      >
+        <span className="flex flex-col items-center leading-tight">
+          <span className="tracking-normal">{isSubmitting ? '送出中...' : '送出註冊'}</span>
+          <span className="text-[10px] font-mono opacity-60 normal-case">{isSubmitting ? 'SUBMITTING...' : 'REGISTER_'}</span>
+        </span>
+      </Button>
+
+      <Button variant="neutral" className="w-full h-12 font-black tracking-widest border-2 border-black rounded-none" onClick={() => navigate(`/${activeLang}/login`)}>
+        返回登入
+      </Button>
+    </AuthCard>
   );
 }
-

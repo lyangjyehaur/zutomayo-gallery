@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { resetPassword } from '@/lib/public-auth';
+import { AuthCard } from '@/components/auth/AuthCard';
 
 export function ResetPasswordPage() {
   const location = useLocation();
@@ -30,18 +31,33 @@ export function ResetPasswordPage() {
   }, [navigate, password, redirect, token]);
 
   return (
-    <div className="w-full max-w-xl mx-auto">
-      <div className="border-4 border-black bg-card shadow-shadow p-6 space-y-4">
-        <div className="text-2xl font-black tracking-widest uppercase">重設密碼</div>
-        <div className="space-y-2">
-          <div className="text-sm font-black">新密碼（至少 8 碼）</div>
-          <Input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="••••••••" />
+    <AuthCard title="重設密碼" code="RESET_PASSWORD" iconClassName="hn hn-edit" bodyClassName="flex flex-col gap-6" maxWidthClassName="max-w-md">
+      <div className="space-y-2">
+        <div className="text-xs font-black uppercase tracking-widest flex flex-col leading-tight">
+          <span className="tracking-normal opacity-70">新密碼</span>
+          <span className="text-[10px] font-mono opacity-40 normal-case">NEW_PASSWORD</span>
         </div>
-        <div className="pt-2">
-          <Button onClick={onSubmit} disabled={isSubmitting || !token}>確認重設</Button>
-        </div>
+        <Input
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="password"
+          type="password"
+          className="font-mono bg-black/5 border-2 border-black focus-visible:ring-black rounded-none h-12"
+          autoFocus
+        />
       </div>
-    </div>
+      <Button
+        type="button"
+        variant="default"
+        className="w-full bg-black text-white hover:bg-main hover:text-black shadow-neo border-2 border-transparent transition-colors rounded-none h-12 font-black tracking-widest"
+        onClick={onSubmit}
+        disabled={isSubmitting || !token || !password}
+      >
+        <span className="flex flex-col items-center leading-tight">
+          <span className="tracking-normal">{isSubmitting ? '處理中...' : '確認重設'}</span>
+          <span className="text-[10px] font-mono opacity-60 normal-case">{isSubmitting ? 'APPLYING...' : 'APPLY_'}</span>
+        </span>
+      </Button>
+    </AuthCard>
   );
 }
-
