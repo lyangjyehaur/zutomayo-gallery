@@ -3,7 +3,7 @@ import fetch from 'node-fetch';
 
 type AuthMailPurpose = 'login' | 'verify_email' | 'reset_password';
 type MailLocale = 'zh-TW' | 'zh-CN' | 'zh-HK' | 'en' | 'ja';
-type MailProvider = 'tencent_ses' | 'brevo';
+type MailProvider = 'tencent_ses' | 'aliyun_dm' | 'brevo' | 'postmark';
 
 const tcSecretId = process.env.TENCENT_SECRET_ID;
 const tcSecretKey = process.env.TENCENT_SECRET_KEY;
@@ -14,6 +14,12 @@ const defaultLocale = (process.env.TENCENT_SES_DEFAULT_LANG || 'zh-TW') as MailL
 const supportedLocales: MailLocale[] = ['zh-TW', 'zh-CN', 'zh-HK', 'en', 'ja'];
 
 const brevoApiKey = process.env.BREVO_API_KEY;
+const postmarkServerToken = process.env.POSTMARK_SERVER_TOKEN;
+
+const aliyunAccessKeyId = process.env.ALIYUN_ACCESS_KEY_ID;
+const aliyunAccessKeySecret = process.env.ALIYUN_ACCESS_KEY_SECRET;
+const aliyunDmRegionId = process.env.ALIYUN_DM_REGION_ID || 'cn-hangzhou';
+const aliyunDmEndpoint = process.env.ALIYUN_DM_ENDPOINT || 'dm.aliyuncs.com';
 
 const normalizeLocale = (v: string | null | undefined): MailLocale | null => {
   const s = String(v || '').trim();
@@ -235,6 +241,156 @@ const sendBrevoEmail = async (args: { to: string; sender: { email: string; name?
   return true;
 };
 
+const isPostmarkConfigured = () => Boolean(postmarkServerToken && (process.env.POSTMARK_FROM_EMAIL || process.env.POSTMARK_FROM_VERIFY_EMAIL || process.env.POSTMARK_FROM_RESET_EMAIL));
+
+const getPostmarkFromByPurpose = (purpose: AuthMailPurpose) => {
+  const commonEmail = process.env.POSTMARK_FROM_EMAIL;
+  const commonName = process.env.POSTMARK_FROM_NAME;
+  const map = {
+    login: {
+      email: process.env.POSTMARK_FROM_LOGIN_EMAIL || commonEmail,
+      name: process.env.POSTMARK_FROM_LOGIN_NAME || commonName,
+    },
+    verify_email: {
+      email: process.env.POSTMARK_FROM_VERIFY_EMAIL || commonEmail,
+      name: process.env.POSTMARK_FROM_VERIFY_NAME || commonName,
+    },
+    reset_password: {
+      email: process.env.POSTMARK_FROM_RESET_EMAIL || commonEmail,
+      name: process.env.POSTMARK_FROM_RESET_NAME || commonName,
+    },
+  }[purpose];
+  if (!map?.email) return null;
+  const email = String(map.email).trim();
+  const name = map.name ? String(map.name).trim() : '';
+  return name ? `${name} <${email}>` : email;
+};
+
+const callPostmark = async (payload: any) => {
+  if (!postmarkServerToken) throw new Error('POSTMARK_SERVER_TOKEN_MISSING');
+  const res = await fetch('https://api.postmarkapp.com/email', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      'X-Postmark-Server-Token': postmarkServerToken,
+    },
+    body: JSON.stringify(payload || {}),
+  });
+  const json: any = await res.json().catch(() => null);
+  if (!res.ok) {
+    const msg = json?.Message || `HTTP_${res.status}`;
+    const code = json?.ErrorCode ? String(json.ErrorCode) : '';
+    throw new Error(`POSTMARK_SEND_FAILED:${code}:${msg}`);
+  }
+  return json;
+};
+
+const sendPostmarkEmail = async (args: { to: string; from: string; subject: string; html: string; text?: string }) => {
+  const stream = process.env.POSTMARK_MESSAGE_STREAM || 'outbound';
+  await callPostmark({
+    From: args.from,
+    To: args.to,
+    Subject: args.subject,
+    HtmlBody: args.html,
+    TextBody: args.text || undefined,
+    MessageStream: stream,
+  });
+  return true;
+};
+
+const isAliyunDmConfigured = () => Boolean(aliyunAccessKeyId && aliyunAccessKeySecret && (process.env.ALIYUN_DM_ACCOUNT_NAME || process.env.ALIYUN_DM_ACCOUNT_NAME_VERIFY || process.env.ALIYUN_DM_ACCOUNT_NAME_RESET));
+
+const getAliyunAccountNameByPurpose = (purpose: AuthMailPurpose) => {
+  const common = process.env.ALIYUN_DM_ACCOUNT_NAME;
+  const map = {
+    login: process.env.ALIYUN_DM_ACCOUNT_NAME_LOGIN || common,
+    verify_email: process.env.ALIYUN_DM_ACCOUNT_NAME_VERIFY || common,
+    reset_password: process.env.ALIYUN_DM_ACCOUNT_NAME_RESET || common,
+  }[purpose];
+  if (!map) return null;
+  return String(map).trim();
+};
+
+const getAliyunFromAliasByPurpose = (purpose: AuthMailPurpose) => {
+  const common = process.env.ALIYUN_DM_FROM_ALIAS;
+  const map = {
+    login: process.env.ALIYUN_DM_FROM_ALIAS_LOGIN || common,
+    verify_email: process.env.ALIYUN_DM_FROM_ALIAS_VERIFY || common,
+    reset_password: process.env.ALIYUN_DM_FROM_ALIAS_RESET || common,
+  }[purpose];
+  if (!map) return undefined;
+  const v = String(map).trim();
+  return v ? v : undefined;
+};
+
+const percentEncodeAliyun = (s: string) =>
+  encodeURIComponent(s)
+    .replace(/\+/g, '%20')
+    .replace(/\*/g, '%2A')
+    .replace(/%7E/g, '~');
+
+const signAliyunRpc = (params: Record<string, string>, secret: string) => {
+  const keys = Object.keys(params).sort();
+  const canonicalized = keys.map((k) => `${percentEncodeAliyun(k)}=${percentEncodeAliyun(params[k] || '')}`).join('&');
+  const stringToSign = `POST&%2F&${percentEncodeAliyun(canonicalized)}`;
+  const signature = crypto.createHmac('sha1', `${secret}&`).update(stringToSign).digest('base64');
+  return signature;
+};
+
+const callAliyunDirectMail = async (action: string, params: Record<string, string>) => {
+  if (!aliyunAccessKeyId || !aliyunAccessKeySecret) throw new Error('ALIYUN_CREDENTIALS_MISSING');
+
+  const baseParams: Record<string, string> = {
+    Action: action,
+    Version: '2015-11-23',
+    Format: 'JSON',
+    AccessKeyId: aliyunAccessKeyId,
+    SignatureMethod: 'HMAC-SHA1',
+    SignatureVersion: '1.0',
+    SignatureNonce: crypto.randomUUID(),
+    Timestamp: new Date().toISOString(),
+    RegionId: aliyunDmRegionId,
+  };
+
+  const allParams: Record<string, string> = { ...baseParams, ...params };
+  allParams.Signature = signAliyunRpc(allParams, aliyunAccessKeySecret);
+  const body = Object.keys(allParams)
+    .sort()
+    .map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(allParams[k] || '')}`)
+    .join('&');
+
+  const res = await fetch(`https://${aliyunDmEndpoint}/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body,
+  });
+  const json: any = await res.json().catch(() => null);
+  if (!res.ok || json?.Code) {
+    const code = json?.Code || 'ALIYUN_DM_REQUEST_FAILED';
+    const msg = json?.Message || `HTTP_${res.status}`;
+    throw new Error(`ALIYUN_DM_SEND_FAILED:${code}:${msg}`);
+  }
+  return json;
+};
+
+const sendAliyunDmEmail = async (args: { to: string; accountName: string; fromAlias?: string; subject: string; html: string; text?: string }) => {
+  const params: Record<string, string> = {
+    AccountName: args.accountName,
+    ReplyToAddress: 'true',
+    AddressType: '1',
+    ToAddress: args.to,
+    Subject: args.subject,
+    HtmlBody: args.html,
+  };
+  if (args.fromAlias) params.FromAlias = args.fromAlias;
+  if (args.text) params.TextBody = args.text;
+  await callAliyunDirectMail('SingleSendMail', params);
+  return true;
+};
+
 const getFromByPurpose = (purpose: AuthMailPurpose) => {
   const commonEmail = process.env.TENCENT_SES_FROM_EMAIL;
   const commonName = process.env.TENCENT_SES_FROM_NAME;
@@ -260,13 +416,14 @@ const getFromByPurpose = (purpose: AuthMailPurpose) => {
 };
 
 export const isMailConfigured = () => {
-  return isTencentConfigured() || isBrevoConfigured();
+  return isTencentConfigured() || isAliyunDmConfigured() || isBrevoConfigured() || isPostmarkConfigured();
 };
 
 export const isMailConfiguredFor = (to: string) => {
-  const provider = resolveProvider(to);
-  if (provider === 'tencent_ses') return isTencentConfigured();
-  return isBrevoConfigured();
+  if (isMainlandMailbox(to)) {
+    return isTencentConfigured() || isAliyunDmConfigured();
+  }
+  return isBrevoConfigured() || isPostmarkConfigured();
 };
 
 const base64 = (s: string) => Buffer.from(s, 'utf8').toString('base64');
@@ -394,12 +551,12 @@ const buildAuthMail = (purpose: AuthMailPurpose, link: string) => {
 };
 
 export const sendAuthLinkEmail = async (to: string, args: { purpose: AuthMailPurpose; link: string }) => {
-  const provider = resolveProvider(to);
   const normalizedLink = String(args.link || '').trim().replaceAll('`', '');
   const inferredLocale = inferLocaleFromLink(normalizedLink) || defaultLocale;
+  const subject = subjectByPurpose(args.purpose, inferredLocale);
+  const html = htmlByPurpose(args.purpose, inferredLocale).replaceAll('{{link}}', normalizedLink);
 
-  if (provider === 'tencent_ses') {
-    if (!isTencentConfigured()) return false;
+  const sendTencent = async () => {
     const from = getFromByPurpose(args.purpose);
     if (!from) return false;
     const templateId = envTemplateId(args.purpose, inferredLocale);
@@ -409,24 +566,75 @@ export const sendAuthLinkEmail = async (to: string, args: { purpose: AuthMailPur
     await sendTencentSesEmail({
       to,
       from,
-      subject: subjectByPurpose(args.purpose, inferredLocale),
+      subject,
       text: '',
       template: { id: templateId, data: { link: normalizedLink } },
     });
     return true;
+  };
+
+  const sendAliyun = async () => {
+    const accountName = getAliyunAccountNameByPurpose(args.purpose);
+    if (!accountName) return false;
+    const fromAlias = getAliyunFromAliasByPurpose(args.purpose);
+    await sendAliyunDmEmail({
+      to,
+      accountName,
+      fromAlias,
+      subject,
+      html,
+    });
+    return true;
+  };
+
+  const sendBrevo = async () => {
+    const sender = getBrevoSenderByPurpose(args.purpose);
+    if (!sender) return false;
+    await sendBrevoEmail({
+      to,
+      sender,
+      subject,
+      html,
+    });
+    return true;
+  };
+
+  const sendPostmark = async () => {
+    const from = getPostmarkFromByPurpose(args.purpose);
+    if (!from) return false;
+    await sendPostmarkEmail({
+      to,
+      from,
+      subject,
+      html,
+      text: `${subject}\n\n${normalizedLink}`,
+    });
+    return true;
+  };
+
+  if (isMainlandMailbox(to)) {
+    if (isTencentConfigured()) {
+      try {
+        return await sendTencent();
+      } catch (e) {
+        if (!isAliyunDmConfigured()) throw e;
+        return await sendAliyun();
+      }
+    }
+    if (!isAliyunDmConfigured()) return false;
+    return await sendAliyun();
   }
 
-  if (!isBrevoConfigured()) return false;
-  const sender = getBrevoSenderByPurpose(args.purpose);
-  if (!sender) return false;
-  const html = htmlByPurpose(args.purpose, inferredLocale).replaceAll('{{link}}', normalizedLink);
-  await sendBrevoEmail({
-    to,
-    sender,
-    subject: subjectByPurpose(args.purpose, inferredLocale),
-    html,
-  });
-  return true;
+  if (isBrevoConfigured()) {
+    try {
+      return await sendBrevo();
+    } catch (e) {
+      if (!isPostmarkConfigured()) throw e;
+      return await sendPostmark();
+    }
+  }
+  if (!isPostmarkConfigured()) return false;
+  return await sendPostmark();
 };
 
 export const sendMagicLinkEmail = async (to: string, link: string) => {
