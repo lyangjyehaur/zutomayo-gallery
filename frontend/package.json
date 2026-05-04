@@ -6,7 +6,7 @@
   "scripts": {
     "predev": "npm install --legacy-peer-deps",
     "dev": "vite --host",
-    "build": "pnpm run sync-locales && vite build",
+    "build": "node scripts/sync-locales.js && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -45,7 +45,6 @@
     "@tanstack/react-query": "^4.44.0",
     "@tanstack/react-table": "^8.21.3",
     "@waline/client": "^3.5.0",
-    "atropos": "^2.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -76,7 +75,6 @@
     "tailwind-merge": "^2.6.1",
     "three": "^0.160.0",
     "vaul": "^1.1.2",
-    "workbox-window": "^7.3.0",
     "zod": "^4.4.1"
   },
   "devDependencies": {

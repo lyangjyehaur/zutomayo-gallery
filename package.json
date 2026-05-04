@@ -15,9 +15,5 @@
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
-  },
-  "dependencies": {
-    "@monaco-editor/react": "^4.7.0",
-    "ani-cursor": "^0.0.5"
   }
 }

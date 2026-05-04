@@ -10,5 +10,5 @@
     "skipLibCheck": true,
     "incremental": true
   },
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "test-apify.ts", "test-json.ts"]
+  "exclude": ["node_modules", "dist", "**/*.test.ts"]
 }

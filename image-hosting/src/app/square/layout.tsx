@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Image as ImageIcon } from "lucide-react";
 
 export default function SquareLayout({ children }: { children: React.ReactNode }) {
@@ -12,9 +12,9 @@ export default function SquareLayout({ children }: { children: React.ReactNode }
             <span className="font-bold text-xl">Image Square</span>
           </div>
           <nav>
-            <Button asChild variant="ghost">
-              <Link href="/admin">Admin Login</Link>
-            </Button>
+            <Link href="/admin" className={buttonVariants({ variant: "ghost" })}>
+              Admin Login
+            </Link>
           </nav>
         </div>
       </header>

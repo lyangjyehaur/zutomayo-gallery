@@ -44,7 +44,6 @@
     "ioredis": "^5.10.1",
     "maxmind": "^5.0.6",
     "meilisearch": "^0.57.0",
-    "morgan": "^1.10.1",
     "multer": "^2.0.2",
     "nanoid": "^5.1.9",
     "node-fetch": "^3.3.2",
@@ -58,7 +57,6 @@
     "rss-parser": "^3.13.0",
     "sequelize": "^6.37.8",
     "umzug": "^3.8.0",
-    "wanakana": "^5.3.1",
     "zod": "^3.22.4"
   },
   "devDependencies": {
@@ -70,10 +68,8 @@
     "@types/express-session": "^1.19.0",
     "@types/geoip-lite": "^1.4.4",
     "@types/multer": "^1.4.12",
-    "@types/morgan": "^1.9.10",
     "@types/node": "^20.11.24",
     "@types/probe-image-size": "^7.2.5",
-    "@types/redis": "^4.0.10",
     "tsx": "^4.7.1",
     "typescript": "^5.3.3"
   },

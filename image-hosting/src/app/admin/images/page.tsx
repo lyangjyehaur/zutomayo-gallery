@@ -116,8 +116,8 @@ export default function ImageManagementPage() {
             {selected.length} selected
           </div>
           <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
-            <DialogTrigger asChild>
-              <Button><UploadCloud className="mr-2 h-4 w-4" /> Upload</Button>
+            <DialogTrigger render={<Button />}>
+              <UploadCloud className="mr-2 h-4 w-4" /> Upload
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]" onPaste={onPaste}>
               <DialogHeader>
