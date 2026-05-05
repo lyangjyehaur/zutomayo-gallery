@@ -147,8 +147,8 @@ zutomayo-gallery/
 
 ### 前置需求
 
-- Node.js >= 18
-- npm 或 pnpm
+- Node.js 20 LTS（專案提供 `.nvmrc`；目前支援 `>=20 <26`）
+- npm 10+
 - Git
 - PostgreSQL（主資料庫）
 - Redis / Meilisearch（選配，用於 session / 搜尋 / 佇列等；未配置時部分功能會自動降級或停用）
@@ -160,18 +160,24 @@ zutomayo-gallery/
 git clone https://github.com/lyangjyehaur/zutomayo-gallery.git
 cd zutomayo-gallery
 
-# 2. 方法一：一鍵安裝所有依賴（推薦）
+# 2. 方法一：一鍵安裝主站依賴（推薦：root + frontend + backend）
 npm run install:all
+
+# CI / 乾淨環境可使用 lockfile 安裝
+npm run ci:all
 
 # 3. 方法二：分別安裝
 # 安裝根依賴
 npm install
 
 # 安裝前端依賴
-cd frontend && npm install
+npm --prefix frontend install --legacy-peer-deps
 
 # 安裝後端依賴
-cd ../backend && npm install
+npm --prefix backend install
+
+# 可選：安裝獨立圖床服務依賴
+npm run install:optional
 ```
 
 ### 開發模式
@@ -187,6 +193,9 @@ npm run start:frontend
 
 # 啟動後端
 npm run start:backend
+
+# 建置 + 測試
+npm run verify
 ```
 
 ### 生產構建

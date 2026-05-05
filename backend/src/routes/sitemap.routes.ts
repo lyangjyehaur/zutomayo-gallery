@@ -4,7 +4,10 @@ import { MVModel, MediaGroupModel } from '../models/index.js';
 import { getMVsFromDB } from '../services/v2_mapper.js';
 
 const router = Router();
-const BASE_URL = 'https://gallery.ztmr.club';
+const BASE_URL = process.env.SITEMAP_BASE_URL || 'https://gallery.ztmr.club';
+const SITEMAP_IMGPROXY_URL = (process.env.SITEMAP_IMGPROXY_URL || process.env.IMGPROXY_URL || 'https://img.ztmr.club').replace(/\/$/, '');
+const SITEMAP_TWITTER_ASSET_HOST = process.env.SITEMAP_TWITTER_ASSET_HOST || 'https://assets.ztmr.club/ti';
+const SITEMAP_YOUTUBE_ASSET_HOST = process.env.SITEMAP_YOUTUBE_ASSET_HOST || 'https://assets.ztmr.club/yi';
 
 router.get('/sitemap.xml', async (req, res) => {
   try {
@@ -52,7 +55,7 @@ router.get('/sitemap.xml', async (req, res) => {
         if (mv.video_id) {
           imageTags += `
     <image:image>
-      <image:loc>https://img.ztmr.club/f:webp/w:1280/aHR0cHM6Ly9pLnl0aW1nLmNvbS92aS8${Buffer.from(`https://i.ytimg.com/vi/${mv.video_id}/maxresdefault.jpg`).toString('base64').replace(/=/g, '')}/maxresdefault.jpg</image:loc>
+      <image:loc>${SITEMAP_IMGPROXY_URL}/f:webp/w:1280/aHR0cHM6Ly9pLnl0aW1nLmNvbS92aS8${Buffer.from(`https://i.ytimg.com/vi/${mv.video_id}/maxresdefault.jpg`).toString('base64').replace(/=/g, '')}/maxresdefault.jpg</image:loc>
       <image:title>${(mv.title || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</image:title>
     </image:image>`;
         }
@@ -63,9 +66,9 @@ router.get('/sitemap.xml', async (req, res) => {
             const rawUrl = typeof img === 'string' ? img : img.url;
             let imgUrl = rawUrl;
             if (rawUrl.includes('pbs.twimg.com')) {
-              imgUrl = rawUrl.replace('https://pbs.twimg.com', 'https://assets.ztmr.club/ti');
+              imgUrl = rawUrl.replace('https://pbs.twimg.com', SITEMAP_TWITTER_ASSET_HOST);
             } else if (rawUrl.includes('i.ytimg.com')) {
-              imgUrl = rawUrl.replace('https://i.ytimg.com', 'https://assets.ztmr.club/yi');
+              imgUrl = rawUrl.replace('https://i.ytimg.com', SITEMAP_YOUTUBE_ASSET_HOST);
             }
             // R2 (r2.dan.tw) 直接使用原網址，不走 Nginx 反代
             
@@ -99,9 +102,9 @@ router.get('/sitemap.xml', async (req, res) => {
 
             let proxyUrl = rawUrl;
             if (rawUrl.includes('pbs.twimg.com')) {
-              proxyUrl = rawUrl.replace('https://pbs.twimg.com', 'https://assets.ztmr.club/ti');
+              proxyUrl = rawUrl.replace('https://pbs.twimg.com', SITEMAP_TWITTER_ASSET_HOST);
             } else if (rawUrl.includes('i.ytimg.com')) {
-              proxyUrl = rawUrl.replace('https://i.ytimg.com', 'https://assets.ztmr.club/yi');
+              proxyUrl = rawUrl.replace('https://i.ytimg.com', SITEMAP_YOUTUBE_ASSET_HOST);
             }
             // R2 (r2.dan.tw) 直接使用原網址，不走 Nginx 反代
             

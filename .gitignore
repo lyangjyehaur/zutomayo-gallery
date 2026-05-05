@@ -81,8 +81,6 @@ out
 # Nuxt.js build / generate output
 .nuxt
 dist/
-backend/dist/
-frontend/dist/
 
 .DS_Store
 **/.DS_Store
@@ -98,7 +96,6 @@ frontend/dist/
 
 # vuepress v2.x temp and cache directory
 .temp
-.cache
 
 # Sveltekit cache directory
 .svelte-kit/
@@ -165,10 +162,8 @@ frontend-memory.md
 backend/crawler/*.json
 
 frontend/memory.md
-.DS_Store
 frontend/.DS_Store
 frontend/src/.DS_Store
 frontend/dev-dist/
 frontend/public/version.json
-frontend/package-lock.json
 frontend/pnpm-lock.yaml

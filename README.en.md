@@ -102,8 +102,8 @@ zutomayo-gallery/
 
 ### Requirements
 
-- Node.js >= 18
-- npm or pnpm
+- Node.js 20 LTS (the project includes `.nvmrc`; supported range is `>=20 <26`)
+- npm 10+
 - Git
 - PostgreSQL (primary DB)
 - Redis / Meilisearch (optional; features degrade/disable when not configured)
@@ -114,6 +114,9 @@ zutomayo-gallery/
 git clone https://github.com/lyangjyehaur/zutomayo-gallery.git
 cd zutomayo-gallery
 npm run install:all
+
+# CI / clean installs
+npm run ci:all
 ```
 
 ### Development
@@ -122,6 +125,9 @@ npm run install:all
 npm run dev
 # Frontend: http://localhost:5173
 # Backend:  http://localhost:5010
+
+# Build + test
+npm run verify
 ```
 
 ---

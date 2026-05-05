@@ -124,8 +124,8 @@ export function WalineComments({
           const geoInfo = await initGeo();
           if (!isMounted) return;
           
-          // 統一使用 comments.ztmr.club
-          const serverURL = 'https://comments.ztmr.club';
+          // 優先讀取環境變數，未設定時 fallback 到既有正式站服務
+          const serverURL = import.meta.env.VITE_WALINE_SERVER_URL || 'https://comments.ztmr.club';
             
           // 針對大陸用戶，unpkg.com 經常被干擾，改用 jsDelivr 的 Fastly 節點作為替代方案
           const unpkgHost = geoInfo.isChinaIP ? '//fastly.jsdelivr.net/npm' : '//unpkg.com';

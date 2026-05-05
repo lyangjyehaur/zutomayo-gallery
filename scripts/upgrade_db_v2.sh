@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 # ==========================================
 # Zutomayo Gallery - 升級生產庫至 V2 架構腳本
@@ -13,18 +13,26 @@ NC='\033[0m'
 
 echo -e "${YELLOW}開始執行資料庫升級流程...${NC}"
 
-# 連線資訊設定
-REMOTE_HOST="127.0.0.1" # 透過 autossh 轉發
-REMOTE_PORT="5432"
-REMOTE_USER="zutomayo_gallery"
-REMOTE_DB="zutomayo_gallery"
-REMOTE_PASS="FBZNYC3HSJExdHX3"
+# 連線資訊設定（密碼一律從環境變數讀取，避免硬編碼）
+REMOTE_HOST="${UPGRADE_REMOTE_HOST:-127.0.0.1}"   # 透過 autossh 轉發
+REMOTE_PORT="${UPGRADE_REMOTE_PORT:-15432}"       # 對應 start_autossh.sh 的本地轉發端口
+REMOTE_USER="${UPGRADE_REMOTE_USER:-zutomayo_gallery}"
+REMOTE_DB="${UPGRADE_REMOTE_DB:-zutomayo_gallery}"
+REMOTE_PASS="${UPGRADE_REMOTE_PASS:-}"
 
-LOCAL_HOST="127.0.0.1"
-LOCAL_PORT="5432"
-LOCAL_USER="zutomayo_gallery_test"
-LOCAL_DB="zutomayo_gallery_test"
-LOCAL_PASS="XCFHbZQyn33KeY66"
+LOCAL_HOST="${UPGRADE_LOCAL_HOST:-127.0.0.1}"
+LOCAL_PORT="${UPGRADE_LOCAL_PORT:-5432}"
+LOCAL_USER="${UPGRADE_LOCAL_USER:-zutomayo_gallery_test}"
+LOCAL_DB="${UPGRADE_LOCAL_DB:-zutomayo_gallery_test}"
+LOCAL_PASS="${UPGRADE_LOCAL_PASS:-}"
+
+if [ -z "$REMOTE_PASS" ] || [ -z "$LOCAL_PASS" ]; then
+    echo -e "${RED}錯誤：缺少資料庫密碼環境變數。${NC}"
+    echo "請先設定："
+    echo "  export UPGRADE_REMOTE_PASS='...'"
+    echo "  export UPGRADE_LOCAL_PASS='...'"
+    exit 1
+fi
 
 # 檢查是否安裝 psql 與 pg_dump
 if ! command -v pg_dump &> /dev/null || ! command -v psql &> /dev/null; then

@@ -2,16 +2,26 @@
   "name": "zutomayo-gallery",
   "version": "3.6.2",
   "type": "module",
+  "packageManager": "npm@11.12.1",
+  "engines": {
+    "node": ">=20 <26",
+    "npm": ">=10"
+  },
   "scripts": {
-    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
-    "start:frontend": "cd frontend && npm run dev",
-    "start:backend": "cd backend && npm run dev",
+    "install:all": "npm install && npm --prefix frontend install --legacy-peer-deps && npm --prefix backend install",
+    "ci:all": "npm ci && npm --prefix frontend ci --legacy-peer-deps && npm --prefix backend ci",
+    "install:optional": "npm --prefix image-hosting install",
+    "start:frontend": "npm --prefix frontend run dev",
+    "start:backend": "npm --prefix backend run dev",
+    "start:image-hosting": "npm --prefix image-hosting run dev",
     "dev": "concurrently -n \"frontend,backend\" -c \"green,blue\" \"npm run start:frontend\" \"npm run start:backend\"",
-    "build:frontend": "cd frontend && npm run build",
-    "build:backend": "cd backend && npm run build",
+    "build:frontend": "npm --prefix frontend run build",
+    "build:backend": "npm --prefix backend run build",
+    "build:image-hosting": "npm --prefix image-hosting run build",
     "build": "npm run build:frontend && npm run build:backend",
-    "preview": "cd frontend && npm run preview",
-    "test": "cd frontend && npm run test"
+    "preview": "npm --prefix frontend run preview",
+    "test": "npm --prefix frontend run test",
+    "verify": "npm run build && npm run test"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

@@ -4,7 +4,6 @@
   "version": "3.6.2",
   "type": "module",
   "scripts": {
-    "predev": "npm install --legacy-peer-deps",
     "dev": "vite --host",
     "build": "node scripts/sync-locales.js && vite build",
     "preview": "vite preview",

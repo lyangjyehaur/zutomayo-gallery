@@ -24,17 +24,9 @@ if [ ! -f "package.json" ]; then
     exit 1
 fi
 
-if command -v pnpm &> /dev/null; then
-    PKG_MANAGER="pnpm"
-    PKG_INSTALL="pnpm install"
-    PKG_BUILD="pnpm run build"
-    echo -e "${GREEN}偵測到 pnpm，將使用 pnpm 進行套件管理。${NC}"
-else
-    PKG_MANAGER="npm"
-    PKG_INSTALL="npm install"
-    PKG_BUILD="npm run build"
-    echo -e "${YELLOW}未偵測到 pnpm，降級使用 npm 進行套件管理。${NC}"
-fi
+PKG_INSTALL="npm install"
+PKG_BUILD="npm run build"
+echo -e "${GREEN}使用 npm 進行套件管理。${NC}"
 # ==========================================
 # 1. 檢查並載入部署設定檔
 # ==========================================
@@ -228,18 +220,9 @@ deploy_backend() {
     rm -rf node_modules
     
     echo "安裝後端依賴 (僅生產環境)..."
-    if [ "$PKG_MANAGER" = "pnpm" ]; then
-        # pnpm >= 9 預設會阻擋安裝腳本 (better-sqlite3 等原生套件需要)，需手動允許
-        pnpm config set ignore-scripts true
-        pnpm install --prod=true --ignore-scripts # 伺服器只需安裝 dependencies，且忽略 geoip-lite 耗記憶體的安裝腳本
-        
-        echo -e "${YELLOW}強制重建原生套件 (better-sqlite3, bcrypt)...${NC}"
-        pnpm rebuild better-sqlite3 bcrypt
-    else
-        npm install --omit=dev --ignore-scripts
-        echo -e "${YELLOW}強制重建原生套件 (better-sqlite3, bcrypt)...${NC}"
-        npm rebuild better-sqlite3 bcrypt
-    fi
+    npm install --omit=dev --ignore-scripts
+    echo -e "${YELLOW}強制重建原生套件 (better-sqlite3, bcrypt)...${NC}"
+    npm rebuild better-sqlite3 bcrypt
     
     echo -e "${GREEN}使用本地 (Mac) 上傳的編譯產物，跳過伺服器端 tsc 編譯...${NC}"
     
