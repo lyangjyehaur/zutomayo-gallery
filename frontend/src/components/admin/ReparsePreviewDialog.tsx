@@ -38,6 +38,7 @@ type ReparsePreviewDialogProps = {
 }
 
 const FIELD_LABELS: Record<string, string> = {
+  source_url: "source_url",
   source_text: "推文內容",
   author_name: "作者名稱",
   author_handle: "作者帳號",
@@ -79,6 +80,8 @@ export function ReparsePreviewDialog({
   const [error, setError] = React.useState<string | null>(null)
   const [results, setResults] = React.useState<PreviewResult[]>([])
   const [errors, setErrors] = React.useState<PreviewError[]>([])
+  const [selectedGroupFields, setSelectedGroupFields] = React.useState<Record<string, boolean>>({})
+  const [selectedMediaFields, setSelectedMediaFields] = React.useState<Record<string, boolean>>({})
   const [selectedNewUrls, setSelectedNewUrls] = React.useState<Record<string, boolean>>({})
   const [applyProgress, setApplyProgress] = React.useState<string | null>(null)
 
@@ -87,6 +90,8 @@ export function ReparsePreviewDialog({
     if (!open || groupIds.length === 0) {
       setResults([])
       setErrors([])
+      setSelectedGroupFields({})
+      setSelectedMediaFields({})
       setSelectedNewUrls({})
       return
     }
@@ -107,13 +112,25 @@ export function ReparsePreviewDialog({
       if (!res.ok || !json?.success) throw new Error(String(json?.error || "PREVIEW_FAILED"))
       setResults(Array.isArray(json?.data?.results) ? json.data.results : [])
       setErrors(Array.isArray(json?.data?.errors) ? json.data.errors : [])
-      // 預設全選新增媒體
+      // 預設全選所有可套用項目
+      const allGroupFields: Record<string, boolean> = {}
+      const allMediaFields: Record<string, boolean> = {}
       const allNew: Record<string, boolean> = {}
       ;(json?.data?.results || []).forEach((r: PreviewResult) => {
+        ;(r.diff || []).forEach((field) => {
+          allGroupFields[`${r.group_id}:${field}`] = true
+        })
+        ;(r.media_updates || []).forEach((m) => {
+          ;(m.diff || []).forEach((field) => {
+            allMediaFields[`${m.media_id}:${field}`] = true
+          })
+        })
         ;(r.media_new || []).forEach((m: any) => {
           allNew[m.parsed.url] = true
         })
       })
+      setSelectedGroupFields(allGroupFields)
+      setSelectedMediaFields(allMediaFields)
       setSelectedNewUrls(allNew)
     } catch (e: any) {
       setError(String(e?.message || e))
@@ -155,6 +172,10 @@ export function ReparsePreviewDialog({
     return Object.values(selectedNewUrls).filter(Boolean).length
   }, [selectedNewUrls])
 
+  const selectedDiffCount = React.useMemo(() => {
+    return Object.values(selectedGroupFields).filter(Boolean).length + Object.values(selectedMediaFields).filter(Boolean).length
+  }, [selectedGroupFields, selectedMediaFields])
+
   const allNewSelected = React.useMemo(() => {
     return totalNewMedia > 0 && selectedNewCount === totalNewMedia
   }, [totalNewMedia, selectedNewCount])
@@ -181,6 +202,18 @@ export function ReparsePreviewDialog({
           group_ids: groupIds,
           overwrite,
           include_new_media: includeNewMedia,
+          selected_group_fields: results.reduce<Record<string, string[]>>((acc, r) => {
+            const fields = r.diff.filter((field) => selectedGroupFields[`${r.group_id}:${field}`])
+            if (fields.length > 0) acc[r.group_id] = fields
+            return acc
+          }, {}),
+          selected_media_fields: results.reduce<Record<string, string[]>>((acc, r) => {
+            r.media_updates.forEach((m) => {
+              const fields = m.diff.filter((field) => selectedMediaFields[`${m.media_id}:${field}`])
+              if (fields.length > 0) acc[m.media_id] = fields
+            })
+            return acc
+          }, {}),
         }
         if (includeNewMedia) {
           body.new_media_urls = Object.entries(selectedNewUrls)
@@ -211,7 +244,7 @@ export function ReparsePreviewDialog({
         setApplying(false)
       }
     },
-    [base, groupIds, overwrite, selectedNewUrls, onComplete, onOpenChange],
+    [base, groupIds, overwrite, results, selectedGroupFields, selectedMediaFields, selectedNewUrls, onComplete, onOpenChange],
   )
 
   return (
@@ -235,7 +268,7 @@ export function ReparsePreviewDialog({
             {/* 控制列 */}
             <div className="flex items-center justify-between gap-3">
               <div className="text-xs font-mono opacity-70">
-                {groupIds.length} 個 group | {totalDiffCount} 個變更 | {totalNewMedia} 個新媒體
+                {groupIds.length} 個 group | {selectedDiffCount}/{totalDiffCount} 個變更已選 | {selectedNewCount}/{totalNewMedia} 個新媒體已選
               </div>
               <div className="flex items-center gap-2">
                 <div className="text-xs font-mono">只填充空值</div>
@@ -281,14 +314,24 @@ export function ReparsePreviewDialog({
                       {r.diff.length > 0 ? (
                         <div className="flex flex-col gap-1">
                           <div className="text-xs font-bold">Group Meta</div>
-                          {r.diff.map((field) => (
-                            <div key={field} className="grid grid-cols-[120px_1fr_auto_1fr] gap-2 text-xs font-mono items-start">
+                          {r.diff.map((field) => {
+                            const selectionKey = `${r.group_id}:${field}`
+                            const checked = Boolean(selectedGroupFields[selectionKey])
+                            return (
+                            <div key={field} className="grid grid-cols-[28px_120px_1fr_auto_1fr] gap-2 text-xs font-mono items-start">
+                              <Checkbox
+                                checked={checked}
+                                onCheckedChange={(v) =>
+                                  setSelectedGroupFields((prev) => ({ ...prev, [selectionKey]: Boolean(v) }))
+                                }
+                              />
                               <div className="font-bold opacity-70">{FIELD_LABELS[field] || field}</div>
                               <div className="opacity-50 break-all">{formatValue(r.current[field])}</div>
                               <div className="opacity-40">→</div>
                               <div className="text-green-700 font-bold break-all">{formatValue(r.parsed[field])}</div>
                             </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       ) : null}
 
@@ -300,8 +343,17 @@ export function ReparsePreviewDialog({
                             m.diff.length > 0 ? (
                               <div key={m.media_id} className="ml-3 flex flex-col gap-1">
                                 <div className="text-xs font-mono opacity-60">{m.media_id}</div>
-                                {m.diff.map((field) => (
-                                  <div key={field} className="grid grid-cols-[100px_1fr_auto_1fr] gap-2 text-xs font-mono items-start ml-3">
+                                {m.diff.map((field) => {
+                                  const selectionKey = `${m.media_id}:${field}`
+                                  const checked = Boolean(selectedMediaFields[selectionKey])
+                                  return (
+                                  <div key={field} className="grid grid-cols-[28px_100px_1fr_auto_1fr] gap-2 text-xs font-mono items-start ml-3">
+                                    <Checkbox
+                                      checked={checked}
+                                      onCheckedChange={(v) =>
+                                        setSelectedMediaFields((prev) => ({ ...prev, [selectionKey]: Boolean(v) }))
+                                      }
+                                    />
                                     <div className="opacity-70">{FIELD_LABELS[field] || field}</div>
                                     <div className="opacity-50 break-all">{formatValue(m.current[field])}</div>
                                     <div className="opacity-40">→</div>
@@ -309,7 +361,8 @@ export function ReparsePreviewDialog({
                                       {formatValue(m.parsed[field])}
                                     </div>
                                   </div>
-                                ))}
+                                  )
+                                })}
                               </div>
                             ) : null,
                           )}
@@ -371,26 +424,26 @@ export function ReparsePreviewDialog({
                     <Button
                       variant="neutral"
                       onClick={() => void doApply(false)}
-                      disabled={applying || totalDiffCount === 0}
+                      disabled={applying || selectedDiffCount === 0}
                       className="border-2 border-black"
                     >
-                      僅更新 Meta
+                      僅更新勾選變更
                     </Button>
                     <Button
                       onClick={() => void doApply(true)}
-                      disabled={applying || (totalDiffCount === 0 && selectedNewCount === 0)}
+                      disabled={applying || (selectedDiffCount === 0 && selectedNewCount === 0)}
                     >
                       {applying
                         ? applyProgress || "應用中..."
-                        : `更新 Meta + 新增 ${selectedNewCount} 個媒體`}
+                        : `更新 ${selectedDiffCount} 個變更 + 新增 ${selectedNewCount} 個媒體`}
                     </Button>
                   </>
                 ) : (
                   <Button
                     onClick={() => void doApply(false)}
-                    disabled={applying || totalDiffCount === 0}
+                    disabled={applying || selectedDiffCount === 0}
                   >
-                    {applying ? applyProgress || "應用中..." : `應用 ${totalDiffCount} 個變更`}
+                    {applying ? applyProgress || "應用中..." : `應用 ${selectedDiffCount} 個變更`}
                   </Button>
                 )}
               </div>

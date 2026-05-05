@@ -9,12 +9,18 @@ export interface TwitterMedia {
   tweet_id?: string;  // 真正含有媒體的推文 ID（轉推時為原推文 ID）
   tweet_url?: string; // 真正含有媒體的推文網址
   requested_tweet_id?: string; // 輸入網址上的推文 ID
+  like_count?: number | null;
+  retweet_count?: number | null;
+  view_count?: number | null;
+  hashtags?: string[] | null;
 }
 
 import { logger } from '../utils/logger.js';
 
 const ZUTOMAYO_ART_STATUS_URL = 'https://x.com/zutomayo_art/status/';
 const X_STATUS_URL = 'https://x.com/i/status/';
+const MAX_TWEET_REDIRECTS = 8;
+const TWEET_REDIRECT_TIMEOUT_MS = 8000;
 
 export const normalizeTweetUrl = (tweetUrl: string) => (
   tweetUrl.trim().replace(ZUTOMAYO_ART_STATUS_URL, X_STATUS_URL)
@@ -22,9 +28,31 @@ export const normalizeTweetUrl = (tweetUrl: string) => (
 
 export const buildCanonicalTweetUrl = (tweetId: string) => `${X_STATUS_URL}${tweetId}`;
 
-export const extractTweetId = (tweetUrl: string) => (
-  normalizeTweetUrl(tweetUrl).match(/\/status\/(\d+)/)?.[1] || null
-);
+const parseTweetUrl = (tweetUrl: string): URL | null => {
+  const normalized = normalizeTweetUrl(tweetUrl);
+  const urlText = /^[a-z][a-z\d+.-]*:\/\//i.test(normalized) ? normalized : `https://${normalized}`;
+
+  try {
+    const url = new URL(urlText);
+    const host = url.hostname.toLowerCase();
+    if (!['x.com', 'www.x.com', 'twitter.com', 'www.twitter.com', 'mobile.twitter.com'].includes(host)) {
+      return null;
+    }
+    return url;
+  } catch {
+    return null;
+  }
+};
+
+export const extractTweetId = (tweetUrl: string) => {
+  const url = parseTweetUrl(tweetUrl);
+  if (!url) return null;
+
+  const parts = url.pathname.split('/').filter(Boolean);
+  const statusIndex = parts.lastIndexOf('status');
+  const id = statusIndex >= 0 ? parts[statusIndex + 1] : null;
+  return id && /^\d+$/.test(id) ? id : null;
+};
 
 const readTweetId = (value: unknown): string | null => {
   if (typeof value === 'string') {
@@ -85,6 +113,94 @@ const resolveSourceTweetData = (data: any) => (
   data
 );
 
+const resolveRedirectedTweetUrl = async (tweetUrl: string) => {
+  const requestedTweetId = extractTweetId(tweetUrl);
+  if (!requestedTweetId) return null;
+
+  let currentUrl = buildCanonicalTweetUrl(requestedTweetId);
+  let latestTweetId: string | null = requestedTweetId;
+
+  for (let i = 0; i < MAX_TWEET_REDIRECTS; i++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), TWEET_REDIRECT_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(currentUrl, {
+        method: 'GET',
+        redirect: 'manual',
+        signal: controller.signal,
+        headers: {
+          'accept': 'text/html,application/xhtml+xml',
+          'user-agent': 'Mozilla/5.0 (compatible; zutomayo-gallery/1.0)',
+        },
+      });
+
+      try {
+        await response.body?.cancel();
+      } catch {
+        // no-op: some runtimes may not expose a cancellable body
+      }
+
+      const location = response.headers.get('location');
+      if (!location) break;
+
+      const nextUrl = new URL(location, currentUrl).toString();
+      const nextTweetId = extractTweetId(nextUrl);
+      if (nextTweetId) latestTweetId = nextTweetId;
+      if (nextUrl === currentUrl) break;
+      currentUrl = nextUrl;
+    } catch (error) {
+      logger.warn({ err: error, tweetUrl }, '推文跳轉解析失敗，改用輸入網址 ID');
+      break;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  return latestTweetId ? buildCanonicalTweetUrl(latestTweetId) : null;
+};
+
+const readCount = (...values: unknown[]): number | null => {
+  for (const value of values) {
+    if (typeof value === 'number' && Number.isFinite(value)) return Math.trunc(value);
+    if (typeof value === 'string') {
+      const normalized = value.replace(/,/g, '').trim();
+      if (/^\d+$/.test(normalized)) return Number(normalized);
+    }
+  }
+  return null;
+};
+
+const normalizeHashtags = (hashtags: unknown): string[] => {
+  if (!Array.isArray(hashtags)) return [];
+  return hashtags
+    .map((tag: any) => {
+      if (typeof tag === 'string') return tag;
+      return tag?.text || tag?.tag || tag?.name || '';
+    })
+    .map((tag) => String(tag).replace(/^#/, '').trim())
+    .filter(Boolean);
+};
+
+const parseHashtagsFromText = (text: unknown): string[] => {
+  if (typeof text !== 'string') return [];
+  return Array.from(text.matchAll(/(?:^|\s)#([^\s#]+)/gu))
+    .map((match) => match[1].replace(/[。、，,.!?！？:：;；)）\]】]+$/u, '').trim())
+    .filter(Boolean);
+};
+
+const readHashtags = (sourceData: any, data: any): string[] | null => {
+  const tags = [
+    ...normalizeHashtags(sourceData?.hashtags),
+    ...normalizeHashtags(sourceData?.entities?.hashtags),
+    ...normalizeHashtags(data?.hashtags),
+    ...normalizeHashtags(data?.entities?.hashtags),
+    ...parseHashtagsFromText(sourceData?.text || data?.text),
+  ];
+  const uniqueTags = Array.from(new Set(tags));
+  return uniqueTags.length > 0 ? uniqueTags : null;
+};
+
 export const TwitterService = {
   /**
    * 解析推文網址，獲取真實媒體資源 (圖片、最高畫質 MP4)
@@ -94,10 +210,13 @@ export const TwitterService = {
   async extractMediaFromTweet(tweetUrl: string): Promise<TwitterMedia[]> {
     try {
       // 1. 從網址中提取推文 ID
-      const tweetId = extractTweetId(tweetUrl);
-      if (!tweetId) {
+      const requestedTweetId = extractTweetId(tweetUrl);
+      if (!requestedTweetId) {
         throw new Error('無效的推文網址格式');
       }
+
+      const redirectedTweetUrl = await resolveRedirectedTweetUrl(tweetUrl);
+      const tweetId = extractTweetId(redirectedTweetUrl || '') || requestedTweetId;
 
       // 2. 呼叫 vxtwitter 的免費開源 API
       const apiUrl = `https://api.vxtwitter.com/Twitter/status/${tweetId}`;
@@ -111,6 +230,37 @@ export const TwitterService = {
       const sourceData = resolveSourceTweetData(data);
       const sourceTweetId = resolveSourceTweetId(data, tweetId);
       const sourceTweetUrl = buildCanonicalTweetUrl(sourceTweetId);
+      const likeCount = readCount(
+        sourceData?.like_count,
+        sourceData?.likeCount,
+        sourceData?.favorite_count,
+        sourceData?.favoriteCount,
+        sourceData?.likes,
+        data?.like_count,
+        data?.likeCount,
+        data?.favorite_count,
+        data?.favoriteCount,
+        data?.likes,
+      );
+      const retweetCount = readCount(
+        sourceData?.retweet_count,
+        sourceData?.retweetCount,
+        sourceData?.retweets,
+        sourceData?.reposts,
+        data?.retweet_count,
+        data?.retweetCount,
+        data?.retweets,
+        data?.reposts,
+      );
+      const viewCount = readCount(
+        sourceData?.view_count,
+        sourceData?.viewCount,
+        sourceData?.views,
+        data?.view_count,
+        data?.viewCount,
+        data?.views,
+      );
+      const hashtags = readHashtags(sourceData, data);
       
       // 3. 整理並返回媒體資料
       const mediaList: TwitterMedia[] = [];
@@ -129,7 +279,11 @@ export const TwitterService = {
             date: sourceData?.date || sourceData?.created_at || data.date,
             tweet_id: sourceTweetId,
             tweet_url: sourceTweetUrl,
-            requested_tweet_id: tweetId
+            requested_tweet_id: requestedTweetId,
+            like_count: likeCount,
+            retweet_count: retweetCount,
+            view_count: viewCount,
+            hashtags
           });
         });
       }

@@ -317,6 +317,22 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const isEmpty = (v: any): boolean => v === null || v === undefined || v === '' || (Array.isArray(v) && v.length === 0);
 
+const parseSelectedFields = (value: unknown): Map<string, Set<string>> | null => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const map = new Map<string, Set<string>>();
+  for (const [id, fields] of Object.entries(value as Record<string, unknown>)) {
+    if (!Array.isArray(fields)) continue;
+    const selected = fields.filter((field): field is string => typeof field === 'string' && field.length > 0);
+    map.set(id, new Set(selected));
+  }
+  return map;
+};
+
+const isFieldSelected = (selection: Map<string, Set<string>> | null, id: string, field: string): boolean => {
+  if (!selection) return true;
+  return selection.get(id)?.has(field) === true;
+};
+
 interface ParsedGroupMeta {
   source_url: string | null;
   source_text: string | null;
@@ -547,13 +563,15 @@ export const previewReparseTwitter = async (req: Request, res: Response) => {
 };
 
 export const applyReparseTwitter = async (req: Request, res: Response) => {
-  const { group_ids, overwrite, include_new_media, new_media_urls } = (req.body || {}) as any;
+  const { group_ids, overwrite, include_new_media, new_media_urls, selected_group_fields, selected_media_fields } = (req.body || {}) as any;
   const ids: string[] = Array.isArray(group_ids) ? group_ids.filter((id: any) => typeof id === 'string' && id) : [];
   const shouldOverwrite = overwrite === true;
   const shouldIncludeNewMedia = include_new_media === true;
   const allowedNewUrls = Array.isArray(new_media_urls)
     ? new Set(new_media_urls.filter((u: any) => typeof u === 'string'))
     : null; // null = 全部新增
+  const selectedGroupFields = parseSelectedFields(selected_group_fields);
+  const selectedMediaFields = parseSelectedFields(selected_media_fields);
 
   if (ids.length === 0) {
     res.status(400).json({ success: false, error: '請提供 group_ids' });
@@ -599,6 +617,7 @@ export const applyReparseTwitter = async (req: Request, res: Response) => {
         const groupUpdate: any = {};
         const fields = ['source_url', 'source_text', 'author_name', 'author_handle', 'post_date', 'like_count', 'retweet_count', 'view_count', 'hashtags'] as const;
         for (const field of fields) {
+          if (!isFieldSelected(selectedGroupFields, g.id, field)) continue;
           const cv = g[field] ?? null;
           const pv = (parsedGroupMeta as any)[field] ?? null;
           if (field !== 'source_url' && !shouldOverwrite && !isEmpty(cv)) continue;
@@ -636,7 +655,7 @@ export const applyReparseTwitter = async (req: Request, res: Response) => {
 
             // 更新 thumbnail_url
             const newThumbnail = tm.thumbnail || null;
-            if (newThumbnail && (shouldOverwrite || isEmpty(m.thumbnail_url))) {
+            if (isFieldSelected(selectedMediaFields, m.id, 'thumbnail_url') && newThumbnail && (shouldOverwrite || isEmpty(m.thumbnail_url))) {
               mediaUpdate.thumbnail_url = newThumbnail;
             }
 
@@ -645,12 +664,16 @@ export const applyReparseTwitter = async (req: Request, res: Response) => {
             if (String(tm.url || '').includes('.mp4') || String(tm.url || '').includes('video.twimg.com')) {
               mediaType = 'video';
             }
-            if (mediaType && (shouldOverwrite || isEmpty(m.media_type) || m.media_type === 'image') && mediaType !== m.media_type) {
+            if (isFieldSelected(selectedMediaFields, m.id, 'media_type') && mediaType && (shouldOverwrite || isEmpty(m.media_type) || m.media_type === 'image') && mediaType !== m.media_type) {
               mediaUpdate.media_type = mediaType;
             }
 
+            if (isFieldSelected(selectedMediaFields, m.id, 'original_url') && tm.url && (shouldOverwrite || isEmpty(m.original_url)) && tm.url !== m.original_url) {
+              mediaUpdate.original_url = tm.url;
+            }
+
             // 補全 R2 備份：url 仍指向 twimg 且無 R2 備份
-            if (TWIMG_URL_PATTERN.test(String(m.url || ''))) {
+            if (isFieldSelected(selectedMediaFields, m.id, 'url') && TWIMG_URL_PATTERN.test(String(m.url || ''))) {
               const r2Folder = mediaType === 'video' ? 'fanarts/videos' : 'fanarts';
               const r2Url = await backupImageToR2(String(m.url), r2Folder, {
                 metadata: { 'group-id': g.id, 'source': 'reparse-r2-fill' },
