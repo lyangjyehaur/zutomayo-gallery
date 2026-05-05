@@ -4,7 +4,7 @@ import { toast } from "sonner"
 import { startAuthentication } from "@simplewebauthn/browser"
 import { VERSION_CONFIG } from "@/config/version"
 import { adminFetch, getAuthApiBase } from "@/lib/admin-api"
-import { fetchAdminMe } from "@/lib/admin-session"
+import { clearAdminMeCache, fetchAdminMe } from "@/lib/admin-session"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -55,6 +55,7 @@ export function AdminAuthPage() {
       })
       const json = (await res.json().catch(() => null)) as { success?: boolean; error?: string; message?: string } | null
       if (!res.ok || !json?.success) throw new Error(String(json?.error || "LOGIN_FAILED"))
+      clearAdminMeCache()
       toast.success("登入成功")
       navigate(to, { replace: true })
     } catch (e) {
@@ -85,6 +86,7 @@ export function AdminAuthPage() {
       if (!verifyResp.ok || !verifyResult?.success) {
         throw new Error(String((verifyResult as any)?.error || "PASSKEY_VERIFY_FAILED"))
       }
+      clearAdminMeCache()
       toast.success("Passkey 登入成功")
       navigate(to, { replace: true })
     } catch (e: any) {

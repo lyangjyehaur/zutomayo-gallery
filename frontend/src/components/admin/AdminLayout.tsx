@@ -1,5 +1,5 @@
 import React from "react"
-import { Link, Navigate, Outlet, useLocation } from "react-router-dom"
+import { Link, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom"
 import { Refine } from "@refinedev/core"
 import { toast } from "sonner"
 import { adminFetch, getAuthApiBase } from "@/lib/admin-api"
@@ -19,10 +19,11 @@ import { Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarSeparator, Me
 import { useConfirmDialog } from "@/components/admin/useConfirmDialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { ADMIN_PERMISSIONS } from "@/lib/admin-permissions"
-import { fetchAdminMe, type AdminMePayload } from "@/lib/admin-session"
+import { clearAdminMeCache, fetchAdminMe, type AdminMePayload } from "@/lib/admin-session"
 
 export default function AdminLayout() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [confirm, ConfirmDialog] = useConfirmDialog()
   const [isInitializing, setIsInitializing] = React.useState(true)
   const [isAuthed, setIsAuthed] = React.useState(false)
@@ -76,6 +77,7 @@ export default function AdminLayout() {
         const json = await res.json().catch(() => null)
         throw new Error(String(json?.error || json?.message || "LOGOUT_FAILED"))
       }
+      clearAdminMeCache()
       toast.success("已登出")
     } catch (e: any) {
       setLogoutError(`登出失敗：${String(e?.message || e)}`)
@@ -83,7 +85,8 @@ export default function AdminLayout() {
     }
     setMe(null)
     setIsAuthed(false)
-  }, [confirm])
+    navigate("/admin/auth?to=%2Fadmin", { replace: true })
+  }, [confirm, navigate])
 
   const menus = React.useMemo(() => {
     const list = Array.isArray(me?.menus) ? me!.menus : []
