@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { useCreate, useDelete, useInvalidate, useList, useUpdate } from "@refinedev/core"
 
@@ -31,18 +31,24 @@ export function AdminArtistsPage() {
   const [deletedIds, setDeletedIds] = useState<string[]>([])
   const [selectedId, setSelectedId] = useState<string>("")
   const [query, setQuery] = useState("")
+  const [isDirty, setIsDirty] = useState(false)
+
+  const hydrateArtists = useCallback((rows: ArtistRow[]) => {
+    setArtists(rows)
+    setSelectedId((prev) => (rows.some((row) => String(row.id) === prev) ? prev : String(rows[0]?.id || "")))
+  }, [])
 
   useEffect(() => {
     const rows = listQuery.data?.data || []
-    if (rows.length === 0) return
-    setArtists((prev) => (prev.length > 0 ? prev : rows))
-    setSelectedId((prev) => (prev ? prev : String(rows[0].id)))
-  }, [listQuery.data])
+    if (isDirty) return
+    hydrateArtists(rows)
+  }, [hydrateArtists, isDirty, listQuery.data])
 
   const selected = useMemo(() => artists.find((a) => a.id === selectedId) || null, [artists, selectedId])
 
   const updateSelected = (patch: Partial<ArtistRow>) => {
     if (!selected) return
+    setIsDirty(true)
     setArtists((prev) => prev.map((a) => (a.id === selected.id ? { ...a, ...patch } : a)))
   }
 
@@ -82,6 +88,7 @@ export function AdminArtistsPage() {
 
   const handleAdd = () => {
     const newId = `artist-${Date.now()}`
+    setIsDirty(true)
     setArtists((prev) => [
       ...prev,
       {
@@ -103,6 +110,7 @@ export function AdminArtistsPage() {
 
   const handleDeleteSelected = () => {
     if (!selected) return
+    setIsDirty(true)
     if (!String(selected.id).startsWith("artist-")) {
       setDeletedIds((prev) => [...prev, String(selected.id)])
     }
@@ -170,11 +178,15 @@ export function AdminArtistsPage() {
           })
         }
         await invalidate({ resource: "artists", invalidates: ["list"] })
+        const refreshed = await listQuery.refetch()
+        return refreshed.data?.data || []
       })(),
       {
         loading: "儲存中...",
-        success: () => {
+        success: (rows) => {
           setDeletedIds([])
+          setIsDirty(false)
+          hydrateArtists(rows as ArtistRow[])
           return "儲存成功！"
         },
         error: (e) => `儲存失敗：${String((e as any)?.message || e)}`,

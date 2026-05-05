@@ -25,24 +25,6 @@ import { MVDetailsModal } from "@/components/MVDetailsModal";
 import { IllustratorDetailsModal } from "@/components/IllustratorDetailsModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AdminPage } from "@/pages/AdminPage";
-import { AdminArtistsPage } from "@/pages/AdminArtistsPage";
-import { AdminAlbumsPage } from "@/pages/AdminAlbumsPage";
-import { AdminAppleMusicAlbumsPage } from "@/pages/AdminAppleMusicAlbumsPage";
-import { AdminDictsPage } from "@/pages/AdminDictsPage";
-import { AdminFanArtPage } from "@/pages/AdminFanArtPage";
-import { AdminStagingFanartPage } from "@/pages/AdminStagingFanartPage";
-import { AdminSubmissionsPage } from "@/pages/AdminSubmissionsPage";
-import { AdminSystemUsersPage } from "@/pages/AdminSystemUsersPage";
-import { AdminSystemRolesPage } from "@/pages/AdminSystemRolesPage";
-import { AdminSystemMenusPage } from "@/pages/AdminSystemMenusPage";
-import { AdminAuthPage } from "@/pages/AdminAuthPage";
-import { AdminSystemAnnouncementsPage } from "@/pages/AdminSystemAnnouncementsPage";
-import { AdminMVSettingsPage } from "@/pages/AdminMVSettingsPage";
-import { AdminOrphanMediaPage } from "@/pages/AdminOrphanMediaPage";
-import { AdminMediaGroupsPage } from "@/pages/AdminMediaGroupsPage";
-import { AdminMediaGroupRepairPage } from "@/pages/AdminMediaGroupRepairPage";
-import { AdminAccountPage } from "@/pages/AdminAccountPage";
 import { AppleMusicGalleryPage } from "@/pages/AppleMusicGalleryPage";
 import { SubmitFanArtPage } from "@/pages/SubmitFanArtPage";
 import { PublicLoginPage } from "@/pages/PublicLoginPage";
@@ -126,12 +108,41 @@ import useSWR from "swr";
 import { MODAL_THEME } from "@/lib/theme";
 import { MaintenancePage } from "@/pages/MaintenancePage";
 import AdminLayout from "@/components/admin/AdminLayout";
+import { AdminHomeRedirect, AdminSystemRedirect } from "@/components/admin/AdminHomeRedirect";
+import { AdminRouteGuard } from "@/components/admin/AdminRouteGuard";
 import { useTranslation } from 'react-i18next';
 import { RouteDataProvider, useRouteData } from "@/lib/routeData";
 import { MVRouteBoundary } from "@/routes/MVRouteBoundary";
 import { IllustratorRouteBoundary } from "@/routes/IllustratorRouteBoundary";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { isSupportedLang, normalizeLang } from "@/i18n";
+
+const AdminPage = React.lazy(() => import("@/pages/AdminPage").then((m) => ({ default: m.AdminPage })));
+const AdminArtistsPage = React.lazy(() => import("@/pages/AdminArtistsPage").then((m) => ({ default: m.AdminArtistsPage })));
+const AdminAlbumsPage = React.lazy(() => import("@/pages/AdminAlbumsPage").then((m) => ({ default: m.AdminAlbumsPage })));
+const AdminAppleMusicAlbumsPage = React.lazy(() => import("@/pages/AdminAppleMusicAlbumsPage").then((m) => ({ default: m.AdminAppleMusicAlbumsPage })));
+const AdminDictsPage = React.lazy(() => import("@/pages/AdminDictsPage").then((m) => ({ default: m.AdminDictsPage })));
+const AdminFanArtPage = React.lazy(() => import("@/pages/AdminFanArtPage").then((m) => ({ default: m.AdminFanArtPage })));
+const AdminStagingFanartPage = React.lazy(() => import("@/pages/AdminStagingFanartPage").then((m) => ({ default: m.AdminStagingFanartPage })));
+const AdminSubmissionsPage = React.lazy(() => import("@/pages/AdminSubmissionsPage").then((m) => ({ default: m.AdminSubmissionsPage })));
+const AdminSystemUsersPage = React.lazy(() => import("@/pages/AdminSystemUsersPage").then((m) => ({ default: m.AdminSystemUsersPage })));
+const AdminSystemRolesPage = React.lazy(() => import("@/pages/AdminSystemRolesPage").then((m) => ({ default: m.AdminSystemRolesPage })));
+const AdminSystemMenusPage = React.lazy(() => import("@/pages/AdminSystemMenusPage").then((m) => ({ default: m.AdminSystemMenusPage })));
+const AdminAuthPage = React.lazy(() => import("@/pages/AdminAuthPage").then((m) => ({ default: m.AdminAuthPage })));
+const AdminSystemAnnouncementsPage = React.lazy(() => import("@/pages/AdminSystemAnnouncementsPage").then((m) => ({ default: m.AdminSystemAnnouncementsPage })));
+const AdminMVSettingsPage = React.lazy(() => import("@/pages/AdminMVSettingsPage").then((m) => ({ default: m.AdminMVSettingsPage })));
+const AdminOrphanMediaPage = React.lazy(() => import("@/pages/AdminOrphanMediaPage").then((m) => ({ default: m.AdminOrphanMediaPage })));
+const AdminMediaGroupsPage = React.lazy(() => import("@/pages/AdminMediaGroupsPage").then((m) => ({ default: m.AdminMediaGroupsPage })));
+const AdminMediaGroupRepairPage = React.lazy(() => import("@/pages/AdminMediaGroupRepairPage").then((m) => ({ default: m.AdminMediaGroupRepairPage })));
+const AdminAccountPage = React.lazy(() => import("@/pages/AdminAccountPage").then((m) => ({ default: m.AdminAccountPage })));
+
+const adminFallback = <div className="p-6 font-mono text-sm">Loading...</div>;
+
+const adminRoute = (resource: string | undefined, element: React.ReactNode) => (
+  <AdminRouteGuard resource={resource}>
+    <React.Suspense fallback={adminFallback}>{element}</React.Suspense>
+  </AdminRouteGuard>
+);
 
 
 
@@ -3038,23 +3049,19 @@ export default function RootApp() {
               path="/demo/trae-footer-glitch"
               element={<DemoTraeFooterHoverPage />}
             />
-            <Route path="/admin/auth" element={<AdminAuthPage />} />
+            <Route path="/admin/auth" element={<React.Suspense fallback={adminFallback}><AdminAuthPage /></React.Suspense>} />
             <Route path="/admin" element={<AdminLayout />}>
               <Route
                 index
-                element={
-                  <AdminPage />
-                }
+                element={<AdminHomeRedirect />}
               />
               <Route
                 path="mvs"
-                element={
-                  <AdminPage />
-                }
+                element={adminRoute("mvs", <AdminPage />)}
               />
               <Route
                 path="mvs/settings"
-                element={
+                element={adminRoute("mvsSettings",
                   <AdminMVSettingsPage
                     metadata={normalizedMetadata}
                     systemStatus={systemStatus}
@@ -3064,24 +3071,24 @@ export default function RootApp() {
                       mutateSystemStatus();
                     }}
                   />
-                }
+                )}
               />
-              <Route path="account" element={<AdminAccountPage />} />
-              <Route path="artists" element={<AdminArtistsPage />} />
-              <Route path="albums" element={<AdminAlbumsPage />} />
-              <Route path="apple-music-albums" element={<AdminAppleMusicAlbumsPage />} />
-              <Route path="dicts" element={<AdminDictsPage />} />
-              <Route path="fanart" element={<AdminFanArtPage />} />
-              <Route path="staging-fanarts" element={<AdminStagingFanartPage />} />
-            <Route path="submissions" element={<AdminSubmissionsPage />} />
-              <Route path="system" element={<Navigate to="/admin/system/users" replace />} />
-              <Route path="system/users" element={<AdminSystemUsersPage />} />
-              <Route path="system/roles" element={<AdminSystemRolesPage />} />
-              <Route path="system/menus" element={<AdminSystemMenusPage />} />
-              <Route path="system/announcements" element={<AdminSystemAnnouncementsPage />} />
-              <Route path="system/media-groups" element={<AdminMediaGroupsPage />} />
-              <Route path="system/group-repair" element={<AdminMediaGroupRepairPage />} />
-              <Route path="system/orphans" element={<AdminOrphanMediaPage />} />
+              <Route path="account" element={adminRoute(undefined, <AdminAccountPage />)} />
+              <Route path="artists" element={adminRoute("artists", <AdminArtistsPage />)} />
+              <Route path="albums" element={adminRoute("albums", <AdminAlbumsPage />)} />
+              <Route path="apple-music-albums" element={adminRoute("appleMusicAlbums", <AdminAppleMusicAlbumsPage />)} />
+              <Route path="dicts" element={adminRoute("dicts", <AdminDictsPage />)} />
+              <Route path="fanart" element={adminRoute("fanart", <AdminFanArtPage />)} />
+              <Route path="staging-fanarts" element={adminRoute("stagingFanarts", <AdminStagingFanartPage />)} />
+              <Route path="submissions" element={adminRoute("submissions", <AdminSubmissionsPage />)} />
+              <Route path="system" element={<AdminSystemRedirect />} />
+              <Route path="system/users" element={adminRoute("systemUsers", <AdminSystemUsersPage />)} />
+              <Route path="system/roles" element={adminRoute("systemRoles", <AdminSystemRolesPage />)} />
+              <Route path="system/menus" element={adminRoute("systemMenus", <AdminSystemMenusPage />)} />
+              <Route path="system/announcements" element={adminRoute("systemAnnouncements", <AdminSystemAnnouncementsPage />)} />
+              <Route path="system/media-groups" element={adminRoute("systemMediaGroups", <AdminMediaGroupsPage />)} />
+              <Route path="system/group-repair" element={adminRoute("systemGroupRepair", <AdminMediaGroupRepairPage />)} />
+              <Route path="system/orphans" element={adminRoute("systemOrphans", <AdminOrphanMediaPage />)} />
             </Route>
             <Route path="/debug/fb/:mvid?" element={<DebugFancyboxMasonry />} />
             <Route path="/debug/modal" element={<DebugMVModalLightbox />} />

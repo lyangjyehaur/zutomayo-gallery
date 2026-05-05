@@ -1,4 +1,5 @@
 import React from "react"
+import { useCan } from "@refinedev/core"
 import { toast } from "sonner"
 
 import { adminFetch } from "@/lib/admin-api"
@@ -52,6 +53,10 @@ export function AdminMVSettingsPage({
   const [localMaintenance, setLocalMaintenance] = React.useState(false)
   const [localMaintenanceType, setLocalMaintenanceType] = React.useState<"data" | "ui">("ui")
   const [localMaintenanceEta, setLocalMaintenanceEta] = React.useState<string>("")
+  const maintenanceAccess = useCan({ resource: "systemMaintenance", action: "access" })
+  const cacheAccess = useCan({ resource: "systemCache", action: "access" })
+  const canUpdateMaintenance = !!maintenanceAccess.data?.can
+  const canClearCache = !!cacheAccess.data?.can
 
   React.useEffect(() => {
     try {
@@ -104,11 +109,11 @@ export function AdminMVSettingsPage({
       if (!response.ok) throw new Error("保存 Metadata 失敗")
 
       const etaISO = localMaintenanceEta ? new Date(localMaintenanceEta).toISOString() : ""
-      if (
+      const maintenanceChanged =
         localMaintenance !== (systemStatus?.maintenance || false) ||
         localMaintenanceType !== (systemStatus?.type || "ui") ||
         etaISO !== (systemStatus?.eta || "")
-      ) {
+      if (canUpdateMaintenance && maintenanceChanged) {
         const sysResponse = await adminFetch(`${apiUrl.replace("/mvs", "/system")}/maintenance`, {
           method: "PUT",
           headers: {
@@ -126,7 +131,7 @@ export function AdminMVSettingsPage({
     } finally {
       setIsSaving(false)
     }
-  }, [apiUrl, localMaintenance, localMaintenanceEta, localMaintenanceType, localMetadata, onRefresh, systemStatus?.eta, systemStatus?.maintenance, systemStatus?.type])
+  }, [apiUrl, canUpdateMaintenance, localMaintenance, localMaintenanceEta, localMaintenanceType, localMetadata, onRefresh, systemStatus?.eta, systemStatus?.maintenance, systemStatus?.type])
 
   return (
     <div className="p-6">
@@ -154,7 +159,7 @@ export function AdminMVSettingsPage({
                 <div className="text-[10px] font-bold opacity-40 font-mono normal-case">Maintenance Mode</div>
                 <div className="text-[10px] font-bold opacity-60">開啟後所有訪客將看到維護頁面</div>
               </div>
-              <Switch checked={localMaintenance} onCheckedChange={(checked) => setLocalMaintenance(checked)} />
+              <Switch checked={localMaintenance} disabled={!canUpdateMaintenance} onCheckedChange={(checked) => setLocalMaintenance(checked)} />
             </div>
             {localMaintenance ? (
               <div className="flex flex-col gap-3 pt-3 border-t-2 border-yellow-500/30">
@@ -170,6 +175,7 @@ export function AdminMVSettingsPage({
                         name="maintenanceType"
                         value="ui"
                         checked={localMaintenanceType === "ui"}
+                        disabled={!canUpdateMaintenance}
                         onChange={() => setLocalMaintenanceType("ui")}
                         className="accent-yellow-500"
                       />
@@ -181,6 +187,7 @@ export function AdminMVSettingsPage({
                         name="maintenanceType"
                         value="data"
                         checked={localMaintenanceType === "data"}
+                        disabled={!canUpdateMaintenance}
                         onChange={() => setLocalMaintenanceType("data")}
                         className="accent-yellow-500"
                       />
@@ -198,6 +205,7 @@ export function AdminMVSettingsPage({
                   <Input
                     type="datetime-local"
                     value={localMaintenanceEta}
+                    disabled={!canUpdateMaintenance}
                     onChange={(e) => setLocalMaintenanceEta(e.target.value)}
                     className="font-mono text-sm bg-background border-2 border-black focus-visible:ring-black h-8"
                   />
@@ -214,7 +222,7 @@ export function AdminMVSettingsPage({
             </div>
             <Button
               onClick={() => void handleClearRedisCache()}
-              disabled={isClearingRedisCache}
+              disabled={isClearingRedisCache || !canClearCache}
               className="border-2 border-black bg-main text-black hover:bg-main/80 font-black shadow-neo-sm"
             >
               {isClearingRedisCache ? "清除中..." : "清除快取"}

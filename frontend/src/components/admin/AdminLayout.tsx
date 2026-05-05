@@ -18,6 +18,7 @@ import { AppSidebar } from "@/components/admin/AppSidebar"
 import { Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarSeparator, MenubarTrigger } from "@/components/ui/menubar"
 import { useConfirmDialog } from "@/components/admin/useConfirmDialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { ADMIN_PERMISSIONS } from "@/lib/admin-permissions"
 
 type MePayload = {
   username?: string
@@ -50,8 +51,12 @@ export default function AdminLayout() {
 
   const permissions = React.useMemo(() => {
     if (me?.permissions && Array.isArray(me.permissions)) return me.permissions
-    return isAuthed ? ["*"] : []
-  }, [isAuthed, me?.permissions])
+    return []
+  }, [me?.permissions])
+
+  const canAccessPermission = React.useCallback((permission: string) => {
+    return permissions.includes("*") || permissions.includes(permission)
+  }, [permissions])
 
   const refresh = React.useCallback(async () => {
     const next = await fetchMe()
@@ -151,6 +156,29 @@ export default function AdminLayout() {
     return first ? String(first) : "/admin/system/media-groups"
   }, [menus])
 
+  const navigateItems = React.useMemo(() => {
+    const hasSystemAccess = [
+      ADMIN_PERMISSIONS.SYSTEM_USERS,
+      ADMIN_PERMISSIONS.SYSTEM_ROLES,
+      ADMIN_PERMISSIONS.SYSTEM_MENUS,
+      ADMIN_PERMISSIONS.SYSTEM_ANNOUNCEMENTS,
+      ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS,
+      ADMIN_PERMISSIONS.SYSTEM_MEDIA_ORPHANS,
+    ].some((permission) => canAccessPermission(permission))
+    return [
+      { label: mvLabel, path: mvListPath, permission: ADMIN_PERMISSIONS.MVS },
+      { label: "系統管理", path: systemRootPath, permission: null, visible: hasSystemAccess },
+      { label: "全局設定", path: "/admin/mvs/settings", permission: ADMIN_PERMISSIONS.MVS },
+      { label: "公告管理", path: "/admin/system/announcements", permission: ADMIN_PERMISSIONS.SYSTEM_ANNOUNCEMENTS },
+      { label: "推文修復", path: "/admin/system/group-repair", permission: ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS },
+      { label: "推文分組", path: "/admin/system/media-groups", permission: ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS },
+      { label: "未歸屬媒體", path: "/admin/system/orphans", permission: ADMIN_PERMISSIONS.SYSTEM_MEDIA_ORPHANS },
+    ].filter((item) => {
+      if ("visible" in item) return item.visible
+      return canAccessPermission(item.permission)
+    })
+  }, [canAccessPermission, mvLabel, mvListPath, systemRootPath])
+
   const breadcrumb = React.useMemo(() => {
     const path = location.pathname
     const items: Array<{ label: string; to?: string }> = [{ label: "Admin", to: "/admin" }]
@@ -186,6 +214,7 @@ export default function AdminLayout() {
     <SidebarProvider>
         <AppSidebar
           menus={menus}
+          permissions={permissions}
           username={me?.username || "legacy"}
           email={me?.email}
           displayName={me?.display_name}
@@ -222,28 +251,14 @@ export default function AdminLayout() {
             <MenubarMenu>
               <MenubarTrigger>Navigate</MenubarTrigger>
               <MenubarContent>
-                <MenubarItem asChild>
-                  <Link to={mvListPath}>{mvLabel}</Link>
-                </MenubarItem>
-                <MenubarSeparator />
-                <MenubarItem asChild>
-                  <Link to={systemRootPath}>系統管理</Link>
-                </MenubarItem>
-                <MenubarItem asChild>
-                  <Link to="/admin/mvs/settings">全局設定</Link>
-                </MenubarItem>
-                <MenubarItem asChild>
-                  <Link to="/admin/system/announcements">公告管理</Link>
-                </MenubarItem>
-                <MenubarItem asChild>
-                  <Link to="/admin/system/group-repair">推文修復</Link>
-                </MenubarItem>
-                <MenubarItem asChild>
-                  <Link to="/admin/system/media-groups">推文分組</Link>
-                </MenubarItem>
-                <MenubarItem asChild>
-                  <Link to="/admin/system/orphans">未歸屬媒體</Link>
-                </MenubarItem>
+                {navigateItems.map((item, idx) => (
+                  <React.Fragment key={item.path}>
+                    {idx === 1 ? <MenubarSeparator /> : null}
+                    <MenubarItem asChild>
+                      <Link to={item.path}>{item.label}</Link>
+                    </MenubarItem>
+                  </React.Fragment>
+                ))}
               </MenubarContent>
             </MenubarMenu>
           </Menubar>
@@ -264,7 +279,7 @@ export default function AdminLayout() {
             notificationProvider={adminNotificationProvider}
             resources={adminResources}
           >
-            <Outlet />
+            <Outlet context={{ menus }} />
           </Refine>
           <ConfirmDialog />
         </div>

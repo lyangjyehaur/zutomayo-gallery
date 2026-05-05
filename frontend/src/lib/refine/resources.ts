@@ -1,27 +1,22 @@
 import type { ResourceProps } from "@refinedev/core"
-import { AdminPage } from "@/pages/AdminPage"
-import { AdminArtistsPage } from "@/pages/AdminArtistsPage"
-import { AdminAlbumsPage } from "@/pages/AdminAlbumsPage"
-import { AdminAppleMusicAlbumsPage } from "@/pages/AdminAppleMusicAlbumsPage"
-import { AdminDictsPage } from "@/pages/AdminDictsPage"
-import { AdminFanArtPage } from "@/pages/AdminFanArtPage"
-import { AdminStagingFanartPage } from "@/pages/AdminStagingFanartPage"
-import { AdminSystemUsersPage } from "@/pages/AdminSystemUsersPage"
-import { AdminSystemRolesPage } from "@/pages/AdminSystemRolesPage"
-import { AdminSystemMenusPage } from "@/pages/AdminSystemMenusPage"
 
 export const adminResources: ResourceProps[] = [
-  { name: "mvs", list: AdminPage, create: AdminPage, edit: AdminPage, show: AdminPage },
-  { name: "artists", list: AdminArtistsPage, edit: AdminArtistsPage },
-  { name: "albums", list: AdminAlbumsPage, create: AdminAlbumsPage, edit: AdminAlbumsPage },
-  { name: "appleMusicAlbums", list: AdminAppleMusicAlbumsPage, edit: AdminAppleMusicAlbumsPage },
-  { name: "dicts", list: AdminDictsPage, create: AdminDictsPage, edit: AdminDictsPage },
-  { name: "fanart", list: AdminFanArtPage, edit: AdminFanArtPage },
-  { name: "stagingFanarts", list: AdminStagingFanartPage, edit: AdminStagingFanartPage },
+  { name: "mvs", list: "/admin/mvs", create: "/admin/mvs", edit: "/admin/mvs", show: "/admin/mvs" },
+  { name: "mvsSettings", list: "/admin/mvs/settings", meta: { parent: "mvs" } },
+  { name: "artists", list: "/admin/artists", edit: "/admin/artists" },
+  { name: "albums", list: "/admin/albums", create: "/admin/albums", edit: "/admin/albums" },
+  { name: "appleMusicAlbums", list: "/admin/apple-music-albums", edit: "/admin/apple-music-albums" },
+  { name: "dicts", list: "/admin/dicts", create: "/admin/dicts", edit: "/admin/dicts" },
+  { name: "fanart", list: "/admin/fanart", edit: "/admin/fanart" },
+  { name: "stagingFanarts", list: "/admin/staging-fanarts", edit: "/admin/staging-fanarts" },
+  { name: "submissions", list: "/admin/submissions" },
   { name: "system", meta: { label: "系統管理" } },
-  { name: "systemUsers", list: AdminSystemUsersPage, create: AdminSystemUsersPage, edit: AdminSystemUsersPage, meta: { parent: "system" } },
-  { name: "systemRoles", list: AdminSystemRolesPage, create: AdminSystemRolesPage, edit: AdminSystemRolesPage, meta: { parent: "system" } },
-  { name: "systemMenus", list: AdminSystemMenusPage, create: AdminSystemMenusPage, edit: AdminSystemMenusPage, meta: { parent: "system" } },
+  { name: "systemUsers", list: "/admin/system/users", create: "/admin/system/users", edit: "/admin/system/users", meta: { parent: "system" } },
+  { name: "systemRoles", list: "/admin/system/roles", create: "/admin/system/roles", edit: "/admin/system/roles", meta: { parent: "system" } },
+  { name: "systemMenus", list: "/admin/system/menus", create: "/admin/system/menus", edit: "/admin/system/menus", meta: { parent: "system" } },
+  { name: "systemAnnouncements", list: "/admin/system/announcements", meta: { parent: "system" } },
+  { name: "systemMediaGroups", list: "/admin/system/media-groups", meta: { parent: "system" } },
+  { name: "systemGroupRepair", list: "/admin/system/group-repair", meta: { parent: "system" } },
+  { name: "systemOrphans", list: "/admin/system/orphans", meta: { parent: "system" } },
   { name: "systemPermissions", meta: { parent: "system" } },
 ]
-

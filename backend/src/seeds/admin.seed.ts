@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import { AdminRoleModel, AdminUserModel, AdminMenuModel } from '../models/index.js';
+import { ADMIN_PERMISSIONS } from '../constants/admin-permissions.js';
 import { getEnforcer, reloadEnforcerPolicy } from '../rbac/enforcer.js';
 
 export const seedAdminRBAC = async (): Promise<void> => {
@@ -26,21 +27,37 @@ export const seedAdminRBAC = async (): Promise<void> => {
   }
 
   const defaults = [
-    { label: 'MV 管理', path: '/admin/mvs', sort: 10, permission: 'admin:mvs' },
-    { label: '畫師管理', path: '/admin/artists', sort: 20, permission: 'admin:artists' },
-    { label: '專輯管理', path: '/admin/albums', sort: 30, permission: 'admin:albums' },
-    { label: 'Apple Music', path: '/admin/apple-music-albums', sort: 40, permission: 'admin:albums' },
-    { label: 'FanArt 管理', path: '/admin/fanart', sort: 50, permission: 'admin:fanarts' },
-    { label: 'Staging FanArt', path: '/admin/staging-fanarts', sort: 60, permission: 'admin:staging-fanarts' },
-    { label: '投稿審核', path: '/admin/submissions', sort: 65, permission: 'admin:submissions' },
-    { label: '字典管理', path: '/admin/dicts', sort: 70, permission: 'admin:system:menus' },
-    { label: '系統：使用者', path: '/admin/system/users', sort: 100, permission: 'admin:system:users' },
-    { label: '系統：角色', path: '/admin/system/roles', sort: 110, permission: 'admin:system:roles' },
-    { label: '系統：菜單', path: '/admin/system/menus', sort: 120, permission: 'admin:system:menus' },
+    { label: 'MV 管理', path: '/admin/mvs', sort: 10, permission: ADMIN_PERMISSIONS.MVS },
+    { label: '畫師管理', path: '/admin/artists', sort: 20, permission: ADMIN_PERMISSIONS.ARTISTS },
+    { label: '專輯管理', path: '/admin/albums', sort: 30, permission: ADMIN_PERMISSIONS.ALBUMS },
+    { label: 'Apple Music', path: '/admin/apple-music-albums', sort: 40, permission: ADMIN_PERMISSIONS.ALBUMS },
+    { label: 'FanArt 管理', path: '/admin/fanart', sort: 50, permission: ADMIN_PERMISSIONS.FANARTS },
+    { label: 'Staging FanArt', path: '/admin/staging-fanarts', sort: 60, permission: ADMIN_PERMISSIONS.STAGING_FANARTS },
+    { label: '投稿審核', path: '/admin/submissions', sort: 65, permission: ADMIN_PERMISSIONS.SUBMISSIONS },
+    { label: '字典管理', path: '/admin/dicts', sort: 70, permission: ADMIN_PERMISSIONS.SYSTEM_DICTS },
+    { label: '系統：使用者', path: '/admin/system/users', sort: 100, permission: ADMIN_PERMISSIONS.SYSTEM_USERS },
+    { label: '系統：角色', path: '/admin/system/roles', sort: 110, permission: ADMIN_PERMISSIONS.SYSTEM_ROLES },
+    { label: '系統：菜單', path: '/admin/system/menus', sort: 120, permission: ADMIN_PERMISSIONS.SYSTEM_MENUS },
+    { label: '全局設定', path: '/admin/mvs/settings', sort: 130, permission: ADMIN_PERMISSIONS.MVS },
+    { label: '公告管理', path: '/admin/system/announcements', sort: 140, permission: ADMIN_PERMISSIONS.SYSTEM_ANNOUNCEMENTS },
+    { label: '推文修復', path: '/admin/system/group-repair', sort: 150, permission: ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS },
+    { label: '推文分組', path: '/admin/system/media-groups', sort: 160, permission: ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS },
+    { label: '未歸屬媒體', path: '/admin/system/orphans', sort: 170, permission: ADMIN_PERMISSIONS.SYSTEM_MEDIA_ORPHANS },
   ];
+  const legacyPermissionByPath = new Map<string, string>([
+    ['/admin/dicts', 'admin:system:menus'],
+  ]);
   for (const m of defaults) {
     const existing = await AdminMenuModel.findOne({ where: { path: m.path } as any });
-    if (!existing) await AdminMenuModel.create(m as any);
+    if (!existing) {
+      await AdminMenuModel.create(m as any);
+      continue;
+    }
+
+    const data = existing.toJSON() as any;
+    if (data.permission === legacyPermissionByPath.get(m.path)) {
+      await existing.update({ permission: m.permission } as any);
+    }
   }
 
   await enforcer.savePolicy();

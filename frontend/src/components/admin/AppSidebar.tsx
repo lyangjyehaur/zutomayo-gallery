@@ -47,6 +47,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ADMIN_PERMISSIONS, type AdminPermission } from "@/lib/admin-permissions"
 import { resolveUserAvatarUrl } from "@/lib/gravatar"
 
 type MenuItem = {
@@ -77,6 +78,7 @@ const iconForPath = (path: string) => {
 
 export function AppSidebar({
   menus,
+  permissions,
   username,
   email,
   displayName,
@@ -84,6 +86,7 @@ export function AppSidebar({
   onLogout,
 }: {
   menus: MenuItem[]
+  permissions: string[]
   username: string
   email?: string | null
   displayName?: string | null
@@ -92,6 +95,11 @@ export function AppSidebar({
 }) {
   const location = useLocation()
   const { isMobile } = useSidebar()
+  const canAccessPermission = React.useCallback((permission?: AdminPermission) => {
+    if (!permission) return true
+    return permissions.includes("*") || permissions.includes(permission)
+  }, [permissions])
+
   const sorted = React.useMemo(() => {
     return [...menus].sort(
       (a, b) => (Number(a.sort || 0) || 0) - (Number(b.sort || 0) || 0),
@@ -101,11 +109,11 @@ export function AppSidebar({
   const systemItems = React.useMemo(() => {
     const base = sorted.filter((m) => String(m.path || "").startsWith("/admin/system/"))
     const mediaTools = [
-      { label: "全局設定", path: "/admin/mvs/settings", sort: 9979 },
-      { label: "公告管理", path: "/admin/system/announcements", sort: 9980 },
-      { label: "推文修復", path: "/admin/system/group-repair", sort: 9981 },
-      { label: "推文分組", path: "/admin/system/media-groups", sort: 9982 },
-      { label: "未歸屬媒體", path: "/admin/system/orphans", sort: 9983 },
+      { label: "全局設定", path: "/admin/mvs/settings", sort: 9979, permission: ADMIN_PERMISSIONS.MVS },
+      { label: "公告管理", path: "/admin/system/announcements", sort: 9980, permission: ADMIN_PERMISSIONS.SYSTEM_ANNOUNCEMENTS },
+      { label: "推文修復", path: "/admin/system/group-repair", sort: 9981, permission: ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS },
+      { label: "推文分組", path: "/admin/system/media-groups", sort: 9982, permission: ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS },
+      { label: "未歸屬媒體", path: "/admin/system/orphans", sort: 9983, permission: ADMIN_PERMISSIONS.SYSTEM_MEDIA_ORPHANS },
     ]
     const excluded = new Set(mediaTools.map((m) => m.path))
     const adminTools = base.filter((m) => {
@@ -124,8 +132,11 @@ export function AppSidebar({
         (a, b) => (Number(a.sort || 0) || 0) - (Number(b.sort || 0) || 0),
       )
     }
-    return { adminTools: normalize(adminTools), mediaTools: normalize(mediaTools as any[]) }
-  }, [sorted])
+    const visibleMediaTools = mediaTools
+      .filter((m) => canAccessPermission(m.permission))
+      .map((m) => sorted.find((item) => String(item.path || "") === m.path) || m)
+    return { adminTools: normalize(adminTools), mediaTools: normalize(visibleMediaTools as any[]) }
+  }, [canAccessPermission, sorted])
 
   const globalSettingsPath = "/admin/mvs/settings"
 
@@ -176,6 +187,8 @@ export function AppSidebar({
   const miscItems = React.useMemo(() => {
     return otherItems.filter((m) => !contentPaths.has(String(m.path || "")))
   }, [contentPaths, otherItems])
+
+  const hasSystemItems = systemItems.adminTools.length > 0 || systemItems.mediaTools.length > 0
 
   const labelForMenu = React.useCallback((m: any) => {
     const raw = typeof m?.label === "string" ? m.label.trim() : ""
@@ -256,62 +269,68 @@ export function AppSidebar({
           </SidebarGroup>
         ) : null}
 
-        <SidebarGroup>
-          <SidebarGroupLabel>系統</SidebarGroupLabel>
-          <SidebarMenu>
-            <Collapsible asChild defaultOpen={systemOpen} className="group/collapsible">
-              <SidebarMenuItem>
-                <CollapsibleTrigger asChild>
-                  <SidebarMenuButton
-                    isActive={systemOpen}
-                    tooltip="系統管理"
-                    className="data-[state=open]:bg-main data-[state=open]:outline-border data-[state=open]:text-main-foreground"
-                  >
-                    <Settings2 />
-                    <span>系統管理</span>
-                    <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                  </SidebarMenuButton>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <SidebarMenuSub>
-                    <div className="px-2 py-1 text-[10px] font-mono opacity-60">媒體</div>
-                    {systemItems.mediaTools.map((m, idx) => {
-                      const path = String(m.path || "")
-                      if (!path) return null
-                      const active = location.pathname === path
-                      return (
-                        <SidebarMenuSubItem key={`${path}-${idx}`}>
-                          <SidebarMenuSubButton asChild isActive={active}>
-                            <Link to={path}>
-                              {React.createElement(iconForPath(path))}
-                              <span>{labelForMenu(m)}</span>
-                            </Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      )
-                    })}
-                    <div className="px-2 py-1 text-[10px] font-mono opacity-60">權限</div>
-                    {systemItems.adminTools.map((m, idx) => {
-                      const path = String(m.path || "")
-                      if (!path) return null
-                      const active = location.pathname === path
-                      return (
-                        <SidebarMenuSubItem key={`${path}-${idx}`}>
-                          <SidebarMenuSubButton asChild isActive={active}>
-                            <Link to={path}>
-                              {React.createElement(iconForPath(path))}
-                              <span>{labelForMenu(m)}</span>
-                            </Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      )
-                    })}
-                  </SidebarMenuSub>
-                </CollapsibleContent>
-              </SidebarMenuItem>
-            </Collapsible>
-          </SidebarMenu>
-        </SidebarGroup>
+        {hasSystemItems ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>系統</SidebarGroupLabel>
+            <SidebarMenu>
+              <Collapsible asChild defaultOpen={systemOpen} className="group/collapsible">
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton
+                      isActive={systemOpen}
+                      tooltip="系統管理"
+                      className="data-[state=open]:bg-main data-[state=open]:outline-border data-[state=open]:text-main-foreground"
+                    >
+                      <Settings2 />
+                      <span>系統管理</span>
+                      <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      {systemItems.mediaTools.length > 0 ? (
+                        <div className="px-2 py-1 text-[10px] font-mono opacity-60">媒體</div>
+                      ) : null}
+                      {systemItems.mediaTools.map((m, idx) => {
+                        const path = String(m.path || "")
+                        if (!path) return null
+                        const active = location.pathname === path
+                        return (
+                          <SidebarMenuSubItem key={`${path}-${idx}`}>
+                            <SidebarMenuSubButton asChild isActive={active}>
+                              <Link to={path}>
+                                {React.createElement(iconForPath(path))}
+                                <span>{labelForMenu(m)}</span>
+                              </Link>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        )
+                      })}
+                      {systemItems.adminTools.length > 0 ? (
+                        <div className="px-2 py-1 text-[10px] font-mono opacity-60">權限</div>
+                      ) : null}
+                      {systemItems.adminTools.map((m, idx) => {
+                        const path = String(m.path || "")
+                        if (!path) return null
+                        const active = location.pathname === path
+                        return (
+                          <SidebarMenuSubItem key={`${path}-${idx}`}>
+                            <SidebarMenuSubButton asChild isActive={active}>
+                              <Link to={path}>
+                                {React.createElement(iconForPath(path))}
+                                <span>{labelForMenu(m)}</span>
+                              </Link>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        )
+                      })}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
+            </SidebarMenu>
+          </SidebarGroup>
+        ) : null}
 
         {miscItems.length > 0 ? (
           <SidebarGroup>

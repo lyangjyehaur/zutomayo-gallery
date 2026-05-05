@@ -766,6 +766,7 @@ export function AdminPage() {
   const originalDataRef = useRef<MVItem[]>([]);
 
   const mvs = useMemo(() => mvList.data?.data || [], [mvList.data])
+  const hasUnsavedChanges = useMemo(() => changedFields.size > 0 || deletedIds.size > 0, [changedFields, deletedIds])
 
   useEffect(() => {
     const run = async () => {
@@ -823,21 +824,26 @@ export function AdminPage() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (mvs && mvs.length > 0) {
-      // 按年份和日期降序排序（最新的排在最前）
-      const sortedData = [...mvs].sort((a, b) => {
-        const dateA = `${a.year}-${a.date || ''}`;
-        const dateB = `${b.year}-${b.date || ''}`;
-        return dateB.localeCompare(dateA);
-      });
-      const cloned = JSON.parse(JSON.stringify(sortedData));
-      const hydrated = cloned;
-      setData(hydrated);
-      originalDataRef.current = JSON.parse(JSON.stringify(hydrated));
-      // 重置變動追蹤
+    if (hasUnsavedChanges) return;
+    if (!mvs || mvs.length === 0) {
+      setData([]);
+      originalDataRef.current = [];
       setChangedFields(new Map());
+      return;
     }
-  }, [mvs]);
+    // 按年份和日期降序排序（最新的排在最前）
+    const sortedData = [...mvs].sort((a, b) => {
+      const dateA = `${a.year}-${a.date || ''}`;
+      const dateB = `${b.year}-${b.date || ''}`;
+      return dateB.localeCompare(dateA);
+    });
+    const cloned = JSON.parse(JSON.stringify(sortedData));
+    const hydrated = cloned;
+    setData(hydrated);
+    originalDataRef.current = JSON.parse(JSON.stringify(hydrated));
+    // 重置變動追蹤
+    setChangedFields(new Map());
+  }, [hasUnsavedChanges, mvs]);
 
   useEffect(() => {
     if (!pendingJump) return;

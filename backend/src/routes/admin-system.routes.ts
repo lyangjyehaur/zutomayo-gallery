@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { requireAdmin } from '../middleware/auth.middleware.js';
+import { ADMIN_PERMISSIONS } from '../constants/admin-permissions.js';
+import { requireAnyPermission, requirePermission } from '../middleware/auth.middleware.js';
 import {
   createUser,
   listUsers,
@@ -25,26 +26,28 @@ import { listAdminPermissions } from '../controllers/admin-system/permissions.co
 
 const router = Router();
 
-router.use(requireAdmin);
+router.get('/users', requirePermission(ADMIN_PERMISSIONS.SYSTEM_USERS), listUsers);
+router.post('/users', requirePermission(ADMIN_PERMISSIONS.SYSTEM_USERS), createUser);
+router.patch('/users/:id', requirePermission(ADMIN_PERMISSIONS.SYSTEM_USERS), updateUser);
+router.post('/users/:id/reset-password', requirePermission(ADMIN_PERMISSIONS.SYSTEM_USERS), resetUserPassword);
+router.put('/users/:id/roles', requirePermission(ADMIN_PERMISSIONS.SYSTEM_USERS), setUserRoles);
 
-router.get('/users', listUsers);
-router.post('/users', createUser);
-router.patch('/users/:id', updateUser);
-router.post('/users/:id/reset-password', resetUserPassword);
-router.put('/users/:id/roles', setUserRoles);
+router.get('/roles', requireAnyPermission([ADMIN_PERMISSIONS.SYSTEM_ROLES, ADMIN_PERMISSIONS.SYSTEM_USERS]), listRoles);
+router.post('/roles', requirePermission(ADMIN_PERMISSIONS.SYSTEM_ROLES), createRole);
+router.patch('/roles/:code', requirePermission(ADMIN_PERMISSIONS.SYSTEM_ROLES), updateRole);
+router.delete('/roles/:code', requirePermission(ADMIN_PERMISSIONS.SYSTEM_ROLES), deleteRole);
+router.put('/roles/:code/permissions', requirePermission(ADMIN_PERMISSIONS.SYSTEM_ROLES), setRolePermissions);
 
-router.get('/roles', listRoles);
-router.post('/roles', createRole);
-router.patch('/roles/:code', updateRole);
-router.delete('/roles/:code', deleteRole);
-router.put('/roles/:code/permissions', setRolePermissions);
+router.get('/menus', requirePermission(ADMIN_PERMISSIONS.SYSTEM_MENUS), listMenus);
+router.post('/menus', requirePermission(ADMIN_PERMISSIONS.SYSTEM_MENUS), createMenu);
+router.patch('/menus/:id', requirePermission(ADMIN_PERMISSIONS.SYSTEM_MENUS), updateMenu);
+router.delete('/menus/:id', requirePermission(ADMIN_PERMISSIONS.SYSTEM_MENUS), deleteMenu);
+router.put('/menus/bulk', requirePermission(ADMIN_PERMISSIONS.SYSTEM_MENUS), bulkUpdateMenus);
 
-router.get('/menus', listMenus);
-router.post('/menus', createMenu);
-router.patch('/menus/:id', updateMenu);
-router.delete('/menus/:id', deleteMenu);
-router.put('/menus/bulk', bulkUpdateMenus);
-
-router.get('/permissions', listAdminPermissions);
+router.get(
+  '/permissions',
+  requireAnyPermission([ADMIN_PERMISSIONS.SYSTEM_ROLES, ADMIN_PERMISSIONS.SYSTEM_MENUS]),
+  listAdminPermissions
+);
 
 export default router;

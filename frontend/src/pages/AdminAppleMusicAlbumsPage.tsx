@@ -27,9 +27,8 @@ export function AdminAppleMusicAlbumsPage() {
 
   useEffect(() => {
     const rows = listQuery.data?.data || []
-    if (rows.length === 0) return
-    setAlbums((prev) => (prev.length > 0 ? prev : rows))
-    setSelectedId((prev) => (typeof prev === "string" ? prev : String(rows[0].id)))
+    setAlbums(rows)
+    setSelectedId((prev) => (rows.some((row) => String(row.id) === prev) ? prev : String(rows[0]?.id || "")))
   }, [listQuery.data])
 
   const filtered = useMemo(() => {
@@ -104,12 +103,24 @@ export function AdminAppleMusicAlbumsPage() {
                 <Switch
                   checked={!!selected.is_hidden}
                   onCheckedChange={(c) => {
+                    const previous = !!selected.is_hidden
                     updateSelected({ is_hidden: c })
                     toast.promise(
                       updateOne
                         .mutateAsync({ resource: "appleMusicAlbums", id: selected.id, values: { is_hidden: c } })
-                        .then(() => invalidate({ resource: "appleMusicAlbums", invalidates: ["list", "detail"] })),
-                      { loading: "儲存中...", success: "已更新", error: "更新失敗" },
+                        .then(async () => {
+                          await invalidate({ resource: "appleMusicAlbums", invalidates: ["list", "detail"] })
+                          const refreshed = await listQuery.refetch()
+                          setAlbums(refreshed.data?.data || [])
+                        }),
+                      {
+                        loading: "儲存中...",
+                        success: "已更新",
+                        error: () => {
+                          updateSelected({ is_hidden: previous })
+                          return "更新失敗"
+                        },
+                      },
                     )
                   }}
                 />

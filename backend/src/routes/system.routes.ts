@@ -16,7 +16,8 @@ import { getMediaGroup, listMediaGroups, listRepairMediaGroups, mergeMediaGroups
 import { createAnnouncement, deleteAnnouncement, listAnnouncements, updateAnnouncement, updateAnnouncementOrder } from '../controllers/announcements.controller.js';
 import { syncImagesToR2 } from '../controllers/r2.controller.js';
 import { rebuildR2 } from '../controllers/r2_rebuild.js';
-import { requireAuth, requirePermission } from '../middleware/auth.middleware.js';
+import { ADMIN_PERMISSIONS } from '../constants/admin-permissions.js';
+import { requireAnyPermission, requirePermission } from '../middleware/auth.middleware.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 
 const router = Router();
@@ -50,10 +51,6 @@ const requireR2SyncAuth = (permissionCode: string) => {
       res.status(403).json({ success: false, message: 'Forbidden' });
       return;
     }
-    await requireAuth(req, res, async (err?: any) => {
-      if (err) next(err);
-    });
-    if (!req.user) return;
     await requirePerm(req, res, next);
   });
 };
@@ -67,41 +64,46 @@ router.get('/geo', asyncHandler(getClientGeo));
 router.post('/geo/raw', asyncHandler(saveGeoRaw));
 
 // Admin: Toggle maintenance mode
-router.put('/maintenance', requireAuth, requirePermission('admin.system.maintenance.update'), asyncHandler(toggleMaintenance));
+router.put('/maintenance', requirePermission(ADMIN_PERMISSIONS.SYSTEM_MAINTENANCE), asyncHandler(toggleMaintenance));
 
 // Admin: Get dictionaries
 router.get('/dicts', asyncHandler(getDictionaries));
 
 // Admin: Update dictionaries
-router.post('/dicts', requireAuth, requirePermission('admin.system.dicts.update'), asyncHandler(updateDictionaries));
-router.post('/dicts/create', requireAuth, requirePermission('admin.system.dicts.update'), asyncHandler(createDictionary));
-router.patch('/dicts/:id', requireAuth, requirePermission('admin.system.dicts.update'), asyncHandler(patchDictionary));
-router.delete('/dicts/:id', requireAuth, requirePermission('admin.system.dicts.update'), asyncHandler(deleteDictionary));
+router.post('/dicts', requirePermission(ADMIN_PERMISSIONS.SYSTEM_DICTS), asyncHandler(updateDictionaries));
+router.post('/dicts/create', requirePermission(ADMIN_PERMISSIONS.SYSTEM_DICTS), asyncHandler(createDictionary));
+router.patch('/dicts/:id', requirePermission(ADMIN_PERMISSIONS.SYSTEM_DICTS), asyncHandler(patchDictionary));
+router.delete('/dicts/:id', requirePermission(ADMIN_PERMISSIONS.SYSTEM_DICTS), asyncHandler(deleteDictionary));
 
-router.post('/cache/clear', requireAuth, requirePermission('admin.system.cache.clear'), asyncHandler(clearRedisApiCache));
+router.post('/cache/clear', requirePermission(ADMIN_PERMISSIONS.SYSTEM_CACHE), asyncHandler(clearRedisApiCache));
 
-router.get('/media/orphans', requireAuth, asyncHandler(listOrphanMedia));
-router.post('/media/orphans/:mediaId/assign', requireAuth, asyncHandler(assignOrphanMediaGroup));
-router.post('/media/orphans/:mediaId/unassign', requireAuth, asyncHandler(unassignOrphanMediaGroup));
+const requireMediaToolPermission = requireAnyPermission([
+  ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS,
+  ADMIN_PERMISSIONS.SYSTEM_MEDIA_ORPHANS,
+]);
 
-router.get('/media/groups', requireAuth, asyncHandler(listMediaGroups));
-router.get('/media/groups/repair', requireAuth, asyncHandler(listRepairMediaGroups));
-router.get('/media/groups/:id', requireAuth, asyncHandler(getMediaGroup));
-router.put('/media/groups/:id', requireAuth, asyncHandler(updateMediaGroup));
-router.post('/media/groups/:id/merge', requireAuth, asyncHandler(mergeMediaGroups));
-router.post('/media/groups/:id/unassign', requireAuth, asyncHandler(unassignMediaGroup));
-router.post('/media/:mediaId/relations/sync', requireAuth, asyncHandler(syncMediaRelations));
+router.get('/media/orphans', requireMediaToolPermission, asyncHandler(listOrphanMedia));
+router.post('/media/orphans/:mediaId/assign', requireMediaToolPermission, asyncHandler(assignOrphanMediaGroup));
+router.post('/media/orphans/:mediaId/unassign', requireMediaToolPermission, asyncHandler(unassignOrphanMediaGroup));
 
-router.get('/announcements', requireAuth, asyncHandler(listAnnouncements));
-router.post('/announcements', requireAuth, asyncHandler(createAnnouncement));
-router.put('/announcements/order', requireAuth, asyncHandler(updateAnnouncementOrder));
-router.put('/announcements/:id', requireAuth, asyncHandler(updateAnnouncement));
-router.delete('/announcements/:id', requireAuth, asyncHandler(deleteAnnouncement));
+router.get('/media/groups', requireMediaToolPermission, asyncHandler(listMediaGroups));
+router.get('/media/groups/repair', requirePermission(ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS), asyncHandler(listRepairMediaGroups));
+router.get('/media/groups/:id', requirePermission(ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS), asyncHandler(getMediaGroup));
+router.put('/media/groups/:id', requirePermission(ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS), asyncHandler(updateMediaGroup));
+router.post('/media/groups/:id/merge', requirePermission(ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS), asyncHandler(mergeMediaGroups));
+router.post('/media/groups/:id/unassign', requirePermission(ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS), asyncHandler(unassignMediaGroup));
+router.post('/media/:mediaId/relations/sync', requirePermission(ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS), asyncHandler(syncMediaRelations));
+
+router.get('/announcements', requirePermission(ADMIN_PERMISSIONS.SYSTEM_ANNOUNCEMENTS), asyncHandler(listAnnouncements));
+router.post('/announcements', requirePermission(ADMIN_PERMISSIONS.SYSTEM_ANNOUNCEMENTS), asyncHandler(createAnnouncement));
+router.put('/announcements/order', requirePermission(ADMIN_PERMISSIONS.SYSTEM_ANNOUNCEMENTS), asyncHandler(updateAnnouncementOrder));
+router.put('/announcements/:id', requirePermission(ADMIN_PERMISSIONS.SYSTEM_ANNOUNCEMENTS), asyncHandler(updateAnnouncement));
+router.delete('/announcements/:id', requirePermission(ADMIN_PERMISSIONS.SYSTEM_ANNOUNCEMENTS), asyncHandler(deleteAnnouncement));
 
 // Admin: Sync existing Twitter images to R2 Bucket
-router.post('/r2-sync', requireR2SyncAuth('admin.system.r2.sync'), asyncHandler(syncImagesToR2));
+router.post('/r2-sync', requireR2SyncAuth(ADMIN_PERMISSIONS.SYSTEM_R2), asyncHandler(syncImagesToR2));
 
-router.post('/r2-rebuild', requireR2SyncAuth('admin.system.r2.rebuild'), asyncHandler(rebuildR2));
+router.post('/r2-rebuild', requireR2SyncAuth(ADMIN_PERMISSIONS.SYSTEM_R2), asyncHandler(rebuildR2));
 
 // Public: Get signed image proxy URL and redirect
 router.get('/image/proxy', (req, res) => {

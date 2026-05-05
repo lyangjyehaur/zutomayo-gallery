@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import { AdminMenuModel, AdminUserModel } from '../models/index.js';
 import { getEnforcer } from '../rbac/enforcer.js';
+import { normalizeAdminPermissionCodes } from '../constants/admin-permissions.js';
 import { getSessionCookieOptions, sessionCookieName } from '../config/session.js';
 
 const serializeMenus = async (username: string, permissions: Set<string>) => {
@@ -40,7 +41,9 @@ const buildMePayload = async (username: string) => {
     }
   }
 
-  const menus = await serializeMenus(username, permissions);
+  const normalizedPermissions = new Set(normalizeAdminPermissionCodes(permissions));
+
+  const menus = await serializeMenus(username, normalizedPermissions);
   const user = await AdminUserModel.findOne({ where: { username } as any });
   const data = user?.toJSON ? (user.toJSON() as any) : null;
   return {
@@ -49,7 +52,7 @@ const buildMePayload = async (username: string) => {
     display_name: data?.display_name ? String(data.display_name) : null,
     avatar_url: data?.avatar_url ? String(data.avatar_url) : null,
     roles,
-    permissions: Array.from(permissions),
+    permissions: Array.from(normalizedPermissions),
     menus,
   };
 };

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { useCreate, useDelete, useInvalidate, useList, useUpdate } from "@refinedev/core"
 
@@ -27,13 +27,18 @@ export function AdminDictsPage() {
   const [deletedIds, setDeletedIds] = useState<string[]>([])
   const [selectedId, setSelectedId] = useState<string>("")
   const [query, setQuery] = useState("")
+  const [isDirty, setIsDirty] = useState(false)
+
+  const hydrateDicts = useCallback((rows: DictItem[]) => {
+    setDicts(rows)
+    setSelectedId((prev) => (rows.some((row) => String(row.id) === prev) ? prev : String(rows[0]?.id || "")))
+  }, [])
 
   useEffect(() => {
     const rows = listQuery.data?.data || []
-    if (rows.length === 0) return
-    setDicts((prev) => (prev.length > 0 ? prev : rows))
-    setSelectedId((prev) => (prev ? prev : String(rows[0].id)))
-  }, [listQuery.data])
+    if (isDirty) return
+    hydrateDicts(rows)
+  }, [hydrateDicts, isDirty, listQuery.data])
 
   const handleSave = async () => {
     const invalid = dicts.filter((d) => {
@@ -86,12 +91,15 @@ export function AdminDictsPage() {
         }
 
         await invalidate({ resource: "dicts", invalidates: ["list"] })
-        return created
+        const refreshed = await listQuery.refetch()
+        return refreshed.data?.data || created
       })(),
       {
         loading: "儲存中...",
-        success: () => {
+        success: (rows) => {
           setDeletedIds([])
+          setIsDirty(false)
+          hydrateDicts(rows as DictItem[])
           return "儲存成功！"
         },
         error: (e) => `儲存失敗：${String((e as any)?.message || e)}`,
@@ -103,6 +111,7 @@ export function AdminDictsPage() {
 
   const updateSelected = (patch: Partial<DictItem>) => {
     if (!selected) return
+    setIsDirty(true)
     setDicts((prev) => prev.map((d) => (d.id === selected.id ? { ...d, ...patch } : d)))
   }
 
@@ -145,6 +154,7 @@ export function AdminDictsPage() {
       description: "",
       sort_order: 0,
     }
+    setIsDirty(true)
     setDicts((prev) => [...prev, next])
     setSelectedId(newId)
     setQuery("")
@@ -152,6 +162,7 @@ export function AdminDictsPage() {
 
   const handleDeleteSelected = () => {
     if (!selected) return
+    setIsDirty(true)
     if (!String(selected.id).startsWith("dict-")) {
       setDeletedIds((prev) => [...prev, String(selected.id)])
     }

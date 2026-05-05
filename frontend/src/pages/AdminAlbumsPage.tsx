@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { useCreate, useDelete, useInvalidate, useList, useUpdate } from "@refinedev/core"
 
@@ -41,6 +41,12 @@ export function AdminAlbumsPage() {
   const [deletedIds, setDeletedIds] = useState<string[]>([])
   const [selectedId, setSelectedId] = useState<string>("")
   const [query, setQuery] = useState("")
+  const [isDirty, setIsDirty] = useState(false)
+
+  const hydrateAlbums = useCallback((rows: Album[]) => {
+    setAlbums(rows)
+    setSelectedId((prev) => (rows.some((row) => String(row.id) === prev) ? prev : String(rows[0]?.id || "")))
+  }, [])
 
   const typeLabelByCode = useMemo(() => {
     const map = new Map<string, string>()
@@ -50,15 +56,13 @@ export function AdminAlbumsPage() {
 
   useEffect(() => {
     const rows = albumList.data?.data || []
-    if (rows.length === 0) return
-    setAlbums((prev) => (prev.length > 0 ? prev : rows))
-    setSelectedId((prev) => (prev ? prev : String(rows[0].id)))
-  }, [albumList.data])
+    if (isDirty) return
+    hydrateAlbums(rows)
+  }, [albumList.data, hydrateAlbums, isDirty])
 
   useEffect(() => {
     const rows = dictList.data?.data || []
-    if (rows.length === 0) return
-    setDicts((prev) => (prev.length > 0 ? prev : rows))
+    setDicts(rows)
   }, [dictList.data])
 
   useEffect(() => {
@@ -114,11 +118,15 @@ export function AdminAlbumsPage() {
           })
         }
         await invalidate({ resource: "albums", invalidates: ["list"] })
+        const refreshed = await albumList.refetch()
+        return refreshed.data?.data || []
       })(),
       {
         loading: "儲存中...",
-        success: () => {
+        success: (rows) => {
           setDeletedIds([])
+          setIsDirty(false)
+          hydrateAlbums(rows as Album[])
           return "儲存成功！"
         },
         error: (e) => `儲存失敗：${String((e as any)?.message || e)}`,
@@ -129,6 +137,7 @@ export function AdminAlbumsPage() {
   const handleAdd = () => {
     const newId = `album-${Date.now()}`
     const next: Album = { id: newId, name: "", type: "", hide_date: false }
+    setIsDirty(true)
     setAlbums((prev) => [...prev, next])
     setSelectedId(newId)
     setQuery("")
@@ -136,6 +145,7 @@ export function AdminAlbumsPage() {
 
   const handleDeleteSelected = () => {
     if (!selectedId) return
+    setIsDirty(true)
     setAlbums((prev) => {
       const idx = prev.findIndex((a) => a.id === selectedId)
       if (idx < 0) return prev
@@ -155,6 +165,7 @@ export function AdminAlbumsPage() {
 
   const updateSelected = (patch: Partial<Album>) => {
     if (!selected) return
+    setIsDirty(true)
     setAlbums((prev) => prev.map((a) => (a.id === selected.id ? { ...a, ...patch } : a)))
   }
 
