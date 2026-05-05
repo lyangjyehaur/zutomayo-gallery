@@ -218,15 +218,19 @@ cp frontend/.env.example frontend/.env
 cp backend/.env.example backend/.env
 ```
 
-如果你是使用 `deploylocal` 在本機打包前端，請另外確認 `frontend/.env.production` 已經是正式站設定。Vite 在 `build` 時會讀取這份檔案來覆蓋本機 `.env`，避免把開發環境值一起打包進線上 `dist`。
+前端環境檔已經切成兩份：
+- `frontend/.env`：本機開發用
+- `frontend/.env.production`：正式打包用
+
+Vite 在 `vite build` 時會以 production mode 載入 `frontend/.env.production`，再疊加 `frontend/.env` 與執行階段環境變數。正式部署時請確認打包流程沒有額外覆蓋這些值。
 
 ### 前端環境變數 (`frontend/.env`)
 | 變數名稱 | 說明 | 預設值 |
 |---|---|---|
-| `VITE_API_ROOT` | 後端 API 伺服器根路徑，生產環境若為分離部署請務必設定 | `/api` |
-| `VITE_API_ORIGIN` | API 伺服器原始網域，用於 HTML `preconnect` | `https://api.ztmr.club` |
-| `VITE_IMGPROXY_ORIGIN` | Imgproxy 服務原始網域，用於 HTML `preconnect` | `https://img.ztmr.club` |
-| `VITE_ASSETS_ORIGIN` | 靜態媒體資源原始網域，用於圖片/CDN 轉址 | `https://assets.ztmr.club` |
+| `VITE_API_ROOT` | 後端 API 伺服器根路徑，開發時通常維持 `/api` | `/api` |
+| `VITE_API_ORIGIN` | API 伺服器原始網域，用於 HTML `preconnect`；此欄位以本機開發為主 | `http://localhost:5010` |
+| `VITE_IMGPROXY_ORIGIN` | Imgproxy 服務原始網域；此欄位以本機開發為主 | `http://localhost:8018` |
+| `VITE_ASSETS_ORIGIN` | 靜態媒體資源原始網域；此欄位以本機開發為主 | `http://localhost:5173` |
 | `VITE_UNPKG_ORIGIN` | 第三方套件 CDN 原始網域 | `https://unpkg.com` |
 | `VITE_TWITTER_IMAGE_SOURCE_HOST` | Twitter 圖片來源主機 | `https://pbs.twimg.com` |
 | `VITE_TWITTER_VIDEO_SOURCE_HOST` | Twitter 影片來源主機 | `https://video.twimg.com` |
@@ -235,15 +239,15 @@ cp backend/.env.example backend/.env
 | `VITE_YOUTUBE_SOURCE_HOSTS` | YouTube 圖片來源主機列表（逗號分隔） | `i.ytimg.com,img.youtube.com,youtube.com` |
 | `VITE_YOUTUBE_PROXY_PATH` | YouTube 圖片反代路徑 | `/yi` |
 | `VITE_R2_DOMAIN` | (選填) Cloudflare R2 自訂網域 | `https://r2.dan.tw` |
-| `VITE_WALINE_SERVER_URL` | (保留) Waline 伺服器位址。專案目前預設使用 `https://comments.ztmr.club`，此值主要作為未來抽換保留 | `https://comments.ztmr.club` |
+| `VITE_WALINE_SERVER_URL` | Waline 伺服器位址；開發時可直接沿用正式站 | `https://comments.ztmr.club` |
 | `VITE_WALINE_EMOJI_ORIGIN` | Waline 表情 CDN 原始網域 | `https://unpkg.com` |
 | `VITE_WALINE_EMOJI_FASTLY_ORIGIN` | Waline 表情 CDN 備援網域 | `https://fastly.jsdelivr.net/npm` |
 | `VITE_WALINE_AVATAR_ORIGIN` | Waline 頭像來源 | `https://gravatar.com/avatar` |
 | `VITE_WALINE_AVATAR_MIRROR_ORIGIN` | Waline 頭像鏡像來源 | `https://cravatar.cn/avatar` |
 | `VITE_YOUTUBE_EMBED_ORIGIN` | YouTube 影片嵌入來源 | `https://www.youtube.com/embed` |
 | `VITE_BILIBILI_EMBED_ORIGIN` | Bilibili 影片嵌入來源 | `https://player.bilibili.com/player.html` |
-| `VITE_UMAMI_SECONDARY_WEBSITE_ID` | (選填) commons Umami 網站追蹤 ID | 無 |
-| `VITE_UMAMI_SECONDARY_HOST_URL` | (選填) commons Umami 追蹤主機網址 | `https://gallery.ztmr.club/commons` |
+| `VITE_UMAMI_SECONDARY_WEBSITE_ID` | (選填) commons Umami 網站追蹤 ID；本機開發可留空 | 無 |
+| `VITE_UMAMI_SECONDARY_HOST_URL` | (選填) commons Umami 追蹤主機網址；本機開發可留空 | 無 |
 | `VITE_UMAMI_SECONDARY_BASE_SCRIPT` | (選填) commons Umami 腳本基底路徑 | `/commons` |
 
 ### 後端環境變數 (`backend/.env`)
