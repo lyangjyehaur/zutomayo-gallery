@@ -23,7 +23,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
   const baseApiUrl = useMemo(() => getApiRoot(), []);
   const [galleryFanarts, setGalleryFanarts] = useState<any[]>([]);
   const [galleryMeta, setGalleryMeta] = useState<{ limit: number; offset: number; total: number | null; hasMore: boolean }>({
-    limit: 200,
+    limit: 48,
     offset: 0,
     total: null,
     hasMore: false
@@ -210,7 +210,8 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
       if (res.ok && data?.success && data?.data) {
         setSummary(data.data);
       }
-    } catch {
+    } catch (err) {
+      console.error('Failed to fetch fanart summary:', err);
     }
   }, [baseApiUrl, onlyCollab, onlySubmitted, selectedSpecialTags]);
 
@@ -362,43 +363,43 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
           </div>
           
           <div className={`space-y-6 overflow-hidden transition-all duration-500 origin-top ${isFilterExpanded ? 'max-h-[2000px] opacity-100 mt-6' : 'max-h-0 opacity-0 mt-0'}`}>
-            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" onClick={() => setOnlyCollab(!onlyCollab)}>
-              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyCollab ? 'bg-main' : 'bg-card'}`}>
+            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" role="checkbox" aria-checked={onlyCollab} tabIndex={0} onClick={() => setOnlyCollab(!onlyCollab)} onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setOnlyCollab(!onlyCollab); } }}>
+              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyCollab ? 'bg-main' : 'bg-card'}`} aria-hidden="true">
                 {onlyCollab && <i className="hn hn-check text-xs font-black"></i>}
               </div>
               <Label className="font-bold cursor-pointer">{t('fanart.only_collab', '只看 綜合插畫 (多角色 / 大合繪)')} ({collabCount})</Label>
             </div>
 
-            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" onClick={() => setOnlySubmitted(!onlySubmitted)}>
-              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlySubmitted ? 'bg-main' : 'bg-card'}`}>
+            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" role="checkbox" aria-checked={onlySubmitted} tabIndex={0} onClick={() => setOnlySubmitted(!onlySubmitted)} onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setOnlySubmitted(!onlySubmitted); } }}>
+              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlySubmitted ? 'bg-main' : 'bg-card'}`} aria-hidden="true">
                 {onlySubmitted && <i className="hn hn-check text-xs font-black"></i>}
               </div>
               <Label className="font-bold cursor-pointer">只看 主動投稿</Label>
             </div>
 
-            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" onClick={() => setOnlyAcaNe(!onlyAcaNe)}>
-              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyAcaNe ? 'bg-main' : 'bg-card'}`}>
+            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" role="checkbox" aria-checked={onlyAcaNe} tabIndex={0} onClick={() => setOnlyAcaNe(!onlyAcaNe)} onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setOnlyAcaNe(!onlyAcaNe); } }}>
+              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyAcaNe ? 'bg-main' : 'bg-card'}`} aria-hidden="true">
                 {onlyAcaNe && <i className="hn hn-check text-xs font-black"></i>}
               </div>
               <Label className="font-bold cursor-pointer">{t('fanart.only_aca_ne', '只看 ACAね')} ({specialTagCounts.get('tag:acane') || 0})</Label>
             </div>
 
-            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" onClick={() => setOnlyReal(!onlyReal)}>
-              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyReal ? 'bg-main' : 'bg-card'}`}>
+            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" role="checkbox" aria-checked={onlyReal} tabIndex={0} onClick={() => setOnlyReal(!onlyReal)} onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setOnlyReal(!onlyReal); } }}>
+              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyReal ? 'bg-main' : 'bg-card'}`} aria-hidden="true">
                 {onlyReal && <i className="hn hn-check text-xs font-black"></i>}
               </div>
               <Label className="font-bold cursor-pointer">只看 實物 ({specialTagCounts.get('tag:real') || 0})</Label>
             </div>
 
-            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" onClick={() => setOnlyUniguri(!onlyUniguri)}>
-              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyUniguri ? 'bg-main' : 'bg-card'}`}>
+            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" role="checkbox" aria-checked={onlyUniguri} tabIndex={0} onClick={() => setOnlyUniguri(!onlyUniguri)} onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setOnlyUniguri(!onlyUniguri); } }}>
+              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyUniguri ? 'bg-main' : 'bg-card'}`} aria-hidden="true">
                 {onlyUniguri && <i className="hn hn-check text-xs font-black"></i>}
               </div>
               <Label className="font-bold cursor-pointer">只看 海膽栗子/生薑 ({specialTagCounts.get('tag:uniguri') || 0})</Label>
             </div>
 
-            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" onClick={() => setOnlyOther(!onlyOther)}>
-              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyOther ? 'bg-main' : 'bg-card'}`}>
+            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" role="checkbox" aria-checked={onlyOther} tabIndex={0} onClick={() => setOnlyOther(!onlyOther)} onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setOnlyOther(!onlyOther); } }}>
+              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyOther ? 'bg-main' : 'bg-card'}`} aria-hidden="true">
                 {onlyOther && <i className="hn hn-check text-xs font-black"></i>}
               </div>
               <Label className="font-bold cursor-pointer">只看 其他 ({specialTagCounts.get('tag:other') || 0})</Label>
