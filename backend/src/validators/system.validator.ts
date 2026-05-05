@@ -8,14 +8,14 @@ export const toggleMaintenanceSchema = z.object({
 
 export const saveGeoRawSchema = z.object({
   geo_session_id: z.string().optional(),
-  ip: z.string().optional(),       // 可選：後端可從請求頭提取
+  ip: z.string().min(1, 'ip is required'),
   country: z.string().optional(),
   raw_country: z.string().optional(),
   ip2region_raw: z.string().optional(),
   geoip_raw: z.string().optional(),
   maxmind_city_raw: z.string().optional(),
   maxmind_asn_raw: z.string().optional(),
-  ip2region_sha256: z.string().optional(),   // 可選：後端可自行計算
+  ip2region_sha256: z.string().optional(),
   geoip_sha256: z.string().optional(),
   maxmind_city_sha256: z.string().optional(),
   maxmind_asn_sha256: z.string().optional(),
