@@ -1,26 +1,6 @@
 import type { AuthProvider } from "@refinedev/core"
 import { adminFetch, getAuthApiBase } from "@/lib/admin-api"
-
-type MePayload = {
-  username?: string
-  roles?: string[]
-  permissions?: string[]
-  menus?: unknown[]
-}
-
-type ApiResponse<T> =
-  | { success: true; data: T }
-  | { success: false; error?: string; message?: string }
-
-const fetchMe = async () => {
-  const authApiBase = getAuthApiBase()
-  const res = await adminFetch(`${authApiBase}/me`)
-  const json = (await res.json().catch(() => null)) as ApiResponse<MePayload> | null
-  if (!res.ok || !json || !("success" in json) || !json.success) {
-    throw new Error("UNAUTHENTICATED")
-  }
-  return json.data
-}
+import { clearAdminMeCache, fetchAdminMe } from "@/lib/admin-session"
 
 export const adminAuthProvider: AuthProvider = {
   login: async (params: { username?: string; password?: string } = {}) => {
@@ -30,21 +10,24 @@ export const adminAuthProvider: AuthProvider = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username: params.username, password: params.password }),
     })
-    const json = (await res.json().catch(() => null)) as ApiResponse<MePayload> | null
+    const json = (await res.json().catch(() => null)) as { success?: boolean; error?: string; message?: string } | null
     if (!res.ok || !json?.success) {
       const msg = (json as any)?.error || (json as any)?.message || "LOGIN_FAILED"
       return { success: false, error: new Error(String(msg)) }
     }
+    clearAdminMeCache()
     return { success: true }
   },
   logout: async () => {
     const authApiBase = getAuthApiBase()
     await adminFetch(`${authApiBase}/logout`, { method: "POST" }).catch(() => undefined)
+    clearAdminMeCache()
     return { success: true, redirectTo: "/admin" }
   },
   check: async () => {
     try {
-      await fetchMe()
+      const me = await fetchAdminMe()
+      if (!me) throw new Error("UNAUTHENTICATED")
       return { authenticated: true }
     } catch {
       return { authenticated: false, redirectTo: "/admin" }
@@ -56,12 +39,12 @@ export const adminAuthProvider: AuthProvider = {
     return { error }
   },
   getPermissions: async () => {
-    const me = await fetchMe()
+    const me = await fetchAdminMe()
+    if (!me) return []
     return me.permissions || []
   },
   getIdentity: async () => {
-    const me = await fetchMe()
+    const me = await fetchAdminMe()
     return me || null
   },
 }
-

@@ -4,25 +4,11 @@ import { toast } from "sonner"
 import { startAuthentication } from "@simplewebauthn/browser"
 import { VERSION_CONFIG } from "@/config/version"
 import { adminFetch, getAuthApiBase } from "@/lib/admin-api"
+import { fetchAdminMe } from "@/lib/admin-session"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AuthCard } from "@/components/auth/AuthCard"
-
-type MePayload = {
-  username?: string
-}
-
-type ApiResponse<T> =
-  | { success: true; data: T }
-  | { success: false; error?: string; message?: string }
-
-const fetchMe = async (): Promise<MePayload | null> => {
-  const res = await adminFetch(`${getAuthApiBase()}/me`)
-  const json = (await res.json().catch(() => null)) as ApiResponse<MePayload> | null
-  if (!res.ok || !json?.success) return null
-  return json.data
-}
 
 const getTo = (raw: string | null) => {
   const v = typeof raw === "string" ? raw : ""
@@ -46,7 +32,7 @@ export function AdminAuthPage() {
   React.useEffect(() => {
     const run = async () => {
       try {
-        const me = await fetchMe()
+        const me = await fetchAdminMe()
         if (me) {
           navigate(to, { replace: true })
           return
@@ -67,8 +53,8 @@ export function AdminAuthPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       })
-      const json = (await res.json().catch(() => null)) as ApiResponse<any> | null
-      if (!res.ok || !json?.success) throw new Error(String((json as any)?.error || "LOGIN_FAILED"))
+      const json = (await res.json().catch(() => null)) as { success?: boolean; error?: string; message?: string } | null
+      if (!res.ok || !json?.success) throw new Error(String(json?.error || "LOGIN_FAILED"))
       toast.success("登入成功")
       navigate(to, { replace: true })
     } catch (e) {

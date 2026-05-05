@@ -19,34 +19,14 @@ import { Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarSeparator, Me
 import { useConfirmDialog } from "@/components/admin/useConfirmDialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { ADMIN_PERMISSIONS } from "@/lib/admin-permissions"
-
-type MePayload = {
-  username?: string
-  email?: string | null
-  display_name?: string | null
-  avatar_url?: string | null
-  roles?: string[]
-  permissions?: string[]
-  menus?: Array<{ label?: string; path?: string; sort?: number }>
-}
-
-type ApiResponse<T> =
-  | { success: true; data: T }
-  | { success: false; error?: string; message?: string }
-
-const fetchMe = async (): Promise<MePayload | null> => {
-  const res = await adminFetch(`${getAuthApiBase()}/me`)
-  const json = (await res.json().catch(() => null)) as ApiResponse<MePayload> | null
-  if (!res.ok || !json?.success) return null
-  return json.data
-}
+import { fetchAdminMe, type AdminMePayload } from "@/lib/admin-session"
 
 export default function AdminLayout() {
   const location = useLocation()
   const [confirm, ConfirmDialog] = useConfirmDialog()
   const [isInitializing, setIsInitializing] = React.useState(true)
   const [isAuthed, setIsAuthed] = React.useState(false)
-  const [me, setMe] = React.useState<MePayload | null>(null)
+  const [me, setMe] = React.useState<AdminMePayload | null>(null)
   const [logoutError, setLogoutError] = React.useState<string | null>(null)
 
   const permissions = React.useMemo(() => {
@@ -59,7 +39,7 @@ export default function AdminLayout() {
   }, [permissions])
 
   const refresh = React.useCallback(async () => {
-    const next = await fetchMe()
+    const next = await fetchAdminMe()
     if (next) {
       setMe(next)
       setIsAuthed(true)
