@@ -406,27 +406,6 @@ function App({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  useEffect(() => {
-    const apiUrl = getMvsApiBase();
-    const authApiUrl = getAuthApiBase();
-    let cancelled = false;
-
-    fetch(`${authApiUrl}/me`, { credentials: "include" })
-      .then((res) => {
-        if (cancelled) return;
-        if (res.ok) {
-          setIsAdminAuthenticated(true);
-          return;
-        }
-        setIsAdminAuthenticated(false);
-      })
-      .catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   // 處理反饋抽屜的延遲卸載，以保留滑出動畫
   useEffect(() => {
     if (isFeedbackOpen) {
@@ -500,6 +479,30 @@ function App({
   const isForgotRoute = pathnameWithoutLang === "/forgot";
   const isMeSubmissionsRoute = pathnameWithoutLang === "/me/submissions";
   const isNotFound = pathnameWithoutLang !== "/" && pathnameWithoutLang !== "/favorites" && !isIllustratorsRoute && !isFanArtRoute && !isAppleMusicGalleryRoute && !isSubmitRoute && !isLoginRoute && !isRegisterRoute && !isForgotRoute && !isMeSubmissionsRoute && !is404Route && !isDemo3DCard && !mvIdMatch;
+
+  useEffect(() => {
+    const isAdminRoute = pathnameWithoutLang.startsWith("/admin");
+    let cancelled = false;
+
+    if (!isAdminRoute) {
+      setIsAdminAuthenticated(false);
+      return;
+    }
+
+    const authApiUrl = getAuthApiBase();
+    fetch(`${authApiUrl}/me`, { credentials: "include" })
+      .then((res) => {
+        if (cancelled) return;
+        setIsAdminAuthenticated(res.ok);
+      })
+      .catch(() => {
+        if (!cancelled) setIsAdminAuthenticated(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pathnameWithoutLang]);
 
   // 動態獲取唯一的年份、專輯與藝術家清單，並處理分組
   const {
