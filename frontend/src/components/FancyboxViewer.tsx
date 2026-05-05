@@ -293,8 +293,37 @@ const SkeletonHeader = () => (
   </header>
 );
 
+const MAX_CACHE_SIZE = 500;
+
 const loadedImagesCache = new Set<string>();
 const dimensionCache = new Map<string, { width: number; height: number }>();
+
+function addToLoadedCache(url: string) {
+  if (loadedImagesCache.size >= MAX_CACHE_SIZE) {
+    // LRU: 移除最老的一半條目
+    const toRemove = Math.floor(MAX_CACHE_SIZE / 2);
+    let count = 0;
+    for (const item of loadedImagesCache) {
+      if (count >= toRemove) break;
+      loadedImagesCache.delete(item);
+      count++;
+    }
+  }
+  loadedImagesCache.add(url);
+}
+
+function setDimensionCache(url: string, dims: { width: number; height: number }) {
+  if (dimensionCache.size >= MAX_CACHE_SIZE) {
+    const toRemove = Math.floor(MAX_CACHE_SIZE / 2);
+    let count = 0;
+    for (const key of dimensionCache.keys()) {
+      if (count >= toRemove) break;
+      dimensionCache.delete(key);
+      count++;
+    }
+  }
+  dimensionCache.set(url, dims);
+}
 
 interface PhotoItemProps {
   photo: PhotoData;
@@ -411,12 +440,12 @@ const PhotoItem = React.memo(function PhotoItem({ photo, index, onPhotoClick, de
                   willChange: 'opacity'
                 }}
                 onLoad={(e) => {
-                  loadedImagesCache.add(photo.thumb);
+                  addToLoadedCache(photo.thumb);
                   setIsLoaded(true);
                   const target = e.target as HTMLImageElement;
                   if (!actualDimensions && target.naturalWidth) {
                     const dims = { width: target.naturalWidth, height: target.naturalHeight };
-                    dimensionCache.set(photo.thumb, dims);
+                    setDimensionCache(photo.thumb, dims);
                     setActualDimensions(dims);
                   }
                 }}

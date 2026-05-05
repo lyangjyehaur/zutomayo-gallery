@@ -1272,6 +1272,10 @@ function App({
                 el.style.setProperty("--mx", "0");
                 el.style.setProperty("--my", "0");
               }
+              if (titleRafRef.current != null) {
+                cancelAnimationFrame(titleRafRef.current);
+                titleRafRef.current = null;
+              }
               titlePointerRef.current = null;
             }}
           >

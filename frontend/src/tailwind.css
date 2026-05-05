@@ -208,9 +208,13 @@ body.is-admin .border-l-4 {
     @apply text-foreground font-base bg-background;
   }
 
-  /* 移除所有元素的預設瀏覽器 focus outline (藍色外框) */
-  *:focus, *:focus-visible {
-    outline: none !important;
+  /* 滑鼠點擊時移除 outline，鍵盤導航時保留自定義 focus 樣式 */
+  *:focus {
+    outline: none;
+  }
+  *:focus-visible {
+    outline: 2px solid var(--main);
+    outline-offset: 2px;
   }
 
   h1, h2, h3, h4, h5, h6{
