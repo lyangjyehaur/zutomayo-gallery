@@ -25,21 +25,28 @@ import { MVDetailsModal } from "@/components/MVDetailsModal";
 import { IllustratorDetailsModal } from "@/components/IllustratorDetailsModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AppleMusicGalleryPage } from "@/pages/AppleMusicGalleryPage";
-import { SubmitFanArtPage } from "@/pages/SubmitFanArtPage";
-import { PublicLoginPage } from "@/pages/PublicLoginPage";
-import { MySubmissionsPage } from "@/pages/MySubmissionsPage";
-import { PublicRegisterPage } from "@/pages/PublicRegisterPage";
-import { PublicForgotPasswordPage } from "@/pages/PublicForgotPasswordPage";
-import { VerifyEmailCallbackPage } from "@/pages/VerifyEmailCallbackPage";
-import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
-import { NotFoundPage } from "@/pages/NotFoundPage";
-import { Demo3DCardPage } from "@/pages/Demo3DCardPage";
-import { DemoCDCasePage } from "@/pages/DemoCDCasePage";
-import { DemoTraeFooterHoverPage } from "@/pages/DemoTraeFooterHoverPage";
+// 前台頁面懶加載
+const AppleMusicGalleryPage = React.lazy(() => import("@/pages/AppleMusicGalleryPage").then((m) => ({ default: m.AppleMusicGalleryPage })));
+const SubmitFanArtPage = React.lazy(() => import("@/pages/SubmitFanArtPage").then((m) => ({ default: m.SubmitFanArtPage })));
+const PublicLoginPage = React.lazy(() => import("@/pages/PublicLoginPage").then((m) => ({ default: m.PublicLoginPage })));
+const MySubmissionsPage = React.lazy(() => import("@/pages/MySubmissionsPage").then((m) => ({ default: m.MySubmissionsPage })));
+const PublicRegisterPage = React.lazy(() => import("@/pages/PublicRegisterPage").then((m) => ({ default: m.PublicRegisterPage })));
+const PublicForgotPasswordPage = React.lazy(() => import("@/pages/PublicForgotPasswordPage").then((m) => ({ default: m.PublicForgotPasswordPage })));
+const VerifyEmailCallbackPage = React.lazy(() => import("@/pages/VerifyEmailCallbackPage").then((m) => ({ default: m.VerifyEmailCallbackPage })));
+const ResetPasswordPage = React.lazy(() => import("@/pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
+const NotFoundPage = React.lazy(() => import("@/pages/NotFoundPage").then((m) => ({ default: m.NotFoundPage })));
+const Demo3DCardPage = React.lazy(() => import("@/pages/Demo3DCardPage").then((m) => ({ default: m.Demo3DCardPage })));
+const DemoCDCasePage = React.lazy(() => import("@/pages/DemoCDCasePage").then((m) => ({ default: m.DemoCDCasePage })));
+const DemoTraeFooterHoverPage = React.lazy(() => import("@/pages/DemoTraeFooterHoverPage").then((m) => ({ default: m.DemoTraeFooterHoverPage })));
+const IllustratorsPage = React.lazy(() => import("@/pages/IllustratorsPage").then((m) => ({ default: m.IllustratorsPage })));
+const FanArtPage = React.lazy(() => import("@/pages/FanArtPage").then((m) => ({ default: m.FanArtPage })));
+const MaintenancePage = React.lazy(() => import("@/pages/MaintenancePage").then((m) => ({ default: m.MaintenancePage })));
+const DebugFancyboxMasonry = React.lazy(() => import("@/debug/DebugFancyboxMasonry"));
+const DebugMVModalLightbox = React.lazy(() => import("@/debug/DebugMVModalLightbox"));
+
+const pageFallback = <div className="flex items-center justify-center min-h-[50vh]"><div className="animate-pulse font-mono text-sm">Loading...</div></div>;
 import { PageNavigation } from "@/components/PageNavigation";
-import { IllustratorsPage } from "@/pages/IllustratorsPage";
-import { FanArtPage } from "@/pages/FanArtPage";
+
 import { PWAPrompt } from "@/components/PWAPrompt";
 import { ModalBackdrop } from "@/components/ModalBackdrop";
 import { Toaster } from "@/components/ui/sonner";
@@ -65,8 +72,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import DebugFancyboxMasonry from "@/debug/DebugFancyboxMasonry";
-import DebugMVModalLightbox from "@/debug/DebugMVModalLightbox";
+
 import { STORAGE_KEYS, storage } from "@/config/storage";
 import { VERSION_CONFIG } from "@/config/version";
 import { ALBUM_CATEGORIES } from "@/config/albums";
@@ -106,7 +112,7 @@ import {
 import useSWR from "swr";
 
 import { MODAL_THEME } from "@/lib/theme";
-import { MaintenancePage } from "@/pages/MaintenancePage";
+
 import AdminLayout from "@/components/admin/AdminLayout";
 import { AdminHomeRedirect, AdminSystemRedirect } from "@/components/admin/AdminHomeRedirect";
 import { AdminRouteGuard } from "@/components/admin/AdminRouteGuard";
@@ -115,6 +121,7 @@ import { RouteDataProvider, useRouteData } from "@/lib/routeData";
 import { MVRouteBoundary } from "@/routes/MVRouteBoundary";
 import { IllustratorRouteBoundary } from "@/routes/IllustratorRouteBoundary";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { isSupportedLang, normalizeLang } from "@/i18n";
 
 const AdminPage = React.lazy(() => import("@/pages/AdminPage").then((m) => ({ default: m.AdminPage })));
@@ -281,6 +288,11 @@ function App({
   const [search, setSearch] = useState(() => {
     try { return sessionStorage.getItem('mv_filter_search') || ''; } catch { return ''; }
   });
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
   const [yearFilter, setYearFilter] = useState<string[]>(() => {
     try { const saved = sessionStorage.getItem('mv_filter_year'); return saved ? JSON.parse(saved) : []; } catch { return []; }
   });
@@ -560,9 +572,9 @@ function App({
   // 自動過濾與排序邏輯 (取代原本的 FilterManager)
   const filteredData = useMemo(() => {
     let data = mvData.filter((mv) => {
-      const searchLower = search.toLowerCase();
+      const searchLower = debouncedSearch.toLowerCase();
       const matchesSearch =
-        !search ||
+        !debouncedSearch ||
         mv.title.toLowerCase().includes(searchLower) ||
         (mv.keywords &&
           mv.keywords.some((k) => k.name.toLowerCase().includes(searchLower))) ||
@@ -602,7 +614,7 @@ function App({
     });
   }, [
     mvData,
-    search,
+    debouncedSearch,
     yearFilter,
     albumFilter,
     artistFilter,
@@ -723,7 +735,7 @@ function App({
       }, 50);
     }
   }, [
-    search,
+    debouncedSearch,
     yearFilter,
     albumFilter,
     artistFilter,
@@ -766,7 +778,7 @@ function App({
 
     const observer = new IntersectionObserver(handleIntersect, {
       root: null,
-      rootMargin: "3000px", // 大幅增加觸發距離，確保使用者永遠不會滾到底部才看到加載
+      rootMargin: "600px", // 適度提前觸發，平衡流暢度與資源浪費
       threshold: 0,
     });
 
@@ -851,7 +863,7 @@ function App({
       cancelAnimationFrame(rafId);
       observer.disconnect();
     };
-  }, [search, yearFilter, albumFilter, artistFilter]); // Dependency 確保過濾條件改變時重新綁定或觸發
+  }, [debouncedSearch, yearFilter, albumFilter, artistFilter]); // Dependency 確保過濾條件改變時重新綁定或觸發
 
   // 獲取當前選中的 MV 對象
   const selectedMv = useMemo(() => {
@@ -904,17 +916,7 @@ function App({
   const isGlobalPaused = !!selectedMvId || !!selectedIllustratorId || (isFeedbackOpen && isMobile) || (isAboutOpen && isMobile) || !isTabActive;
 
   // 控制背景滾動
-  useEffect(() => {
-    if (isFeedbackOpen || !!selectedMvId || !!selectedIllustratorId || isAboutOpen || isFanArtSubmitRoute) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "auto";
-    }
-    
-    return () => {
-      document.body.style.overflow = "auto";
-    };
-  }, [isFeedbackOpen, selectedIllustratorId, selectedMvId, isAboutOpen, isFanArtSubmitRoute]);
+  useBodyScrollLock(isFeedbackOpen || !!selectedMvId || !!selectedIllustratorId || isAboutOpen || isFanArtSubmitRoute);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -1218,9 +1220,9 @@ function App({
 
   const isPublicAuthStandalone = isLoginRoute || isRegisterRoute || isForgotRoute
   if (isPublicAuthStandalone) {
-    if (isLoginRoute) return <PublicLoginPage />
-    if (isRegisterRoute) return <PublicRegisterPage />
-    return <PublicForgotPasswordPage />
+    if (isLoginRoute) return <React.Suspense fallback={pageFallback}><PublicLoginPage /></React.Suspense>
+    if (isRegisterRoute) return <React.Suspense fallback={pageFallback}><PublicRegisterPage /></React.Suspense>
+    return <React.Suspense fallback={pageFallback}><PublicForgotPasswordPage /></React.Suspense>
   }
 
   return (
@@ -1331,25 +1333,25 @@ function App({
         {isNotFound ? (
           <Navigate to={`${basePath}/404?from=${encodeURIComponent(location.pathname + location.search)}`} replace />
         ) : is404Route ? (
-          <NotFoundPage />
+          <React.Suspense fallback={pageFallback}><NotFoundPage /></React.Suspense>
         ) : isDemo3DCard ? (
-          <Demo3DCardPage basePath={basePath} />
+          <React.Suspense fallback={pageFallback}><Demo3DCardPage basePath={basePath} /></React.Suspense>
         ) : isIllustratorsRoute ? (
-          <IllustratorsPage mvData={mvData} metadata={metadata} />
+          <React.Suspense fallback={pageFallback}><IllustratorsPage mvData={mvData} metadata={metadata} /></React.Suspense>
         ) : isFanArtRoute ? (
-          <FanArtPage mvData={mvData} />
+          <React.Suspense fallback={pageFallback}><FanArtPage mvData={mvData} /></React.Suspense>
         ) : isAppleMusicGalleryRoute ? (
-          <AppleMusicGalleryPage />
+          <React.Suspense fallback={pageFallback}><AppleMusicGalleryPage /></React.Suspense>
         ) : isSubmitRoute ? (
-          <SubmitFanArtPage mvData={mvData} />
+          <React.Suspense fallback={pageFallback}><SubmitFanArtPage mvData={mvData} /></React.Suspense>
         ) : isLoginRoute ? (
-          <PublicLoginPage />
+          <React.Suspense fallback={pageFallback}><PublicLoginPage /></React.Suspense>
         ) : isRegisterRoute ? (
-          <PublicRegisterPage />
+          <React.Suspense fallback={pageFallback}><PublicRegisterPage /></React.Suspense>
         ) : isForgotRoute ? (
-          <PublicForgotPasswordPage />
+          <React.Suspense fallback={pageFallback}><PublicForgotPasswordPage /></React.Suspense>
         ) : isMeSubmissionsRoute ? (
-          <MySubmissionsPage />
+          <React.Suspense fallback={pageFallback}><MySubmissionsPage /></React.Suspense>
         ) : (
           <>
             {/* 篩選欄定位錨點（非 sticky），用來計算篩選欄原始位置，放在這裡會剛好和 filterBarRef 的頂部對齊 */}
@@ -1998,7 +2000,7 @@ function App({
 
                 <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
                   <div className="px-4 md:px-6 py-4 md:py-6 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-                    <SubmitFanArtPage mvData={mvData} />
+                    <React.Suspense fallback={pageFallback}><SubmitFanArtPage mvData={mvData} /></React.Suspense>
                   </div>
                 </div>
               </div>
@@ -3016,7 +3018,7 @@ export default function RootApp() {
   };
 
   if (systemStatus?.maintenance && !isAdminRoute) {
-    return <MaintenancePage type={systemStatus.type || 'ui'} eta={systemStatus.eta} />;
+    return <React.Suspense fallback={pageFallback}><MaintenancePage type={systemStatus.type || 'ui'} eta={systemStatus.eta} /></React.Suspense>;
   }
 
   return (
@@ -3024,8 +3026,8 @@ export default function RootApp() {
       <>
         <Routes>
             <Route path="/" element={<RootLocaleRedirect commonProps={commonProps} />} />
-            <Route path="/auth/verify-email" element={<VerifyEmailCallbackPage />} />
-            <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/auth/verify-email" element={<React.Suspense fallback={pageFallback}><VerifyEmailCallbackPage /></React.Suspense>} />
+            <Route path="/auth/reset-password" element={<React.Suspense fallback={pageFallback}><ResetPasswordPage /></React.Suspense>} />
             <Route path="/:lng" element={<LocalizedAppLayout commonProps={commonProps} />}>
               <Route index element={null} />
               <Route path="favorites" element={null} />
@@ -3043,11 +3045,11 @@ export default function RootApp() {
               <Route path="404" element={null} />
               <Route path="*" element={null} />
             </Route>
-            <Route path="/demo/3d-card" element={<Demo3DCardPage />} />
-            <Route path="/demo/cd-case" element={<DemoCDCasePage />} />
+            <Route path="/demo/3d-card" element={<React.Suspense fallback={pageFallback}><Demo3DCardPage /></React.Suspense>} />
+            <Route path="/demo/cd-case" element={<React.Suspense fallback={pageFallback}><DemoCDCasePage /></React.Suspense>} />
             <Route
               path="/demo/trae-footer-glitch"
-              element={<DemoTraeFooterHoverPage />}
+              element={<React.Suspense fallback={pageFallback}><DemoTraeFooterHoverPage /></React.Suspense>}
             />
             <Route path="/admin/auth" element={<React.Suspense fallback={adminFallback}><AdminAuthPage /></React.Suspense>} />
             <Route path="/admin" element={<AdminLayout />}>
@@ -3090,8 +3092,8 @@ export default function RootApp() {
               <Route path="system/group-repair" element={adminRoute("systemGroupRepair", <AdminMediaGroupRepairPage />)} />
               <Route path="system/orphans" element={adminRoute("systemOrphans", <AdminOrphanMediaPage />)} />
             </Route>
-            <Route path="/debug/fb/:mvid?" element={<DebugFancyboxMasonry />} />
-            <Route path="/debug/modal" element={<DebugMVModalLightbox />} />
+            <Route path="/debug/fb/:mvid?" element={<React.Suspense fallback={pageFallback}><DebugFancyboxMasonry /></React.Suspense>} />
+            <Route path="/debug/modal" element={<React.Suspense fallback={pageFallback}><DebugMVModalLightbox /></React.Suspense>} />
             <Route path="*" element={<FallbackRedirect commonProps={commonProps} />} />
           </Routes>
         {(import.meta.env.PROD || import.meta.env.VITE_PWA_DEV === 'true') ? <PWAPrompt /> : null}

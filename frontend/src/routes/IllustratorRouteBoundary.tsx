@@ -46,7 +46,7 @@ export function IllustratorRouteBoundary() {
 
   if (isLoading && mvData.length === 0) {
     return (
-      <div className={`fixed inset-0 z-[210] ${MODAL_THEME.overlay.dialog} flex items-center justify-center`}>
+      <div className={`fixed inset-0 z-[140] ${MODAL_THEME.overlay.dialog} flex items-center justify-center`}>
         <div className={`px-6 py-4 border-4 border-black bg-card shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] ${MODAL_THEME.content.dialog}`}>
           <div className="flex items-center gap-3 font-black uppercase tracking-widest">
             <i className="hn hn-loading text-xl animate-spin"></i>
@@ -59,7 +59,7 @@ export function IllustratorRouteBoundary() {
 
   if (!found) {
     return (
-      <div className="fixed inset-0 z-[220] overflow-auto bg-background">
+      <div className="fixed inset-0 z-[150] overflow-auto bg-background">
         <NotFoundPage />
       </div>
     );

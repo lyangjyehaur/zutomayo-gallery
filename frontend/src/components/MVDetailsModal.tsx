@@ -22,6 +22,7 @@ import './MVDetailsModal.css';
 import { MODAL_THEME } from '@/lib/theme';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 
 // 圖標組件改為 pixelarticons 類名使用
@@ -47,6 +48,8 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata }: MV
   const location = useLocation();
   const navigate = useNavigate();
   const suppressCloseNavigationRef = useRef(false);
+
+  useBodyScrollLock(!!mv);
 
   // 影片播放狀態
   const [videoPlatform, setVideoPlatform] = useState<'youtube' | 'bilibili'>('bilibili');
@@ -278,13 +281,6 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata }: MV
       // 確保影片播放狀態被重置
       setIsVideoActivated(false);
       
-      // 手動處理背景滾動鎖定 (使用 modal={false} 避免 pointer-events 導致的大量 DOM 樣式重算卡頓)
-      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-      document.body.style.overflow = 'hidden';
-      if (scrollbarWidth > 0) {
-        document.body.style.paddingRight = `${scrollbarWidth}px`;
-      }
-      
       // 延遲渲染重型組件以保持彈窗動畫流暢
       // 等待 600ms，確保 Dialog 動畫與 Modal 開啟流程徹底完成後再加載畫廊與評論
       const timer = setTimeout(() => {
@@ -294,13 +290,9 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata }: MV
       }, 600); 
       return () => {
         clearTimeout(timer);
-        document.body.style.overflow = '';
-        document.body.style.paddingRight = '';
       };
     } else {
       setIsDeferredReady(false);
-      document.body.style.overflow = '';
-      document.body.style.paddingRight = '';
     }
   }, [mv]);
 

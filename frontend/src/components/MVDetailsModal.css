@@ -193,8 +193,9 @@
 }
 
 /* MVDetailsModal Global Styles */
+/* z-index 分層：Lightgallery / Fancybox 統一使用 150-152，避免極端數值 */
 .fancybox__container {
-  z-index: 100000 !important;
+  z-index: 150 !important;
 }
 
 .fancybox__backdrop {
@@ -233,13 +234,13 @@
 }
 
 .lg-backdrop {
-  z-index: 99999 !important;
+  z-index: 150 !important;
 }
 .lg-outer {
-  z-index: 100000 !important;
+  z-index: 151 !important;
 }
 .lg-components {
-  z-index: 100001 !important;
+  z-index: 152 !important;
 }
 
 .lg-backdrop,

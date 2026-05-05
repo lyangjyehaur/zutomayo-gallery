@@ -741,7 +741,7 @@ export default function FancyboxViewer({
       },
       {
         root: null,
-        rootMargin: '1200px', // 從 400px 提早到 1200px，讓載入更平滑
+        rootMargin: '500px', // 適度提前觸發，避免過早加載浪費資源
         threshold: 0.1,
       }
     );
@@ -941,7 +941,7 @@ export default function FancyboxViewer({
     <div ref={containerRef} className={`p-4 sm:p-6 lg:p-10 min-h-screen font-mono ${className}`}>
       <style>{`
         .fancybox__container {
-          z-index: 100000 !important;
+          z-index: 150 !important;
         }
 
         .fancybox__backdrop {

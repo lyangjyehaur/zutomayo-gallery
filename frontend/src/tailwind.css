@@ -398,6 +398,19 @@ body.cursor-native * {
   .crt-lines {
     overflow: hidden;
   }
+  /* z-index 分層規範（避免極端數值）：
+     0-49   基礎內容
+     50     CRT 掃描線
+     60     底部固定懸浮按鈕
+     90     Drawer Overlay
+     100    Modal / Dialog 內容
+     110    Modal 關閉按鈕
+     120    Popover / Dropdown
+     130    Tooltip / Toast
+     140    Route Boundary Loading
+     150    Route Boundary NotFound / Lightgallery / Fancybox
+     152    Lightgallery 組件層
+  */
   /* 細微的彩色水平條紋（模擬像素柵格） */
   .crt-lines::before {
     content: " ";
