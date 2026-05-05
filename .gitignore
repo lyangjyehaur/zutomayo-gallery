@@ -152,21 +152,30 @@ backend/data/metadata.json
 # Deployment config
 deploy.conf
 deploy-local.sh
+deploy-local.conf
 
 # Agent memory
+memory.md
 backend-memory.md
 frontend-memory.md
+.trae/
 
 # Web Scraper
 /scraper/
 backend/crawler/*.json
 
 frontend/memory.md
+backend/data/*.bak
+prod_v1_backup_*.sql
 frontend/.DS_Store
 frontend/src/.DS_Store
 frontend/dev-dist/
 frontend/public/version.json
 frontend/pnpm-lock.yaml
+
+# Local tunnel/debug artifacts
+.autossh-tunnel.log
+.autossh-tunnel.pid
 
 # WorkBuddy workspace
 .workbuddy/
