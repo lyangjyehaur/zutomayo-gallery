@@ -147,12 +147,30 @@ check_and_edit_env() {
     fi
 }
 
+validate_backend_env() {
+    if [ ! -f "backend/.env" ]; then
+        return
+    fi
+
+    # 僅在 production 情境下阻擋缺少必要秘密的部署
+    BACKEND_NODE_ENV=$(grep -E "^NODE_ENV=" backend/.env 2>/dev/null | tail -n1 | cut -d '=' -f2- | tr -d '\r' | xargs)
+    BACKEND_SESSION_SECRET=$(grep -E "^SESSION_SECRET=" backend/.env 2>/dev/null | tail -n1 | cut -d '=' -f2- | tr -d '\r' | xargs)
+
+    if [ "$BACKEND_NODE_ENV" = "production" ] && [ -z "$BACKEND_SESSION_SECRET" ]; then
+        echo -e "${RED}錯誤：backend/.env 目前是 production，但 SESSION_SECRET 為空。${NC}"
+        echo -e "${YELLOW}請先在 backend/.env 設定一個足夠隨機的 SESSION_SECRET，再重新執行部署。${NC}"
+        echo -e "${YELLOW}你可以參考 backend/.env.example 的欄位說明。${NC}"
+        exit 1
+    fi
+}
+
 if [[ "$choice" == "1" || "$choice" == "2" ]]; then
     check_and_edit_env "frontend/.env" "前端 (Frontend)"
 fi
 
 if [[ "$choice" == "1" || "$choice" == "3" ]]; then
     check_and_edit_env "backend/.env" "後端 (Backend)"
+    validate_backend_env
 fi
 
 # ==========================================

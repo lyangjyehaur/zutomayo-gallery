@@ -235,6 +235,7 @@ cp backend/.env.example backend/.env
 | `PORT` | 服务端口 | `5010` |
 | `NODE_ENV` | 运行环境 (`development` / `production`) | `development` |
 | `ALLOWED_ORIGINS` | 允许的 CORS 来源，逗号分隔 | localhost 相关 |
+| `SESSION_SECRET` | Express session 签名密钥。`production` 必填，否则后端不会启动 | 无 |
 | `ADMIN_PASSWORD` | 管理后台密码（生产环境强烈建议修改） | `zutomayo` |
 | `EXPECTED_ORIGIN` | WebAuthn 来源，必须与前端一致 | `http://localhost:5173` |
 | `RP_ID` | WebAuthn 依赖方 ID，通常为站点域名，不含协议 | 从 `EXPECTED_ORIGIN` 推导 |
@@ -251,10 +252,11 @@ cp backend/.env.example backend/.env
 ### 部署注意事项
 
 1. 请务必修改后端环境变量中的 `ADMIN_PASSWORD`，否则后台存在未授权访问风险。
-2. 如果启用 Passkeys，需要正确设置 `EXPECTED_ORIGIN` 与 `RP_ID`，且必须在 HTTPS 环境中运行。
-3. PostgreSQL 是主数据库，请确保具备持久化存储。`backend/data/` 主要用于缓存和遗留文件。
-4. 若前端部署在 Vercel / Netlify，后端部署在其他主机，请正确配置 `ALLOWED_ORIGINS`。
-5. 后端依赖 `better-sqlite3` 与 `bcrypt` 等原生模块，Linux 服务器需要 `python3` / `make` / `g++` 等编译工具链。
+2. 如果后端以 `production` 启动，请先设置 `SESSION_SECRET`，否则服务会在启动时退出。
+3. 如果启用 Passkeys，需要正确设置 `EXPECTED_ORIGIN` 与 `RP_ID`，且必须在 HTTPS 环境中运行。
+4. PostgreSQL 是主数据库，请确保具备持久化存储。`backend/data/` 主要用于缓存和遗留文件。
+5. 若前端部署在 Vercel / Netlify，后端部署在其他主机，请正确配置 `ALLOWED_ORIGINS`。
+6. 后端依赖 `better-sqlite3` 与 `bcrypt` 等原生模块，Linux 服务器需要 `python3` / `make` / `g++` 等编译工具链。
 
 ### 选项 A：`deploy.sh`（推荐服务器使用）
 

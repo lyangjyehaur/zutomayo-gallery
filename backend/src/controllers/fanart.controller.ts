@@ -214,7 +214,7 @@ export const getFanartGallerySummary = async (req: Request, res: Response) => {
   const tagCountRows = await sequelize.query(
     `
     SELECT t.tag, COUNT(DISTINCT m.id)::int AS count
-    FROM unnest(:tags::text[]) AS t(tag)
+    FROM unnest(ARRAY[:tags]::text[]) AS t(tag)
     JOIN media m ON m.type = 'fanart' AND m.tags @> to_jsonb(t.tag::text)
     JOIN media_groups g ON g.id = m.group_id AND g.status = 'organized'
     ${sourceFilter.replace(':source', ':source_for_tag')}
@@ -315,7 +315,7 @@ export const getFanartTagSummary = async (req: Request, res: Response) => {
            COUNT(DISTINCT m.id)::int AS count
     FROM (
       SELECT tag, CASE WHEN tag LIKE 'tag:%' THEN substring(tag FROM 5) ELSE tag END AS legacy_tag
-      FROM unnest(:tags::text[]) AS tag
+      FROM unnest(ARRAY[:tags]::text[]) AS tag
     ) t
     JOIN media m ON m.type = 'fanart' AND (m.tags @> to_jsonb(t.tag::text) OR m.tags @> to_jsonb(t.legacy_tag::text))
     GROUP BY t.tag, t.legacy_tag

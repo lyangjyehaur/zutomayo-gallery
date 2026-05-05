@@ -235,6 +235,7 @@ cp backend/.env.example backend/.env
 | `PORT` | Server port | `5010` |
 | `NODE_ENV` | Runtime environment (`development` / `production`) | `development` |
 | `ALLOWED_ORIGINS` | Allowed CORS origins, comma-separated | localhost values |
+| `SESSION_SECRET` | Express session signing key; required in `production`, or the backend will refuse to start | none |
 | `ADMIN_PASSWORD` | Admin login password (strongly recommended to change in production) | `zutomayo` |
 | `EXPECTED_ORIGIN` | WebAuthn origin, must match the frontend | `http://localhost:5173` |
 | `RP_ID` | WebAuthn relying party ID, usually the site domain without protocol | derived from `EXPECTED_ORIGIN` |
@@ -251,10 +252,11 @@ cp backend/.env.example backend/.env
 ### Deployment Notes
 
 1. Change `ADMIN_PASSWORD` in the backend environment variables. Leaving the default password creates an unauthorized access risk.
-2. Passkeys require correct `EXPECTED_ORIGIN` and `RP_ID` values, plus HTTPS.
-3. PostgreSQL is the primary database. Make sure it has persistent storage. `backend/data/` is for cache and legacy files only.
-4. If the frontend is deployed on Vercel / Netlify and the backend is on another host, set `ALLOWED_ORIGINS` accordingly.
-5. The backend depends on `better-sqlite3` and `bcrypt`, which are native addons. Linux servers need a working build toolchain such as `python3`, `make`, and `g++`.
+2. Set `SESSION_SECRET` before starting the backend in `production`; otherwise the server will exit on boot.
+3. Passkeys require correct `EXPECTED_ORIGIN` and `RP_ID` values, plus HTTPS.
+4. PostgreSQL is the primary database. Make sure it has persistent storage. `backend/data/` is for cache and legacy files only.
+5. If the frontend is deployed on Vercel / Netlify and the backend is on another host, set `ALLOWED_ORIGINS` accordingly.
+6. The backend depends on `better-sqlite3` and `bcrypt`, which are native addons. Linux servers need a working build toolchain such as `python3`, `make`, and `g++`.
 
 ### Option A: `deploy.sh` (recommended for servers)
 

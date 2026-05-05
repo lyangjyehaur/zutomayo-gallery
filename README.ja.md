@@ -235,6 +235,7 @@ cp backend/.env.example backend/.env
 | `PORT` | サーバーポート | `5010` |
 | `NODE_ENV` | 実行環境 (`development` / `production`) | `development` |
 | `ALLOWED_ORIGINS` | 許可する CORS origin（カンマ区切り） | localhost 系 |
+| `SESSION_SECRET` | Express session 署名キー。本番 (`production`) では必須で、未設定だと起動しません | なし |
 | `ADMIN_PASSWORD` | 管理画面のパスワード（本番では変更を強く推奨） | `zutomayo` |
 | `EXPECTED_ORIGIN` | WebAuthn の origin。frontend と一致させる必要あり | `http://localhost:5173` |
 | `RP_ID` | WebAuthn の relying party ID。通常はサイトのドメイン名（プロトコルなし） | `EXPECTED_ORIGIN` から導出 |
@@ -251,10 +252,11 @@ cp backend/.env.example backend/.env
 ### デプロイ時の注意
 
 1. バックエンドの `ADMIN_PASSWORD` は必ず変更してください。変更しないと未承認アクセスのリスクがあります。
-2. Passkeys を使う場合は `EXPECTED_ORIGIN` と `RP_ID` を正しく設定し、HTTPS 環境で実行してください。
-3. PostgreSQL は主データベースです。永続ストレージを確保してください。`backend/data/` はキャッシュやレガシーファイル用です。
-4. frontend を Vercel / Netlify、backend を別ホストへ置く場合は `ALLOWED_ORIGINS` を適切に設定してください。
-5. backend は `better-sqlite3` と `bcrypt` などのネイティブモジュールに依存するため、Linux サーバーには `python3` / `make` / `g++` などのビルド環境が必要です。
+2. 本番 (`production`) で backend を起動する前に `SESSION_SECRET` を必ず設定してください。未設定だと起動時に停止します。
+3. Passkeys を使う場合は `EXPECTED_ORIGIN` と `RP_ID` を正しく設定し、HTTPS 環境で実行してください。
+4. PostgreSQL は主データベースです。永続ストレージを確保してください。`backend/data/` はキャッシュやレガシーファイル用です。
+5. frontend を Vercel / Netlify、backend を別ホストへ置く場合は `ALLOWED_ORIGINS` を適切に設定してください。
+6. backend は `better-sqlite3` と `bcrypt` などのネイティブモジュールに依存するため、Linux サーバーには `python3` / `make` / `g++` などのビルド環境が必要です。
 
 ### オプション A: `deploy.sh`（サーバー向け推奨）
 

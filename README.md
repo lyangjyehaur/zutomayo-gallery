@@ -234,6 +234,7 @@ cp backend/.env.example backend/.env
 | `PORT` | 伺服器運行的連接埠 | `5010` |
 | `NODE_ENV` | 運行環境 (`development` / `production`) | `development` |
 | `ALLOWED_ORIGINS` | 允許的 CORS 來源（以逗號分隔） | `localhost` 相關 |
+| `SESSION_SECRET` | Express session 簽名金鑰；`production` 必填，否則後端不會啟動 | 無 |
 | `ADMIN_PASSWORD` | 管理後台登入密碼 (⚠️**生產環境強烈建議修改**) | `zutomayo` |
 | `EXPECTED_ORIGIN` | WebAuthn (通行密鑰) 驗證的來源域名 (需與前端一致) | `http://localhost:5173` |
 | `RP_ID` | WebAuthn 依賴方 ID (通常為網站主網域，不含 http) | 解析自 `EXPECTED_ORIGIN` |
@@ -249,10 +250,11 @@ cp backend/.env.example backend/.env
 
 ### ⚠️ 部署注意事項與優化建議
 1. **密碼安全性**：務必在後端環境變數中修改 `ADMIN_PASSWORD`，否則後台會有被未授權存取的風險。
-2. **通行密鑰 (Passkeys)**：專案引入了 `@simplewebauthn`。如果要使用生物辨識或通行密鑰登入，必須正確設定 `EXPECTED_ORIGIN`（例如 `https://gallery.ztmy.com`）與 `RP_ID`（例如 `gallery.ztmy.com`），並且**必須在 HTTPS 環境下**運行。
-3. **資料持久化 (Data Persistence)**：主資料庫為 PostgreSQL，請確保資料庫本身具備持久化（例如使用受管 DB 或自行配置磁碟/Volume）。`backend/data/` 主要用於快取與遺留資料（如 ip2region、SQLite 舊資料、備份檔等），不作為主資料庫。
-4. **CORS 設定**：前端若部署於 Vercel / Netlify 等平台，後端部署於另一台主機，請記得在後端設定 `ALLOWED_ORIGINS=https://你的前端網址.com`。
-5. **原生套件編譯**：後端依賴 `better-sqlite3` 與 `bcrypt`（native addon）。Linux 伺服器需具備基本編譯工具鏈（常見為 `python3` / `make` / `g++`）。本專案的 `deploy.sh` 會自動 `rebuild` 相關套件。
+2. **Session 金鑰**：如果後端以 `production` 啟動，請務必設定 `SESSION_SECRET`，否則服務會在啟動時直接退出。
+3. **通行密鑰 (Passkeys)**：專案引入了 `@simplewebauthn`。如果要使用生物辨識或通行密鑰登入，必須正確設定 `EXPECTED_ORIGIN`（例如 `https://gallery.ztmy.com`）與 `RP_ID`（例如 `gallery.ztmy.com`），並且**必須在 HTTPS 環境下**運行。
+4. **資料持久化 (Data Persistence)**：主資料庫為 PostgreSQL，請確保資料庫本身具備持久化（例如使用受管 DB 或自行配置磁碟/Volume）。`backend/data/` 主要用於快取與遺留資料（如 ip2region、SQLite 舊資料、備份檔等），不作為主資料庫。
+5. **CORS 設定**：前端若部署於 Vercel / Netlify 等平台，後端部署於另一台主機，請記得在後端設定 `ALLOWED_ORIGINS=https://你的前端網址.com`。
+6. **原生套件編譯**：後端依賴 `better-sqlite3` 與 `bcrypt`（native addon）。Linux 伺服器需具備基本編譯工具鏈（常見為 `python3` / `make` / `g++`）。本專案的 `deploy.sh` 會自動 `rebuild` 相關套件。
 
 ### 部署方式參考
 
