@@ -318,6 +318,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const isEmpty = (v: any): boolean => v === null || v === undefined || v === '' || (Array.isArray(v) && v.length === 0);
 
 interface ParsedGroupMeta {
+  source_url: string | null;
   source_text: string | null;
   author_name: string | null;
   author_handle: string | null;
@@ -341,6 +342,7 @@ interface ParsedMediaMeta {
 const extractGroupMetaFromTweet = (mediaList: any[]): ParsedGroupMeta => {
   const first = mediaList[0] || {};
   return {
+    source_url: first.tweet_url || null,
     source_text: first.text || null,
     author_name: first.user_name || null,
     author_handle: first.user_screen_name || null,
@@ -444,12 +446,12 @@ const matchParsedMedia = (
  * 計算 group 層級的 diff
  */
 const computeGroupDiff = (current: any, parsed: ParsedGroupMeta, overwrite: boolean): string[] => {
-  const fields = ['source_text', 'author_name', 'author_handle', 'post_date', 'like_count', 'retweet_count', 'view_count', 'hashtags'] as const;
+  const fields = ['source_url', 'source_text', 'author_name', 'author_handle', 'post_date', 'like_count', 'retweet_count', 'view_count', 'hashtags'] as const;
   const diff: string[] = [];
   for (const field of fields) {
     const cv = current[field] ?? null;
     const pv = parsed[field] ?? null;
-    if (!overwrite && !isEmpty(cv)) continue; // 只填充空值模式
+    if (field !== 'source_url' && !overwrite && !isEmpty(cv)) continue; // 只填充空值模式
     if (String(cv ?? '') !== String(pv ?? '')) {
       diff.push(field);
     }
@@ -506,6 +508,7 @@ export const previewReparseTwitter = async (req: Request, res: Response) => {
           group_id: g.id,
           source_url: sourceUrl,
           current: {
+            source_url: g.source_url ?? null,
             source_text: g.source_text ?? null,
             author_name: g.author_name ?? null,
             author_handle: g.author_handle ?? null,
@@ -594,11 +597,11 @@ export const applyReparseTwitter = async (req: Request, res: Response) => {
         // 更新 group meta
         const parsedGroupMeta = extractGroupMetaFromTweet(mediaList);
         const groupUpdate: any = {};
-        const fields = ['source_text', 'author_name', 'author_handle', 'post_date', 'like_count', 'retweet_count', 'view_count', 'hashtags'] as const;
+        const fields = ['source_url', 'source_text', 'author_name', 'author_handle', 'post_date', 'like_count', 'retweet_count', 'view_count', 'hashtags'] as const;
         for (const field of fields) {
           const cv = g[field] ?? null;
           const pv = (parsedGroupMeta as any)[field] ?? null;
-          if (!shouldOverwrite && !isEmpty(cv)) continue;
+          if (field !== 'source_url' && !shouldOverwrite && !isEmpty(cv)) continue;
           if (String(cv ?? '') !== String(pv ?? '')) {
             if (field === 'post_date' && pv) {
               groupUpdate[field] = new Date(pv);

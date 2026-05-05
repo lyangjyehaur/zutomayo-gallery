@@ -6,7 +6,7 @@ import path from 'path';
 import multer from 'multer';
 import { Op } from 'sequelize';
 import { FanartSubmissionMediaModel, FanartSubmissionModel, FanartSubmissionMvModel, MVModel, PublicUserModel } from '../models/index.js';
-import { TwitterService } from '../services/twitter.service.js';
+import { TwitterService, extractTweetId } from '../services/twitter.service.js';
 import { uploadStreamToR2 } from '../services/r2.service.js';
 import { generateToken, sha256Hex } from '../utils/submission.js';
 import { AppError } from '../middleware/errorHandler.js';
@@ -148,8 +148,7 @@ export const addTweet = async (req: Request, res: Response) => {
   }
 
   const media = await TwitterService.extractMediaFromTweet(tweetUrl);
-  const match = tweetUrl.match(/(?:x|twitter)\.com\/[^/]+\/status\/(\d+)/);
-  const tweetId = match?.[1] || null;
+  const tweetId = media[0]?.tweet_id || extractTweetId(tweetUrl);
 
   const existing = await FanartSubmissionMediaModel.findAll({
     where: {

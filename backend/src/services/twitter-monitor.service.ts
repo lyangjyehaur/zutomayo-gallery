@@ -2,7 +2,7 @@ import Parser from 'rss-parser';
 import { MediaGroupModel, MediaModel, SysConfigModel } from '../models/index.js';
 import { nanoid } from 'nanoid';
 const generateShortId = () => nanoid(16);
-import { TwitterService, extractTweetId, normalizeTweetUrl } from './twitter.service.js';
+import { TwitterService, buildCanonicalTweetUrl, extractTweetId, normalizeTweetUrl } from './twitter.service.js';
 import { backupImageToR2 } from './r2.service.js';
 import fetch from 'node-fetch';
 import { Op } from 'sequelize';
@@ -31,15 +31,6 @@ export const TwitterMonitorService = {
         const tweetLink = normalizeTweetUrl(item.link);
         const tweetId = extractTweetId(tweetLink);
         if (!tweetId) continue;
-        
-        // 檢查是否已經處理過
-        const existing = await MediaGroupModel.findOne({
-          where: { source_url: { [Op.regexp]: `/status/${tweetId}([/?#]|$)` } }
-        });
-        if (existing) continue;
-
-        newTweetsCount++;
-        console.log(`[Twitter Monitor] New tweet found: ${tweetLink}`);
 
           // 使用現有的 vxtwitter 解析真實媒體
           let mediaList = [];
@@ -52,6 +43,18 @@ export const TwitterMonitorService = {
 
           // 如果有媒體（圖片、影片等），則存入 fanarts 標記為未整理
           if (mediaList && mediaList.length > 0) {
+            const sourceTweetId = mediaList[0].tweet_id || tweetId;
+            const sourceTweetLink = mediaList[0].tweet_url || buildCanonicalTweetUrl(sourceTweetId);
+
+            // 檢查真正的原推文是否已經處理過
+            const existing = await MediaGroupModel.findOne({
+              where: { source_url: { [Op.regexp]: `/status/${sourceTweetId}([/?#]|$)` } }
+            });
+            if (existing) continue;
+
+            newTweetsCount++;
+            console.log(`[Twitter Monitor] New tweet found: ${sourceTweetLink}`);
+
             const id = `fanart-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
             const firstMedia = mediaList[0];
             const tweetText = firstMedia.text || item.title || '';
@@ -66,7 +69,7 @@ export const TwitterMonitorService = {
                   metadata: {
                     'fanart-id': id,
                     'author-handle': tweetHandle || 'unknown',
-                    'source-tweet': tweetLink || 'unknown'
+                    'source-tweet': sourceTweetLink || 'unknown'
                   }
                 });
                 if (r2Url) {
@@ -77,7 +80,7 @@ export const TwitterMonitorService = {
                   metadata: {
                     'fanart-id': id,
                     'author-handle': tweetHandle || 'unknown',
-                    'source-tweet': tweetLink || 'unknown'
+                    'source-tweet': sourceTweetLink || 'unknown'
                   }
                 });
                 
@@ -100,7 +103,7 @@ export const TwitterMonitorService = {
             const groupId = generateShortId();
             await MediaGroupModel.create({
               id: groupId,
-              source_url: tweetLink,
+              source_url: sourceTweetLink,
               source_text: tweetText,
               author_name: tweetAuthor,
               author_handle: tweetHandle,
@@ -126,7 +129,7 @@ export const TwitterMonitorService = {
               });
             }
 
-            console.log(`[Twitter Monitor] Saved new fanart: ${tweetLink}`);
+            console.log(`[Twitter Monitor] Saved new fanart: ${sourceTweetLink}`);
 
             // 發送 Bark 推送通知
             if (BARK_URL) {
@@ -134,7 +137,7 @@ export const TwitterMonitorService = {
                 const message = `發現新推文！來自 ${tweetAuthor}\n包含 ${mediaList.length} 個媒體\n${tweetText}`;
                 const title = encodeURIComponent('FanArt 監聽通知');
                 const body = encodeURIComponent(message);
-                const barkReqUrl = `${BARK_URL}/${title}/${body}?url=${encodeURIComponent(tweetLink)}`;
+                const barkReqUrl = `${BARK_URL}/${title}/${body}?url=${encodeURIComponent(sourceTweetLink)}`;
                 
                 await fetch(barkReqUrl);
                 console.log('[Twitter Monitor] Bark notification sent.');
