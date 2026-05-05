@@ -28,6 +28,17 @@ export function AdminAuthPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const normalizedUsername = username.trim()
 
+  const formatPasskeyError = React.useCallback((raw: unknown) => {
+    const message = String((raw as any)?.message || raw || "")
+    if (message.includes("該用戶沒有註冊任何 Passkey")) {
+      return "這個帳號尚未註冊 Passkey，請先用密碼登入後到帳戶設定註冊。"
+    }
+    if (message.includes("無法生成認證選項")) {
+      return "這個帳號目前不能使用 Passkey 登入，請確認帳號是否正確，或先用密碼登入後註冊 Passkey。"
+    }
+    return `Passkey 登入失敗：${message || "UNKNOWN_ERROR"}`
+  }, [])
+
   const to = React.useMemo(() => getTo(params.get("to")), [params])
 
   React.useEffect(() => {
@@ -100,11 +111,11 @@ export function AdminAuthPage() {
       toast.success("Passkey 登入成功")
       navigate(to, { replace: true })
     } catch (e: any) {
-      setError(`Passkey 登入失敗：${String(e?.message || e)}`)
+      setError(formatPasskeyError(e))
     } finally {
       setIsSubmitting(false)
     }
-  }, [isSubmitting, navigate, normalizedUsername, to, username])
+  }, [formatPasskeyError, isSubmitting, navigate, normalizedUsername, to, username])
 
   if (isInitializing) {
     return <div className="p-6 font-mono">Loading...</div>
@@ -205,6 +216,9 @@ export function AdminAuthPage() {
               <span className="text-[10px] font-mono opacity-60 normal-case">PASSKEY LOGIN</span>
             </span>
           </Button>
+          <div className="text-[10px] font-mono opacity-50 leading-tight -mt-2">
+            若尚未註冊 Passkey，請先用密碼登入後，到帳戶設定完成註冊。
+          </div>
     </AuthCard>
   )
 }
