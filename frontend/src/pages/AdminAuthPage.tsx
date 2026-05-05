@@ -26,6 +26,7 @@ export function AdminAuthPage() {
   const [username, setUsername] = React.useState("")
   const [password, setPassword] = React.useState("")
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const normalizedUsername = username.trim()
 
   const to = React.useMemo(() => getTo(params.get("to")), [params])
 
@@ -43,6 +44,12 @@ export function AdminAuthPage() {
     }
     run()
   }, [navigate, to])
+
+  React.useEffect(() => {
+    if (normalizedUsername && error === "請先輸入帳號，再使用 Passkey 登入。") {
+      setError(null)
+    }
+  }, [error, normalizedUsername])
 
   const handleLogin = React.useCallback(async () => {
     setIsSubmitting(true)
@@ -67,9 +74,7 @@ export function AdminAuthPage() {
 
   const handlePasskeyLogin = React.useCallback(async () => {
     if (isSubmitting) return
-    const normalizedUsername = username.trim()
     if (!normalizedUsername) {
-      setError("請先輸入帳號，再使用 Passkey 登入。")
       return
     }
     setIsSubmitting(true)
@@ -99,7 +104,7 @@ export function AdminAuthPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [isSubmitting, navigate, to])
+  }, [isSubmitting, navigate, normalizedUsername, to, username])
 
   if (isInitializing) {
     return <div className="p-6 font-mono">Loading...</div>
@@ -167,7 +172,7 @@ export function AdminAuthPage() {
             variant="default"
             className="w-full bg-black text-white hover:bg-main hover:text-black shadow-neo border-2 border-transparent transition-colors rounded-none h-12 font-black tracking-widest"
             onClick={() => void handleLogin()}
-            disabled={isSubmitting || !username.trim() || !password}
+            disabled={isSubmitting || !normalizedUsername || !password}
           >
             <span className="flex flex-col items-center leading-tight">
               <span className="tracking-normal">{isSubmitting ? "驗證中..." : "登入"}</span>
@@ -192,7 +197,7 @@ export function AdminAuthPage() {
             variant="neutral"
             className="w-full h-12 font-black tracking-widest flex items-center justify-center gap-2 border-2 border-black rounded-none"
             onClick={() => void handlePasskeyLogin()}
-            disabled={isSubmitting || !username.trim()}
+            disabled={isSubmitting || !normalizedUsername}
           >
             <i className="hn hn-user text-xl" />
             <span className="flex flex-col items-center leading-tight">
