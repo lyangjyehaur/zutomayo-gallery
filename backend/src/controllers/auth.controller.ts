@@ -92,7 +92,12 @@ export const verifyReg = async (req: Request, res: Response) => {
  */
 export const generateAuthOptions = async (req: Request, res: Response) => {
   const { rpID } = getOriginInfo(req);
-  const { username } = req.body;
+  const usernameRaw = typeof req.body?.username === 'string'
+    ? req.body.username
+    : typeof req.query?.username === 'string'
+      ? req.query.username
+      : '';
+  const username = usernameRaw.trim();
 
   // 必須提供用戶名才能查詢對應的 passkey
   if (!username || typeof username !== 'string') {

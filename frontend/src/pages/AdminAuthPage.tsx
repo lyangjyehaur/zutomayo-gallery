@@ -67,10 +67,15 @@ export function AdminAuthPage() {
 
   const handlePasskeyLogin = React.useCallback(async () => {
     if (isSubmitting) return
+    const normalizedUsername = username.trim()
+    if (!normalizedUsername) {
+      setError("請先輸入帳號，再使用 Passkey 登入。")
+      return
+    }
     setIsSubmitting(true)
     setError(null)
     try {
-      const resp = await adminFetch(`${getAuthApiBase()}/generate-auth-options`)
+      const resp = await adminFetch(`${getAuthApiBase()}/generate-auth-options?username=${encodeURIComponent(normalizedUsername)}`)
       const options = await resp.json().catch(() => null)
       if (!resp.ok || !options || (options as any).error) {
         throw new Error(String((options as any)?.error || "PASSKEY_OPTIONS_FAILED"))
@@ -181,7 +186,7 @@ export function AdminAuthPage() {
             variant="neutral"
             className="w-full h-12 font-black tracking-widest flex items-center justify-center gap-2 border-2 border-black rounded-none"
             onClick={() => void handlePasskeyLogin()}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !username.trim()}
           >
             <i className="hn hn-user text-xl" />
             <span className="flex flex-col items-center leading-tight">
