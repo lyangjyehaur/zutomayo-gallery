@@ -137,7 +137,10 @@ export function AdminAuthPage() {
             </div>
             <Input
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => {
+                setUsername(e.target.value)
+                if (error) setError(null)
+              }}
               placeholder="username"
               className="font-mono bg-black/5 border-2 border-black focus-visible:ring-black rounded-none h-12"
               autoFocus
@@ -150,7 +153,10 @@ export function AdminAuthPage() {
             </div>
             <Input
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value)
+                if (error) setError(null)
+              }}
               placeholder="password"
               type="password"
               className="font-mono bg-black/5 border-2 border-black focus-visible:ring-black rounded-none h-12"
