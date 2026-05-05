@@ -218,13 +218,15 @@ cp frontend/.env.example frontend/.env
 cp backend/.env.example backend/.env
 ```
 
+如果你是使用 `deploylocal` 在本機打包前端，請另外確認 `frontend/.env.production` 已經是正式站設定。Vite 在 `build` 時會讀取這份檔案來覆蓋本機 `.env`，避免把開發環境值一起打包進線上 `dist`。
+
 ### 前端環境變數 (`frontend/.env`)
 | 變數名稱 | 說明 | 預設值 |
 |---|---|---|
 | `VITE_API_URL` | 後端 API 伺服器地址，生產環境若為分離部署請務必設定 | `/api/mvs` |
 | `VITE_TWITTER_IMG_PROXY` | (選填) 圖片代理與加速服務 | `https://img.ztmr.club` |
 | `VITE_R2_DOMAIN` | (選填) Cloudflare R2 自訂網域 | `https://r2.dan.tw` |
-| `VITE_WALINE_SERVER_URL` | (保留) Waline 伺服器位址。專案目前預設使用 `https://comments.ztmr.club`（寫死於程式碼），此值主要作為未來抽換保留 | `https://wl.danndann.cn` |
+| `VITE_WALINE_SERVER_URL` | (保留) Waline 伺服器位址。專案目前預設使用 `https://comments.ztmr.club`，此值主要作為未來抽換保留 | `https://comments.ztmr.club` |
 | `VITE_UMAMI_WEBSITE_ID` | (選填) Umami 網站追蹤 ID | 無 |
 | `VITE_UMAMI_SCRIPT_URL` | (選填) Umami 追蹤腳本網址 | 無 |
 
