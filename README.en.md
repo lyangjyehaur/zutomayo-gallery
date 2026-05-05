@@ -225,8 +225,9 @@ cp backend/.env.example backend/.env
 | `VITE_TWITTER_IMG_PROXY` | Optional image proxy / acceleration service | `https://img.ztmr.club` |
 | `VITE_R2_DOMAIN` | Optional Cloudflare R2 custom domain | `https://r2.dan.tw` |
 | `VITE_WALINE_SERVER_URL` | Reserved. The code currently uses `https://comments.ztmr.club`; this env var is kept for future replacement | `https://wl.danndann.cn` |
-| `VITE_UMAMI_WEBSITE_ID` | Optional Umami website ID | none |
-| `VITE_UMAMI_SCRIPT_URL` | Optional Umami script URL | none |
+| `VITE_UMAMI_SECONDARY_WEBSITE_ID` | Optional commons Umami website ID | none |
+| `VITE_UMAMI_SECONDARY_HOST_URL` | Optional commons Umami host URL | `https://gallery.ztmr.club/commons` |
+| `VITE_UMAMI_SECONDARY_BASE_SCRIPT` | Optional commons Umami base script path | `/commons` |
 
 ### Backend (`backend/.env`)
 

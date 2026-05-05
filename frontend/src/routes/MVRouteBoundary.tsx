@@ -5,6 +5,7 @@ import type { MVItem } from '@/lib/types';
 import { useRouteData } from '@/lib/routeData';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { MODAL_THEME } from '@/lib/theme';
+import { getMvsApiBase } from '@/lib/admin-api';
 
 type AppCommonProps = {
   mvData: MVItem[];
@@ -41,7 +42,7 @@ export function MVRouteBoundary() {
     return mvData.find((m) => m.id === id) || null;
   }, [id, mvData]);
 
-  const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
+  const apiUrl = getMvsApiBase();
   const shouldFetch = !!id && !mvFromList;
 
   const { data, error, isLoading } = useSWR<MVItem>(

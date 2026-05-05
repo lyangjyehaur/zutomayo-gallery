@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useCustomMutation, useInvalidate, useList } from "@refinedev/core"
 import { VERSION_CONFIG } from '@/config/version';
 import { toast } from "sonner"
-import { adminFetch, getApiRoot } from "@/lib/admin-api";
+import { adminFetch, getMvsApiBase, getSystemApiBase } from "@/lib/admin-api";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -771,8 +771,7 @@ export function AdminPage() {
   useEffect(() => {
     const run = async () => {
       try {
-        const base = getApiRoot()
-        const res = await adminFetch(`${base.replace("/mvs", "/system")}/status`)
+        const res = await adminFetch(`${getSystemApiBase()}/status`)
         const json = await res.json().catch(() => null)
         if (json && typeof json === "object" && "maintenance" in json) {
           setSystemStatus(json as any)
@@ -1144,7 +1143,7 @@ export function AdminPage() {
     // 探測時使用 'full' 模式獲取原始比例 WebP
     const proxiedUrl = getProxyImgUrl(url, 'full');
     try {
-      const apiUrl = (import.meta.env.VITE_API_URL || '/api/mvs').replace(/\/mvs$/, '/mvs/probe');
+      const apiUrl = `${getMvsApiBase()}/probe`;
       const response = await adminFetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1240,7 +1239,7 @@ export function AdminPage() {
     for (let i = 0; i < urls.length; i++) {
       const url = urls[i];
       try {
-        const apiUrl = (import.meta.env.VITE_API_URL || '/api').replace(/\/mvs$/, '') + '/mvs/twitter-resolve';
+        const apiUrl = `${getMvsApiBase()}/twitter-resolve`;
         const response = await adminFetch(apiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1418,8 +1417,7 @@ export function AdminPage() {
     // 如果是推文網址，先呼叫後端解析
     if (url.match(/(?:x|twitter)\.com\/[^/]+\/status\/\d+/)) {
       try {
-        // 使用相對路徑加上後端代理的 VITE_API_URL 邏輯，避免跨域和環境變數問題
-        const apiUrl = (import.meta.env.VITE_API_URL || '/api').replace(/\/mvs$/, '') + '/mvs/twitter-resolve';
+        const apiUrl = `${getMvsApiBase()}/twitter-resolve`;
         const response = await adminFetch(apiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1783,7 +1781,7 @@ export function AdminPage() {
       return;
     }
     
-    const apiUrl = `${getApiRoot()}/mvs/update`
+    const apiUrl = `${getMvsApiBase()}/update`
     
     // 將管理員的實質寫入操作上報至 Umami
     if ((window as any).umami && typeof (window as any).umami.track === 'function') {

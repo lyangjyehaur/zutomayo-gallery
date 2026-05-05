@@ -7,6 +7,7 @@ import { MultiSelect, Option } from '@/components/ui/multi-select';
 import { toast } from 'sonner';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { usePublicMe } from '@/lib/public-auth';
+import { getApiRoot } from '@/lib/admin-api';
 
 type LocalTokenItem = { id: string; token: string };
 
@@ -53,7 +54,7 @@ interface SubmitFanArtPageProps {
 
 export function SubmitFanArtPage({ mvData }: SubmitFanArtPageProps) {
   const { t } = useTranslation();
-  const baseApiUrl = useMemo(() => (import.meta.env.VITE_API_URL || '/api').replace(/\/mvs$/, ''), []);
+  const baseApiUrl = useMemo(() => getApiRoot(), []);
   const location = useLocation();
   const navigate = useNavigate();
   const { data: me } = usePublicMe();

@@ -19,17 +19,17 @@
     <link rel="manifest" href="%BASE_URL%icon/site.webmanifest">
     <meta name="theme-color" content="#0d0d0f">
 
-    <link rel="preconnect" href="https://api.ztmr.club" />
-    <link rel="preconnect" href="https://img.ztmr.club" />
-    <link rel="preconnect" href="https://assets.ztmr.club" />
-    <link rel="preconnect" href="https://unpkg.com" crossorigin />
-    <link rel="preconnect" href="https://comments.ztmr.club" />
+    <link rel="preconnect" href="%VITE_API_ORIGIN%" />
+    <link rel="preconnect" href="%VITE_IMGPROXY_ORIGIN%" />
+    <link rel="preconnect" href="%VITE_ASSETS_ORIGIN%" />
+    <link rel="preconnect" href="%VITE_UNPKG_ORIGIN%" crossorigin />
+    <link rel="preconnect" href="%VITE_WALINE_SERVER_URL%" />
 
     <meta property="og:title" content="ZUTOMAYO Gallery">
     <meta property="og:description" content="收錄 ZTMY 歷年 MV 設定資料。">
     <meta property="og:type" content="website">
-    <meta property="og:image" content="https://assets.ztmr.club/ti/your-default-og-image.jpg">
-    <link rel="stylesheet" href="https://unpkg.com/@waline/client@v3/dist/waline-meta.css">
+    <meta property="og:image" content="%VITE_ASSETS_ORIGIN%%VITE_TWITTER_PROXY_PATH%/your-default-og-image.jpg">
+    <link rel="stylesheet" href="%VITE_UNPKG_ORIGIN%/@waline/client@v3/dist/waline-meta.css">
     <link rel="stylesheet" href="%BASE_URL%assets/css/fonts.css?v=%VITE_APP_VERSION%">
     <link rel="stylesheet" href="/src/tailwind.css">
     <script>

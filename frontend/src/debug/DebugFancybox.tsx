@@ -6,6 +6,7 @@ import "@fancyapps/ui/dist/fancybox/fancybox.sidebar.css";
 import Fancybox from './Fancybox';
 import { MVItem } from '@/lib/types';
 import { getProxyImgUrl } from '@/lib/image';
+import { getMvsApiBase } from '@/lib/admin-api';
 
 interface DebugFancyBoxProps {
   mvid?: string;
@@ -28,7 +29,7 @@ export default function DebugFancyBox({ mvid: propMvid }: DebugFancyBoxProps) {
         setError(null);
         
         // 根據是否有 mvid 決定 API 路徑
-        const apiUrl = mvid ? `/api/mvs/${mvid}` : '/api/mvs';
+        const apiUrl = mvid ? `${getMvsApiBase()}/${mvid}` : getMvsApiBase();
         const response = await fetch(apiUrl);
         
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);

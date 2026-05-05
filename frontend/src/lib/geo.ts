@@ -1,3 +1,5 @@
+import { getSystemApiBase } from "./admin-api";
+
 export interface GeoInfo {
   ipCountry: string;
   isChinaTimezone: boolean;
@@ -83,7 +85,7 @@ export const clearGeoCache = () => {
  * 使用 Promise.any 實現競速機制 (Race)，哪個 API 先回應就用哪個
  */
 const fetchIpCountry = async (): Promise<{ countryCode: string, ip?: string, rawCountry?: string, rawString?: string, ip2regionRaw?: string, geoipRaw?: string, maxmindCityRaw?: string, maxmindAsnRaw?: string, details?: GeoInfo['details'] }> => {
-  const apiUrl = (import.meta.env.VITE_API_URL || '/api/mvs').replace(/\/mvs$/, '/system/geo');
+  const apiUrl = `${getSystemApiBase()}/geo`;
 
   try {
     // 由於我們已經實作了高效且 100% 準確的本地 ip2region 服務
@@ -253,7 +255,7 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
         const rawReported = sessionStorage.getItem('umami_geo_raw_reported') === 'true';
         if (rawReported) return geoCache;
 
-        const geoRawApi = (import.meta.env.VITE_API_URL || '/api/mvs').replace(/\/mvs$/, '/system/geo/raw');
+        const geoRawApi = `${getSystemApiBase()}/geo/raw`;
         const rawCountryStr = rawCountry || ipCountry;
 
         const [

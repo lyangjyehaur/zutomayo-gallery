@@ -16,6 +16,7 @@ import {
   Outlet,
 } from "react-router-dom";
 import { MVItem } from "@/lib/types";
+import { getAuthApiBase, getMvsApiBase, getSystemApiBase } from "@/lib/admin-api";
 import { initAnalytics } from "@/lib/analytics";
 import { printEgg } from "@/lib/egg";
 import { initGeo, getGeoInfo } from "@/lib/geo";
@@ -406,8 +407,8 @@ function App({
   }, []);
 
   useEffect(() => {
-    const apiUrl = import.meta.env.VITE_API_URL || "/api/mvs";
-    const authApiUrl = apiUrl.replace(/\/mvs$/, "/auth");
+    const apiUrl = getMvsApiBase();
+    const authApiUrl = getAuthApiBase();
     let cancelled = false;
 
     fetch(`${authApiUrl}/me`, { credentials: "include" })
@@ -2917,7 +2918,7 @@ export const pwaEventTarget = new EventTarget();
 export default function RootApp() {
   const { t, i18n } = useTranslation();
 
-  const apiUrl = import.meta.env.VITE_API_URL || "/api/mvs";
+  const apiUrl = getMvsApiBase();
   const defaultMetadata = {
     albumMeta: {},
     artistMeta: {},
@@ -2964,7 +2965,7 @@ export default function RootApp() {
   }, [metadataData]);
 
   const { data: systemStatus, mutate: mutateSystemStatus } = useSWR<{ maintenance: boolean; type?: 'data' | 'ui'; eta?: string | null; buildTime?: string | null }>(
-    `${apiUrl.replace('/mvs', '/system')}/status`,
+    `${getSystemApiBase()}/status`,
     fetcher,
     { revalidateOnFocus: true }
   );

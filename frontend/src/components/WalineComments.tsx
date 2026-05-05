@@ -5,6 +5,12 @@ import '@waline/client/style';
 import './WalineComments.css';
 import { useTranslation } from 'react-i18next';
 
+const env = (import.meta as any).env || {};
+const getEnvUrl = (key: string, fallback: string) => {
+  const raw = typeof env[key] === 'string' ? String(env[key]).trim() : '';
+  return (raw || fallback).replace(/\/+$/, '');
+};
+
 interface WalineCommentsProps {
   path: string;
   className?: string;
@@ -125,14 +131,18 @@ export function WalineComments({
           if (!isMounted) return;
           
           // 優先讀取環境變數，未設定時 fallback 到既有正式站服務
-          const serverURL = import.meta.env.VITE_WALINE_SERVER_URL || 'https://comments.ztmr.club';
+          const serverURL = getEnvUrl('VITE_WALINE_SERVER_URL', 'https://comments.ztmr.club');
             
           // 針對大陸用戶，unpkg.com 經常被干擾，改用 jsDelivr 的 Fastly 節點作為替代方案
-          const unpkgHost = geoInfo.isChinaIP ? '//fastly.jsdelivr.net/npm' : '//unpkg.com';
+          const unpkgHost = geoInfo.isChinaIP
+            ? getEnvUrl('VITE_WALINE_EMOJI_FASTLY_ORIGIN', 'https://fastly.jsdelivr.net/npm')
+            : getEnvUrl('VITE_WALINE_EMOJI_ORIGIN', 'https://unpkg.com');
           
           // 針對大陸用戶，Gravatar 頭像可能被牆，改用 Cravatar 鏡像 (透過 DOM 攔截)
           // Cravatar.cn 是專為中國大陸優化的 Gravatar 替代方案
-          const gravatarHost = geoInfo.isChinaIP ? 'cravatar.cn/avatar' : 'gravatar.com/avatar';
+          const gravatarHost = geoInfo.isChinaIP
+            ? getEnvUrl('VITE_WALINE_AVATAR_MIRROR_ORIGIN', 'https://cravatar.cn/avatar')
+            : getEnvUrl('VITE_WALINE_AVATAR_ORIGIN', 'https://gravatar.com/avatar');
         
         walineInstance = init({
           el: currentContainer,

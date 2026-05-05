@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Music } from 'lucide-react';
 import { getAppleMusicImgUrl } from '@/lib/image';
+import { getAlbumApiBase, getR2Domain } from '@/lib/admin-api';
 
 const AppleMusicTimeline = React.lazy(() => import('@/components/AppleMusicTimeline').then(m => ({ default: m.AppleMusicTimeline })));
 const AppleMusicToolPage = React.lazy(() => import('./AppleMusicToolPage'));
@@ -13,13 +14,12 @@ export function AppleMusicGalleryPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   // 初始化時就立刻解析 R2 Domain，避免在 map 中重複讀取環境變數
-  const r2Domain = import.meta.env.VITE_R2_DOMAIN || 'https://r2.dan.tw';
+  const r2Domain = getR2Domain();
 
   useEffect(() => {
     const fetchAlbums = async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || '/api/mvs';
-        const targetUrl = apiUrl.replace(/\/mvs$/, '/album/apple-music');
+        const targetUrl = `${getAlbumApiBase()}/apple-music`;
         const res = await fetch(targetUrl);
         const json = await res.json();
         

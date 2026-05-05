@@ -225,8 +225,9 @@ cp backend/.env.example backend/.env
 | `VITE_TWITTER_IMG_PROXY` | 可选图片代理 / 加速服务 | `https://img.ztmr.club` |
 | `VITE_R2_DOMAIN` | 可选 Cloudflare R2 自定义域名 | `https://r2.dan.tw` |
 | `VITE_WALINE_SERVER_URL` | 保留变量。当前代码固定使用 `https://comments.ztmr.club` | `https://wl.danndann.cn` |
-| `VITE_UMAMI_WEBSITE_ID` | 可选 Umami 网站 ID | 无 |
-| `VITE_UMAMI_SCRIPT_URL` | 可选 Umami 脚本地址 | 无 |
+| `VITE_UMAMI_SECONDARY_WEBSITE_ID` | 可选 commons Umami 网站 ID | 无 |
+| `VITE_UMAMI_SECONDARY_HOST_URL` | 可选 commons Umami 主机地址 | `https://gallery.ztmr.club/commons` |
+| `VITE_UMAMI_SECONDARY_BASE_SCRIPT` | 可选 commons Umami 基础脚本路径 | `/commons` |
 
 ### 后端 (`backend/.env`)
 

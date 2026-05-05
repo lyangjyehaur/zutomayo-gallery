@@ -1,3 +1,5 @@
+import { getSystemApiBase } from './admin-api';
+
 /**
  * URL 安全的 Base64 編碼，支援 Unicode (如日文檔名)
  */
@@ -14,6 +16,53 @@ import { getGeoInfo } from './geo';
 
 export type ProxyMode = 'thumb' | 'full' | 'small' | 'raw' | 'sd' | 'hq';
 
+const env = (import.meta as any).env || {};
+
+const normalizeBaseUrl = (value: unknown, fallback: string) => {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  return (raw || fallback).replace(/\/+$/, '');
+};
+
+const normalizePath = (value: unknown, fallback: string) => {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  const next = raw || fallback;
+  return next.startsWith('/') ? next.replace(/\/+$/, '') : `/${next.replace(/\/+$/, '')}`;
+};
+
+const splitHostList = (value: unknown, fallback: string[]) => {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  const list = raw ? raw.split(',') : fallback;
+  return list.map((item) => item.trim()).filter(Boolean);
+};
+
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const getAssetsOrigin = () => normalizeBaseUrl(env.VITE_ASSETS_ORIGIN, 'https://assets.ztmr.club');
+const getR2Domain = () => normalizeBaseUrl(env.VITE_R2_DOMAIN, 'https://r2.dan.tw');
+const getTwitterImageSourceHost = () => normalizeBaseUrl(env.VITE_TWITTER_IMAGE_SOURCE_HOST, 'https://pbs.twimg.com');
+const getTwitterVideoSourceHost = () => normalizeBaseUrl(env.VITE_TWITTER_VIDEO_SOURCE_HOST, 'https://video.twimg.com');
+const getTwitterProxyPath = () => normalizePath(env.VITE_TWITTER_PROXY_PATH, '/ti');
+const getTwitterVideoProxyPath = () => normalizePath(env.VITE_TWITTER_VIDEO_PROXY_PATH, '/tv');
+const getYoutubeProxyPath = () => normalizePath(env.VITE_YOUTUBE_PROXY_PATH, '/yi');
+const getYoutubeSourceHosts = () => splitHostList(env.VITE_YOUTUBE_SOURCE_HOSTS, ['i.ytimg.com', 'img.youtube.com', 'youtube.com']);
+
+const isHostMatch = (url: string, origin: string) => {
+  try {
+    const urlHost = new URL(url).hostname.toLowerCase();
+    const originHost = new URL(origin).hostname.toLowerCase();
+    return urlHost === originHost || urlHost.endsWith(`.${originHost}`);
+  } catch {
+    const host = origin.replace(/^https?:\/\//i, '').replace(/\/+$/, '').toLowerCase();
+    return url.toLowerCase().includes(host);
+  }
+};
+
+const replaceOrigin = (url: string, sourceOrigin: string, targetOrigin: string) => {
+  const sourceHost = sourceOrigin.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+  const pattern = new RegExp(`^https?:\\/\\/${escapeRegExp(sourceHost)}`, 'i');
+  return url.replace(pattern, targetOrigin);
+};
+
 /**
  * 判斷該媒體是否為影片 (作為資料庫 media_type 遺失時的備用判斷)
  */
@@ -27,7 +76,7 @@ export const isMediaVideo = (url?: string, type?: string): boolean => {
   const hasVideoExtension = url.match(/\.(mp4|webm|mov|m4v|m3u8)(\?.*)?$/i);
   
   // 檢查是否來自 Twitter 影片網域
-  const isTwitterVideoDomain = url.includes('video.twimg.com') || url.includes('/videos/');
+  const isTwitterVideoDomain = isHostMatch(url, getTwitterVideoSourceHost()) || url.includes('/videos/');
   
   // 排除雖然在影片網域但實際上是圖片的情況 (如 Twitter 的影片縮圖)
   const isImageExtension = url.match(/\.(jpg|jpeg|png|gif|webp|avif)(\?.*)?$/i);
@@ -70,9 +119,9 @@ export const getAppleMusicImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb'): 
  * 根據需求建立 imgproxy 請求網址 (強制走後端 API 產生簽名)
  */
 const buildImgproxyUrl = (targetUrl: string, mode: ProxyMode, customFilename = ''): string => {
-  const apiUrl = (import.meta.env.VITE_API_URL || '/api/mvs').replace(/\/mvs$/, '');
+  const apiUrl = getSystemApiBase();
   const proxyMode = mode === 'thumb' ? 'thumb_general' : mode;
-  let url = `${apiUrl}/system/image/proxy?url=${encodeURIComponent(targetUrl)}&mode=${proxyMode}`;
+  let url = `${apiUrl}/image/proxy?url=${encodeURIComponent(targetUrl)}&mode=${proxyMode}`;
   if (customFilename) {
     url += `&filename=${encodeURIComponent(customFilename)}`;
   }
@@ -145,13 +194,13 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
     // 因為 imgproxy 不支援影片處理，所以影片永遠不過 imgproxy，直接走 Nginx 反代或直連
     // 這必須放在最前面，否則 raw 模式會把影片丟給 imgproxy 導致載入失敗！
     if (isMediaVideo(targetUrl)) {
-      if (targetUrl.includes('r2.dan.tw')) {
+      if (isHostMatch(targetUrl, getR2Domain())) {
         // R2 的網域本身在 Cloudflare 後面，中國大陸通常也能直連 (或者透過自訂網域綁定 Cloudflare)，
         // 而且我們已經在 R2 設定了 CORS。因此不論海內外，影片都可以直接存取 R2。
         return targetUrl;
       }
-      if (targetUrl.includes('video.twimg.com')) {
-        return isOverseasDirect ? targetUrl : targetUrl.replace('https://video.twimg.com', 'https://assets.ztmr.club/tv');
+      if (isHostMatch(targetUrl, getTwitterVideoSourceHost())) {
+        return isOverseasDirect ? targetUrl : replaceOrigin(targetUrl, getTwitterVideoSourceHost(), `${getAssetsOrigin()}${getTwitterVideoProxyPath()}`);
       }
       return targetUrl;
     }
@@ -163,7 +212,7 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
     //   並由伺服器回傳 Content-Disposition: attachment; filename="xxx" 標頭。
     // - 因此，無論海內外，下載 (raw 模式) 且需要自訂檔名時，一律走 imgproxy 代理。
     if (mode === 'raw') {
-      if (targetUrl.includes('pbs.twimg.com')) {
+      if (isHostMatch(targetUrl, getTwitterImageSourceHost())) {
         targetUrl = formatTwitterImageUrl(targetUrl, mode);
       }
       
@@ -175,9 +224,9 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
     }
 
     // ==== 3. 圖片處理 ====
-    const isTwitter = targetUrl.includes('pbs.twimg.com');
-    const isYoutube = targetUrl.includes('ytimg.com') || targetUrl.includes('youtube.com');
-    const isR2 = targetUrl.includes('r2.dan.tw');
+    const isTwitter = isHostMatch(targetUrl, getTwitterImageSourceHost());
+    const isYoutube = getYoutubeSourceHosts().some((host) => isHostMatch(targetUrl, `https://${host}`));
+    const isR2 = isHostMatch(targetUrl, getR2Domain());
 
     if (isTwitter) {
       targetUrl = formatTwitterImageUrl(targetUrl, mode);
@@ -203,11 +252,16 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
     if (isTwitter) {
       // 巧妙利用推特原生縮圖參數 (?name=small)，並直接走 Nginx 反代，刻意繞過 imgproxy 節省伺服器 CPU
       // 因為這是在前端組件 (Fancybox) 嘗試 original_url 的情況下進來的
-      return targetUrl.replace('https://pbs.twimg.com', 'https://assets.ztmr.club/ti');
+      return replaceOrigin(targetUrl, getTwitterImageSourceHost(), `${getAssetsOrigin()}${getTwitterProxyPath()}`);
     }
     
     if (isYoutube) {
-      return targetUrl.replace(/https:\/\/(i\d*\.ytimg\.com|img\.youtube\.com)/i, 'https://assets.ztmr.club/yi');
+      for (const host of getYoutubeSourceHosts()) {
+        if (isHostMatch(targetUrl, `https://${host}`)) {
+          return replaceOrigin(targetUrl, `https://${host}`, `${getAssetsOrigin()}${getYoutubeProxyPath()}`);
+        }
+      }
+      return targetUrl;
     }
     
     if (isR2) {

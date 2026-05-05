@@ -3,8 +3,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { logoutPublicUser, usePublicMe } from '@/lib/public-auth';
+import { getApiRoot } from '@/lib/admin-api';
 
-const baseApiUrl = (import.meta.env.VITE_API_URL || '/api').replace(/\/mvs$/, '');
+const baseApiUrl = getApiRoot();
 
 const fetchJson = async (url: string) => {
   const res = await fetch(url, { credentials: 'include' });
@@ -109,4 +110,3 @@ export function MySubmissionsPage() {
     </div>
   );
 }
-

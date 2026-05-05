@@ -4,20 +4,12 @@ declare global {
       track: (eventName: string, eventData?: Record<string, any>) => void;
       identify?: (data: Record<string, any>) => void;
     };
-    umami_old?: {
-      track: (eventName: string, eventData?: Record<string, any>) => void;
-      identify?: (data: Record<string, any>) => void;
-    };
   }
 }
 
 // 避免 React StrictMode 導致重複綁定事件
 let isInitialized = false;
 
-const LEGACY_WEBSITE_ID = import.meta.env.VITE_UMAMI_LEGACY_WEBSITE_ID || '405e07a8-7aae-41a6-bdb9-6851e898ab0c';
-const LEGACY_SCRIPT_URL = import.meta.env.VITE_UMAMI_LEGACY_SCRIPT_URL || 'https://u.danndann.cn/script.js';
-const LEGACY_HOST_URL = import.meta.env.VITE_UMAMI_LEGACY_HOST_URL || 'https://u.danndann.cn';
-const UMAMI_DOMAINS = import.meta.env.VITE_UMAMI_DOMAINS || 'gallery.ztmr.club';
 const SECONDARY_WEBSITE_ID = import.meta.env.VITE_UMAMI_SECONDARY_WEBSITE_ID || '76cef12d-6b0a-4b5c-882b-36d87912e4f5';
 const SECONDARY_HOST_URL = import.meta.env.VITE_UMAMI_SECONDARY_HOST_URL || 'https://gallery.ztmr.club/commons';
 const SECONDARY_BASE_SCRIPT = import.meta.env.VITE_UMAMI_SECONDARY_BASE_SCRIPT || '/commons';
@@ -27,98 +19,79 @@ export const initAnalytics = () => {
   isInitialized = true;
 
   const hostname = window.location.hostname;
-  const isLocal = 
-    ['localhost', '127.0.0.1', '0.0.0.0'].includes(hostname) || 
-    hostname.startsWith('192.168.') || 
-    hostname.startsWith('10.') || 
+  const isLocal =
+    ['localhost', '127.0.0.1', '0.0.0.0'].includes(hostname) ||
+    hostname.startsWith('192.168.') ||
+    hostname.startsWith('10.') ||
     window.location.protocol === 'file:';
 
   if (isLocal) {
-      console.log('Local environment detected, skipping Umami analytics loading. Mocking window.umami.track for testing purposes.');
-      
-      // 模擬 umami 的 track 方法
-      window.umami = {
-        track: (payload: any, eventData?: Record<string, any>) => {
-          if (typeof payload === 'function') {
-            console.group('[Umami Mock] Virtual Pageview');
-            console.table(payload({ url: window.location.pathname, title: document.title }));
-            console.groupEnd();
-          } else if (typeof payload === 'object' && payload !== null) {
-            console.group('[Umami Mock] Object Event');
-            console.table(payload);
-            console.groupEnd();
+    console.log('Local environment detected, skipping Umami analytics loading. Mocking window.umami.track for testing purposes.');
+
+    // 模擬 umami 的 track 方法
+    window.umami = {
+      track: (payload: any, eventData?: Record<string, any>) => {
+        if (typeof payload === 'function') {
+          console.group('[Umami Mock] Virtual Pageview');
+          console.table(payload({ url: window.location.pathname, title: document.title }));
+          console.groupEnd();
+        } else if (typeof payload === 'object' && payload !== null) {
+          console.group('[Umami Mock] Object Event');
+          console.table(payload);
+          console.groupEnd();
+        } else {
+          console.group(`[Umami Mock] Event: ${payload}`);
+          if (eventData) {
+            console.table(eventData);
           } else {
-            console.group(`[Umami Mock] Event: ${payload}`);
-            if (eventData) {
-              console.table(eventData);
-            } else {
-              console.log('No event data');
-            }
-            console.groupEnd();
+            console.log('No event data');
           }
-        },
-        identify: (data: Record<string, any>) => {
-          console.group(`[Umami Mock] Identify`);
-          console.table(data);
           console.groupEnd();
         }
-      };
-      
-      // 模擬 Umami 原生腳本自動擷取 data-umami-event 的行為
-      document.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement;
-        const umamiEl = target.closest('[data-umami-event]');
-        
-        if (umamiEl) {
-          const eventName = umamiEl.getAttribute('data-umami-event') || 'Unknown';
-          const eventData: Record<string, string> = {};
-          
-          // 擷取所有 data-umami-event-xxx 作為 eventData
-          Array.from(umamiEl.attributes).forEach(attr => {
-            if (attr.name.startsWith('data-umami-event-') && attr.name !== 'data-umami-event') {
-              const key = attr.name.replace('data-umami-event-', '');
-              eventData[key] = attr.value;
-            }
-          });
-          
-          if (window.umami && typeof window.umami.track === 'function') {
-            window.umami.track(eventName, Object.keys(eventData).length ? eventData : undefined);
+      },
+      identify: (data: Record<string, any>) => {
+        console.group(`[Umami Mock] Identify`);
+        console.table(data);
+        console.groupEnd();
+      }
+    };
+
+    // 模擬 Umami 原生腳本自動擷取 data-umami-event 的行為
+    document.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const umamiEl = target.closest('[data-umami-event]');
+
+      if (umamiEl) {
+        const eventName = umamiEl.getAttribute('data-umami-event') || 'Unknown';
+        const eventData: Record<string, string> = {};
+
+        // 擷取所有 data-umami-event-xxx 作為 eventData
+        Array.from(umamiEl.attributes).forEach(attr => {
+          if (attr.name.startsWith('data-umami-event-') && attr.name !== 'data-umami-event') {
+            const key = attr.name.replace('data-umami-event-', '');
+            eventData[key] = attr.value;
           }
+        });
+
+        if (window.umami && typeof window.umami.track === 'function') {
+          window.umami.track(eventName, Object.keys(eventData).length ? eventData : undefined);
         }
-      }, { capture: true });
-      
-      // 注意：這裡不 return，讓下面的事件監聽器也能綁定上去
+      }
+    }, { capture: true });
+
+    // 注意：這裡不 return，讓下面的事件監聽器也能綁定上去
   } else {
     // 避免重複載入 (只在非本地環境載入真實的 script)
-    if (!document.querySelector(`script[data-website-id="${LEGACY_WEBSITE_ID}"]`)) {
-      const script = document.createElement('script');
-      script.src = LEGACY_SCRIPT_URL;
-      script.defer = true;
-      script.setAttribute('data-website-id', LEGACY_WEBSITE_ID);
-      // 將舊版的實例命名為 umami_old，避免與新版衝突
-      script.setAttribute('data-host-url', LEGACY_HOST_URL);
-      script.setAttribute('data-domains', UMAMI_DOMAINS);
-      script.onload = () => {
-        // 在舊版載入完成後，把全域變數移到 umami_old
-        if (window.umami) {
-          window.umami_old = window.umami;
-          delete window.umami;
-        }
-      };
-      document.head.appendChild(script);
-    }
-    
-    // 額外添加 server3 上自建的 Umami 追蹤 (偽裝為 commons.js)
     if (!document.querySelector(`script[data-website-id="${SECONDARY_WEBSITE_ID}"]`)) {
       // 第一部分：基礎數據追蹤 (commons.js)
       const script2 = document.createElement('script');
       script2.src = `${SECONDARY_BASE_SCRIPT}/commons.js`;
       script2.defer = true;
-      script2.setAttribute('data-website-id', SECONDARY_WEBSITE_ID); 
+      script2.setAttribute('data-website-id', SECONDARY_WEBSITE_ID);
       // 確保新版實例佔用 window.umami，並且使用 /commons/api/send 發送數據
       script2.setAttribute('data-host-url', SECONDARY_HOST_URL);
       document.head.appendChild(script2);
-      
+
       // 第二部分：螢幕錄影回放 (偽裝為 telemetry.js)
       const script3 = document.createElement('script');
       script3.src = `${SECONDARY_BASE_SCRIPT}/telemetry.js`;
@@ -158,7 +131,7 @@ export const initAnalytics = () => {
       const tagName = interactable.tagName.toLowerCase();
       const role = interactable.getAttribute('role');
       const classes = interactable.getAttribute('class') || '';
-      
+
       // 識別特定 UI 組件
       let componentType = '';
       if (classes.includes('gallery-item')) componentType = 'Gallery_Image';
@@ -187,7 +160,7 @@ export const initAnalytics = () => {
             }
           }
         }
-        
+
         // 如果 API 獲取失敗，退回 DOM 爬取
         if (!targetImageInfo) {
           const activeSlide = document.querySelector('.f-carousel__slide.is-selected img, .fancybox__slide.is-selected .fancybox__image') as HTMLImageElement;
@@ -198,8 +171,8 @@ export const initAnalytics = () => {
       }
 
       // 嘗試獲取有意義的標籤文字或屬性
-      let label = interactable.getAttribute('aria-label') || 
-                  interactable.getAttribute('title') || 
+      let label = interactable.getAttribute('aria-label') ||
+                  interactable.getAttribute('title') ||
                   (interactable.hasAttribute('data-fancybox-close') ? 'Close' : null) ||
                   (interactable.hasAttribute('data-fancybox-next') ? 'Next' : null) ||
                   (interactable.hasAttribute('data-fancybox-prev') ? 'Prev' : null) ||
@@ -222,8 +195,8 @@ export const initAnalytics = () => {
 
       // 如果還是沒有，再退回抓取 innerText
       if (!label) {
-        label = interactable.textContent?.trim() || 
-                interactable.getAttribute('name') || 
+        label = interactable.textContent?.trim() ||
+                interactable.getAttribute('name') ||
                 interactable.getAttribute('value') ||
                 'unknown';
       }
@@ -253,7 +226,7 @@ export const initAnalytics = () => {
       const href = interactable.getAttribute('href');
       if (href) {
         const isOutbound = href.startsWith('http') && !href.includes(window.location.hostname);
-        
+
         if (isOutbound) {
           window.umami.track('Z_Outbound_Link', {
             url: href,
@@ -273,7 +246,7 @@ export const initAnalytics = () => {
 
       // 決定事件名稱：將高價值的畫廊互動從泛用的 Z_Interaction 中獨立出來
       let eventName = 'Z_Interaction';
-      
+
       if (componentType === 'Gallery_Image') {
         eventName = 'Z_Image_Open'; // 開啟燈箱看大圖
       } else if (componentType === 'Fancybox_Button') {
@@ -283,7 +256,7 @@ export const initAnalytics = () => {
       } else if (componentType === 'Waline_Interaction') {
         // 大多數 Waline 行為由 WalineComments.tsx 自行處理以取得更精確的 Context
         if (classes.includes('wl-reaction-item') || classes.includes('wl-sort') || classes.includes('wl-action') || classes.includes('wl-like') || classes.includes('wl-reply') || classes.includes('wl-login')) {
-          return; 
+          return;
         } else if (classes.includes('wl-btn')) {
           eventName = 'Z_Waline_Comment_Submit'; // 送出留言
         }
@@ -291,11 +264,6 @@ export const initAnalytics = () => {
 
       // 發送自定義事件 (加入 Z_ 前綴)
       window.umami.track(eventName, eventData);
-      
-      // 同步發送給舊版 Umami (如果有載入)
-      if (window.umami_old && typeof window.umami_old.track === 'function') {
-        window.umami_old.track(eventName, eventData);
-      }
     }
   }, { capture: true });
 
@@ -322,12 +290,12 @@ export const initAnalytics = () => {
     const inputType = target.getAttribute('type');
 
     // 嘗試獲取輸入框的名稱或提示文字
-    let label = target.getAttribute('aria-label') || 
-                target.getAttribute('name') || 
-                target.getAttribute('placeholder') || 
+    let label = target.getAttribute('aria-label') ||
+                target.getAttribute('name') ||
+                target.getAttribute('placeholder') ||
                 target.id ||
                 'unknown';
-    
+
     label = label.replace(/\s+/g, ' ').slice(0, 50);
 
     // 獲取使用者輸入或選擇的值
@@ -344,10 +312,5 @@ export const initAnalytics = () => {
 
     // 發送輸入變更事件 (加入 Z_ 前綴)
     window.umami.track('Z_Input_Change', eventData);
-    
-    // 同步發送給舊版 Umami
-    if (window.umami_old && typeof window.umami_old.track === 'function') {
-      window.umami_old.track('Z_Input_Change', eventData);
-    }
   }, { capture: true });
 };

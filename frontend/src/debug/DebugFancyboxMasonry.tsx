@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import type { MVItem, MVMedia } from '@/lib/types';
 import FancyboxViewer from '@/components/FancyboxViewer';
 import { GALLERY_BREAKPOINTS } from '@/components/galleryBreakpoints';
+import { getMvsApiBase } from '@/lib/admin-api';
 
 interface DebugFancyboxMasonryProps {
   mvid?: string;
@@ -62,7 +63,7 @@ export default function DebugFancyboxMasonry({ mvid: propMvid }: DebugFancyboxMa
         setLoading(true);
         setError(null);
 
-        const apiUrl = mvid ? `/api/mvs/${mvid}` : '/api/mvs';
+        const apiUrl = mvid ? `${getMvsApiBase()}/${mvid}` : getMvsApiBase();
         const response = await fetch(apiUrl);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 

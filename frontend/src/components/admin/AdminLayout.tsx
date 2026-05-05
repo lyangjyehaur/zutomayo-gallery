@@ -2,7 +2,7 @@ import React from "react"
 import { Link, Navigate, Outlet, useLocation } from "react-router-dom"
 import { Refine } from "@refinedev/core"
 import { toast } from "sonner"
-import { adminFetch, getAuthApiBase, getMvsApiBase } from "@/lib/admin-api"
+import { adminFetch, getAuthApiBase } from "@/lib/admin-api"
 import {
   adminAccessControlProvider,
   adminAuthProvider,

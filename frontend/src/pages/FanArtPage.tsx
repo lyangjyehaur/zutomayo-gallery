@@ -4,6 +4,7 @@ import { MVItem } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { WalineComments } from '@/components/WalineComments';
 import FancyboxViewer from '@/components/FancyboxViewer';
+import { getApiRoot } from '@/lib/admin-api';
 
 interface FanArtPageProps {
   mvData: MVItem[];
@@ -19,7 +20,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
     return `tag:${str}`;
   };
 
-  const baseApiUrl = useMemo(() => (import.meta.env.VITE_API_URL || '/api').replace(/\/mvs$/, ''), []);
+  const baseApiUrl = useMemo(() => getApiRoot(), []);
   const [galleryFanarts, setGalleryFanarts] = useState<any[]>([]);
   const [galleryMeta, setGalleryMeta] = useState<{ limit: number; offset: number; total: number | null; hasMore: boolean }>({
     limit: 200,

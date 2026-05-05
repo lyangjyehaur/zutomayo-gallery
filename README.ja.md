@@ -225,8 +225,9 @@ cp backend/.env.example backend/.env
 | `VITE_TWITTER_IMG_PROXY` | 任意の画像プロキシ / 高速化サービス | `https://img.ztmr.club` |
 | `VITE_R2_DOMAIN` | 任意の Cloudflare R2 カスタムドメイン | `https://r2.dan.tw` |
 | `VITE_WALINE_SERVER_URL` | 予約用。現在のコードは `https://comments.ztmr.club` を使用 | `https://wl.danndann.cn` |
-| `VITE_UMAMI_WEBSITE_ID` | 任意の Umami website ID | なし |
-| `VITE_UMAMI_SCRIPT_URL` | 任意の Umami script URL | なし |
+| `VITE_UMAMI_SECONDARY_WEBSITE_ID` | 任意の commons Umami website ID | なし |
+| `VITE_UMAMI_SECONDARY_HOST_URL` | 任意の commons Umami host URL | `https://gallery.ztmr.club/commons` |
+| `VITE_UMAMI_SECONDARY_BASE_SCRIPT` | 任意の commons Umami base script path | `/commons` |
 
 ### バックエンド (`backend/.env`)
 

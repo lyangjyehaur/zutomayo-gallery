@@ -1,4 +1,5 @@
 import useSWR from 'swr';
+import { getApiRoot } from './admin-api';
 
 export type PublicUser = {
   id: string;
@@ -9,7 +10,7 @@ export type PublicUser = {
   public_profile_fields?: { display_name?: boolean; socials?: boolean; email_masked?: boolean };
 };
 
-const baseApiUrl = (import.meta.env.VITE_API_URL || '/api').replace(/\/mvs$/, '');
+const baseApiUrl = getApiRoot();
 
 const fetchJson = async (url: string, init?: RequestInit) => {
   const res = await fetch(url, { credentials: 'include', ...init });

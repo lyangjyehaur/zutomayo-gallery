@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { getSystemApiBase } from "@/lib/admin-api"
 
 type SystemStatus = {
   maintenance: boolean
@@ -72,13 +73,13 @@ export function AdminMVSettingsPage({
     setLocalMaintenanceEta(toDatetimeLocal(systemStatus?.eta || ""))
   }, [systemStatus?.eta, systemStatus?.maintenance, systemStatus?.type])
 
-  const apiUrl = React.useMemo(() => import.meta.env.VITE_API_URL || "/api/mvs", [])
+  const apiUrl = React.useMemo(() => getSystemApiBase(), [])
 
   const handleClearRedisCache = React.useCallback(async () => {
     setIsClearingRedisCache(true)
     setError(null)
     try {
-      const res = await adminFetch(`${apiUrl.replace("/mvs", "/system")}/cache/clear`, {
+      const res = await adminFetch(`${apiUrl}/cache/clear`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       })
@@ -114,7 +115,7 @@ export function AdminMVSettingsPage({
         localMaintenanceType !== (systemStatus?.type || "ui") ||
         etaISO !== (systemStatus?.eta || "")
       if (canUpdateMaintenance && maintenanceChanged) {
-        const sysResponse = await adminFetch(`${apiUrl.replace("/mvs", "/system")}/maintenance`, {
+        const sysResponse = await adminFetch(`${apiUrl}/maintenance`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
