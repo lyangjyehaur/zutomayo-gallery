@@ -8,6 +8,8 @@ export interface TwitterMedia {
   date?: string;      // 發布時間
 }
 
+import { logger } from '../utils/logger.js';
+
 export const TwitterService = {
   /**
    * 解析推文網址，獲取真實媒體資源 (圖片、最高畫質 MP4)
@@ -54,7 +56,7 @@ export const TwitterService = {
       return mediaList;
 
     } catch (error) {
-      console.error('推文解析失敗:', error);
+      logger.error({ err: error }, '推文解析失敗');
       throw error;
     }
   }

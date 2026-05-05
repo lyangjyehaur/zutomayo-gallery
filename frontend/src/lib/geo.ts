@@ -3,7 +3,6 @@ export interface GeoInfo {
   isChinaTimezone: boolean;
   isChinaIP: boolean;
   isVPN: boolean;
-  ip?: string;
   rawCountry?: string; // 原始的中文國家名稱
   rawString?: string;  // 完整的原始字串 (主要來源)
   ip2regionRaw?: string; // 獨立回傳 ip2region 解析結果
@@ -73,7 +72,6 @@ export const clearGeoCache = () => {
   if (typeof window !== 'undefined') {
     sessionStorage.removeItem('geo_info');
     sessionStorage.removeItem('geo_session_id');
-    sessionStorage.removeItem('umami_geo_location_reported');
     sessionStorage.removeItem('umami_geo_raw_reported');
   }
 };
@@ -82,8 +80,13 @@ export const clearGeoCache = () => {
  * 獲取 IP 所在的國家代碼
  * 使用 Promise.any 實現競速機制 (Race)，哪個 API 先回應就用哪個
  */
-const fetchIpCountry = async (): Promise<{ countryCode: string, ip?: string, rawCountry?: string, rawString?: string, ip2regionRaw?: string, geoipRaw?: string, maxmindCityRaw?: string, maxmindAsnRaw?: string, details?: GeoInfo['details'] }> => {
-  const apiUrl = (import.meta.env.VITE_API_URL || '/api/mvs').replace(/\/mvs$/, '/system/geo');
+const fetchIpCountry = async (): Promise<{ countryCode: string, rawCountry?: string, rawString?: string, ip2regionRaw?: string, geoipRaw?: string, maxmindCityRaw?: string, maxmindAsnRaw?: string, details?: GeoInfo['details'] }> => {
+  const baseApiUrl = (import.meta.env.VITE_API_URL || '/api/mvs').replace(/\/mvs$/, '/system/geo');
+
+  // 傳遞瀏覽器時區和語言給後端 (用於 VPN 偵測和 Umami 追蹤)
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const lang = navigator.language || navigator.languages?.[0] || '';
+  const apiUrl = `${baseApiUrl}?tz=${encodeURIComponent(tz)}&lang=${encodeURIComponent(lang)}`;
 
   try {
     // 由於我們已經實作了高效且 100% 準確的本地 ip2region 服務
@@ -95,7 +98,6 @@ const fetchIpCountry = async (): Promise<{ countryCode: string, ip?: string, raw
     if (json && json.success && json.data && json.data.country) {
       return {
         countryCode: json.data.country === 'LOCAL' ? 'CN' : json.data.country,
-        ip: json.data.ip,
         rawCountry: json.data.rawCountry, // 後端傳來的原始名稱
         rawString: json.data.rawString,   // 後端傳來的完整原始字串
         ip2regionRaw: json.data.ip2regionRaw,
@@ -167,95 +169,28 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
       return geoCache;
     }
 
-    const { countryCode, ip, rawCountry, rawString, ip2regionRaw, geoipRaw, maxmindCityRaw, maxmindAsnRaw, details } = await fetchIpCountry();
+    const { countryCode, rawCountry, rawString, ip2regionRaw, geoipRaw, maxmindCityRaw, maxmindAsnRaw, details } = await fetchIpCountry();
     const ipCountry = countryCode;
     const isChinaIP = ipCountry === 'CN';
     const isVPN = !isChinaIP && isChinaTimezone;
 
-    geoCache = { ipCountry, isChinaTimezone, isChinaIP, isVPN, ip, rawCountry, rawString, ip2regionRaw, geoipRaw, maxmindCityRaw, maxmindAsnRaw, details };
+    geoCache = { ipCountry, isChinaTimezone, isChinaIP, isVPN, rawCountry, rawString, ip2regionRaw, geoipRaw, maxmindCityRaw, maxmindAsnRaw, details };
     
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('geo_info', JSON.stringify(geoCache));
       
-      // 將精確的地理與 IP 資訊上報給 Umami (如果有的話)
-      if ((window as any).umami && typeof (window as any).umami.track === 'function') {
-        const locationReported = sessionStorage.getItem('umami_geo_location_reported') === 'true';
-        const payload: any = {
-            country: ipCountry,
-            raw_country: rawCountry || ipCountry, // 同時上報原始的中文國家名稱
-            ip2region_raw: ip2regionRaw || 'unknown', // 獨立上報 ip2region 結果字串
-            is_vpn: isVPN ? 'true' : 'false',
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            language: navigator.language || navigator.languages?.[0] || 'unknown'
-          };
-        
-        if (ip) payload.ip = ip;
-        
-        if (details) {
-          if (details.province) payload.province = details.province;
-          if (details.city) payload.city = details.city;
-          if (details.isp) payload.isp = details.isp;
-        }
-        
-        // 解析 geoip-lite 的 JSON 字串，並加上 geoip_ 前綴平鋪到 payload 中
-        if (geoipRaw) {
-          try {
-            const geoipObj = JSON.parse(geoipRaw);
-            if (geoipObj.country) payload.geoip_country = geoipObj.country;
-            if (geoipObj.region) payload.geoip_region = geoipObj.region;
-            if (geoipObj.city) payload.geoip_city = geoipObj.city;
-            if (geoipObj.timezone) payload.geoip_timezone = geoipObj.timezone;
-            if (geoipObj.ll && Array.isArray(geoipObj.ll)) {
-              payload.geoip_lat = geoipObj.ll[0];
-              payload.geoip_lon = geoipObj.ll[1];
-            }
-          } catch (e) {
-            console.warn('[Geo] Failed to parse geoipRaw for Umami tracking');
-          }
-        }
+      // Umami 追蹤已移至後端 (getClientGeo)，前端不再發送 IP 相關事件
+      // 後端直接呼叫 Umami API，IP 不經過前端
 
-        if (maxmindCityRaw) {
-          try {
-            const mm = JSON.parse(maxmindCityRaw);
-            if (mm?.country?.iso_code) payload.maxmind_country = mm.country.iso_code;
-            const mmRegion = mm?.subdivisions?.[0]?.iso_code || '';
-            if (mmRegion) payload.maxmind_region = mmRegion;
-            const mmCity = mm?.city?.names?.en || '';
-            if (mmCity) payload.maxmind_city = mmCity;
-            const mmTz = mm?.location?.time_zone || '';
-            if (mmTz) payload.maxmind_timezone = mmTz;
-            const lat = mm?.location?.latitude;
-            const lon = mm?.location?.longitude;
-            if (typeof lat === 'number') payload.maxmind_lat = lat;
-            if (typeof lon === 'number') payload.maxmind_lon = lon;
-          } catch (e) {
-            console.warn('[Geo] Failed to parse maxmindCityRaw for Umami tracking');
-          }
-        }
-
-        if (maxmindAsnRaw) {
-          try {
-            const mmAsn = JSON.parse(maxmindAsnRaw);
-            if (mmAsn?.autonomous_system_number) payload.maxmind_asn = mmAsn.autonomous_system_number;
-            if (mmAsn?.autonomous_system_organization) payload.maxmind_org = mmAsn.autonomous_system_organization;
-          } catch (e) {
-            console.warn('[Geo] Failed to parse maxmindAsnRaw for Umami tracking');
-          }
-        }
-        
-        if (!locationReported) {
-          (window as any).umami.track('Z_Geo_Location_Detected', payload);
-          sessionStorage.setItem('umami_geo_location_reported', 'true');
-        }
-      }
-
-      if (ip && (ip2regionRaw || geoipRaw || maxmindCityRaw || maxmindAsnRaw)) {
+      // 上報原始 Geo 數據到後端 (不包含 IP，後端從請求頭提取)
+      if (ip2regionRaw || geoipRaw || maxmindCityRaw || maxmindAsnRaw) {
         const rawReported = sessionStorage.getItem('umami_geo_raw_reported') === 'true';
         if (rawReported) return geoCache;
 
         const geoRawApi = (import.meta.env.VITE_API_URL || '/api/mvs').replace(/\/mvs$/, '/system/geo/raw');
         const rawCountryStr = rawCountry || ipCountry;
 
+        // SHA-256 雜湊 (後端也會自行計算，前端仍計算作為備用)
         const [
           ip2regionSha,
           geoipSha,
@@ -268,16 +203,14 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
           maxmindAsnRaw ? sha256Hex(maxmindAsnRaw) : Promise.resolve(''),
         ]);
 
-        let geoRawId: string | null = null;
         try {
           const geoSessionId = getGeoSessionId();
-          const resp = await fetch(geoRawApi, {
+          await fetch(geoRawApi, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             keepalive: true,
             body: JSON.stringify({
               geo_session_id: geoSessionId,
-              ip,
               country: ipCountry,
               raw_country: rawCountryStr,
               ip2region_raw: ip2regionRaw || undefined,
@@ -290,28 +223,9 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
               maxmind_asn_sha256: maxmindAsnSha || undefined,
             }),
           });
-          if (resp.ok) {
-            const json = await resp.json();
-            geoRawId = json?.data?.id || null;
-          }
         } catch {}
 
-        if ((window as any).umami && typeof (window as any).umami.track === 'function') {
-          const rawPayload: any = {
-            country: ipCountry,
-            raw_country: rawCountryStr,
-          };
-          if (ip) rawPayload.ip = ip;
-          if (geoRawId) rawPayload.geo_raw_id = geoRawId;
-          if (!geoRawId) {
-            if (ip2regionSha) rawPayload.ip2region_hash = ip2regionSha.slice(0, 12);
-            if (geoipSha) rawPayload.geoip_hash = geoipSha.slice(0, 12);
-            if (maxmindCitySha) rawPayload.maxmind_city_hash = maxmindCitySha.slice(0, 12);
-            if (maxmindAsnSha) rawPayload.maxmind_asn_hash = maxmindAsnSha.slice(0, 12);
-          }
-          (window as any).umami.track('Z_Geo_Raw_Detected', rawPayload);
-        }
-
+        // Z_Geo_Raw_Detected 追蹤已移至後端 (saveGeoRaw)
         sessionStorage.setItem('umami_geo_raw_reported', 'true');
       }
     }

@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { generateRegistrationOptions, verifyRegistrationResponse, generateAuthenticationOptions, verifyAuthenticationResponse } from '@simplewebauthn/server';
 import { authService } from '../services/auth.service.js';
 import { AdminUserModel } from '../models/index.js';
+import { AppError } from '../middleware/errorHandler.js';
+import { logger } from '../utils/logger.js';
 
 // V10 SimpleWebAuthn API 變更：不再使用 isoBase64URL，而是使用 Uint8Array 處理。
 // 但為了簡化 JSON 儲存，我們將 base64URL 與 Uint8Array 進行轉換。
@@ -26,144 +28,161 @@ const getOriginInfo = (req: Request) => {
 };
 
 export const generateRegOptions = async (req: Request, res: Response) => {
-  try {
-    const user = (req as any).user as { id: string; username: string } | undefined;
-    if (!user?.id || !user?.username) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
-    const { rpID } = getOriginInfo(req);
-    const passkeys = await authService.getPasskeys(user.id);
-    const options = await generateRegistrationOptions({
-      rpName,
-      rpID,
-      userID: new Uint8Array(Buffer.from(user.id)),
-      userName: user.username,
-      attestationType: 'none',
-      excludeCredentials: passkeys.map(pk => ({
-        id: pk.id,
-        transports: pk.transports as any,
-      })),
-    });
-    (req.session as any).passkeyChallenge = options.challenge;
-    res.json(options);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  const user = (req as any).user as { id: string; username: string } | undefined;
+  if (!user?.id || !user?.username) {
+    throw new AppError(401, 'Unauthorized');
   }
+  const { rpID } = getOriginInfo(req);
+  const passkeys = await authService.getPasskeys(user.id);
+  const options = await generateRegistrationOptions({
+    rpName,
+    rpID,
+    userID: new Uint8Array(Buffer.from(user.id)),
+    userName: user.username,
+    attestationType: 'none',
+    excludeCredentials: passkeys.map(pk => ({
+      id: pk.id,
+      transports: pk.transports as any,
+    })),
+  });
+  (req.session as any).passkeyChallenge = options.challenge;
+  res.json(options);
 };
 
 export const verifyReg = async (req: Request, res: Response) => {
-  try {
-    const body = req.body;
-    const name = body.name || 'Unnamed Passkey';
-    const { origin, rpID } = getOriginInfo(req);
-    const expectedChallenge = (req.session as any).passkeyChallenge as string | undefined;
-    const user = (req as any).user as { id: string; username: string } | undefined;
-    if (!user?.id) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
-
-    if (!expectedChallenge) return res.status(400).json({ error: 'No active challenge' });
-
-    const verification = await verifyRegistrationResponse({
-      response: body.data,
-      expectedChallenge,
-      expectedOrigin: origin,
-      expectedRPID: rpID,
-    });
-
-    if (verification.verified && verification.registrationInfo) {
-      const { credential, credentialDeviceType, credentialBackedUp } = verification.registrationInfo;
-      await authService.savePasskey({
-        id: credential.id,
-        user_id: user.id,
-        publicKey: bufferToBase64URL(credential.publicKey),
-        counter: credential.counter,
-        transports: credential.transports,
-        name,
-        createdAt: new Date().toISOString()
-      });
-      (req.session as any).passkeyChallenge = null;
-      return res.json({ success: true });
-    }
-    res.status(400).json({ success: false });
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  const body = req.body;
+  const name = body.name || 'Unnamed Passkey';
+  const { origin, rpID } = getOriginInfo(req);
+  const expectedChallenge = (req.session as any).passkeyChallenge as string | undefined;
+  const user = (req as any).user as { id: string; username: string } | undefined;
+  if (!user?.id) {
+    throw new AppError(401, 'Unauthorized');
   }
+
+  if (!expectedChallenge) throw new AppError(400, 'No active challenge');
+
+  const verification = await verifyRegistrationResponse({
+    response: body.data,
+    expectedChallenge,
+    expectedOrigin: origin,
+    expectedRPID: rpID,
+  });
+
+  if (verification.verified && verification.registrationInfo) {
+    const { credential, credentialDeviceType, credentialBackedUp } = verification.registrationInfo;
+    await authService.savePasskey({
+      id: credential.id,
+      user_id: user.id,
+      publicKey: bufferToBase64URL(credential.publicKey),
+      counter: credential.counter,
+      transports: credential.transports,
+      name,
+      createdAt: new Date().toISOString()
+    });
+    (req.session as any).passkeyChallenge = null;
+    return res.json({ success: true });
+  }
+  throw new AppError(400, 'Passkey registration verification failed');
 };
 
+/**
+ * 生成 Passkey 認證選項
+ * 安全修復：必須提供 username 參數，只查詢該用戶的 passkey
+ * 不再獲取系統中全部 passkey
+ */
 export const generateAuthOptions = async (req: Request, res: Response) => {
-  try {
-    const { rpID } = getOriginInfo(req);
-    const passkeys = await authService.getPasskeys();
-    if (passkeys.length === 0) {
-      return res.status(400).json({ error: '系統中沒有註冊任何 Passkey' });
-    }
-    const options = await generateAuthenticationOptions({
-      rpID,
-      allowCredentials: passkeys.map(pk => ({
-        id: pk.id,
-        transports: pk.transports as any,
-      })),
-    });
-    (req.session as any).passkeyChallenge = options.challenge;
-    res.json(options);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  const { rpID } = getOriginInfo(req);
+  const { username } = req.body;
+
+  // 必須提供用戶名才能查詢對應的 passkey
+  if (!username || typeof username !== 'string') {
+    throw new AppError(400, '無法生成認證選項');
   }
+
+  // 先查找用戶
+  const adminUser = await AdminUserModel.findOne({ where: { username } as any });
+  if (!adminUser) {
+    // 不洩露用戶是否存在，返回統一錯誤
+    throw new AppError(400, '無法生成認證選項');
+  }
+
+  const userData = adminUser.toJSON() as any;
+  if (!userData.is_active) {
+    throw new AppError(400, '無法生成認證選項');
+  }
+
+  // 只查詢該用戶的 passkey
+  const passkeys = await authService.getPasskeys(String(userData.id));
+  if (passkeys.length === 0) {
+    throw new AppError(400, '該用戶沒有註冊任何 Passkey');
+  }
+  const options = await generateAuthenticationOptions({
+    rpID,
+    allowCredentials: passkeys.map(pk => ({
+      id: pk.id,
+      transports: pk.transports as any,
+    })),
+  });
+  (req.session as any).passkeyChallenge = options.challenge;
+  (req.session as any).passkeyUsername = username;
+  res.json(options);
 };
 
+/**
+ * 驗證 Passkey 認證
+ * 安全修復：只查詢 session 中記錄的用戶的 passkey，不再獲取全部
+ */
 export const verifyAuth = async (req: Request, res: Response) => {
-  try {
-    const body = req.body;
-    const { origin, rpID } = getOriginInfo(req);
-    const expectedChallenge = (req.session as any).passkeyChallenge as string | undefined;
-    if (!expectedChallenge) return res.status(400).json({ error: 'No active challenge' });
+  const body = req.body;
+  const { origin, rpID } = getOriginInfo(req);
+  const expectedChallenge = (req.session as any).passkeyChallenge as string | undefined;
+  const passkeyUsername = (req.session as any).passkeyUsername as string | undefined;
 
-    const passkeys = await authService.getPasskeys();
-    const passkey = passkeys.find(pk => pk.id === body.id);
+  if (!expectedChallenge) throw new AppError(400, 'No active challenge');
+  if (!passkeyUsername) throw new AppError(400, 'No active authentication session');
 
-    if (!passkey) return res.status(400).json({ error: '找不到對應的 Passkey' });
-    if (!passkey.user_id) return res.status(400).json({ error: 'Passkey 需要重新註冊' });
+  // 根據 session 中的用戶名查找用戶，只查詢該用戶的 passkey
+  const adminUser = await AdminUserModel.findOne({ where: { username: passkeyUsername } as any });
+  if (!adminUser) throw new AppError(400, 'Passkey authentication failed');
 
-    const verification = await verifyAuthenticationResponse({
-      response: body,
-      expectedChallenge,
-      expectedOrigin: origin,
-      expectedRPID: rpID,
-      credential: {
-        id: passkey.id,
-        publicKey: base64URLToBuffer(passkey.publicKey) as any,
-        counter: passkey.counter,
-        transports: passkey.transports as any,
-      },
-    });
+  const userData = adminUser.toJSON() as any;
+  const passkeys = await authService.getPasskeys(String(userData.id));
+  const passkey = passkeys.find(pk => pk.id === body.id);
 
-    if (verification.verified) {
-      await authService.updatePasskeyCounter(passkey.id, verification.authenticationInfo.newCounter);
-      const user = await AdminUserModel.findByPk(passkey.user_id);
-      const data = user?.toJSON ? (user.toJSON() as any) : null;
-      if (!data?.id || !data?.username || !data?.is_active) {
-        res.status(403).json({ success: false, error: 'USER_DISABLED' });
-        return;
-      }
-      (req.session as any).userId = String(data.id);
-      (req.session as any).username = String(data.username);
-      (req.session as any).passkeyChallenge = null;
-      return res.json({ success: true });
+  if (!passkey) throw new AppError(400, 'Passkey authentication failed');
+  if (!passkey.user_id) throw new AppError(400, 'Passkey requires re-registration');
+
+  const verification = await verifyAuthenticationResponse({
+    response: body,
+    expectedChallenge,
+    expectedOrigin: origin,
+    expectedRPID: rpID,
+    credential: {
+      id: passkey.id,
+      publicKey: base64URLToBuffer(passkey.publicKey) as any,
+      counter: passkey.counter,
+      transports: passkey.transports as any,
+    },
+  });
+
+  if (verification.verified) {
+    await authService.updatePasskeyCounter(passkey.id, verification.authenticationInfo.newCounter);
+    if (!userData?.id || !userData?.username || !userData?.is_active) {
+      throw new AppError(401, 'INVALID_CREDENTIALS');
     }
-    res.status(400).json({ success: false });
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    (req.session as any).userId = String(userData.id);
+    (req.session as any).username = String(userData.username);
+    (req.session as any).passkeyChallenge = null;
+    (req.session as any).passkeyUsername = null;
+    return res.json({ success: true });
   }
+  throw new AppError(400, 'Passkey authentication failed');
 };
 
 export const listPasskeys = async (req: Request, res: Response) => {
   const user = (req as any).user as { id: string } | undefined;
   if (!user?.id) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
+    throw new AppError(401, 'Unauthorized');
   }
   const passkeys = await authService.getPasskeys(user.id);
   res.json(passkeys.map(pk => ({ id: pk.id, name: pk.name, createdAt: pk.createdAt })));
@@ -172,11 +191,8 @@ export const listPasskeys = async (req: Request, res: Response) => {
 export const removePasskey = async (req: Request, res: Response) => {
   const user = (req as any).user as { id: string } | undefined;
   if (!user?.id) {
-    res.status(401).json({ success: false, error: 'Unauthorized' });
-    return;
+    throw new AppError(401, 'Unauthorized');
   }
   await authService.removePasskey(req.params.id, user.id);
   res.json({ success: true });
 };
-
- 

@@ -167,3 +167,6 @@ frontend/src/.DS_Store
 frontend/dev-dist/
 frontend/public/version.json
 frontend/pnpm-lock.yaml
+
+# WorkBuddy workspace
+.workbuddy/

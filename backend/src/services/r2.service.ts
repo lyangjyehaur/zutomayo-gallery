@@ -1,6 +1,7 @@
 import { S3Client, PutObjectCommand, HeadObjectCommand, CopyObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
 import type { Readable } from 'stream';
+import { logger } from '../utils/logger.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -22,12 +23,12 @@ if (ACCOUNT_ID && ACCESS_KEY_ID && SECRET_ACCESS_KEY) {
       secretAccessKey: SECRET_ACCESS_KEY,
     },
   });
-  console.log('[R2] Service initialized successfully.');
+  logger.info('[R2] Service initialized successfully.');
 } else {
   if (isProduction) {
-    console.warn('[R2] Missing R2 credentials in production environment.');
+    logger.warn('[R2] Missing R2 credentials in production environment.');
   } else {
-    console.log('[R2] Skipped initialization in development (missing credentials).');
+    logger.info('[R2] Skipped initialization in development (missing credentials).');
   }
 }
 
@@ -82,7 +83,7 @@ export const uploadBufferToR2 = async (
       if (!options?.forceUpdate) {
         const exists = await checkImageExists(fileName);
         if (exists) {
-          console.log(`[R2] File already exists: ${fileName}`);
+          logger.info({ fileName }, '[R2] File already exists');
           return `${R2_PUBLIC_DOMAIN}/${fileName}`;
         }
       }
@@ -98,7 +99,7 @@ export const uploadBufferToR2 = async (
       }
 
       // 3. 上傳到 R2
-      console.log(`[R2] Uploading buffer to R2 (Attempt ${attempt + 1}/${retryCount}): ${fileName} (${(buffer.length / 1024).toFixed(2)} KB)`);
+      logger.info({ fileName, attempt: attempt + 1, retryCount, sizeKB: (buffer.length / 1024).toFixed(2) }, '[R2] Uploading buffer to R2');
       await s3Client.send(new PutObjectCommand({
         Bucket: BUCKET_NAME,
         Key: fileName,
@@ -112,9 +113,9 @@ export const uploadBufferToR2 = async (
       return `${R2_PUBLIC_DOMAIN}/${fileName}`;
     } catch (error) {
       attempt++;
-      console.error(`[R2] Error uploading buffer ${fileName} (Attempt ${attempt}/${retryCount}):`, error);
+      logger.error({ err: error, fileName, attempt, retryCount }, '[R2] Error uploading buffer');
       if (attempt >= retryCount) {
-        console.error(`[R2] Max retries reached for ${fileName}. Giving up.`);
+        logger.error({ fileName }, '[R2] Max retries reached, giving up');
         return null;
       }
       // 等待一段時間後重試 (1s, 2s, 3s...)
@@ -140,7 +141,7 @@ export const uploadStreamToR2 = async (
       if (!options?.forceUpdate) {
         const exists = await checkImageExists(fileName);
         if (exists) {
-          console.log(`[R2] File already exists: ${fileName}`);
+          logger.info({ fileName }, '[R2] File already exists');
           return `${R2_PUBLIC_DOMAIN}/${fileName}`;
         }
       }
@@ -151,7 +152,7 @@ export const uploadStreamToR2 = async (
       };
       if (options?.metadata) Object.assign(metadata, options.metadata);
 
-      console.log(`[R2] Uploading stream to R2 (Attempt ${attempt + 1}/${retryCount}): ${fileName} (${options?.sizeBytes ? `${(options.sizeBytes / 1024 / 1024).toFixed(2)} MB` : 'unknown size'})`);
+      logger.info({ fileName, attempt: attempt + 1, retryCount, sizeMB: options?.sizeBytes ? (options.sizeBytes / 1024 / 1024).toFixed(2) : 'unknown' }, '[R2] Uploading stream to R2');
       await s3Client.send(new PutObjectCommand({
         Bucket: BUCKET_NAME,
         Key: fileName,
@@ -164,9 +165,9 @@ export const uploadStreamToR2 = async (
       return `${R2_PUBLIC_DOMAIN}/${fileName}`;
     } catch (error) {
       attempt++;
-      console.error(`[R2] Error uploading stream ${fileName} (Attempt ${attempt}/${retryCount}):`, error);
+      logger.error({ err: error, fileName, attempt, retryCount }, '[R2] Error uploading stream');
       if (attempt >= retryCount) {
-        console.error(`[R2] Max retries reached for ${fileName}. Giving up.`);
+        logger.error({ fileName }, '[R2] Max retries reached, giving up');
         return null;
       }
       await new Promise(resolve => setTimeout(resolve, attempt * 1000));
@@ -186,7 +187,7 @@ export const moveFileInR2 = async (oldKey: string, newKey: string): Promise<stri
   
   try {
     // 1. 複製檔案
-    console.log(`[R2] Copying from ${oldKey} to ${newKey}...`);
+    logger.info({ oldKey, newKey }, '[R2] Copying file...');
     await s3Client.send(new CopyObjectCommand({
       Bucket: BUCKET_NAME,
       CopySource: `${BUCKET_NAME}/${encodeURI(oldKey)}`,
@@ -194,16 +195,16 @@ export const moveFileInR2 = async (oldKey: string, newKey: string): Promise<stri
     }));
 
     // 2. 刪除原檔案
-    console.log(`[R2] Deleting original file ${oldKey}...`);
+    logger.info({ oldKey }, '[R2] Deleting original file');
     await s3Client.send(new DeleteObjectCommand({
       Bucket: BUCKET_NAME,
       Key: oldKey,
     }));
 
-    console.log(`[R2] Successfully moved file to ${newKey}.`);
+    logger.info({ newKey }, '[R2] Successfully moved file');
     return `${R2_PUBLIC_DOMAIN}/${newKey}`;
   } catch (error) {
-    console.error(`[R2] Error moving file from ${oldKey} to ${newKey}:`, error);
+    logger.error({ err: error, oldKey, newKey }, '[R2] Error moving file');
     return null;
   }
 };
@@ -234,14 +235,14 @@ export const backupImageToR2 = async (
       if (url.includes('format=webp')) ext = 'webp';
       if (url.includes('format=mp4')) ext = 'mp4';
 
-      const hash = crypto.createHash('md5').update(url).digest('hex');
+      const hash = crypto.createHash('sha256').update(url).digest('hex').substring(0, 16);
       const fileName = `${folder}/${hash}.${ext}`;
 
       // 2. 檢查是否已經備份過 (除非設定 forceUpdate=true)
       if (!options?.forceUpdate) {
         const exists = await checkImageExists(fileName);
         if (exists) {
-          console.log(`[R2] Image already backed up: ${fileName}`);
+          logger.info({ fileName }, '[R2] Image already backed up');
           return `${R2_PUBLIC_DOMAIN}/${fileName}`;
         }
       }
@@ -259,7 +260,7 @@ export const backupImageToR2 = async (
         // 清理可能出現的 ?& 狀況
         fetchUrl = fetchUrl.replace('?&', '?');
       }
-      console.log(`[R2] Downloading image (Attempt ${attempt + 1}/${retryCount}): ${fetchUrl}`);
+      logger.info({ fetchUrl, attempt: attempt + 1, retryCount }, '[R2] Downloading image');
 
       const response = await fetch(fetchUrl);
       if (!response.ok) {
@@ -292,7 +293,7 @@ export const backupImageToR2 = async (
       }
 
       // 4. 上傳到 R2
-      console.log(`[R2] Uploading to R2: ${fileName} (${(buffer.length / 1024).toFixed(2)} KB)`);
+      logger.info({ fileName, sizeKB: (buffer.length / 1024).toFixed(2) }, '[R2] Uploading to R2');
       await s3Client.send(new PutObjectCommand({
         Bucket: BUCKET_NAME,
         Key: fileName,
@@ -306,9 +307,9 @@ export const backupImageToR2 = async (
       return `${R2_PUBLIC_DOMAIN}/${fileName}`;
     } catch (error) {
       attempt++;
-      console.error(`[R2] Error backing up image ${url} (Attempt ${attempt}/${retryCount}):`, error);
+      logger.error({ err: error, url, attempt, retryCount }, '[R2] Error backing up image');
       if (attempt >= retryCount) {
-        console.error(`[R2] Max retries reached for ${url}. Giving up.`);
+        logger.error({ url }, '[R2] Max retries reached, giving up');
         return null;
       }
       // 等待一段時間後重試 (1s, 2s, 3s...)

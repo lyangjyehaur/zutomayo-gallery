@@ -74,7 +74,7 @@ export const login = async (req: Request, res: Response) => {
 
   const data = user.toJSON() as any;
   if (!data.is_active) {
-    res.status(403).json({ success: false, error: 'USER_DISABLED' });
+    res.status(401).json({ success: false, error: 'INVALID_CREDENTIALS' });
     return;
   }
 

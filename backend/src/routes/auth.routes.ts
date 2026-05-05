@@ -2,22 +2,23 @@ import { Router } from 'express';
 import { generateRegOptions, verifyReg, generateAuthOptions, verifyAuth, listPasskeys, removePasskey } from '../controllers/auth.controller.js';
 import { login, logout, me, updateMeProfile } from '../controllers/auth-session.controller.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
+import { asyncHandler } from '../middleware/errorHandler.js';
 
 const router = Router();
 
-router.post('/login', login);
-router.post('/logout', logout);
-router.get('/me', me);
-router.put('/me/profile', requireAuth, updateMeProfile);
+router.post('/login', asyncHandler(login));
+router.post('/logout', asyncHandler(logout));
+router.get('/me', asyncHandler(me));
+router.put('/me/profile', requireAuth, asyncHandler(updateMeProfile));
 
 // Passkey authentication (public)
-router.get('/generate-auth-options', generateAuthOptions);
-router.post('/verify-auth', verifyAuth);
+router.get('/generate-auth-options', asyncHandler(generateAuthOptions));
+router.post('/verify-auth', asyncHandler(verifyAuth));
 
 // Passkey management (per-user)
-router.get('/generate-reg-options', requireAuth, generateRegOptions);
-router.post('/verify-reg', requireAuth, verifyReg);
-router.get('/passkeys', requireAuth, listPasskeys);
-router.delete('/passkeys/:id', requireAuth, removePasskey);
+router.get('/generate-reg-options', requireAuth, asyncHandler(generateRegOptions));
+router.post('/verify-reg', requireAuth, asyncHandler(verifyReg));
+router.get('/passkeys', requireAuth, asyncHandler(listPasskeys));
+router.delete('/passkeys/:id', requireAuth, asyncHandler(removePasskey));
 
 export default router;

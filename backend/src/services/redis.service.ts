@@ -1,4 +1,5 @@
 import { createClient } from 'redis';
+import { logger } from '../utils/logger.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
@@ -12,17 +13,17 @@ export const redisClient = createClient({
 redisClient.on('error', (err) => {
   // 在開發環境不印出錯誤以避免洗版
   if (isProduction) {
-    console.error('Redis Client Error:', err);
+    logger.error({ err }, 'Redis Client Error');
   }
 });
 
 // 連線成功
 redisClient.on('connect', () => {
-  console.log('Redis Client Connected');
+  logger.info('Redis Client Connected');
 });
 
 redisClient.on('ready', () => {
-  console.log('Redis Client Ready');
+  logger.info('Redis Client Ready');
 });
 
 // 啟動連線函數
@@ -34,11 +35,11 @@ export const initRedis = async () => {
         await redisClient.connect();
       }
     } catch (error) {
-      console.error('Failed to connect to Redis:', error);
+      logger.error({ err: error }, 'Failed to connect to Redis');
       // 即使 Redis 連線失敗，也不要讓整個應用程式崩潰，它會自動重試
     }
   } else {
-    console.log('[Redis] Skipped connection in development environment');
+    logger.info('[Redis] Skipped connection in development environment');
   }
 };
 

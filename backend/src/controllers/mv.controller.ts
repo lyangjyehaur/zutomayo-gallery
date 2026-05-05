@@ -13,12 +13,13 @@ import { getMetadata as getMeta, saveMetadata as saveMeta } from '../services/me
 import { deleteKeysByPattern } from '../services/redis.service.js';
 
 import { TwitterService } from '../services/twitter.service.js';
+import { logger } from '../utils/logger.js';
 
 const mvService = new MVService();
 
 // 統一錯誤處理輔助函數
 const handleError = (res: Response, error: unknown, context: string) => {
-  console.error(`[${context}]:`, error);
+  logger.error({ err: error, context }, 'Controller error');
   
   if (error instanceof ZodError) {
     return res.status(400).json({

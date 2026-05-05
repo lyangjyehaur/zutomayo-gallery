@@ -2,11 +2,16 @@ import type { Request, Response } from 'express';
 import crypto from 'crypto';
 import { Op } from 'sequelize';
 import { FanartSubmissionMediaModel, FanartSubmissionModel, FanartSubmissionMvModel, MediaGroupModel, MediaModel, MVMediaModel, MVModel, PublicUserModel } from '../models/index.js';
+import { sequelize } from '../services/pg.service.js';
 import { backupImageToR2, moveFileInR2, uploadBufferToR2 } from '../services/r2.service.js';
 import { maskEmail } from '../utils/submission.js';
 import { MVService } from '../services/mv.service.js';
+import { logger } from '../utils/logger.js';
+import { AppError } from '../middleware/errorHandler.js';
+import { FANART_ALLOWED_TAGS_SET } from '../constants/fanart-tags.js';
+import { listSubmissionsQuerySchema, rejectSubmissionSchema } from '../validators/admin-submission.validator.js';
 
-const allowedTags = new Set(['tag:collab', 'tag:acane', 'tag:real', 'tag:uniguri', 'tag:other']);
+const mvService = new MVService();
 
 const buildSubmitterSnapshot = (submitter: any) => {
   if (!submitter) return null;
@@ -21,35 +26,32 @@ const buildSubmitterSnapshot = (submitter: any) => {
 };
 
 export const listSubmissions = async (req: Request, res: Response) => {
-  try {
-    const status = String(req.query.status || 'pending');
-    const page = Math.max(1, Number(req.query.page || 1) || 1);
-    const limit = Math.min(100, Math.max(1, Number(req.query.limit || 20) || 20));
-    const offset = (page - 1) * limit;
+  const parsed = listSubmissionsQuerySchema.safeParse(req.query);
+  const status = parsed.success ? parsed.data.status : String(req.query.status || 'pending');
+  const page = parsed.success ? parsed.data.page : Math.max(1, Number(req.query.page || 1) || 1);
+  const limit = parsed.success ? parsed.data.limit : Math.min(100, Math.max(1, Number(req.query.limit || 20) || 20));
+  const offset = (page - 1) * limit;
 
-    const where: any = {};
-    if (['draft', 'pending', 'approved', 'rejected', 'cancelled'].includes(status)) where.status = status;
+  const where: any = {};
+  if (['draft', 'pending', 'approved', 'rejected', 'cancelled'].includes(status)) where.status = status;
 
-    const { rows, count } = await FanartSubmissionModel.findAndCountAll({
-      where,
-      order: [['created_at', 'DESC']],
-      limit,
-      offset,
-      include: [
-        { model: FanartSubmissionMediaModel, as: 'media' },
-        { model: MVModel, as: 'mvs', through: { attributes: [] }, required: false, attributes: ['id', 'title'] },
-        { model: PublicUserModel, as: 'submitter' },
-      ] as any,
-    });
+  const { rows, count } = await FanartSubmissionModel.findAndCountAll({
+    where,
+    order: [['created_at', 'DESC']],
+    limit,
+    offset,
+    include: [
+      { model: FanartSubmissionMediaModel, as: 'media' },
+      { model: MVModel, as: 'mvs', through: { attributes: [] }, required: false, attributes: ['id', 'title'] },
+      { model: PublicUserModel, as: 'submitter' },
+    ] as any,
+  });
 
-    res.json({
-      success: true,
-      data: rows.map((r: any) => r.toJSON()),
-      meta: { total: count, page, limit, totalPages: Math.ceil(count / limit) }
-    });
-  } catch (e: any) {
-    res.status(500).json({ success: false, error: e?.message || 'LIST_SUBMISSIONS_FAILED' });
-  }
+  res.json({
+    success: true,
+    data: rows.map((r: any) => r.toJSON()),
+    meta: { total: count, page, limit, totalPages: Math.ceil(count / limit) }
+  });
 };
 
 const fetchMediaToBuffer = async (url: string) => {
@@ -72,44 +74,43 @@ const fetchMediaToBuffer = async (url: string) => {
 };
 
 export const approveSubmission = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const submission = await FanartSubmissionModel.findByPk(id, {
-      include: [
-        { model: FanartSubmissionMediaModel, as: 'media' },
-        { model: MVModel, as: 'mvs', through: { attributes: [] }, required: false, attributes: ['id', 'title'] },
-        { model: PublicUserModel, as: 'submitter' },
-      ] as any,
-    });
-    if (!submission) {
-      res.status(404).json({ success: false, error: 'SUBMISSION_NOT_FOUND' });
-      return;
-    }
-    if (String((submission as any).get('status')) !== 'pending') {
-      res.status(400).json({ success: false, error: 'ONLY_PENDING_CAN_APPROVE' });
-      return;
-    }
+  const { id } = req.params;
 
-    const media = (submission as any).get('media') as any[] || [];
-    if (media.length === 0) {
-      res.status(400).json({ success: false, error: 'NO_MEDIA' });
-      return;
-    }
+  const submission = await FanartSubmissionModel.findByPk(id, {
+    include: [
+      { model: FanartSubmissionMediaModel, as: 'media' },
+      { model: MVModel, as: 'mvs', through: { attributes: [] }, required: false, attributes: ['id', 'title'] },
+      { model: PublicUserModel, as: 'submitter' },
+    ] as any,
+  });
+  if (!submission) {
+    throw new AppError(404, 'SUBMISSION_NOT_FOUND');
+  }
+  if (String((submission as any).get('status')) !== 'pending') {
+    throw new AppError(400, 'ONLY_PENDING_CAN_APPROVE');
+  }
 
-    const tagsRaw = (submission as any).get('special_tags') as any;
-    const tags = Array.isArray(tagsRaw) ? tagsRaw.filter((t: any) => typeof t === 'string' && allowedTags.has(t)) : [];
-    const mvIds = Array.isArray((submission as any).get('mvs')) ? (submission as any).get('mvs').map((m: any) => m.id) : [];
+  const media = (submission as any).get('media') as any[] || [];
+  if (media.length === 0) {
+    throw new AppError(400, 'NO_MEDIA');
+  }
 
-    const submitter = (submission as any).get('submitter') as any;
-    const submitterSnapshot = buildSubmitterSnapshot(submitter);
+  const tagsRaw = (submission as any).get('special_tags') as any;
+  const tags = Array.isArray(tagsRaw) ? tagsRaw.filter((t: any) => typeof t === 'string' && FANART_ALLOWED_TAGS_SET.has(t)) : [];
+  const mvIds = Array.isArray((submission as any).get('mvs')) ? (submission as any).get('mvs').map((m: any) => m.id) : [];
 
+  const submitter = (submission as any).get('submitter') as any;
+  const submitterSnapshot = buildSubmitterSnapshot(submitter);
+
+  // 使用事務包裹整個審批流程，確保數據一致性
+  const result = await sequelize.transaction(async (t) => {
     const group = await MediaGroupModel.create({
       id: undefined,
       source_url: `submission:${id}`,
       source_text: String((submission as any).get('note') || ''),
       post_date: (submission as any).get('submitted_at') || new Date(),
       status: 'organized',
-    } as any);
+    } as any, { transaction: t });
 
     const createdMedia: any[] = [];
 
@@ -147,7 +148,7 @@ export const approveSubmission = async (req: Request, res: Response) => {
       if (!finalUrl && originalUrl) {
         const fetched = await fetchMediaToBuffer(String(originalUrl));
         if (fetched) {
-          const hash = crypto.createHash('md5').update(String(originalUrl)).digest('hex');
+          const hash = crypto.createHash('sha256').update(String(originalUrl)).digest('hex').substring(0, 16);
           const fileName = `fanart/${hash}.${fetched.ext}`;
           const uploaded = await uploadBufferToR2(fetched.buffer, fileName, fetched.contentType, { metadata: { source: 'submission', 'submission-id': id } });
           if (uploaded) finalUrl = uploaded;
@@ -171,67 +172,56 @@ export const approveSubmission = async (req: Request, res: Response) => {
         submitter_user_id: submitter ? submitter.id : null,
         submitter_public_snapshot: submitterSnapshot,
         submission_id: id,
-      } as any);
+      } as any, { transaction: t });
 
       createdMedia.push(record);
 
       for (const mvId of mvIds) {
         await MVMediaModel.findOrCreate({
           where: { mv_id: mvId, media_id: (record as any).get('id') },
-          defaults: { mv_id: mvId, media_id: (record as any).get('id'), usage: 'gallery', order_index: 0 }
+          defaults: { mv_id: mvId, media_id: (record as any).get('id'), usage: 'gallery', order_index: 0 },
+          transaction: t,
         });
       }
     }
 
     if (createdMedia.length === 0) {
-      await (group as any).destroy();
-      res.status(500).json({ success: false, error: 'APPROVE_NO_MEDIA_CREATED' });
-      return;
+      await (group as any).destroy({ transaction: t });
+      throw new AppError(500, 'APPROVE_NO_MEDIA_CREATED');
     }
 
     await (submission as any).update({
       status: 'approved',
       reviewed_by: (req.session as any)?.username || (req as any).user?.username || 'admin',
       reviewed_at: new Date(),
-    });
+    }, { transaction: t });
 
-    if (mvIds.length > 0) {
-      const mvService = new MVService();
-      mvService.clearCache();
-    }
+    return createdMedia.length;
+  });
 
-    res.json({ success: true });
-  } catch (e: any) {
-    res.status(500).json({ success: false, error: e?.message || 'APPROVE_SUBMISSION_FAILED' });
+  if (mvIds.length > 0) {
+    mvService.clearCache();
   }
+
+  res.json({ success: true });
 };
 
 export const rejectSubmission = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const reason = String((req.body as any)?.reason || '').trim();
-    if (!reason) {
-      res.status(400).json({ success: false, error: 'REASON_REQUIRED' });
-      return;
-    }
-    const submission = await FanartSubmissionModel.findByPk(id);
-    if (!submission) {
-      res.status(404).json({ success: false, error: 'SUBMISSION_NOT_FOUND' });
-      return;
-    }
-    if (String((submission as any).get('status')) !== 'pending') {
-      res.status(400).json({ success: false, error: 'ONLY_PENDING_CAN_REJECT' });
-      return;
-    }
-    await (submission as any).update({
-      status: 'rejected',
-      review_reason: reason,
-      reviewed_by: (req.session as any)?.username || (req as any).user?.username || 'admin',
-      reviewed_at: new Date(),
-    });
-    res.json({ success: true });
-  } catch (e: any) {
-    res.status(500).json({ success: false, error: e?.message || 'REJECT_SUBMISSION_FAILED' });
+  const { id } = req.params;
+  const parsed = rejectSubmissionSchema.parse(req.body);
+  const reason = parsed.reason.trim();
+  const submission = await FanartSubmissionModel.findByPk(id);
+  if (!submission) {
+    throw new AppError(404, 'SUBMISSION_NOT_FOUND');
   }
+  if (String((submission as any).get('status')) !== 'pending') {
+    throw new AppError(400, 'ONLY_PENDING_CAN_REJECT');
+  }
+  await (submission as any).update({
+    status: 'rejected',
+    review_reason: reason,
+    reviewed_by: (req.session as any)?.username || (req as any).user?.username || 'admin',
+    reviewed_at: new Date(),
+  });
+  res.json({ success: true });
 };
-

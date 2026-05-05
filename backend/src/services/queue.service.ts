@@ -5,6 +5,7 @@ import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
 import { runR2Sync } from './r2-sync.service.js';
+import { logger } from '../utils/logger.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const hasRedisUrl = !!process.env.REDIS_URL;
@@ -46,7 +47,7 @@ if (isProduction || hasRedisUrl) {
   });
 
   const worker = new Worker('twitter-monitor', async (job: Job) => {
-    console.log(`[BullMQ] Processing job ${job.id} of type ${job.name}`);
+    logger.info({ jobId: job.id, jobName: job.name }, '[BullMQ] Processing job');
     if (job.name === 'check-rss') {
       // 呼叫原本的檢查邏輯
       const result = await TwitterMonitorService.checkRss();
@@ -60,15 +61,15 @@ if (isProduction || hasRedisUrl) {
   }, { connection, concurrency: 1 });
 
   worker.on('completed', (job, returnvalue) => {
-    console.log(`[BullMQ] Job ${job.id} has completed! Result:`, returnvalue);
+    logger.info({ jobId: job.id, result: returnvalue }, '[BullMQ] Job completed');
   });
 
   worker.on('failed', (job, err) => {
-    console.error(`[BullMQ] Job ${job?.id} has failed with ${err.message}`);
+    logger.error({ jobId: job?.id, err }, '[BullMQ] Job failed');
   });
 
   const mediaWorker = new Worker('media-tasks', async (job: Job) => {
-    console.log(`[BullMQ] Processing job ${job.id} of type ${job.name}`);
+    logger.info({ jobId: job.id, jobName: job.name }, '[BullMQ] Processing job');
     if (job.name === 'sync-images-to-r2') {
       const result = await runR2Sync();
       await job.updateProgress(100);
@@ -78,17 +79,17 @@ if (isProduction || hasRedisUrl) {
   }, { connection, concurrency: 1 });
 
   mediaWorker.on('completed', (job, returnvalue) => {
-    console.log(`[BullMQ] Job ${job.id} has completed! Result:`, returnvalue);
+    logger.info({ jobId: job.id, result: returnvalue }, '[BullMQ] Job completed');
   });
 
   mediaWorker.on('failed', (job, err) => {
-    console.error(`[BullMQ] Job ${job?.id} has failed with ${err.message}`);
+    logger.error({ jobId: job?.id, err }, '[BullMQ] Job failed');
   });
 }
 
 export const initQueues = async () => {
   if (!twitterQueue) {
-    console.log('[BullMQ] Skipped initialization in development environment without Redis');
+    logger.info('[BullMQ] Skipped initialization in development environment without Redis');
     return;
   }
 
@@ -101,7 +102,7 @@ export const initQueues = async () => {
   }
 
   if (!process.env.TWITTER_RSS_URL) {
-    console.log('[BullMQ] TWITTER_RSS_URL is not set. Scheduled monitor disabled.');
+    logger.info('[BullMQ] TWITTER_RSS_URL is not set. Scheduled monitor disabled.');
     return;
   }
 
@@ -112,5 +113,5 @@ export const initQueues = async () => {
     }
   });
 
-  console.log(`[BullMQ] Twitter Monitor scheduled with pattern: ${CRON_SCHEDULE}`);
+  logger.info({ pattern: CRON_SCHEDULE }, '[BullMQ] Twitter Monitor scheduled');
 };

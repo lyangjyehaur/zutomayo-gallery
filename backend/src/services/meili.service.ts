@@ -1,5 +1,6 @@
 import { Meilisearch } from 'meilisearch';
 import { getMVsFromDB } from './v2_mapper.js';
+import { logger } from '../utils/logger.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const MEILI_HOST = process.env.MEILI_HOST || 'http://localhost:7700';
@@ -13,12 +14,12 @@ export const meiliClient = new Meilisearch({
 export const initMeiliSearch = async () => {
   // 本地開發時若沒提供 MEILI_HOST 則跳過
   if (!isProduction && !process.env.MEILI_HOST) {
-    console.log('[Meilisearch] Skipped initialization in development environment');
+    logger.info('[Meilisearch] Skipped initialization in development environment');
     return;
   }
   try {
     const health = await meiliClient.health();
-    console.log('[Meilisearch] Status:', health.status);
+    logger.info({ status: health.status }, '[Meilisearch] Status');
 
     // ==========================================
     // 1. 初始化 MVs 索引
@@ -54,16 +55,16 @@ export const initMeiliSearch = async () => {
       }
     });
 
-    console.log('[Meilisearch] Indices settings updated.');
+    logger.info('[Meilisearch] Indices settings updated.');
   } catch (error) {
-    console.error('[Meilisearch] Initialization failed:', error);
+    logger.error({ err: error }, '[Meilisearch] Initialization failed');
   }
 };
 
 export const syncDataToMeili = async () => {
   if (!isProduction && !process.env.MEILI_HOST) return;
   try {
-    console.log('[Meilisearch] Starting data sync...');
+    logger.info('[Meilisearch] Starting data sync...');
 
     // 1. 處理 MVs
     const mvs = await getMVsFromDB();
@@ -88,7 +89,7 @@ export const syncDataToMeili = async () => {
 
     if (mvDocs.length > 0) {
       const response = await meiliClient.index('mvs').addDocuments(mvDocs);
-      console.log(`[Meilisearch] Enqueued ${mvDocs.length} MVs. Task UID: ${response.taskUid}`);
+      logger.info({ count: mvDocs.length, taskUid: response.taskUid }, '[Meilisearch] Enqueued MVs');
     }
 
     // 2. 處理 Fanarts (已經整合到 V2，這裡可以從 images 表中篩選 type=fanart，但通常 Fanart 不直接建獨立文件，而是跟著 MV)
@@ -108,11 +109,11 @@ export const syncDataToMeili = async () => {
 
     if (fanartDocs.length > 0) {
       const response = await meiliClient.index('fanarts').addDocuments(fanartDocs);
-      console.log(`[Meilisearch] Enqueued ${fanartDocs.length} Fanarts. Task UID: ${response.taskUid}`);
+      logger.info({ count: fanartDocs.length, taskUid: response.taskUid }, '[Meilisearch] Enqueued Fanarts');
     }
 
-    console.log('[Meilisearch] Sync process completed.');
+    logger.info('[Meilisearch] Sync process completed.');
   } catch (error) {
-    console.error('[Meilisearch] Failed to sync data:', error);
+    logger.error({ err: error }, '[Meilisearch] Failed to sync data');
   }
 };

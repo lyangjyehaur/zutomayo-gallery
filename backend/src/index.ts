@@ -76,7 +76,7 @@ const corsOptions = {
     if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
       callback(null, true);
     } else {
-      console.warn(`[CORS] Blocked request from origin: ${origin}`);
+      logger.warn({ origin }, '[CORS] Blocked request from origin');
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -134,17 +134,24 @@ if (useRedisSessionStore) {
 
 app.use(cors(corsOptions));
 app.use(compression()); // 啟用 gzip/brotli 壓縮，大幅減少大型 JSON 的傳輸體積
+// Session secret：生產環境必須設定 SESSION_SECRET，否則拒絕啟動
+const sessionSecret = process.env.SESSION_SECRET || (!isProduction ? 'dev-session-secret' : undefined);
+if (!sessionSecret) {
+  logger.fatal('SESSION_SECRET environment variable is required in production');
+  process.exit(1);
+}
+
 app.use(session({
   name: sessionCookieName,
-  secret: process.env.SESSION_SECRET || process.env.ADMIN_PASSWORD || 'dev-session-secret',
+  secret: sessionSecret,
   store: sessionStore,
   proxy: Boolean(app.get('trust proxy')),
   resave: false,
   saveUninitialized: false,
   cookie: getSessionCookieOptions(),
 }));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 const createRateLimitStore = (prefix?: string) => {
   if (!redisClient.isOpen) return undefined;
@@ -160,6 +167,7 @@ const createRateLimitStore = (prefix?: string) => {
 
 const apiRateLimitStore = createRateLimitStore();
 const writeRateLimitStore = createRateLimitStore('rl:write:');
+const authRateLimitStore = createRateLimitStore('rl:auth:');
 
 // 請求限流 - 一般 API
 const apiLimiter = rateLimit({
@@ -184,12 +192,25 @@ const apiLimiter = rateLimit({
 
 // 更嚴格的限流 - 寫入操作
 const writeLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 分鐘 (原為 1 小時)
-  max: 200, // 每個 IP 200 次寫入 (原為 30 次)
+  windowMs: 15 * 60 * 1000, // 15 分鐘
+  max: 200, // 每個 IP 200 次寫入
   ...(writeRateLimitStore ? { store: writeRateLimitStore } : {}),
   message: {
     success: false,
     error: '寫入操作過於頻繁，請稍後再試',
+  },
+});
+
+// 認證路由嚴格限流 - 防止暴力破解
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 分鐘
+  max: 20, // 每個 IP 20 次認證嘗試
+  standardHeaders: true,
+  legacyHeaders: false,
+  ...(authRateLimitStore ? { store: authRateLimitStore } : {}),
+  message: {
+    success: false,
+    error: '登入嘗試過於頻繁，請稍後再試',
   },
 });
 
@@ -211,14 +232,14 @@ app.use('/api/', (req, res, next) => {
 });
 
 // API 路由註冊
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/public-auth', authLimiter, publicAuthRoutes);
 app.use('/api/mvs', mvRoutes);
 app.use('/api/album', albumRoutes);
 app.use('/api/artist', artistRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/fanarts', fanartRoutes);
 app.use('/api/staging-fanarts', stagingFanartRoutes);
-app.use('/api/public-auth', publicAuthRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/webhook', webhookRoutes);
 app.use('/api/admin/system', adminSystemRoutes);
@@ -239,15 +260,10 @@ app.use(notFoundHandler);
 // 全局錯誤處理 - 必須在最後
 app.use(globalErrorHandler);
 
-app.listen(PORT, () => {
-  logger.info({ port: PORT }, 'ZTMY Backend running');
-  logger.info({ env: process.env.NODE_ENV || 'development' }, 'Environment');
-});
-
 const initServices = async () => {
   try {
     await sequelize.authenticate();
-    
+
     try {
       const { migrator } = await import('./scripts/migrate.js');
       await migrator.up();
@@ -279,18 +295,24 @@ const initServices = async () => {
     if (useDbSessionStore && 'sync' in sessionStore && typeof (sessionStore as any).sync === 'function') {
       await (sessionStore as any).sync();
     }
-    
+
     logger.info('PostgreSQL Database connected and schema initialization completed');
-    
+
     await initMeiliSearch();
     await syncDataToMeili();
     initGeoService();
     logger.info('IP2Region DB initialized');
-    
+
     await initQueues();
   } catch (error) {
     logger.error({ err: error }, 'Failed to initialize services');
+    process.exit(1);
   }
 };
 
-void initServices();
+await initServices();
+
+app.listen(PORT, () => {
+  logger.info({ port: PORT }, 'ZTMY Backend running');
+  logger.info({ env: process.env.NODE_ENV || 'development' }, 'Environment');
+});

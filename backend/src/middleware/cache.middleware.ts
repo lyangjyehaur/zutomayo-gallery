@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { redisClient } from '../services/redis.service.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * 建立 Redis API 快取 Middleware
@@ -38,7 +39,7 @@ export const cacheMiddleware = (duration: number) => {
       res.json = (body: any): Response => {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           redisClient.setEx(key, duration, JSON.stringify(body)).catch(err => {
-            console.error('[Redis Cache] Failed to save cache:', err);
+            logger.warn({ err }, '[Redis Cache] Failed to save cache');
           });
         }
         
@@ -48,7 +49,7 @@ export const cacheMiddleware = (duration: number) => {
 
       next();
     } catch (error) {
-      console.error('[Redis Cache] Error:', error);
+      logger.warn({ err: error }, '[Redis Cache] Error');
       next();
     }
   };

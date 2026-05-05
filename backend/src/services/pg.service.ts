@@ -16,25 +16,6 @@ export const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASS, {
   timezone: '+08:00',
 });
 
-// MV 主表
-export const MV = sequelize.define('MV', {
-  id: { type: DataTypes.STRING, primaryKey: true },
-  title: DataTypes.STRING,
-  artist: DataTypes.JSONB,
-  year: DataTypes.STRING(4),
-  date: DataTypes.DATE,
-  youtube: DataTypes.STRING,
-  bilibili: DataTypes.STRING,
-  description: DataTypes.TEXT,
-  album: DataTypes.JSONB,
-  coverImages: DataTypes.JSONB,
-  keywords: DataTypes.JSONB,
-  images: DataTypes.JSONB,
-}, { tableName: 'mvs', timestamps: false });
-
-// 舊版 MetaAlbum 等表已移除，改由 V2 Models 接管
-
-
 // Auth 相關
 export const AuthPasskey = sequelize.define('AuthPasskey', {
   id: { type: DataTypes.STRING, primaryKey: true },
@@ -51,7 +32,23 @@ export const AuthSetting = sequelize.define('AuthSetting', {
   value: DataTypes.TEXT,
 }, { tableName: 'auth_settings', timestamps: false });
 
-// Fanarts (Twitter)
+// 舊版 MV / Fanart 模型已由 V2 Models (models/index.ts) 接管
+// 保留舊定義僅供 migrate_to_v2.ts 一次性遷移使用
+export const MV = sequelize.define('MV', {
+  id: { type: DataTypes.STRING, primaryKey: true },
+  title: DataTypes.STRING,
+  artist: DataTypes.JSONB,
+  year: DataTypes.STRING(4),
+  date: DataTypes.DATE,
+  youtube: DataTypes.STRING,
+  bilibili: DataTypes.STRING,
+  description: DataTypes.TEXT,
+  album: DataTypes.JSONB,
+  coverImages: DataTypes.JSONB,
+  keywords: DataTypes.JSONB,
+  images: DataTypes.JSONB,
+}, { tableName: 'mvs', timestamps: false });
+
 export const Fanart = sequelize.define('Fanart', {
   id: { type: DataTypes.STRING, primaryKey: true },
   tweetUrl: { type: DataTypes.STRING, unique: true },

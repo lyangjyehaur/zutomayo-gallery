@@ -4,6 +4,7 @@ import geoip from 'geoip-lite';
 import maxmind, { type Reader } from 'maxmind';
 import { fileURLToPath } from 'url';
 import { Ip2Region, Ip2RegionV6 } from '../utils/ip2region.js';
+import { logger } from '../utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,16 +30,16 @@ export const initGeoService = async () => {
     // 1. 載入 ip2region (中國大陸高精度)
     if (fs.existsSync(dbV4Path)) {
       searcherV4 = new Ip2Region(dbV4Path);
-      console.log('[GeoService] ip2region v4 database loaded into memory.');
+      logger.info('[GeoService] ip2region v4 database loaded into memory.');
     } else {
-      console.warn(`[GeoService] ip2region.xdb not found at ${dbV4Path}. Please run the update script.`);
+      logger.warn({ path: dbV4Path }, '[GeoService] ip2region.xdb not found, please run the update script');
     }
 
     if (fs.existsSync(dbV6Path)) {
       searcherV6 = new Ip2RegionV6(dbV6Path);
-      console.log('[GeoService] ip2region v6 database loaded into memory.');
+      logger.info('[GeoService] ip2region v6 database loaded into memory.');
     } else {
-      console.warn(`[GeoService] ip2region_v6.xdb not found at ${dbV6Path}. Please run the update script.`);
+      logger.warn({ path: dbV6Path }, '[GeoService] ip2region_v6.xdb not found, please run the update script');
     }
 
     if (fs.existsSync(maxmindCityPath)) {
@@ -46,7 +47,7 @@ export const initGeoService = async () => {
         watchForUpdates: false,
         cache: { max: 1000 }
       });
-      console.log('[GeoService] MaxMind GeoLite2 City database loaded.');
+      logger.info('[GeoService] MaxMind GeoLite2 City database loaded.');
     }
 
     if (fs.existsSync(maxmindAsnPath)) {
@@ -54,13 +55,13 @@ export const initGeoService = async () => {
         watchForUpdates: false,
         cache: { max: 2000 }
       });
-      console.log('[GeoService] MaxMind GeoLite2 ASN database loaded.');
+      logger.info('[GeoService] MaxMind GeoLite2 ASN database loaded.');
     }
 
     // 2. geoip-lite 內建自帶資料庫，會在首次呼叫 lookup 時自動載入記憶體
-    console.log('[GeoService] geoip-lite is ready.');
+    logger.info('[GeoService] geoip-lite is ready.');
   } catch (error) {
-    console.error('[GeoService] Failed to initialize geo service:', error);
+    logger.error({ err: error }, '[GeoService] Failed to initialize geo service');
   }
 };
 
@@ -88,7 +89,7 @@ export const getFullGeoInfo = async (ip: string): Promise<{ country: string, reg
   try {
     geoipResult = geoip.lookup(ip);
   } catch (e) {
-    console.warn(`[GeoService] geoip-lite lookup failed for ${ip}:`, e);
+    logger.warn({ err: e, ip }, '[GeoService] geoip-lite lookup failed');
   }
 
   const ip2regionRaw = ip2regionResult || undefined;
@@ -97,7 +98,7 @@ export const getFullGeoInfo = async (ip: string): Promise<{ country: string, reg
     try {
       maxmindCityResult = maxmindCityReader.get(ip) || null;
     } catch (e) {
-      console.warn(`[GeoService] maxmind city lookup failed for ${ip}:`, e);
+      logger.warn({ err: e, ip }, '[GeoService] maxmind city lookup failed');
     }
   }
 
@@ -105,7 +106,7 @@ export const getFullGeoInfo = async (ip: string): Promise<{ country: string, reg
     try {
       maxmindAsnResult = maxmindAsnReader.get(ip) || null;
     } catch (e) {
-      console.warn(`[GeoService] maxmind asn lookup failed for ${ip}:`, e);
+      logger.warn({ err: e, ip }, '[GeoService] maxmind asn lookup failed');
     }
   }
 

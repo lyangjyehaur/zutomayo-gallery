@@ -3,6 +3,7 @@ import { meiliClient, syncDataToMeili } from './meili.service.js';
 import { getMVsFromDB, saveMVsToDB } from './v2_mapper.js';
 import { MVModel } from '../models/index.js';
 import { sequelize } from '../models/index.js';
+import { logger } from '../utils/logger.js';
 
 // 運行時數據緩存，支持熱更新
 let runtimeData: MVItem[] | null = null;
@@ -11,7 +12,7 @@ const getRuntimeData = async (): Promise<MVItem[]> => {
     try {
       runtimeData = await getMVsFromDB();
     } catch (e) {
-      console.error('Failed to read from DB, returning empty array.', e);
+      logger.error({ err: e }, 'Failed to read from DB, returning empty array');
       runtimeData = [];
     }
   }
@@ -64,7 +65,7 @@ export class MVService {
           
       } catch (error: any) {
         if (error.message !== 'Skipping Meilisearch in local environment') {
-          console.error('[MVService] Meilisearch query failed, falling back to memory search:', error);
+          logger.error({ err: error }, '[MVService] Meilisearch query failed, falling back to memory search');
         }
         // 降級到原本的記憶體搜尋
         const k = filters.search.toLowerCase();
@@ -168,7 +169,7 @@ export class MVService {
     runtimeData = finalData;
     
     // 背景同步至 Meilisearch (不阻塞 API 回應)
-    syncDataToMeili().catch(err => console.error('[MVService] Background sync to Meilisearch failed:', err));
+    syncDataToMeili().catch(err => logger.error({ err }, '[MVService] Background sync to Meilisearch failed'));
     
     // 計算總數
     result.totalUpdated = result.updated.length;

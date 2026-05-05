@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import { AdminRoleModel, AdminUserModel, AdminMenuModel } from '../models/index.js';
 import { ADMIN_PERMISSIONS } from '../constants/admin-permissions.js';
 import { getEnforcer, reloadEnforcerPolicy } from '../rbac/enforcer.js';
+import { logger } from '../utils/logger.js';
 
 export const seedAdminRBAC = async (): Promise<void> => {
   const enforcer = await getEnforcer();
@@ -20,10 +21,15 @@ export const seedAdminRBAC = async (): Promise<void> => {
   const userCount = await AdminUserModel.count();
   if (userCount === 0) {
     const username = process.env.ADMIN_SEED_USERNAME || 'admin';
-    const password = process.env.ADMIN_SEED_PASSWORD || process.env.ADMIN_PASSWORD || 'zutomayo';
-    const passwordHash = await bcrypt.hash(password, 10);
-    const user = await AdminUserModel.create({ username, password_hash: passwordHash, is_active: true } as any);
-    await enforcer.addRoleForUser(String((user.toJSON() as any).username), 'role:super_admin');
+    const password = process.env.ADMIN_SEED_PASSWORD || process.env.ADMIN_PASSWORD;
+    if (!password) {
+      logger.warn('No admin password configured (ADMIN_SEED_PASSWORD or ADMIN_PASSWORD). Skipping admin user creation. Set the env var and restart to seed the admin user.');
+    } else {
+      const passwordHash = await bcrypt.hash(password, 12);
+      const user = await AdminUserModel.create({ username, password_hash: passwordHash, is_active: true } as any);
+      await enforcer.addRoleForUser(String((user.toJSON() as any).username), 'role:super_admin');
+      logger.info({ username }, 'Admin user seeded successfully');
+    }
   }
 
   const defaults = [
