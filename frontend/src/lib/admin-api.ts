@@ -1,13 +1,32 @@
+const normalizeBaseUrl = (value: unknown, fallback: string) => {
+  const raw = typeof value === "string" ? value.trim() : ""
+  return (raw || fallback).replace(/\/+$/, "")
+}
+
 const normalizeApiRoot = (value: unknown) => {
   const raw = typeof value === "string" ? value.trim() : ""
   const root = raw || "/api"
   return root.replace(/\/mvs\/?$/, "").replace(/\/+$/, "") || "/api"
 }
 
-export const getApiRoot = () => {
-  const env = (import.meta as any).env || {}
-  return normalizeApiRoot(env.VITE_API_ROOT || env.VITE_API_URL)
+const normalizeApiPathRoot = (value: unknown) => {
+  const raw = typeof value === "string" ? value.trim() : ""
+  const root = raw || "/api"
+  return root.startsWith("/") ? root.replace(/\/+$/, "") : `/${root.replace(/\/+$/, "")}`
 }
+
+export const getApiOrigin = () => {
+  const env = (import.meta as any).env || {}
+  const fallback = import.meta.env.DEV ? "http://localhost:5010" : "https://api.ztmr.club"
+  return normalizeBaseUrl(env.VITE_API_ORIGIN, fallback)
+}
+
+export const getApiPathRoot = () => {
+  const env = (import.meta as any).env || {}
+  return normalizeApiPathRoot(env.VITE_API_ROOT || env.VITE_API_URL)
+}
+
+export const getApiRoot = () => `${getApiOrigin()}${getApiPathRoot()}`
 
 const joinApiPath = (...segments: Array<string | undefined | null>) => {
   const base = getApiRoot()

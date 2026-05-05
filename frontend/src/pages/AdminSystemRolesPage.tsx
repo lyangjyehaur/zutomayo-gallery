@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { MultiSelect, type Option } from "@/components/ui/multi-select"
 import { useConfirmDialog } from "@/components/admin/useConfirmDialog"
 import { DataTable } from "@/components/ui/data-table"
+import { getSystemApiBase } from "@/lib/admin-api"
 
 type RoleRow = {
   code: string
@@ -63,7 +64,7 @@ export function AdminSystemRolesPage() {
   const savePerms = async () => {
     if (!permRole) return
     await custom.mutateAsync({
-      url: `/api/admin/system/roles/${encodeURIComponent(permRole.code)}/permissions`,
+      url: `${getSystemApiBase()}/admin/system/roles/${encodeURIComponent(permRole.code)}/permissions`,
       method: "put",
       values: { permissions: permValue },
       successNotification: { message: "已更新權限", type: "success" },

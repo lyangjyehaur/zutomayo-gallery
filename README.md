@@ -228,7 +228,7 @@ Vite 在 `vite build` 時會以 production mode 載入 `frontend/.env.production
 | 變數名稱 | 說明 | 預設值 |
 |---|---|---|
 | `VITE_API_ROOT` | 後端 API 伺服器根路徑，開發時通常維持 `/api` | `/api` |
-| `VITE_API_ORIGIN` | API 伺服器原始網域，用於 HTML `preconnect`；此欄位以本機開發為主 | `http://localhost:5010` |
+| `VITE_API_ORIGIN` | API 伺服器原始網域，用於實際 API 請求與 HTML `preconnect` | `http://localhost:5010` |
 | `VITE_IMGPROXY_ORIGIN` | Imgproxy 服務原始網域；此欄位以本機開發為主 | `http://localhost:8018` |
 | `VITE_ASSETS_ORIGIN` | 靜態媒體資源原始網域；此欄位以本機開發為主 | `http://localhost:5173` |
 | `VITE_UNPKG_ORIGIN` | 第三方套件 CDN 原始網域 | `https://unpkg.com` |

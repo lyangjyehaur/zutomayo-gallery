@@ -24,6 +24,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { MultiSelect, type Option } from "@/components/ui/multi-select"
 import { DataTable } from "@/components/ui/data-table"
 import { resolveUserAvatarUrl } from "@/lib/gravatar"
+import { getSystemApiBase } from "@/lib/admin-api"
 
 type UserRow = {
   id: string
@@ -152,7 +153,7 @@ export function AdminSystemUsersPage() {
     try {
       await toast.promise(
         custom.mutateAsync({
-          url: `/api/admin/system/users/${encodeURIComponent(pwUser.id)}/reset-password`,
+          url: `${getSystemApiBase()}/admin/system/users/${encodeURIComponent(pwUser.id)}/reset-password`,
           method: "post",
           values: { new_password: pwd },
         }) as any,
@@ -262,7 +263,7 @@ export function AdminSystemUsersPage() {
   const saveRoles = async () => {
     if (!rolesUser) return
     await custom.mutateAsync({
-      url: `/api/admin/system/users/${encodeURIComponent(rolesUser.id)}/roles`,
+      url: `${getSystemApiBase()}/admin/system/users/${encodeURIComponent(rolesUser.id)}/roles`,
       method: "put",
       values: { roles: rolesValue },
       successNotification: { message: "已更新角色", type: "success" },
