@@ -12,7 +12,7 @@ import {
   clearRedisApiCache,
 } from '../controllers/system.controller.js';
 import { assignOrphanMediaGroup, listOrphanMedia, unassignOrphanMediaGroup } from '../controllers/media-orphans.controller.js';
-import { getMediaGroup, listMediaGroups, listRepairMediaGroups, mergeMediaGroups, syncMediaRelations, unassignMediaGroup, updateMediaGroup } from '../controllers/media-groups.controller.js';
+import { getMediaGroup, listMediaGroups, listRepairMediaGroups, mergeMediaGroups, syncMediaRelations, unassignMediaGroup, updateMediaGroup, previewReparseTwitter, applyReparseTwitter } from '../controllers/media-groups.controller.js';
 import { createAnnouncement, deleteAnnouncement, listAnnouncements, updateAnnouncement, updateAnnouncementOrder } from '../controllers/announcements.controller.js';
 import { syncImagesToR2 } from '../controllers/r2.controller.js';
 import { rebuildR2 } from '../controllers/r2_rebuild.js';
@@ -88,6 +88,8 @@ router.post('/media/orphans/:mediaId/unassign', requireMediaToolPermission, asyn
 
 router.get('/media/groups', requireMediaToolPermission, asyncHandler(listMediaGroups));
 router.get('/media/groups/repair', requirePermission(ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS), asyncHandler(listRepairMediaGroups));
+router.post('/media/groups/reparse-twitter/preview', requirePermission(ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS), asyncHandler(previewReparseTwitter));
+router.post('/media/groups/reparse-twitter/apply', requirePermission(ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS), asyncHandler(applyReparseTwitter));
 router.get('/media/groups/:id', requirePermission(ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS), asyncHandler(getMediaGroup));
 router.put('/media/groups/:id', requirePermission(ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS), asyncHandler(updateMediaGroup));
 router.post('/media/groups/:id/merge', requirePermission(ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS), asyncHandler(mergeMediaGroups));

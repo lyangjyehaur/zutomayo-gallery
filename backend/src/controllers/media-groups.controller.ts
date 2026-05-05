@@ -1,6 +1,10 @@
 import { Request, Response } from 'express';
 import { QueryTypes } from 'sequelize';
+import { nanoid } from 'nanoid';
 import { MediaGroupModel, MediaModel, MVModel, MVMediaModel, sequelize } from '../models/index.js';
+import { TwitterService } from '../services/twitter.service.js';
+import { backupImageToR2 } from '../services/r2.service.js';
+import { logger } from '../utils/logger.js';
 
 const clampInt = (value: unknown, fallback: number, min: number, max: number): number => {
   const n = Number(value);
@@ -298,4 +302,435 @@ export const unassignMediaGroup = async (req: Request, res: Response) => {
   });
 
   res.json({ success: true, data: true });
+};
+
+// ==========================================
+// Twitter Re-parse (Preview + Apply)
+// ==========================================
+
+const TWITTER_URL_PATTERN = /(?:twitter\.com|x\.com)/i;
+const TWIMG_URL_PATTERN = /pbs\.twimg\.com|video\.twimg\.com/i;
+const MAX_REPARSE_BATCH = 50;
+const VXITTER_DELAY_MS = 1500;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isEmpty = (v: any): boolean => v === null || v === undefined || v === '' || (Array.isArray(v) && v.length === 0);
+
+interface ParsedGroupMeta {
+  source_text: string | null;
+  author_name: string | null;
+  author_handle: string | null;
+  post_date: string | null;
+  like_count: number | null;
+  retweet_count: number | null;
+  view_count: number | null;
+  hashtags: string[] | null;
+}
+
+interface ParsedMediaMeta {
+  thumbnail_url: string | null;
+  media_type: string | null;
+  url: string | null;
+  original_url: string | null;
+}
+
+/**
+ * 從 vxtwitter 回應中提取 group 層級的 meta 數據
+ */
+const extractGroupMetaFromTweet = (mediaList: any[]): ParsedGroupMeta => {
+  const first = mediaList[0] || {};
+  return {
+    source_text: first.text || null,
+    author_name: first.user_name || null,
+    author_handle: first.user_screen_name || null,
+    post_date: first.date || null,
+    like_count: first.like_count ?? null,
+    retweet_count: first.retweet_count ?? null,
+    view_count: first.view_count ?? null,
+    hashtags: first.hashtags ?? null,
+  };
+};
+
+/**
+ * 從 vxtwitter 回應中比對 media 記錄
+ */
+const matchParsedMedia = (
+  existingMedia: any[],
+  tweetMediaList: any[],
+): {
+  media_updates: Array<{
+    media_id: string;
+    action: 'update';
+    current: ParsedMediaMeta;
+    parsed: ParsedMediaMeta;
+    diff: string[];
+  }>;
+  media_new: Array<{
+    action: 'create';
+    parsed: { url: string; original_url: string; thumbnail_url: string | null; media_type: string };
+  }>;
+} => {
+  const media_updates: any[] = [];
+  const media_new: any[] = [];
+
+  const usedIndices = new Set<number>();
+
+  for (const m of existingMedia) {
+    const currentUrl = String(m.original_url || m.url || '');
+    const matchedIdx = tweetMediaList.findIndex((tm, i) => {
+      if (usedIndices.has(i)) return false;
+      const tmUrl = String(tm.url || '');
+      // 精確匹配 original_url
+      if (currentUrl && tmUrl && currentUrl === tmUrl) return true;
+      // 匹配 pbs.twimg.com 圖片的 base URL (不含格式參數)
+      if (currentUrl && tmUrl && currentUrl.replace(/\?.*$/, '') === tmUrl.replace(/\?.*$/, '')) return true;
+      return false;
+    });
+
+    if (matchedIdx >= 0) {
+      usedIndices.add(matchedIdx);
+      const tm = tweetMediaList[matchedIdx];
+      const current: ParsedMediaMeta = {
+        thumbnail_url: m.thumbnail_url || null,
+        media_type: m.media_type || null,
+        url: m.url || null,
+        original_url: m.original_url || null,
+      };
+      let mediaType = tm.type === 'video' ? 'video' : (tm.type === 'animated_gif' || tm.type === 'gif' ? 'gif' : 'image');
+      if (String(tm.url || '').includes('.mp4') || String(tm.url || '').includes('video.twimg.com')) {
+        mediaType = 'video';
+      }
+      const parsed: ParsedMediaMeta = {
+        thumbnail_url: tm.thumbnail || tm.thumbnail_url || null,
+        media_type: mediaType,
+        url: m.url || null, // 不改變已有的 R2 URL
+        original_url: tm.url || m.original_url || null,
+      };
+
+      const diff = Object.keys(parsed).filter((k) => {
+        const cv = String((current as any)[k] ?? '');
+        const pv = String((parsed as any)[k] ?? '');
+        return cv !== pv;
+      });
+
+      media_updates.push({ media_id: m.id, action: 'update', current, parsed, diff });
+    }
+  }
+
+  // 新增的媒體
+  for (let i = 0; i < tweetMediaList.length; i++) {
+    if (usedIndices.has(i)) continue;
+    const tm = tweetMediaList[i];
+    let mediaType = tm.type === 'video' ? 'video' : (tm.type === 'animated_gif' || tm.type === 'gif' ? 'gif' : 'image');
+    if (String(tm.url || '').includes('.mp4') || String(tm.url || '').includes('video.twimg.com')) {
+      mediaType = 'video';
+    }
+    media_new.push({
+      action: 'create',
+      parsed: {
+        url: tm.url,
+        original_url: tm.url,
+        thumbnail_url: tm.thumbnail || tm.thumbnail_url || null,
+        media_type: mediaType,
+      },
+    });
+  }
+
+  return { media_updates, media_new };
+};
+
+/**
+ * 計算 group 層級的 diff
+ */
+const computeGroupDiff = (current: any, parsed: ParsedGroupMeta, overwrite: boolean): string[] => {
+  const fields = ['source_text', 'author_name', 'author_handle', 'post_date', 'like_count', 'retweet_count', 'view_count', 'hashtags'] as const;
+  const diff: string[] = [];
+  for (const field of fields) {
+    const cv = current[field] ?? null;
+    const pv = parsed[field] ?? null;
+    if (!overwrite && !isEmpty(cv)) continue; // 只填充空值模式
+    if (String(cv ?? '') !== String(pv ?? '')) {
+      diff.push(field);
+    }
+  }
+  return diff;
+};
+
+export const previewReparseTwitter = async (req: Request, res: Response) => {
+  const { group_ids, overwrite } = (req.body || {}) as any;
+  const ids: string[] = Array.isArray(group_ids) ? group_ids.filter((id: any) => typeof id === 'string' && id) : [];
+  const shouldOverwrite = overwrite === true;
+
+  if (ids.length === 0) {
+    res.status(400).json({ success: false, error: '請提供 group_ids' });
+    return;
+  }
+  if (ids.length > MAX_REPARSE_BATCH) {
+    res.status(400).json({ success: false, error: `單次最多 ${MAX_REPARSE_BATCH} 個 group` });
+    return;
+  }
+
+  const results: any[] = [];
+  const errors: any[] = [];
+
+  try {
+    const groups = await MediaGroupModel.findAll({
+      where: { id: ids } as any,
+      include: [{ model: MediaModel, as: 'images', required: false }],
+    });
+
+    for (const group of groups) {
+      const g = group.toJSON() as any;
+      const sourceUrl = String(g.source_url || '');
+
+      if (!TWITTER_URL_PATTERN.test(sourceUrl)) {
+        errors.push({ group_id: g.id, error: '非推特來源' });
+        continue;
+      }
+
+      try {
+        const mediaList = await TwitterService.extractMediaFromTweet(sourceUrl);
+        if (!mediaList || mediaList.length === 0) {
+          errors.push({ group_id: g.id, error: '推文中沒有媒體' });
+          continue;
+        }
+
+        const parsedGroupMeta = extractGroupMetaFromTweet(mediaList);
+        const existingMedia = Array.isArray(g.images) ? g.images : [];
+        const { media_updates, media_new } = matchParsedMedia(existingMedia, mediaList);
+
+        const groupDiff = computeGroupDiff(g, parsedGroupMeta, shouldOverwrite);
+
+        results.push({
+          group_id: g.id,
+          source_url: sourceUrl,
+          current: {
+            source_text: g.source_text ?? null,
+            author_name: g.author_name ?? null,
+            author_handle: g.author_handle ?? null,
+            post_date: g.post_date ?? null,
+            like_count: g.like_count ?? null,
+            retweet_count: g.retweet_count ?? null,
+            view_count: g.view_count ?? null,
+            hashtags: g.hashtags ?? null,
+          },
+          parsed: parsedGroupMeta,
+          diff: groupDiff,
+          media_updates,
+          media_new,
+        });
+      } catch (err: any) {
+        errors.push({ group_id: g.id, error: String(err?.message || err) });
+      }
+
+      // vxtwitter API 限流間隔
+      await sleep(VXITTER_DELAY_MS);
+    }
+
+    // 檢查是否有未找到的 group
+    const foundIds = new Set(groups.map((g) => String((g as any).id)));
+    for (const id of ids) {
+      if (!foundIds.has(id)) {
+        errors.push({ group_id: id, error: 'Group 不存在' });
+      }
+    }
+
+    res.json({ success: true, data: { results, errors } });
+  } catch (error: any) {
+    logger.error({ err: error }, 'previewReparseTwitter failed');
+    res.status(500).json({ success: false, error: String(error?.message || error) });
+  }
+};
+
+export const applyReparseTwitter = async (req: Request, res: Response) => {
+  const { group_ids, overwrite, include_new_media, new_media_urls } = (req.body || {}) as any;
+  const ids: string[] = Array.isArray(group_ids) ? group_ids.filter((id: any) => typeof id === 'string' && id) : [];
+  const shouldOverwrite = overwrite === true;
+  const shouldIncludeNewMedia = include_new_media === true;
+  const allowedNewUrls = Array.isArray(new_media_urls)
+    ? new Set(new_media_urls.filter((u: any) => typeof u === 'string'))
+    : null; // null = 全部新增
+
+  if (ids.length === 0) {
+    res.status(400).json({ success: false, error: '請提供 group_ids' });
+    return;
+  }
+  if (ids.length > MAX_REPARSE_BATCH) {
+    res.status(400).json({ success: false, error: `單次最多 ${MAX_REPARSE_BATCH} 個 group` });
+    return;
+  }
+
+  let updatedGroups = 0;
+  let updatedMedia = 0;
+  let newMedia = 0;
+  let r2Backups = 0;
+  let skipped = 0;
+  const errors: any[] = [];
+
+  try {
+    const groups = await MediaGroupModel.findAll({
+      where: { id: ids } as any,
+      include: [{ model: MediaModel, as: 'images', required: false }],
+    });
+
+    for (const group of groups) {
+      const g = group.toJSON() as any;
+      const sourceUrl = String(g.source_url || '');
+
+      if (!TWITTER_URL_PATTERN.test(sourceUrl)) {
+        skipped++;
+        continue;
+      }
+
+      try {
+        const mediaList = await TwitterService.extractMediaFromTweet(sourceUrl);
+        if (!mediaList || mediaList.length === 0) {
+          skipped++;
+          await sleep(VXITTER_DELAY_MS);
+          continue;
+        }
+
+        // 更新 group meta
+        const parsedGroupMeta = extractGroupMetaFromTweet(mediaList);
+        const groupUpdate: any = {};
+        const fields = ['source_text', 'author_name', 'author_handle', 'post_date', 'like_count', 'retweet_count', 'view_count', 'hashtags'] as const;
+        for (const field of fields) {
+          const cv = g[field] ?? null;
+          const pv = (parsedGroupMeta as any)[field] ?? null;
+          if (!shouldOverwrite && !isEmpty(cv)) continue;
+          if (String(cv ?? '') !== String(pv ?? '')) {
+            if (field === 'post_date' && pv) {
+              groupUpdate[field] = new Date(pv);
+            } else {
+              groupUpdate[field] = pv;
+            }
+          }
+        }
+        if (Object.keys(groupUpdate).length > 0) {
+          await group.update(groupUpdate);
+          updatedGroups++;
+        }
+
+        // 更新已有 media meta + 補全 R2 備份
+        const existingMedia = Array.isArray(g.images) ? g.images : [];
+        const usedIndices = new Set<number>();
+
+        for (const m of existingMedia) {
+          const currentUrl = String(m.original_url || m.url || '');
+          const matchedIdx = mediaList.findIndex((tm: any, i: number) => {
+            if (usedIndices.has(i)) return false;
+            const tmUrl = String(tm.url || '');
+            if (currentUrl && tmUrl && currentUrl === tmUrl) return true;
+            if (currentUrl && tmUrl && currentUrl.replace(/\?.*$/, '') === tmUrl.replace(/\?.*$/, '')) return true;
+            return false;
+          });
+
+          if (matchedIdx >= 0) {
+            usedIndices.add(matchedIdx);
+            const tm = mediaList[matchedIdx];
+            const mediaUpdate: any = {};
+
+            // 更新 thumbnail_url
+            const newThumbnail = tm.thumbnail || null;
+            if (newThumbnail && (shouldOverwrite || isEmpty(m.thumbnail_url))) {
+              mediaUpdate.thumbnail_url = newThumbnail;
+            }
+
+            // 更新 media_type
+            let mediaType = tm.type === 'video' ? 'video' : (tm.type === 'animated_gif' || tm.type === 'gif' ? 'gif' : 'image');
+            if (String(tm.url || '').includes('.mp4') || String(tm.url || '').includes('video.twimg.com')) {
+              mediaType = 'video';
+            }
+            if (mediaType && (shouldOverwrite || isEmpty(m.media_type) || m.media_type === 'image') && mediaType !== m.media_type) {
+              mediaUpdate.media_type = mediaType;
+            }
+
+            // 補全 R2 備份：url 仍指向 twimg 且無 R2 備份
+            if (TWIMG_URL_PATTERN.test(String(m.url || ''))) {
+              const r2Folder = mediaType === 'video' ? 'fanarts/videos' : 'fanarts';
+              const r2Url = await backupImageToR2(String(m.url), r2Folder, {
+                metadata: { 'group-id': g.id, 'source': 'reparse-r2-fill' },
+              });
+              if (r2Url) {
+                mediaUpdate.url = r2Url;
+                if (!m.original_url) mediaUpdate.original_url = m.url;
+                r2Backups++;
+              }
+            }
+
+            if (Object.keys(mediaUpdate).length > 0) {
+              await MediaModel.update(mediaUpdate, { where: { id: m.id } as any });
+              updatedMedia++;
+            }
+          }
+        }
+
+        // 新增缺失媒體
+        if (shouldIncludeNewMedia) {
+          for (let i = 0; i < mediaList.length; i++) {
+            if (usedIndices.has(i)) continue;
+            const tm = mediaList[i];
+            const tmUrl = String(tm.url || '');
+
+            // 檢查是否在允許的新增列表中
+            if (allowedNewUrls && !allowedNewUrls.has(tmUrl)) continue;
+
+            let mediaType = tm.type === 'video' ? 'video' : (tm.type === 'animated_gif' || tm.type === 'gif' ? 'gif' : 'image');
+            if (tmUrl.includes('.mp4') || tmUrl.includes('video.twimg.com')) {
+              mediaType = 'video';
+            }
+
+            // 備份到 R2
+            const r2Folder = mediaType === 'video' ? 'fanarts/videos' : 'fanarts';
+            let r2Url: string | null = null;
+            if (TWIMG_URL_PATTERN.test(tmUrl)) {
+              r2Url = await backupImageToR2(tmUrl, r2Folder, {
+                metadata: { 'group-id': g.id, 'source': 'reparse-new' },
+              });
+              if (r2Url) r2Backups++;
+            }
+
+            // 備份視頻縮圖
+            let thumbnailR2Url = tm.thumbnail || null;
+            if (thumbnailR2Url && TWIMG_URL_PATTERN.test(thumbnailR2Url) && mediaType === 'video') {
+              const thumbR2 = await backupImageToR2(thumbnailR2Url, 'fanarts/videos/thumbs', {
+                metadata: { 'group-id': g.id, 'source': 'reparse-new-thumb' },
+              });
+              if (thumbR2) {
+                thumbnailR2Url = thumbR2;
+                r2Backups++;
+              }
+            }
+
+            const newId = nanoid(16);
+            await MediaModel.create({
+              id: newId,
+              type: 'fanart',
+              media_type: mediaType,
+              source: 'reparse',
+              url: r2Url || tmUrl,
+              original_url: tmUrl,
+              thumbnail_url: thumbnailR2Url,
+              group_id: g.id,
+            } as any);
+            newMedia++;
+          }
+        }
+      } catch (err: any) {
+        errors.push({ group_id: g.id, error: String(err?.message || err) });
+      }
+
+      // vxtwitter API 限流間隔
+      await sleep(VXITTER_DELAY_MS);
+    }
+
+    res.json({
+      success: true,
+      data: { updated_groups: updatedGroups, updated_media: updatedMedia, new_media: newMedia, r2_backups: r2Backups, skipped, errors },
+    });
+  } catch (error: any) {
+    logger.error({ err: error }, 'applyReparseTwitter failed');
+    res.status(500).json({ success: false, error: String(error?.message || error) });
+  }
 };

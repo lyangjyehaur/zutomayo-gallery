@@ -2,9 +2,10 @@ import Parser from 'rss-parser';
 import { MediaGroupModel, MediaModel, SysConfigModel } from '../models/index.js';
 import { nanoid } from 'nanoid';
 const generateShortId = () => nanoid(16);
-import { TwitterService } from './twitter.service.js';
+import { TwitterService, extractTweetId, normalizeTweetUrl } from './twitter.service.js';
 import { backupImageToR2 } from './r2.service.js';
 import fetch from 'node-fetch';
+import { Op } from 'sequelize';
 
 const parser = new Parser();
 
@@ -27,20 +28,25 @@ export const TwitterMonitorService = {
       for (const item of feed.items) {
         // 確保是推文網址
         if (!item.link) continue;
+        const tweetLink = normalizeTweetUrl(item.link);
+        const tweetId = extractTweetId(tweetLink);
+        if (!tweetId) continue;
         
         // 檢查是否已經處理過
-        const existing = await MediaGroupModel.findOne({ where: { source_url: item.link } });
+        const existing = await MediaGroupModel.findOne({
+          where: { source_url: { [Op.regexp]: `/status/${tweetId}([/?#]|$)` } }
+        });
         if (existing) continue;
 
         newTweetsCount++;
-        console.log(`[Twitter Monitor] New tweet found: ${item.link}`);
+        console.log(`[Twitter Monitor] New tweet found: ${tweetLink}`);
 
           // 使用現有的 vxtwitter 解析真實媒體
           let mediaList = [];
           try {
-            mediaList = await TwitterService.extractMediaFromTweet(item.link);
+            mediaList = await TwitterService.extractMediaFromTweet(tweetLink);
           } catch (e) {
-            console.error(`[Twitter Monitor] Failed to extract media for ${item.link}:`, e);
+            console.error(`[Twitter Monitor] Failed to extract media for ${tweetLink}:`, e);
             continue;
           }
 
@@ -60,7 +66,7 @@ export const TwitterMonitorService = {
                   metadata: {
                     'fanart-id': id,
                     'author-handle': tweetHandle || 'unknown',
-                    'source-tweet': item.link || 'unknown'
+                    'source-tweet': tweetLink || 'unknown'
                   }
                 });
                 if (r2Url) {
@@ -71,7 +77,7 @@ export const TwitterMonitorService = {
                   metadata: {
                     'fanart-id': id,
                     'author-handle': tweetHandle || 'unknown',
-                    'source-tweet': item.link || 'unknown'
+                    'source-tweet': tweetLink || 'unknown'
                   }
                 });
                 
@@ -94,7 +100,7 @@ export const TwitterMonitorService = {
             const groupId = generateShortId();
             await MediaGroupModel.create({
               id: groupId,
-              source_url: item.link,
+              source_url: tweetLink,
               source_text: tweetText,
               author_name: tweetAuthor,
               author_handle: tweetHandle,
@@ -120,7 +126,7 @@ export const TwitterMonitorService = {
               });
             }
 
-            console.log(`[Twitter Monitor] Saved new fanart: ${item.link}`);
+            console.log(`[Twitter Monitor] Saved new fanart: ${tweetLink}`);
 
             // 發送 Bark 推送通知
             if (BARK_URL) {
@@ -128,7 +134,7 @@ export const TwitterMonitorService = {
                 const message = `發現新推文！來自 ${tweetAuthor}\n包含 ${mediaList.length} 個媒體\n${tweetText}`;
                 const title = encodeURIComponent('FanArt 監聽通知');
                 const body = encodeURIComponent(message);
-                const barkReqUrl = `${BARK_URL}/${title}/${body}?url=${encodeURIComponent(item.link)}`;
+                const barkReqUrl = `${BARK_URL}/${title}/${body}?url=${encodeURIComponent(tweetLink)}`;
                 
                 await fetch(barkReqUrl);
                 console.log('[Twitter Monitor] Bark notification sent.');

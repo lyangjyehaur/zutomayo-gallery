@@ -10,6 +10,17 @@ export interface TwitterMedia {
 
 import { logger } from '../utils/logger.js';
 
+const ZUTOMAYO_ART_STATUS_URL = 'https://x.com/zutomayo_art/status/';
+const X_STATUS_URL = 'https://x.com/i/status/';
+
+export const normalizeTweetUrl = (tweetUrl: string) => (
+  tweetUrl.trim().replace(ZUTOMAYO_ART_STATUS_URL, X_STATUS_URL)
+);
+
+export const extractTweetId = (tweetUrl: string) => (
+  normalizeTweetUrl(tweetUrl).match(/\/status\/(\d+)/)?.[1] || null
+);
+
 export const TwitterService = {
   /**
    * 解析推文網址，獲取真實媒體資源 (圖片、最高畫質 MP4)
@@ -19,12 +30,10 @@ export const TwitterService = {
   async extractMediaFromTweet(tweetUrl: string): Promise<TwitterMedia[]> {
     try {
       // 1. 從網址中提取推文 ID
-      const match = tweetUrl.match(/(?:x|twitter)\.com\/[^/]+\/status\/(\d+)/);
-      if (!match || !match[1]) {
+      const tweetId = extractTweetId(tweetUrl);
+      if (!tweetId) {
         throw new Error('無效的推文網址格式');
       }
-      
-      const tweetId = match[1];
 
       // 2. 呼叫 vxtwitter 的免費開源 API
       const apiUrl = `https://api.vxtwitter.com/Twitter/status/${tweetId}`;

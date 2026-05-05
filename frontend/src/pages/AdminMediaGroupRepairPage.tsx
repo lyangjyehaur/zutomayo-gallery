@@ -14,6 +14,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
+import { Checkbox } from "@/components/ui/checkbox"
+import { ReparsePreviewDialog } from "@/components/admin/ReparsePreviewDialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -90,6 +92,10 @@ export function AdminMediaGroupRepairPage() {
 
   const [unassignConfirmOpen, setUnassignConfirmOpen] = React.useState(false)
   const [unassignRow, setUnassignRow] = React.useState<RepairGroupRow | null>(null)
+
+  const [selectedIds, setSelectedIds] = React.useState<Record<string, boolean>>({})
+  const [reparseOpen, setReparseOpen] = React.useState(false)
+  const [reparseGroupIds, setReparseGroupIds] = React.useState<string[]>([])
 
   React.useEffect(() => {
     if (!mergeOpen) return
@@ -195,6 +201,67 @@ export function AdminMediaGroupRepairPage() {
   React.useEffect(() => {
     fetchList()
   }, [fetchList])
+
+  const isTwitterUrl = (url: string | null | undefined): boolean =>
+    typeof url === "string" && /(?:twitter\.com|x\.com)/i.test(url)
+
+  const canReparseRow = React.useCallback(
+    (row: RepairGroupRow, inf: { url: string; confidence: string }): boolean => {
+      return isTwitterUrl(row.source_url) || inf.confidence !== "none"
+    },
+    [],
+  )
+
+  /**
+   * 對於缺少 source_url 但有 inferred URL 的 group，
+   * 先將 inferred URL 寫入 source_url，再進行重解析
+   */
+  const ensureSourceUrl = async (row: RepairGroupRow, inf: { url: string; confidence: string }): Promise<boolean> => {
+    if (isTwitterUrl(row.source_url)) return true
+    if (inf.confidence === "none" || !inf.url) return false
+    try {
+      const res = await adminFetch(`${base}/system/media/groups/${encodeURIComponent(row.id)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source_url: inf.url }),
+      })
+      const json = await res.json().catch(() => null)
+      if (!res.ok || !json?.success) return false
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  const handleReparse = async (row: RepairGroupRow, inf: { url: string; confidence: string }) => {
+    const ok = await ensureSourceUrl(row, inf)
+    if (!ok) {
+      toast.error("無法設定 source_url，請先手動編輯")
+      return
+    }
+    setReparseGroupIds([row.id])
+    setReparseOpen(true)
+  }
+
+  const handleBatchReparse = async () => {
+    const ids: string[] = []
+    for (const { row, inferred: inf } of visible) {
+      if (!selectedIds[row.id]) continue
+      if (!canReparseRow(row, inf)) continue
+      const ok = await ensureSourceUrl(row, inf)
+      if (ok) ids.push(row.id)
+    }
+    if (ids.length === 0) {
+      toast.info("沒有可重解析的推特來源")
+      return
+    }
+    setReparseGroupIds(ids)
+    setReparseOpen(true)
+  }
+
+  const selectedCount = React.useMemo(() => {
+    return Object.values(selectedIds).filter(Boolean).length
+  }, [selectedIds])
 
   const openEdit = (row: RepairGroupRow) => {
     setEditRow({ ...row })
@@ -332,6 +399,19 @@ export function AdminMediaGroupRepairPage() {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-10">
+              <Checkbox
+                checked={visible.length > 0 && visible.every(({ row: g, inferred: inf }) => canReparseRow(g, inf) ? selectedIds[g.id] : true)}
+                onCheckedChange={() => {
+                  const next: Record<string, boolean> = {}
+                  const allChecked = visible.every(({ row: g, inferred: inf }) => !canReparseRow(g, inf) || selectedIds[g.id])
+                  visible.forEach(({ row: g, inferred: inf }) => {
+                    if (canReparseRow(g, inf)) next[g.id] = !allChecked
+                  })
+                  setSelectedIds(next)
+                }}
+              />
+            </TableHead>
             <TableHead>Preview</TableHead>
             <TableHead>ID</TableHead>
             <TableHead>Missing</TableHead>
@@ -351,8 +431,16 @@ export function AdminMediaGroupRepairPage() {
             const missing: string[] = []
             if (g.missing_source_url) missing.push("source_url")
             if (g.missing_post_date) missing.push("post_date")
+            const canRep = canReparseRow(g, inf)
             return (
               <TableRow key={g.id}>
+                <TableCell>
+                  <Checkbox
+                    checked={Boolean(selectedIds[g.id])}
+                    onCheckedChange={(v) => setSelectedIds((prev) => ({ ...prev, [g.id]: Boolean(v) }))}
+                    disabled={!canRep}
+                  />
+                </TableCell>
                 <TableCell>
                   {rawUrl ? (
                     isVideo ? (
@@ -413,6 +501,11 @@ export function AdminMediaGroupRepairPage() {
                         Open
                       </Link>
                     </Button>
+                    {canRep ? (
+                      <Button size="sm" variant="outline" onClick={() => void handleReparse(g, inf)}>
+                        Reparse
+                      </Button>
+                    ) : null}
                   </div>
                 </TableCell>
               </TableRow>
@@ -420,13 +513,22 @@ export function AdminMediaGroupRepairPage() {
           })}
           {items.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={9} className="text-center opacity-60">
+              <TableCell colSpan={10} className="text-center opacity-60">
                 {loading ? "Loading..." : "No data"}
               </TableCell>
             </TableRow>
           ) : null}
         </TableBody>
       </Table>
+
+      {selectedCount > 0 ? (
+        <div className="sticky bottom-4 z-10 border-2 border-black bg-background p-3 flex items-center justify-between gap-3 shadow-md">
+          <div className="text-xs font-mono">已選 {selectedCount} 個可重解析的 group</div>
+          <Button onClick={() => void handleBatchReparse()}>
+            批量重新解析
+          </Button>
+        </div>
+      ) : null}
 
       <div className="flex gap-2 justify-end">
         <Button variant="neutral" disabled={!canPrev || loading} onClick={() => setOffset((v) => Math.max(0, v - limit))}>
@@ -564,6 +666,17 @@ export function AdminMediaGroupRepairPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ReparsePreviewDialog
+        open={reparseOpen}
+        onOpenChange={setReparseOpen}
+        groupIds={reparseGroupIds}
+        defaultOverwrite={false}
+        onComplete={() => {
+          setSelectedIds({})
+          void fetchList()
+        }}
+      />
     </div>
   )
 }

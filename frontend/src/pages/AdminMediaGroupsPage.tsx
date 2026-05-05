@@ -16,6 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { MultiSelect, Option } from "@/components/ui/multi-select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { ReparsePreviewDialog } from "@/components/admin/ReparsePreviewDialog"
 
 type MediaGroupRow = {
   id: string
@@ -110,6 +111,9 @@ export function AdminMediaGroupsPage() {
   const [orphanTotal, setOrphanTotal] = React.useState(0)
   const [orphanItems, setOrphanItems] = React.useState<Array<OrphanMediaItem>>([])
   const [orphanSelected, setOrphanSelected] = React.useState<Record<string, boolean>>({})
+
+  const [reparseOpen, setReparseOpen] = React.useState(false)
+  const [reparseGroupIds, setReparseGroupIds] = React.useState<string[]>([])
 
   const [mvData, setMvData] = React.useState<Array<{ id: string; title?: string }>>([])
   const options: Option[] = React.useMemo(() => buildMvTagOptions(mvData) as Option[], [mvData])
@@ -505,6 +509,24 @@ export function AdminMediaGroupsPage() {
               >
                 查詢
               </Button>
+              <Button
+                variant="neutral"
+                onClick={() => {
+                  const twitterIds = items
+                    .filter((g) => g.source_url && /(?:twitter\.com|x\.com)/i.test(g.source_url || ""))
+                    .map((g) => g.id)
+                  if (twitterIds.length === 0) {
+                    toast.info("當前頁面沒有推特來源的 group")
+                    return
+                  }
+                  setReparseGroupIds(twitterIds)
+                  setReparseOpen(true)
+                }}
+                disabled={listLoading}
+                className="border-2 border-black"
+              >
+                批量重新解析
+              </Button>
             </div>
             <div className="text-xs font-mono opacity-60">Total: {total} | Offset: {offset}</div>
           </AdminPanel>
@@ -580,6 +602,18 @@ export function AdminMediaGroupsPage() {
                     <a href={detail.source_url} target="_blank" rel="noreferrer">
                       Open Tweet
                     </a>
+                  </Button>
+                ) : null}
+                {detail?.source_url && /(?:twitter\.com|x\.com)/i.test(detail.source_url) ? (
+                  <Button
+                    variant="neutral"
+                    onClick={() => {
+                      setReparseGroupIds([detail!.id])
+                      setReparseOpen(true)
+                    }}
+                    className="border-2 border-black"
+                  >
+                    重新解析
                   </Button>
                 ) : null}
                 <Button onClick={() => void handleSaveGroup()} disabled={!detail?.id || savingGroup}>
@@ -926,6 +960,17 @@ export function AdminMediaGroupsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ReparsePreviewDialog
+        open={reparseOpen}
+        onOpenChange={setReparseOpen}
+        groupIds={reparseGroupIds}
+        defaultOverwrite={true}
+        onComplete={() => {
+          void fetchList()
+          if (activeId) void fetchDetail(activeId)
+        }}
+      />
     </div>
   )
 }
