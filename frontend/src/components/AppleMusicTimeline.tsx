@@ -214,7 +214,8 @@ function AlbumCardComponent({ album, isEven, idx, itemIndex, isAllowedToLoad, on
                       const y = parseInt(parts[0], 10);
                       const m = parseInt(parts[1], 10) - 1;
                       const d = parseInt(parts[2], 10);
-                      return getFormatter(locale).format(new Date(y, m, d));
+                      const formatted = getFormatter(locale).format(new Date(y, m, d));
+                      return locale === 'es' ? formatted.replace(/ (\w{2,})$/i, ' $1.') : formatted;
                     }
                     return album.releaseDateStr;
                   })()}

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState, memo } from '
 import ImageCard from '@/components/ui/image-card';
 import { MVItem } from '@/lib/types';
 import { getProxyImgUrl } from '@/lib/image';
+import { formatMVDate } from '@/lib/date';
 import { useLazyImage } from '@/hooks/useLazyImage';
 
 import { Switch } from '@/components/ui/switch';
@@ -401,8 +402,8 @@ export const MVCard = memo(function MVCard({ mv, isFav, onToggleFav, onClick, is
                   <span className="text-[8px] font-mono opacity-60 normal-case tracking-normal">Release</span>
                   )}
                 </div>
-                <p className={`truncate text-center border-2 border-border bg-main text-main-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] h-[24px] flex items-center justify-center ${!isVeryCompact ? 'px-2' : 'px-1.5'}`}>
-                  {mv.date}
+                <p className={`truncate text-center border-2 border-border bg-main text-main-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] h-[24px] flex items-center justify-center normal-case ${!isVeryCompact ? 'px-2' : 'px-1.5'}`}>
+                  {formatMVDate(mv.date, i18n.language)}
                 </p>
               </div>
               

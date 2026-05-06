@@ -566,13 +566,18 @@ export default function FancyboxViewer({
 
   const [displayedPhotos, setDisplayedPhotos] = useState<PhotoData[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const hasMoreRef = useRef(true);
   const lastBatchStartRef = useRef(0);
   const displayedCountRef = useRef(0);
   const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
   const fancyboxRef = useRef<ReturnType<typeof NativeFancybox.show> | null>(null);
   const effectiveHasMore = hasMore || externalHasMore;
+
+  useEffect(() => { loadingMoreRef.current = loadingMore; }, [loadingMore]);
+  useEffect(() => { hasMoreRef.current = hasMore; }, [hasMore]);
 
   useEffect(() => {
     displayedCountRef.current = displayedPhotos.length;
@@ -699,6 +704,12 @@ export default function FancyboxViewer({
     });
   }, [processedImages, itemsPerPage, getPhotosFromRange, datasetKey]);
 
+  const processedImagesRef = useRef(processedImages);
+  useEffect(() => { processedImagesRef.current = processedImages; }, [processedImages]);
+
+  const getPhotosFromRangeRef = useRef(getPhotosFromRange);
+  useEffect(() => { getPhotosFromRangeRef.current = getPhotosFromRange; }, [getPhotosFromRange]);
+
   const externalDataReadyRef = useRef<((value: void) => void) | null>(null);
 
   useEffect(() => {
@@ -709,37 +720,21 @@ export default function FancyboxViewer({
   }, [processedImages.length]);
 
   const loadMore = useCallback(async () => {
-    const effectiveHasMore = hasMore || externalHasMore;
-    if (loadingMore || !effectiveHasMore) return;
+    if (loadingMoreRef.current) return;
+    const currentHasMore = hasMoreRef.current;
+    const effectiveHasMoreNow = currentHasMore || externalHasMore;
+    if (!effectiveHasMoreNow) return;
 
+    loadingMoreRef.current = true;
     setLoadingMore(true);
 
-    if (!hasMore && externalHasMore && onExternalLoadMore) {
-      const prevLength = processedImages.length;
+    if (!currentHasMore && externalHasMore && onExternalLoadMore) {
       try {
         await onExternalLoadMore();
       } catch {
       }
 
-      if (processedImages.length > prevLength) {
-        const startIndex = displayedCountRef.current;
-        const newPhotos = await getPhotosFromRange(startIndex, itemsPerPage);
-
-        if (newPhotos.length > 0) {
-          lastBatchStartRef.current = displayedCountRef.current;
-
-          setDisplayedPhotos((prev) => {
-            const existingKeys = new Set(prev.map(p => p.originalUrl || p.full));
-            const uniqueNewPhotos = newPhotos.filter(p => !existingKeys.has(p.originalUrl || p.full));
-            if (uniqueNewPhotos.length === 0) return prev;
-            return [...prev, ...uniqueNewPhotos];
-          });
-
-          setCurrentPage((prev) => prev + 1);
-        }
-
-        setHasMore(startIndex + newPhotos.length < processedImages.length);
-      } else {
+      if (displayedCountRef.current >= processedImagesRef.current.length) {
         await new Promise<void>((resolve) => {
           externalDataReadyRef.current = resolve;
           setTimeout(() => {
@@ -747,28 +742,29 @@ export default function FancyboxViewer({
               externalDataReadyRef.current = null;
               resolve();
             }
-          }, 3000);
+          }, 5000);
         });
-
-        const startIndex = displayedCountRef.current;
-        const newPhotos = await getPhotosFromRange(startIndex, itemsPerPage);
-
-        if (newPhotos.length > 0) {
-          lastBatchStartRef.current = displayedCountRef.current;
-
-          setDisplayedPhotos((prev) => {
-            const existingKeys = new Set(prev.map(p => p.originalUrl || p.full));
-            const uniqueNewPhotos = newPhotos.filter(p => !existingKeys.has(p.originalUrl || p.full));
-            if (uniqueNewPhotos.length === 0) return prev;
-            return [...prev, ...uniqueNewPhotos];
-          });
-
-          setCurrentPage((prev) => prev + 1);
-        }
-
-        setHasMore(startIndex + newPhotos.length < processedImages.length);
       }
 
+      const currentLength = processedImagesRef.current.length;
+      const startIndex = displayedCountRef.current;
+      const newPhotos = await getPhotosFromRangeRef.current(startIndex, itemsPerPage);
+
+      if (newPhotos.length > 0) {
+        lastBatchStartRef.current = displayedCountRef.current;
+
+        setDisplayedPhotos((prev) => {
+          const existingKeys = new Set(prev.map(p => p.originalUrl || p.full));
+          const uniqueNewPhotos = newPhotos.filter(p => !existingKeys.has(p.originalUrl || p.full));
+          if (uniqueNewPhotos.length === 0) return prev;
+          return [...prev, ...uniqueNewPhotos];
+        });
+
+        setCurrentPage((prev) => prev + 1);
+      }
+
+      setHasMore(startIndex + newPhotos.length < currentLength);
+      loadingMoreRef.current = false;
       setLoadingMore(false);
       return;
     }
@@ -790,14 +786,15 @@ export default function FancyboxViewer({
     }
 
     setHasMore(startIndex + newPhotos.length < processedImages.length);
+    loadingMoreRef.current = false;
     setLoadingMore(false);
-  }, [externalHasMore, getPhotosFromRange, hasMore, itemsPerPage, loadingMore, onExternalLoadMore, processedImages.length]);
+  }, [externalHasMore, getPhotosFromRange, itemsPerPage, onExternalLoadMore, processedImages.length]);
 
   // 實作無限滾動 (Infinite Scroll) - 僅在 autoLoadMore 開啟時生效
   useEffect(() => {
     const sentinel = loadMoreSentinelRef.current;
     const effectiveHasMore = hasMore || externalHasMore;
-    if (!sentinel || !effectiveHasMore || loadingMore || !enablePagination || !autoLoadMore) return;
+    if (!sentinel || !effectiveHasMore || loadingMoreRef.current || !enablePagination || !autoLoadMore) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -807,14 +804,14 @@ export default function FancyboxViewer({
       },
       {
         root: null,
-        rootMargin: '500px', // 適度提前觸發，避免過早加載浪費資源
+        rootMargin: '500px',
         threshold: 0.1,
       }
     );
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMore, externalHasMore, loadingMore, loadMore, enablePagination, autoLoadMore]);
+  }, [hasMore, externalHasMore, loadMore, enablePagination, autoLoadMore]);
 
   const handleAfterOpen = useCallback(() => {
     document.dispatchEvent(new CustomEvent('lightboxBeforeOpen', { detail: { provider: 'fb' } }));

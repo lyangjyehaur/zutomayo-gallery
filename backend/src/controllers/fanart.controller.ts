@@ -159,11 +159,16 @@ export const getFanartGallery = async (req: Request, res: Response) => {
     as: 'mvs',
     through: { attributes: [] },
     attributes: ['id', 'title'],
-    required: false
+    required: false,
+    separate: true
   };
   if (mvIds.length > 0) {
-    mvInclude.required = true;
-    mvInclude.where = { id: mvIds };
+    const mvIdList = mvIds.map(id => sequelize.escape(id)).join(',');
+    andConditions.push({
+      id: {
+        [Op.in]: sequelize.literal(`(SELECT mm.media_id FROM mv_media mm WHERE mm.mv_id IN (${mvIdList}))`)
+      }
+    });
   }
 
   const seed = String(q.seed || '').trim();
@@ -217,8 +222,7 @@ export const getFanartGallery = async (req: Request, res: Response) => {
     total = await MediaModel.count({
       where,
       include: [
-        { model: MediaGroupModel, as: 'group', where: { status: 'organized' }, required: true },
-        mvInclude
+        { model: MediaGroupModel, as: 'group', where: { status: 'organized' }, required: true }
       ],
       distinct: true,
       col: 'id'
