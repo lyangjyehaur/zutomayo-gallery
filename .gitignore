@@ -149,6 +149,7 @@ backend/data/*.sqlite-shm
 backend/data/auth.json
 backend/data/data.json
 backend/data/metadata.json
+backend/src/build-info.ts
 
 # Deployment config
 deploy.conf

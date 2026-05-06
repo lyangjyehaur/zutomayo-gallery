@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import { BUILD_INFO } from './build-info.js';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
@@ -107,6 +108,9 @@ app.get('/health', (req, res) => res.json({
   status: 'ZTMY_SERVER_ALIVE',
   timestamp: new Date().toISOString(),
   uptime: process.uptime(),
+  version: BUILD_INFO.version,
+  buildNumber: BUILD_INFO.buildNumber,
+  buildTime: BUILD_INFO.buildTime,
 }));
 
 await initRedis();
