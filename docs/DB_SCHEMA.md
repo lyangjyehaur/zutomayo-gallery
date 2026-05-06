@@ -218,3 +218,18 @@
 | `source` | `VARCHAR(50)` | `NULL` | 資料來源 (crawler/rss) |
 | `created_at` | `TIMESTAMP` | | 建立時間 |
 | `updated_at` | `TIMESTAMP` | | 更新時間 |
+
+### 4.7. `push_subscriptions` (Web Push 訂閱表)
+儲存瀏覽器 Web Push 的訂閱資訊，用於向管理員發送 VAPID 加密的推播通知。
+| 欄位名稱 | 型別 | 約束 | 說明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `VARCHAR(36)` | `PRIMARY KEY` | 訂閱唯一識別碼 (使用 NanoID) |
+| `user_id` | `VARCHAR(255)` | `NOT NULL` | 訂閱者識別碼 (管理員帳號) |
+| `endpoint` | `VARCHAR(500)` | `UNIQUE`, `NOT NULL` | Push 服務的 endpoint URL |
+| `p256dh` | `VARCHAR(255)` | `NOT NULL` | 用戶端公鑰 (ECDH P-256) |
+| `auth` | `VARCHAR(255)` | `NOT NULL` | 認證密鑰 |
+| `created_at` | `TIMESTAMP` | | 建立時間 |
+
+**索引：**
+- `user_id` — 按訂閱者查詢
+- `endpoint` (unique) — 確保同一 endpoint 不重複訂閱

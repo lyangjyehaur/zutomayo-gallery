@@ -286,3 +286,20 @@
 8. FanArt 前台標識與篩選
 9. Post-approval：補充說明/下架申請
 
+---
+
+## 12. 通知機制 (Notification)
+
+投稿系統整合了統一通知服務 `NotificationService`，在投稿狀態變更時自動推送通知給管理員：
+
+### 12.1 通知觸發時機
+- **投稿送審**：當投稿單狀態變更為 `pending`（即投稿者執行 submit 操作）時，呼叫 `NotificationService.send()` 發送通知，讓管理員即時得知有新投稿待審核。
+
+### 12.2 通知渠道
+`NotificationService.send({ type, title, body, url })` 為統一入口，會同時觸發以下三個渠道：
+- **Bark**：推送到 iOS Bark App
+- **Web Push**：透過 `PushService` 發送 VAPID 加密的瀏覽器推播通知
+- **Telegram**：透過 `TelegramBotService` 發送 Telegram Bot 訊息
+
+管理員可透過任一已啟用的渠道即時收到新投稿通知，加快審核響應速度。
+

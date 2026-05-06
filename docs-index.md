@@ -155,6 +155,21 @@
   - relevant files in `image-hosting/`
   - package / config in `image-hosting/package.json`、`image-hosting/next.config.ts`、`image-hosting/prisma/schema.prisma`
 
+- Review app work：
+  - `AGENTS.md`
+  - `memory.md`
+  - relevant files in `review-app/`
+  - `CODE_WIKI.md` (review-app section)
+
+- Notification system (Web Push / Telegram / Bark)：
+  - `AGENTS.md`
+  - `memory.md`
+  - `backend-memory.md`
+  - `docs/TWITTER_CRAWLER_SYSTEM.md` (notification section)
+  - `docs/FANART_SUBMISSION_SYSTEM.md` (notification section)
+  - `docs/DB_SCHEMA.md` (push_subscriptions table)
+  - `backend/API_DOCS.md` (push subscription endpoints)
+
 ## How To Use `CODE_WIKI.md`
 
 - 當 new task 需要快速理解 modules、terminology、rough data flow 時再讀。

@@ -76,3 +76,20 @@
 
 4. **審核拒絕 (`rejectStagingFanart`)**
    - 直接將該筆暫存資料的狀態更新為 `rejected`，不會建立正式資料。
+
+## 6. 通知機制 (Notification)
+
+爬蟲與 RSS 監聽系統整合了統一通知服務 `NotificationService`，在關鍵事件發生時自動推送通知給管理員：
+
+### 6.1 通知觸發時機
+- **RSS 監聯發現新推文**：`TwitterMonitorService` 偵測到新推文並寫入暫存區後，呼叫 `NotificationService.send()` 發送通知。
+- **爬蟲任務完成**：歷史推文爬蟲 (`runCrawler`) 執行完畢後，觸發通知告知管理員。
+
+### 6.2 通知渠道
+`NotificationService.send({ type, title, body, url })` 為統一入口，會同時觸發以下三個渠道：
+- **Bark**：推送到 iOS Bark App（原有的 inline Bark 邏輯已重構至此服務）
+- **Web Push**：透過 `PushService` 發送 VAPID 加密的瀏覽器推播通知
+- **Telegram**：透過 `TelegramBotService` 發送 Telegram Bot 訊息
+
+### 6.3 重構說明
+舊版在爬蟲流程中直接呼叫 Bark API 的 inline 邏輯，已重構為透過 `NotificationService` 統一發送，降低耦合度並擴展支援多渠道通知。

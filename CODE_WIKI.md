@@ -61,6 +61,7 @@ zutomayo-gallery/
 │
 ├── docs/                          # 跨模組設計文檔
 ├── image-hosting/                 # 可選獨立圖床服務
+├── review-app/                    # 獨立 Framework7 React 前端（行動裝置審核用）
 ├── AGENTS.md                      # AI 協作入口規則
 ├── memory.md                      # 跨端共享記憶
 ├── docs-index.md                  # 任務導向文檔索引
@@ -91,6 +92,12 @@ zutomayo-gallery/
 
 - `backend/src/controllers/mv.controller.ts`
   - 提供 MV 讀取、更新、探測圖片尺寸與 metadata 相關 API
+- `backend/src/services/notification.service.ts`
+  - `NotificationService` 統一通知入口，`send({ type, title, body, url })` 同時觸發 Bark + Web Push + Telegram
+- `backend/src/services/push.service.ts`
+  - `PushService` 管理 Web Push 訂閱與 VAPID 加密推播
+- `backend/src/services/telegram-bot.service.ts`
+  - `TelegramBotService` 發送 Telegram Bot 通知
 - `backend/src/services/mv.service.ts`
   - 管理 MV 讀取與更新流程
   - 使用運行時快取 `runtimeData`
@@ -114,6 +121,19 @@ zutomayo-gallery/
 - `backend/src/services/error-events.service.ts`
   - `ErrorEventEmitter` 單例，捕獲所有後端異常並持久化至 `backend_error_logs` 表
   - 透過 SSE 即時推送錯誤事件給已連接的管理員前端
+
+### Review App (`review-app/`)
+
+- 獨立的 Framework7 React 前端應用，專為行動裝置上的媒體審核場景設計
+- 使用 Framework7 React v9，支援 auto theme（iOS/MD 自動切換）與 auto dark mode
+- 連接同一後端 API，透過 session-based auth 與主站共享管理員認證
+- 主要頁面：
+  - `LoginPage` — 管理員登入
+  - `HomePage` — 首頁導航
+  - `StagingPage` — 爬蟲暫存審核
+  - `SubmissionsPage` — 投稿審核
+- 關鍵組件：
+  - `MvSheet` — MV/標籤選擇的 Sheet Modal
 
 ## 4. 目前資料模型重點
 
@@ -142,6 +162,7 @@ zutomayo-gallery/
   - `public_users`
   - `auth_passkeys`
   - `backend_error_logs`
+  - `push_subscriptions`
 
 前端仍消費近似舊版的聚合 JSON 結構，因此後端透過 `v2_mapper.ts` 做雙向轉換，讓前端暫時不必直接承擔完整關聯式資料模型。
 
