@@ -41,7 +41,7 @@ zutomayo-gallery/
 │   │   ├── config/                # 前端設定
 │   │   ├── locales/               # i18n 語系檔
 │   │   ├── debug/                 # 除錯與實驗頁面
-│   │   ├── App.tsx                # 前端主路由與公開站主入口
+│   │   ├── App.tsx                # 前端主路由、輕量佈局容器（hooks + 子組件組合）
 │   │   └── main.tsx               # 啟動點
 │   ├── docs/                      # 前端專屬設計說明
 │   └── package.json
@@ -72,8 +72,9 @@ zutomayo-gallery/
 ### 前端
 
 - `frontend/src/App.tsx`
-  - 公開站主入口
-  - 整合路由、SWR 取數、系統狀態、公開頁面裝配與部分列表互動
+  - 公開站主入口，輕量佈局容器（~993 行）
+  - 組合 8 個 custom hooks（過濾、收藏、無限滾動、吸頂、PWA、載入轉場、滾動位置、動畫暫停）與 13 個抽取組件（AppHeader、FilterBar、GalleryGrid、ControlHub、FeedbackDrawer、AppFooter 等）
+  - 仍保留路由狀態派生、Modal 渲染、Analytics effects
   - 使用 `useSWR` 請求 MV 資料、metadata 與 system status
 - `frontend/src/pages/AdminPage.tsx`
   - 管理後台主頁之一
@@ -151,6 +152,10 @@ zutomayo-gallery/
 - `RootApp()` in `frontend/src/App.tsx`
   - 以 `useSWR` 同時讀取 MV 資料、metadata 與系統維護狀態
   - 根據路由與系統狀態決定是否顯示公開站、管理頁或維護頁
+- `App()` in `frontend/src/App.tsx`
+  - 輕量佈局容器，組合 hooks 與子組件
+  - Custom hooks：`useMVFilters`、`useFavorites`、`useInfiniteScroll`、`useStickyFilterBar`、`usePWA`、`useLoadingTransition`、`useScrollPosition`、`useAnimationPause`
+  - 抽取組件：`AppHeader`、`FilterBar`、`GalleryGrid`、`ControlHub`、`FeedbackDrawer`、`AppFooter`、`LoadingScreen`、`NetworkWarningScreen`、`ErrorScreen`、`PWAInstallDrawer`、`PWARecoverDrawer`、`AboutDialog`、`AnimatedMVCardItem`
 - `useLazyImage()` in `frontend/src/hooks/useLazyImage.ts`
   - 以 `IntersectionObserver` 處理延遲載入與進場時機
 - `CoverCarousel` in `frontend/src/components/MVCard.tsx`
