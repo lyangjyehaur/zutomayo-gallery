@@ -52,30 +52,17 @@ if (trustProxy === 'true') {
 }
 
 // CORS 配置 - 僅允許特定來源
-const allowedOrigins = [
-  'http://localhost:5173',      // Vite dev server
-  'http://localhost:4173',      // Vite preview
-  'http://localhost:3000',      // 常見開發端口
-  'https://mv.ztmr.club',       // 你的正式環境前端網域
-];
+import { getAllowedOrigins, resolveCorsOrigin } from './utils/cors.js';
 
-// 從環境變數讀取額外允許的域名
-if (process.env.ALLOWED_ORIGINS) {
-  allowedOrigins.push(...process.env.ALLOWED_ORIGINS.split(','));
-}
+const allowedOrigins = getAllowedOrigins();
 
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    // 允許無 origin 的請求（如移動應用或 curl）
     if (!origin) {
-      // 在生產環境中，只有特定的內部路由允許無 Origin 請求
-      if (isProduction && !allowedOrigins.includes('*')) {
-        return callback(null, true); // 放行無 Origin 的請求，讓其他中介軟體或路由去處理授權
-      }
       return callback(null, true);
     }
     
-    if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+    if (resolveCorsOrigin(origin)) {
       callback(null, true);
     } else {
       logger.warn({ origin }, '[CORS] Blocked request from origin');

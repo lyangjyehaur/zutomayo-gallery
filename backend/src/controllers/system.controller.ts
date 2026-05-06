@@ -8,6 +8,7 @@ import { errorEventEmitter, type BackendErrorEvent } from '../services/error-eve
 import { BackendErrorLogModel } from '../models/index.js';
 import { getCountryCode, getFullGeoInfo } from '../services/geo.service.js';
 import { redisClient } from '../services/redis.service.js';
+import { resolveCorsOrigin } from '../utils/cors.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
 import {
@@ -385,11 +386,16 @@ export const clearRedisApiCache = async (req: Request, res: Response) => {
 };
 
 export const streamBackendErrors = (req: Request, res: Response) => {
+  const corsOrigin = resolveCorsOrigin(req.headers.origin) || '*';
+
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     Connection: 'keep-alive',
     'X-Accel-Buffering': 'no',
+    'Access-Control-Allow-Origin': corsOrigin,
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
   });
 
   res.write(`data: ${JSON.stringify({ type: 'connected', timestamp: new Date().toISOString() })}\n\n`);
