@@ -325,6 +325,7 @@ function App({
   useEffect(() => {
     favoritesRef.current = favorites;
   }, [favorites]);
+  const [favVersion, setFavVersion] = useState(0);
   
   // 監聽來自 RootApp 的 PWA 安裝事件
   const [deferredPrompt, setDeferredPrompt] = useState<any>(globalDeferredPrompt);
@@ -602,7 +603,7 @@ function App({
         artistFilter.length === 0 ||
         (mv.creators && mv.creators.some((a) => artistFilter.includes(a.name)));
 
-      const matchesFav = !showFavOnly || favorites.includes(mv.id);
+      const matchesFav = !showFavOnly || favoritesRef.current.includes(mv.id);
 
       return (
         matchesSearch &&
@@ -626,9 +627,9 @@ function App({
     yearFilter,
     albumFilter,
     artistFilter,
-    favorites,
     showFavOnly,
     sortOrder,
+    favVersion,
   ]);
 
   // 收藏切換
@@ -640,6 +641,9 @@ function App({
         ? currentFavs.filter((favId) => favId !== id)
         : [...currentFavs, id];
       setFavorites(newFavs);
+      if (showFavOnly) {
+        setFavVersion((v) => v + 1);
+      }
       if (!storage.set(STORAGE_KEYS.FAVORITES, newFavs)) {
         toast.error("收藏狀態無法保存，刷新頁面後可能會丟失");
       }
@@ -682,7 +686,7 @@ function App({
         });
       }
     },
-    [mvData],
+    [mvData, showFavOnly],
   );
 
   // 監聽其他標籤頁的收藏變化

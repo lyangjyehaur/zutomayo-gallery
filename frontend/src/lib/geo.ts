@@ -129,7 +129,7 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
       // 可以透過在控制台輸入 localStorage.setItem('mock_geo_mode', 'CN' | 'VPN' | 'GLOBAL') 來模擬
       const mockMode = window.localStorage.getItem('mock_geo_mode');
       if (mockMode) {
-        console.log(`[Geo Debug] Using mock mode: ${mockMode}`);
+        // 調試輸出已移除，避免生產環境控制台噪音
         if (mockMode === 'CN') {
           geoCache = { ipCountry: 'CN', isChinaTimezone: true, isChinaIP: true, isVPN: false };
         } else if (mockMode === 'VPN') {
