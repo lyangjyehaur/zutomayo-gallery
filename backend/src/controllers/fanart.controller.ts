@@ -118,7 +118,6 @@ export const getLegacyFanarts = async (req: Request, res: Response) => {
 };
 
 export const getFanartGallery = async (req: Request, res: Response) => {
-  try {
   const parsed = getFanartGalleryQuerySchema.safeParse(req.query);
   const q = parsed.success ? parsed.data : req.query;
 
@@ -155,14 +154,6 @@ export const getFanartGallery = async (req: Request, res: Response) => {
 
   const where: any = andConditions.length === 1 ? andConditions[0] : { [Op.and]: andConditions };
 
-  const mvInclude: any = {
-    model: MVModel,
-    as: 'mvs',
-    through: { attributes: [] },
-    attributes: ['id', 'title'],
-    required: false,
-    separate: true
-  };
   if (mvIds.length > 0) {
     const mvIdList = mvIds.map(id => sequelize.escape(id)).join(',');
     andConditions.push({
@@ -186,11 +177,37 @@ export const getFanartGallery = async (req: Request, res: Response) => {
     likes: [[{ model: MediaGroupModel, as: 'group' }, 'like_count', 'DESC'], ['group_id', 'ASC'], ['id', 'ASC']],
   };
 
+  const attachMvs = async (mediaRows: any[]) => {
+    if (mediaRows.length === 0) return;
+    const mediaIds = mediaRows.map(r => r.get('id') as string);
+    const mvLinks = await MVMediaModel.findAll({
+      where: { media_id: { [Op.in]: mediaIds } },
+      attributes: ['media_id', 'mv_id'],
+      raw: true,
+    }) as any[];
+    const mvIds2 = [...new Set(mvLinks.map((l: any) => l.mv_id as string))];
+    const mvMap = new Map<string, any>();
+    if (mvIds2.length > 0) {
+      const mvs = await MVModel.findAll({ where: { id: { [Op.in]: mvIds2 } }, attributes: ['id', 'title'], raw: true }) as any[];
+      for (const mv of mvs) mvMap.set(mv.id, mv);
+    }
+    const mediaMvMap = new Map<string, any[]>();
+    for (const link of mvLinks) {
+      const list = mediaMvMap.get(link.media_id as string) || [];
+      const mv = mvMap.get(link.mv_id as string);
+      if (mv) list.push(mv);
+      mediaMvMap.set(link.media_id as string, list);
+    }
+    for (const row of mediaRows) {
+      (row as any).dataValues.mvs = mediaMvMap.get(row.get('id') as string) || [];
+    }
+  };
+
   if (all) {
     const findOptions: any = {
       where,
       distinct: true,
-      include: [groupInclude, mvInclude],
+      include: [groupInclude],
       order: orderMap[sort] || orderMap.random
     };
     if (sort === 'random' && seed) {
@@ -201,13 +218,14 @@ export const getFanartGallery = async (req: Request, res: Response) => {
       };
     }
     const rows = await MediaModel.findAll(findOptions);
+    await attachMvs(rows);
     const data = rows.map(r => r.toJSON());
     res.json({ success: true, data });
     return;
   }
 
-  // Two-step pagination to avoid Sequelize subQuery + separate:true conflict
-  // Step 1: Get paginated IDs (no MV include, so subQuery:false works with sort_key)
+  // Two-step pagination to avoid Sequelize subQuery issues with BelongsToMany
+  // Step 1: Get paginated IDs (no MV include, subQuery:false works with sort_key)
   const idFindOptions: any = {
     where,
     distinct: true,
@@ -245,12 +263,11 @@ export const getFanartGallery = async (req: Request, res: Response) => {
     return;
   }
 
-  // Step 2: Fetch full data for those IDs (with MV separate:true, no LIMIT/OFFSET needed)
+  // Step 2: Fetch full data for those IDs (no MV include to avoid JOIN row explosion)
   const dataFindOptions: any = {
     where: { id: { [Op.in]: slicedIds } },
     include: [
       { model: MediaGroupModel, as: 'group', required: true },
-      mvInclude
     ],
   };
 
@@ -266,6 +283,7 @@ export const getFanartGallery = async (req: Request, res: Response) => {
   }
 
   const rows = await MediaModel.findAll(dataFindOptions);
+  await attachMvs(rows);
 
   const idOrder = new Map(slicedIds.map((id, idx) => [id, idx]));
   rows.sort((a, b) => (idOrder.get(a.get('id') as string) ?? 0) - (idOrder.get(b.get('id') as string) ?? 0));
@@ -292,16 +310,6 @@ export const getFanartGallery = async (req: Request, res: Response) => {
       hasMore
     }
   });
-  } catch (err: any) {
-    const isDev = process.env.NODE_ENV === 'development';
-    res.status(500).json({
-      success: false,
-      error: err?.message || 'Unknown error',
-      code: err?.name || 'GALLERY_QUERY_ERROR',
-      sql: err?.original?.message || undefined,
-      stack: isDev ? err?.stack : undefined,
-    });
-  }
 };
 
 export const getFanartGallerySummary = async (req: Request, res: Response) => {
