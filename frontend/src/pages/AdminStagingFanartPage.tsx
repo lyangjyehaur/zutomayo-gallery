@@ -124,6 +124,7 @@ export function AdminStagingFanartPage() {
     try {
       localStorage.setItem(settingsKey, JSON.stringify(next));
     } catch {
+      toast.error('篩選設定保存失敗，請檢查瀏覽器隱私模式或存儲空間');
     }
   }, [page, viewStatus, searchTerms, startDate, endDate, maxItems]);
 

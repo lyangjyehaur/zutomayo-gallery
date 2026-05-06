@@ -34,18 +34,20 @@ const readLocalTokens = (): LocalTokenItem[] => {
   }
 };
 
-const writeLocalTokens = (items: LocalTokenItem[]) => {
-  if (typeof window === 'undefined') return;
+const writeLocalTokens = (items: LocalTokenItem[]): boolean => {
+  if (typeof window === 'undefined') return false;
   try {
     localStorage.setItem(storageKey, JSON.stringify(items));
+    return true;
   } catch {
+    return false;
   }
 };
 
-const upsertLocalToken = (item: LocalTokenItem) => {
+const upsertLocalToken = (item: LocalTokenItem): boolean => {
   const prev = readLocalTokens();
   const next = [item, ...prev.filter((x) => x.id !== item.id)].slice(0, 50);
-  writeLocalTokens(next);
+  return writeLocalTokens(next);
 };
 
 interface SubmitFanArtPageProps {
@@ -111,7 +113,11 @@ export function SubmitFanArtPage({ mvData }: SubmitFanArtPageProps) {
       setStatus(String(submission.status || 'draft'));
       setAnonToken(token);
       setMedia([]);
-      if (token) upsertLocalToken({ id: submission.id, token });
+      if (token) {
+        if (!upsertLocalToken({ id: submission.id, token })) {
+          toast.error('本地投稿記錄保存失敗，請檢查瀏覽器隱私模式或存儲空間');
+        }
+      }
       toast.success('已建立草稿');
     } catch (e: any) {
       toast.error(`建立草稿失敗：${String(e?.message || e)}`);

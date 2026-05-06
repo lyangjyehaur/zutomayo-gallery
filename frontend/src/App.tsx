@@ -640,7 +640,9 @@ function App({
         ? currentFavs.filter((favId) => favId !== id)
         : [...currentFavs, id];
       setFavorites(newFavs);
-      storage.set(STORAGE_KEYS.FAVORITES, newFavs);
+      if (!storage.set(STORAGE_KEYS.FAVORITES, newFavs)) {
+        toast.error("收藏狀態無法保存，刷新頁面後可能會丟失");
+      }
 
       // 同步到其他標籤頁
       if (typeof window !== "undefined" && "BroadcastChannel" in window) {
@@ -660,7 +662,9 @@ function App({
               setFavorites((prev) => {
                 if (prev.includes(id)) return prev;
                 const restoredFavs = [...prev, id];
-                storage.set(STORAGE_KEYS.FAVORITES, restoredFavs);
+                if (!storage.set(STORAGE_KEYS.FAVORITES, restoredFavs)) {
+                  toast.error("收藏復原失敗，無法持久化保存");
+                }
                 if (typeof window !== "undefined" && "BroadcastChannel" in window) {
                   const channel = new BroadcastChannel("favorites_sync");
                   channel.postMessage(restoredFavs);

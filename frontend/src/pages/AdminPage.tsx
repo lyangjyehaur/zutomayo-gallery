@@ -91,11 +91,12 @@ const loadTemplates = (): Template[] => {
 };
 
 // 保存模板到 localStorage
-const saveTemplates = (templates: Template[]) => {
+const saveTemplates = (templates: Template[]): boolean => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
+    return true;
   } catch {
-    // 存儲失敗時忽略
+    return false;
   }
 };
 
@@ -171,7 +172,9 @@ function RichTextEditor({ value, onChange }: RichTextEditorProps) {
 
   // 保存模板變更
   useEffect(() => {
-    saveTemplates(templates);
+    if (!saveTemplates(templates)) {
+      toast.error('模板保存失敗，請檢查瀏覽器隱私模式或存儲空間');
+    }
   }, [templates]);
 
   // 處理編輯器變更
