@@ -45,7 +45,7 @@ export const generateRegOptions = async (req: Request, res: Response) => {
       transports: pk.transports as any,
     })),
   });
-  (req.session as any).passkeyChallenge = options.challenge;
+  req.session.passkeyChallenge = options.challenge;
   res.json(options);
 };
 
@@ -53,7 +53,7 @@ export const verifyReg = async (req: Request, res: Response) => {
   const body = req.body;
   const name = body.name || 'Unnamed Passkey';
   const { origin, rpID } = getOriginInfo(req);
-  const expectedChallenge = (req.session as any).passkeyChallenge as string | undefined;
+  const expectedChallenge = req.session.passkeyChallenge as string | undefined;
   const user = (req as any).user as { id: string; username: string } | undefined;
   if (!user?.id) {
     throw new AppError(401, 'Unauthorized');
@@ -79,7 +79,7 @@ export const verifyReg = async (req: Request, res: Response) => {
       name,
       createdAt: new Date().toISOString()
     });
-    (req.session as any).passkeyChallenge = null;
+    req.session.passkeyChallenge = null;
     return res.json({ success: true });
   }
   throw new AppError(400, 'Passkey registration verification failed');
@@ -128,8 +128,8 @@ export const generateAuthOptions = async (req: Request, res: Response) => {
       transports: pk.transports as any,
     })),
   });
-  (req.session as any).passkeyChallenge = options.challenge;
-  (req.session as any).passkeyUsername = username;
+  req.session.passkeyChallenge = options.challenge;
+  req.session.passkeyUsername = username;
   res.json(options);
 };
 
@@ -140,8 +140,8 @@ export const generateAuthOptions = async (req: Request, res: Response) => {
 export const verifyAuth = async (req: Request, res: Response) => {
   const body = req.body;
   const { origin, rpID } = getOriginInfo(req);
-  const expectedChallenge = (req.session as any).passkeyChallenge as string | undefined;
-  const passkeyUsername = (req.session as any).passkeyUsername as string | undefined;
+  const expectedChallenge = req.session.passkeyChallenge as string | undefined;
+  const passkeyUsername = req.session.passkeyUsername as string | undefined;
 
   if (!expectedChallenge) throw new AppError(400, 'No active challenge');
   if (!passkeyUsername) throw new AppError(400, 'No active authentication session');
@@ -175,10 +175,10 @@ export const verifyAuth = async (req: Request, res: Response) => {
     if (!userData?.id || !userData?.username || !userData?.is_active) {
       throw new AppError(401, 'INVALID_CREDENTIALS');
     }
-    (req.session as any).userId = String(userData.id);
-    (req.session as any).username = String(userData.username);
-    (req.session as any).passkeyChallenge = null;
-    (req.session as any).passkeyUsername = null;
+    req.session.userId = String(userData.id);
+    req.session.username = String(userData.username);
+    req.session.passkeyChallenge = null;
+    req.session.passkeyUsername = null;
     return res.json({ success: true });
   }
   throw new AppError(400, 'Passkey authentication failed');

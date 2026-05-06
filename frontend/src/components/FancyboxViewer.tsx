@@ -137,7 +137,15 @@ interface PhotoData {
   isGif?: boolean;
   groupId?: string;
   tweetUrl?: string;
-  [key: string]: any;
+  likeCount?: number;
+  tweetAuthor?: string;
+  tweetHandle?: string;
+  original_thumbnail_url?: string;
+  thumb?: string;
+  fallbackThumb?: string;
+  originalUrl?: string;
+  fallbackFull?: string;
+  [key: string]: unknown;
 }
 
 // 輔助函數：從 URL 提取副檔名
@@ -358,15 +366,10 @@ const PhotoItem = React.memo(function PhotoItem({ photo, index, onPhotoClick, de
     onPhotoClick?.(index);
   };
 
-  const likeCount =
-    typeof (photo as any).like_count === 'number'
-      ? (photo as any).like_count
-      : typeof (photo as any).likeCount === 'number'
-        ? (photo as any).likeCount
-        : undefined;
+  const likeCount = photo.likeCount;
 
-  const authorName = (photo as any).tweetAuthor || '';
-  const authorHandle = (photo as any).tweetHandle || '';
+  const authorName = photo.tweetAuthor || '';
+  const authorHandle = photo.tweetHandle || '';
   const authorText = authorHandle
     ? `${authorName ? `${authorName} ` : ''}@${authorHandle}`
     : authorName;
@@ -610,7 +613,7 @@ export default function FancyboxViewer({
         const hasOriginalFull = img.original_url && (img.original_url.includes('twimg.com') || img.original_url.includes('ytimg.com'));
         const preferredFullUrl = hasOriginalFull ? img.original_url : baseFullUrl;
 
-        const hasVideoThumb = !!((img as any).original_thumbnail_url || img.thumbnail_url);
+        const hasVideoThumb = !!(img.original_thumbnail_url || img.thumbnail_url);
         const noVideoThumb = isVideo && !hasVideoThumb;
 
         const thumbUrl = img.thumb

@@ -183,8 +183,12 @@ export const getProxyImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb', custom
   let isOverseasDirect = (!geoInfo.isChinaIP) || geoInfo.isVPN;
   
   // 開發者除錯後門
-  if (typeof window !== 'undefined' && window.localStorage.getItem('is_china') === 'false') {
-    isOverseasDirect = true;
+  if (typeof window !== 'undefined') {
+    try {
+      if (localStorage.getItem('is_china') === 'false') {
+        isOverseasDirect = true;
+      }
+    } catch {}
   }
 
   try {

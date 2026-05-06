@@ -75,7 +75,8 @@ export function PWAPrompt() {
 
   useEffect(() => {
     if (needRefresh) {
-      fetch(`/version.json?t=${Date.now()}`)
+      const controller = new AbortController();
+      fetch(`/version.json?t=${Date.now()}`, { signal: controller.signal })
         .then((res) => res.json())
         .then((data) => {
           if (data && data.version) {
@@ -83,7 +84,6 @@ export function PWAPrompt() {
           }
         })
         .catch(() => {
-          // 忽略錯誤，可能剛好沒有產生此檔案
         });
     }
   }, [needRefresh]);

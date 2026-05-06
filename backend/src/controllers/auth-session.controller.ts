@@ -84,8 +84,8 @@ export const login = async (req: Request, res: Response) => {
     return;
   }
 
-  (req.session as any).userId = String(data.id);
-  (req.session as any).username = String(data.username);
+  req.session.userId = String(data.id);
+  req.session.username = String(data.username);
 
   const payload = await buildMePayload(String(data.username));
   res.json({ success: true, data: payload });
@@ -107,7 +107,7 @@ export const logout = async (req: Request, res: Response) => {
 };
 
 export const me = async (req: Request, res: Response) => {
-  const username = (req.session as any)?.username;
+  const username = req.session.username;
   if (typeof username !== 'string') {
     res.status(401).json({ success: false, error: 'Unauthorized' });
     return;
@@ -124,8 +124,8 @@ const normalizeOptionalString = (value: unknown) => {
 };
 
 export const updateMeProfile = async (req: Request, res: Response) => {
-  const userId = (req.session as any)?.userId;
-  const username = (req.session as any)?.username;
+  const userId = req.session.userId;
+  const username = req.session.username;
   if (typeof userId !== 'string' || typeof username !== 'string') {
     res.status(401).json({ success: false, error: 'Unauthorized' });
     return;

@@ -1,5 +1,10 @@
 import { getSystemApiBase } from "./admin-api";
 
+const ssGet = (key: string): string | null => { try { return sessionStorage.getItem(key); } catch { return null; } };
+const ssSet = (key: string, value: string): void => { try { sessionStorage.setItem(key, value); } catch {} };
+const ssRemove = (key: string): void => { try { sessionStorage.removeItem(key); } catch {} };
+const lsGet = (key: string): string | null => { try { return localStorage.getItem(key); } catch { return null; } };
+
 export interface GeoInfo {
   ipCountry: string;
   isChinaTimezone: boolean;
@@ -26,12 +31,12 @@ let geoInitPromise: Promise<GeoInfo> | null = null;
 
 const getGeoSessionId = (): string => {
   if (typeof window === 'undefined') return '';
-  const existing = sessionStorage.getItem('geo_session_id');
+  const existing = ssGet('geo_session_id');
   if (existing) return existing;
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
   const id = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
-  sessionStorage.setItem('geo_session_id', id);
+  ssSet('geo_session_id', id);
   return id;
 };
 
@@ -59,11 +64,10 @@ const shouldUseIpLookup = () => {
   
   // 本地開發環境預設不調用 API，除非明確開啟 enable_ip_geo=true
   if (import.meta.env.DEV) {
-    return window.localStorage.getItem('enable_ip_geo') === 'true';
+    return lsGet('enable_ip_geo') === 'true';
   }
 
-  // 線上環境預設開啟 IP 偵測，除非明確設定為 false
-  return window.localStorage.getItem('enable_ip_geo') !== 'false';
+  return lsGet('enable_ip_geo') !== 'false';
 };
 
 /**
@@ -73,10 +77,11 @@ export const clearGeoCache = () => {
   geoCache = null;
   geoInitPromise = null;
   if (typeof window !== 'undefined') {
-    sessionStorage.removeItem('geo_info');
-    sessionStorage.removeItem('geo_session_id');
-    sessionStorage.removeItem('umami_geo_location_reported');
-    sessionStorage.removeItem('umami_geo_raw_reported');
+    ssRemove('geo_info');
+    ssRemove('geo_session_id');
+    ssRemove('umami_geo_location_reported');
+    ssRemove('umami_geo_raw_reported');
+    ssRemove('umami_identify_sent');
   }
 };
 
@@ -127,7 +132,7 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
     if (typeof window !== 'undefined') {
       // 手動 Debug 模式 (最高優先級)
       // 可以透過在控制台輸入 localStorage.setItem('mock_geo_mode', 'CN' | 'VPN' | 'GLOBAL') 來模擬
-      const mockMode = window.localStorage.getItem('mock_geo_mode');
+      const mockMode = lsGet('mock_geo_mode');
       if (mockMode) {
         // 調試輸出已移除，避免生產環境控制台噪音
         if (mockMode === 'CN') {
@@ -139,13 +144,12 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
         }
         
         if (geoCache) {
-          sessionStorage.setItem('geo_info', JSON.stringify(geoCache));
+          ssSet('geo_info', JSON.stringify(geoCache));
           return geoCache;
         }
       }
 
-      // 檢查 sessionStorage 快取，避免每次重整都發送請求
-      const cached = sessionStorage.getItem('geo_info');
+      const cached = ssGet('geo_info');
       if (cached) {
         geoCache = JSON.parse(cached);
         return geoCache!;
@@ -163,7 +167,7 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
       };
 
       if (typeof window !== 'undefined') {
-        sessionStorage.setItem('geo_info', JSON.stringify(geoCache));
+        ssSet('geo_info', JSON.stringify(geoCache));
       }
 
       return geoCache;
@@ -177,11 +181,10 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
     geoCache = { ipCountry, isChinaTimezone, isChinaIP, isVPN, ip, rawCountry, rawString, ip2regionRaw, geoipRaw, maxmindCityRaw, maxmindAsnRaw, details };
     
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem('geo_info', JSON.stringify(geoCache));
+      ssSet('geo_info', JSON.stringify(geoCache));
       
-      // 將精確的地理與 IP 資訊上報給 Umami (如果有的話)
       if ((window as any).umami && typeof (window as any).umami.track === 'function') {
-        const locationReported = sessionStorage.getItem('umami_geo_location_reported') === 'true';
+        const locationReported = ssGet('umami_geo_location_reported') === 'true';
         const payload: any = {
             country: ipCountry,
             raw_country: rawCountry || ipCountry, // 同時上報原始的中文國家名稱
@@ -247,12 +250,12 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
         
         if (!locationReported) {
           (window as any).umami.track('Z_Geo_Location_Detected', payload);
-          sessionStorage.setItem('umami_geo_location_reported', 'true');
+          ssSet('umami_geo_location_reported', 'true');
         }
       }
 
       if (ip && (ip2regionRaw || geoipRaw || maxmindCityRaw || maxmindAsnRaw)) {
-        const rawReported = sessionStorage.getItem('umami_geo_raw_reported') === 'true';
+        const rawReported = ssGet('umami_geo_raw_reported') === 'true';
         if (rawReported) return geoCache;
 
         const geoRawApi = `${getSystemApiBase()}/geo/raw`;
@@ -314,7 +317,7 @@ export const initGeo = async (forceRefresh = false): Promise<GeoInfo> => {
           (window as any).umami.track('Z_Geo_Raw_Detected', rawPayload);
         }
 
-        sessionStorage.setItem('umami_geo_raw_reported', 'true');
+        ssSet('umami_geo_raw_reported', 'true');
       }
     }
     
@@ -345,14 +348,14 @@ export const getGeoInfo = (): GeoInfo => {
   if (geoCache) return geoCache;
   
   if (typeof window !== 'undefined') {
-    const mockMode = window.localStorage.getItem('mock_geo_mode');
+    const mockMode = lsGet('mock_geo_mode');
     if (mockMode) {
       if (mockMode === 'CN') return { ipCountry: 'CN', isChinaTimezone: true, isChinaIP: true, isVPN: false };
       if (mockMode === 'VPN') return { ipCountry: 'JP', isChinaTimezone: true, isChinaIP: false, isVPN: true };
       if (mockMode === 'GLOBAL') return { ipCountry: 'US', isChinaTimezone: false, isChinaIP: false, isVPN: false };
     }
 
-    const cached = sessionStorage.getItem('geo_info');
+    const cached = ssGet('geo_info');
     if (cached) {
       geoCache = JSON.parse(cached);
       return geoCache!;

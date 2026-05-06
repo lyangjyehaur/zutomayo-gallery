@@ -15,6 +15,8 @@ import {
   verifyEmailSchema,
   updateMeSchema,
 } from '../validators/public-auth.validator.js';
+import { plain } from '../types/sequelize-helpers.js';
+import type { PublicUserAttrs, PublicAuthTokenAttrs } from '../types/sequelize-helpers.js';
 
 const magicTokenTtlMs = 15 * 60 * 1000;
 const verifyTokenTtlMs = 60 * 60 * 1000;
@@ -34,7 +36,7 @@ export const requestMagicLink = async (req: Request, res: Response) => {
     defaults: {
       email,
       display_name: email.split('@')[0],
-    } as any,
+    },
   });
 
   const token = generateToken();
@@ -42,12 +44,12 @@ export const requestMagicLink = async (req: Request, res: Response) => {
   const expiresAt = new Date(Date.now() + magicTokenTtlMs);
 
   await PublicAuthTokenModel.create({
-    user_id: (user as any).get('id'),
+    user_id: plain<PublicUserAttrs>(user).id,
     purpose: 'login',
     token_hash: tokenHash,
     expires_at: expiresAt,
     created_at: new Date(),
-  } as any);
+  });
 
   const origin = process.env.PUBLIC_APP_ORIGIN || 'http://localhost:5173';
   const redirect = parsed.redirectUrl || '/';
@@ -77,52 +79,52 @@ export const verifyMagicLink = async (req: Request, res: Response) => {
   if (!record) {
     throw new AppError(401, 'TOKEN_NOT_FOUND');
   }
-  if (String((record as any).get('purpose') || 'login') !== 'login') {
+  const tokenData = plain<PublicAuthTokenAttrs>(record);
+  if (tokenData.purpose !== 'login') {
     throw new AppError(401, 'TOKEN_PURPOSE_INVALID');
   }
 
-  if ((record as any).get('used_at')) {
+  if (tokenData.used_at) {
     throw new AppError(401, 'TOKEN_USED');
   }
 
-  const expiresAt = (record as any).get('expires_at') as Date;
-  if (expiresAt && expiresAt.getTime() < Date.now()) {
+  if (tokenData.expires_at && tokenData.expires_at.getTime() < Date.now()) {
     throw new AppError(401, 'TOKEN_EXPIRED');
   }
 
-  await (record as any).update({ used_at: new Date() });
+  await record.update({ used_at: new Date() });
 
-  const userId = (record as any).get('user_id');
-  (req.session as any).publicUserId = userId;
+  const userId = tokenData.user_id;
+  req.session.publicUserId = userId;
 
   const user = await PublicUserModel.findByPk(userId);
   if (!user) {
     throw new AppError(404, 'USER_NOT_FOUND');
   }
 
-  res.json({ success: true, data: user.toJSON() });
+  res.json({ success: true, data: plain<PublicUserAttrs>(user) });
 };
 
 export const me = async (req: Request, res: Response) => {
-  const userId = (req.session as any)?.publicUserId;
+  const userId = req.session.publicUserId;
   if (!userId) {
     res.json({ success: true, data: null });
     return;
   }
   const user = await PublicUserModel.findByPk(userId);
-  res.json({ success: true, data: user ? user.toJSON() : null });
+  res.json({ success: true, data: user ? plain<PublicUserAttrs>(user) : null });
 };
 
 export const logout = async (req: Request, res: Response) => {
   if (req.session) {
-    (req.session as any).publicUserId = undefined;
+    req.session.publicUserId = undefined;
   }
   res.json({ success: true });
 };
 
 export const updateMe = async (req: Request, res: Response) => {
   const parsed = updateMeSchema.parse(req.body);
-  const userId = (req.session as any)?.publicUserId;
+  const userId = req.session.publicUserId;
   if (!userId) {
     throw new AppError(401, 'PUBLIC_UNAUTHORIZED');
   }
@@ -132,7 +134,7 @@ export const updateMe = async (req: Request, res: Response) => {
     throw new AppError(404, 'USER_NOT_FOUND');
   }
 
-  const update: any = {};
+  const update: Partial<PublicUserAttrs> = {};
 
   if (typeof parsed.display_name === 'string') {
     const v = parsed.display_name.trim();
@@ -141,9 +143,9 @@ export const updateMe = async (req: Request, res: Response) => {
 
   if (parsed.social_links && typeof parsed.social_links === 'object' && !Array.isArray(parsed.social_links)) {
     const allowedKeys = ['x', 'instagram', 'pixiv', 'youtube', 'website'];
-    const next: any = {};
+    const next: Record<string, string> = {};
     allowedKeys.forEach((k) => {
-      const val = (parsed.social_links as any)[k];
+      const val = (parsed.social_links as Record<string, string>)[k];
       if (typeof val === 'string') {
         const s = val.trim();
         if (s) next[k] = s.slice(0, 200);
@@ -165,9 +167,9 @@ export const updateMe = async (req: Request, res: Response) => {
     update.public_profile_fields = next;
   }
 
-  await (user as any).update(update);
+  await user.update(update);
 
-  res.json({ success: true, data: (user as any).toJSON() });
+  res.json({ success: true, data: plain<PublicUserAttrs>(user) });
 };
 
 export const register = async (req: Request, res: Response) => {
@@ -180,24 +182,26 @@ export const register = async (req: Request, res: Response) => {
     throw new AppError(400, 'INVALID_EMAIL');
   }
 
-  const existing = await PublicUserModel.findOne({ where: { email } as any });
-  if (existing && (existing as any).get('password_hash')) {
+  const existing = await PublicUserModel.findOne({ where: { email } });
+  const existingAttrs = existing ? plain<PublicUserAttrs>(existing) : null;
+  if (existingAttrs && existingAttrs.password_hash) {
     throw new AppError(409, 'EMAIL_ALREADY_REGISTERED');
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
-  let user: any;
+  let userId: string;
   if (!existing) {
-    user = await PublicUserModel.create({
+    const user = await PublicUserModel.create({
       email,
       display_name: displayName || email.split('@')[0],
       password_hash: passwordHash,
       email_verified_at: null,
-    } as any);
+    });
+    userId = plain<PublicUserAttrs>(user).id;
   } else {
-    user = existing;
-    await (user as any).update({
-      display_name: displayName || (user as any).get('display_name') || email.split('@')[0],
+    userId = existingAttrs!.id;
+    await existing.update({
+      display_name: displayName || existingAttrs!.display_name || email.split('@')[0],
       password_hash: passwordHash,
       email_verified_at: null,
     });
@@ -207,12 +211,12 @@ export const register = async (req: Request, res: Response) => {
   const tokenHash = sha256Hex(token);
   const expiresAt = new Date(Date.now() + verifyTokenTtlMs);
   await PublicAuthTokenModel.create({
-    user_id: (user as any).get('id'),
+    user_id: userId,
     purpose: 'verify_email',
     token_hash: tokenHash,
     expires_at: expiresAt,
     created_at: new Date(),
-  } as any);
+  });
 
   const origin = process.env.PUBLIC_APP_ORIGIN || 'http://localhost:5173';
   const redirect = parsed.redirectUrl || '/';
@@ -240,27 +244,27 @@ export const verifyEmail = async (req: Request, res: Response) => {
   if (!record) {
     throw new AppError(401, 'TOKEN_NOT_FOUND');
   }
-  if (String((record as any).get('purpose') || '') !== 'verify_email') {
+  const tokenData = plain<PublicAuthTokenAttrs>(record);
+  if (tokenData.purpose !== 'verify_email') {
     throw new AppError(401, 'TOKEN_PURPOSE_INVALID');
   }
-  if ((record as any).get('used_at')) {
+  if (tokenData.used_at) {
     throw new AppError(401, 'TOKEN_USED');
   }
-  const expiresAt = (record as any).get('expires_at') as Date;
-  if (expiresAt && expiresAt.getTime() < Date.now()) {
+  if (tokenData.expires_at && tokenData.expires_at.getTime() < Date.now()) {
     throw new AppError(401, 'TOKEN_EXPIRED');
   }
 
-  await (record as any).update({ used_at: new Date() });
-  const userId = (record as any).get('user_id');
+  await record.update({ used_at: new Date() });
+  const userId = tokenData.user_id;
   const user = await PublicUserModel.findByPk(userId);
   if (!user) {
     throw new AppError(404, 'USER_NOT_FOUND');
   }
 
-  await (user as any).update({ email_verified_at: new Date() });
-  (req.session as any).publicUserId = userId;
-  res.json({ success: true, data: (user as any).toJSON() });
+  await user.update({ email_verified_at: new Date() });
+  req.session.publicUserId = userId;
+  res.json({ success: true, data: plain<PublicUserAttrs>(user) });
 };
 
 export const loginWithPassword = async (req: Request, res: Response) => {
@@ -270,23 +274,23 @@ export const loginWithPassword = async (req: Request, res: Response) => {
   if (!email || !email.includes('@') || !password) {
     throw new AppError(400, 'INVALID_CREDENTIALS');
   }
-  const user = await PublicUserModel.findOne({ where: { email } as any });
+  const user = await PublicUserModel.findOne({ where: { email } });
   if (!user) {
     throw new AppError(401, 'INVALID_CREDENTIALS');
   }
-  const hash = (user as any).get('password_hash') as any;
-  if (!hash) {
+  const attrs = plain<PublicUserAttrs>(user);
+  if (!attrs.password_hash) {
     throw new AppError(401, 'PASSWORD_NOT_SET');
   }
-  const ok = await bcrypt.compare(password, String(hash));
+  const ok = await bcrypt.compare(password, String(attrs.password_hash));
   if (!ok) {
     throw new AppError(401, 'INVALID_CREDENTIALS');
   }
-  if (!(user as any).get('email_verified_at')) {
+  if (!attrs.email_verified_at) {
     throw new AppError(403, 'EMAIL_NOT_VERIFIED');
   }
-  (req.session as any).publicUserId = (user as any).get('id');
-  res.json({ success: true, data: (user as any).toJSON() });
+  req.session.publicUserId = attrs.id;
+  res.json({ success: true, data: attrs });
 };
 
 export const requestPasswordReset = async (req: Request, res: Response) => {
@@ -298,21 +302,22 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
     res.json({ success: true });
 
     if (!email || !email.includes('@') || email.length > 254) return;
-    const user = await PublicUserModel.findOne({ where: { email } as any });
+    const user = await PublicUserModel.findOne({ where: { email } });
     if (!user) return;
-    if (!(user as any).get('email_verified_at')) return;
-    if (!(user as any).get('password_hash')) return;
+    const attrs = plain<PublicUserAttrs>(user);
+    if (!attrs.email_verified_at) return;
+    if (!attrs.password_hash) return;
 
     const token = generateToken();
     const tokenHash = sha256Hex(token);
     const expiresAt = new Date(Date.now() + resetTokenTtlMs);
     await PublicAuthTokenModel.create({
-      user_id: (user as any).get('id'),
+      user_id: attrs.id,
       purpose: 'reset_password',
       token_hash: tokenHash,
       expires_at: expiresAt,
       created_at: new Date(),
-    } as any);
+    });
 
     const origin = process.env.PUBLIC_APP_ORIGIN || 'http://localhost:5173';
     const link = `${origin.replace(/\/$/, '')}/auth/reset-password?token=${encodeURIComponent(token)}&redirect=${encodeURIComponent(redirect)}`;
@@ -331,26 +336,26 @@ export const resetPassword = async (req: Request, res: Response) => {
   if (!record) {
     throw new AppError(401, 'TOKEN_NOT_FOUND');
   }
-  if (String((record as any).get('purpose') || '') !== 'reset_password') {
+  const tokenData = plain<PublicAuthTokenAttrs>(record);
+  if (tokenData.purpose !== 'reset_password') {
     throw new AppError(401, 'TOKEN_PURPOSE_INVALID');
   }
-  if ((record as any).get('used_at')) {
+  if (tokenData.used_at) {
     throw new AppError(401, 'TOKEN_USED');
   }
-  const expiresAt = (record as any).get('expires_at') as Date;
-  if (expiresAt && expiresAt.getTime() < Date.now()) {
+  if (tokenData.expires_at && tokenData.expires_at.getTime() < Date.now()) {
     throw new AppError(401, 'TOKEN_EXPIRED');
   }
 
-  await (record as any).update({ used_at: new Date() });
-  const userId = (record as any).get('user_id');
+  await record.update({ used_at: new Date() });
+  const userId = tokenData.user_id;
   const user = await PublicUserModel.findByPk(userId);
   if (!user) {
     throw new AppError(404, 'USER_NOT_FOUND');
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
-  await (user as any).update({ password_hash: passwordHash });
-  (req.session as any).publicUserId = userId;
+  await user.update({ password_hash: passwordHash });
+  req.session.publicUserId = userId;
   res.json({ success: true });
 };

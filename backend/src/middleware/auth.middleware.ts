@@ -29,8 +29,8 @@ const canAccessPermission = async (username: string, permission: string): Promis
  * 成功時將用戶資訊掛到 req.user，否則返回 401
  */
 export const requireAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const userId = (req.session as any)?.userId;
-  const username = (req.session as any)?.username;
+  const userId = req.session.userId;
+  const username = req.session.username;
   if (typeof userId !== 'string' || typeof username !== 'string') {
     res.status(401).json({ success: false, error: 'Unauthorized' });
     return;
@@ -57,8 +57,8 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
  * 返回 AuthedUser 或 null（null 表示已發送 401 響應）
  */
 const authenticateUser = async (req: Request, res: Response): Promise<AuthedUser | null> => {
-  const userId = (req.session as any)?.userId;
-  const username = (req.session as any)?.username;
+  const userId = req.session.userId;
+  const username = req.session.username;
   if (typeof userId !== 'string' || typeof username !== 'string') {
     res.status(401).json({ success: false, error: 'Unauthorized' });
     return null;

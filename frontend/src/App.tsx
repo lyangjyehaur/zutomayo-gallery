@@ -995,14 +995,19 @@ function App({
 
   // 全域狀態：使用者識別與錯誤追蹤
   useEffect(() => {
-    // 延遲執行 identify，確保 Umami script 已經載入並完成初次 pageview 的 session 建立
+    if (typeof window !== 'undefined' && sessionStorage.getItem('umami_identify_sent') === 'true') return;
+
+    let cancelled = false;
     const timer = setTimeout(async () => {
+      if (cancelled) return;
       if (window.umami && typeof window.umami.identify === 'function') {
+        if (sessionStorage.getItem('umami_identify_sent') === 'true') return;
+
         const geoInfo = await getGeoInfo();
+        if (cancelled) return;
+
         const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         const browserLanguage = navigator.language || navigator.languages?.[0] || 'unknown';
-        
-        // 取得跨 Session 的使用者偏好設定
         const uiLanguage = i18n.language || browserLanguage;
         const isAdmin = isAdminAuthenticated;
         let isChinaNetwork = false;
@@ -1011,36 +1016,33 @@ function App({
           isChinaNetwork = localStorage.getItem('is_china') === 'true';
           enableIpGeo = localStorage.getItem('enable_ip_geo') !== 'false';
         } catch {
-          // 讀取失敗時使用默認值
         }
 
         window.umami.identify({
-          // 核心互動指標
           favorites_count: favorites.length,
           has_favorites: favorites.length > 0 ? 'true' : 'false',
-          
-          // 裝置與環境
           is_mobile: isMobile ? 'true' : 'false',
           theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
           browser_language: browserLanguage,
           ui_language: uiLanguage,
-          
-          // 地理與網路狀態
           country: geoInfo?.country || 'unknown',
           city: geoInfo?.city || 'unknown',
           is_vpn: geoInfo?.is_vpn || 'unknown',
           timezone: timezone,
           is_china_network: isChinaNetwork ? 'true' : 'false',
           geo_tracking_enabled: enableIpGeo ? 'true' : 'false',
-          
-          // 身分識別
           is_admin: isAdmin ? 'true' : 'false'
         });
+
+        sessionStorage.setItem('umami_identify_sent', 'true');
       }
     }, 1500);
     
-    return () => clearTimeout(timer);
-  }, [favorites.length, isMobile, i18n.language]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, []);
 
   useEffect(() => {
     if (error && window.umami && typeof window.umami.track === 'function') {

@@ -10,24 +10,26 @@ export function VerifyEmailCallbackPage() {
   const navigate = useNavigate();
 
   React.useEffect(() => {
+    let cancelled = false;
     const run = async () => {
       const params = new URLSearchParams(location.search);
       const token = String(params.get('token') || '').trim();
       const redirect = String(params.get('redirect') || '/').trim() || '/';
       if (!token) {
         toast.error('缺少 token');
-        navigate(redirect, { replace: true });
+        if (!cancelled) navigate(redirect, { replace: true });
         return;
       }
       try {
         await verifyEmail(token);
-        toast.success('驗證成功，已登入');
+        if (!cancelled) toast.success('驗證成功，已登入');
       } catch (e: any) {
-      toast.error(formatApiError(e, '驗證失敗'));
+        if (!cancelled) toast.error(formatApiError(e, '驗證失敗'));
       }
-      navigate(redirect, { replace: true });
+      if (!cancelled) navigate(redirect, { replace: true });
     };
     void run();
+    return () => { cancelled = true; };
   }, [location.search, navigate]);
 
   return (

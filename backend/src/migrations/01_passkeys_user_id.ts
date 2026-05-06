@@ -19,7 +19,8 @@ export const up = async ({ context: queryInterface }: { context: QueryInterface 
         { replacements: { userId } },
       );
     }
-  } catch {
+  } catch (e) {
+    console.warn('[Migration] 01_passkeys_user_id: Failed to backfill user_id:', e instanceof Error ? e.message : String(e));
   }
 };
 

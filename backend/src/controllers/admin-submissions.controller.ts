@@ -192,7 +192,7 @@ export const approveSubmission = async (req: Request, res: Response) => {
 
     await (submission as any).update({
       status: 'approved',
-      reviewed_by: (req.session as any)?.username || (req as any).user?.username || 'admin',
+      reviewed_by: req.session?.username || (req as any).user?.username || 'admin',
       reviewed_at: new Date(),
     }, { transaction: t });
 
@@ -220,7 +220,7 @@ export const rejectSubmission = async (req: Request, res: Response) => {
   await (submission as any).update({
     status: 'rejected',
     review_reason: reason,
-    reviewed_by: (req.session as any)?.username || (req as any).user?.username || 'admin',
+    reviewed_by: req.session?.username || (req as any).user?.username || 'admin',
     reviewed_at: new Date(),
   });
   res.json({ success: true });

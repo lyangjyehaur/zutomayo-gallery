@@ -157,7 +157,8 @@ const createRateLimitStore = (prefix?: string) => {
       sendCommand: (...args: string[]) => redisClient.sendCommand(args),
       ...(prefix ? { prefix } : {}),
     });
-  } catch {
+  } catch (e) {
+    logger.warn({ err: e }, '[RateLimit] Failed to create Redis store, falling back to memory');
     return undefined;
   }
 };

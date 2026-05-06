@@ -1,6 +1,7 @@
 import { ArtistModel, AlbumModel, SysConfigModel, SysAnnouncementModel, MediaModel, ArtistMediaModel } from '../models/index.js';
 import { sequelize } from '../models/index.js';
 import { ArtistMeta } from '../types.js';
+import { logger } from '../utils/logger.js';
 
 export interface AlbumMeta {
   date?: string;
@@ -208,7 +209,9 @@ export const getMetadata = async (): Promise<MetadataResponse> => {
           });
           return;
         }
-      } catch {}
+      } catch (e) {
+        logger.warn({ err: e, raw }, '[Metadata] Failed to parse announcement JSON');
+      }
     }
     push('default', raw);
   });

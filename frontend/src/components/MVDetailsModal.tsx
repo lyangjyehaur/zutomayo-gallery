@@ -105,9 +105,11 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata }: MV
   }, [activeLang, location, navigate]);
 
   useEffect(() => {
+    let cancelled = false;
     initGeo().then(info => {
-      setIsChinaIP(info.isChinaIP);
+      if (!cancelled) setIsChinaIP(info.isChinaIP);
     });
+    return () => { cancelled = true; };
   }, []);
   
   // 防止在退場動畫期間連續觸發 onClose 導致路由亂跳
