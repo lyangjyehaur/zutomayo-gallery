@@ -96,7 +96,7 @@ export function useStickyFilterBar({ filterDeps }: UseStickyFilterBarParams) {
       cancelAnimationFrame(rafId);
       observer.disconnect();
     };
-  }, filterDeps);
+  }, []);
 
   return { filterBarRef, filterAnchorRef };
 }

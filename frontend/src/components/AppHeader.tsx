@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, forwardRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { shouldShowSecondaryLang } from '@/i18n';
 import { VERSION_CONFIG } from '@/config/version';
@@ -10,7 +10,7 @@ interface AppHeaderProps {
   onVersionTouchStart: (e: React.TouchEvent) => void;
 }
 
-export function AppHeader({ isGlobalPaused, glitchStyleVars, onVersionClick, onVersionTouchStart }: AppHeaderProps) {
+export const AppHeader = forwardRef<HTMLElement, AppHeaderProps>(function AppHeader({ isGlobalPaused, glitchStyleVars, onVersionClick, onVersionTouchStart }, ref) {
   const { t } = useTranslation();
   const [isTitleHovering, setIsTitleHovering] = useState(false);
   const [titleBurstKey, setTitleBurstKey] = useState(0);
@@ -20,7 +20,7 @@ export function AppHeader({ isGlobalPaused, glitchStyleVars, onVersionClick, onV
   const lastTitleBurstAtRef = useRef(0);
 
   return (
-    <header className="py-12 md:py-16 text-center bg-card relative overflow-hidden z-30">
+    <header ref={ref} className="py-12 md:py-16 text-center bg-card relative overflow-hidden z-30">
         <div className="absolute inset-0 opacity-5 pointer-events-none crt-lines"></div>
 
         <h1 className="text-3xl sm:text-4xl md:text-6xl font-black flex flex-col md:flex-row items-center justify-center gap-2 sm:gap-4 px-2">
@@ -104,4 +104,4 @@ export function AppHeader({ isGlobalPaused, glitchStyleVars, onVersionClick, onV
         <p className="mt-2 text-sm opacity-70">{t("app.slogan", "日々研磨爆裂中！")}</p>
       </header>
   );
-}
+});

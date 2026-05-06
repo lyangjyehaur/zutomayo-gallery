@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface UseLoadingTransitionParams {
   isLoading: boolean;
@@ -18,6 +18,8 @@ export function useLoadingTransition({
   isIosMobileSafari,
 }: UseLoadingTransitionParams) {
   const [showLoadingScreen, setShowLoadingScreen] = useState(true);
+  const showLoadingScreenRef = useRef(true);
+  useEffect(() => { showLoadingScreenRef.current = showLoadingScreen; }, [showLoadingScreen]);
   const [showWarningScreen, setShowWarningScreen] = useState(false);
   const [isContentReady, setIsContentReady] = useState(false);
   const [isContentFadingIn, setIsContentFadingIn] = useState(false);
@@ -54,7 +56,7 @@ export function useLoadingTransition({
         setTimeout(() => setIsTransitioningOut(false), 50);
       }, 500);
       return () => clearTimeout(timer);
-    } else if (showLoadingScreen) {
+    } else if (showLoadingScreenRef.current) {
       setIsTransitioningOut(true);
       const timer = setTimeout(() => {
         setShowLoadingScreen(false);

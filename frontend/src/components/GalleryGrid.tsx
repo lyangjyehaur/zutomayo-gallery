@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { shouldShowSecondaryLang } from "@/i18n";
 import { MVItem } from "@/lib/types";
@@ -23,7 +23,7 @@ interface GalleryGridProps {
   setArtistFilter: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
-export function GalleryGrid({
+export const GalleryGrid = memo(function GalleryGrid({
   filteredData,
   visibleCount,
   setSentinelEl,
@@ -147,4 +147,4 @@ export function GalleryGrid({
       )}
     </>
   );
-}
+});

@@ -8,16 +8,16 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 import { toast } from 'sonner';
+import { clearGlobalDeferredPrompt } from '@/App';
 
 interface PWAInstallDrawerProps {
   isInstallPromptOpen: boolean;
   setIsInstallPromptOpen: React.Dispatch<React.SetStateAction<boolean>>;
   deferredPrompt: any;
   setDeferredPrompt: React.Dispatch<React.SetStateAction<any>>;
-  clearGlobalDeferredPrompt: () => void;
 }
 
-export function PWAInstallDrawer({ isInstallPromptOpen, setIsInstallPromptOpen, deferredPrompt, setDeferredPrompt, clearGlobalDeferredPrompt }: PWAInstallDrawerProps) {
+export function PWAInstallDrawer({ isInstallPromptOpen, setIsInstallPromptOpen, deferredPrompt, setDeferredPrompt }: PWAInstallDrawerProps) {
   const { t } = useTranslation();
 
   return (

@@ -274,8 +274,10 @@ function App({
 
   const scrolled = useScrollPosition();
 
+  const headerRef = useRef<HTMLElement>(null);
+
   const isGlobalPaused = useAnimationPause({
-    selectedMvId, selectedIllustratorId, isFeedbackOpen, isAboutOpen, isMobile,
+    selectedMvId, selectedIllustratorId, isFeedbackOpen, isAboutOpen, isMobile, headerRef,
   });
 
   const geoInfo = useGeoLabel();
@@ -506,6 +508,7 @@ function App({
 
         {/* 頁首 */}
         <AppHeader
+          ref={headerRef}
           isGlobalPaused={isGlobalPaused}
           glitchStyleVars={glitchStyleVars}
           onVersionClick={(e) => { e.stopPropagation(); triggerPWARecovery(); }}
@@ -668,8 +671,7 @@ function App({
         setIsInstallPromptOpen={setIsInstallPromptOpen}
         deferredPrompt={deferredPrompt}
         setDeferredPrompt={setDeferredPrompt}
-        clearGlobalDeferredPrompt={() => { globalDeferredPrompt = null; }}
-      />
+        isInstallPromptOpen={isInstallPromptOpen}/>
 
       <PWARecoverDrawer
         isRecoverPromptOpen={isRecoverPromptOpen}
@@ -799,6 +801,7 @@ function LocalizedAppLayout({ commonProps }: { commonProps: AppCommonProps }) {
 
 // 全域儲存 PWA 事件，讓子組件可以存取
 export let globalDeferredPrompt: any = null;
+export function clearGlobalDeferredPrompt() { globalDeferredPrompt = null; }
 export const pwaEventTarget = new EventTarget();
 
 // 為了支援 useParams，我們需要導出一個包裹了路由環境的組件

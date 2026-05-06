@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type RefObject } from 'react';
 
 interface UseAnimationPauseParams {
   selectedMvId: string | null;
@@ -6,6 +6,7 @@ interface UseAnimationPauseParams {
   isFeedbackOpen: boolean;
   isAboutOpen: boolean;
   isMobile: boolean;
+  headerRef: RefObject<HTMLElement | null>;
 }
 
 export function useAnimationPause({
@@ -14,6 +15,7 @@ export function useAnimationPause({
   isFeedbackOpen,
   isAboutOpen,
   isMobile,
+  headerRef,
 }: UseAnimationPauseParams): boolean {
   const [isTabActive, setIsTabActive] = useState(() =>
     typeof document !== 'undefined' ? !document.hidden : true,
@@ -34,40 +36,33 @@ export function useAnimationPause({
     !isTabActive;
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        const titleEl = document.querySelector('.ztmy-cyber-title-crt') as HTMLElement;
-        const pulseEl = document.querySelector('header .animate-pulse') as HTMLElement;
+    const headerEl = headerRef.current;
+    if (!headerEl) return;
 
-        const isPaused = isGlobalPaused || !entry.isIntersecting;
-
-        if (titleEl) {
-          titleEl.style.animationPlayState = isPaused ? 'paused' : 'running';
-          titleEl.style.setProperty('--anim-state', isPaused ? 'paused' : 'running');
-        }
-        if (pulseEl) pulseEl.style.animationPlayState = isPaused ? 'paused' : 'running';
-      },
-      { threshold: 0 },
-    );
-
-    const headerEl = document.querySelector('header');
-    if (headerEl) {
-      observer.observe(headerEl);
-    } else {
-      const titleEl = document.querySelector('.ztmy-cyber-title-crt') as HTMLElement;
-      const pulseEl = document.querySelector('header .animate-pulse') as HTMLElement;
-
-      const isPaused = isGlobalPaused;
+    const applyPauseState = (isPaused: boolean) => {
+      const titleEl = headerEl.querySelector('.ztmy-cyber-title-crt') as HTMLElement;
+      const pulseEl = headerEl.querySelector('.animate-pulse') as HTMLElement;
 
       if (titleEl) {
         titleEl.style.animationPlayState = isPaused ? 'paused' : 'running';
         titleEl.style.setProperty('--anim-state', isPaused ? 'paused' : 'running');
       }
       if (pulseEl) pulseEl.style.animationPlayState = isPaused ? 'paused' : 'running';
-    }
+    };
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        applyPauseState(isGlobalPaused || !entry.isIntersecting);
+      },
+      { threshold: 0 },
+    );
+
+    observer.observe(headerEl);
+
+    applyPauseState(isGlobalPaused);
 
     return () => observer.disconnect();
-  }, [isGlobalPaused]);
+  }, [isGlobalPaused, headerRef]);
 
   return isGlobalPaused;
 }

@@ -1,3 +1,4 @@
+import React, { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { shouldShowSecondaryLang } from '@/i18n'
 import { VERSION_CONFIG } from '@/config/version'
@@ -17,7 +18,7 @@ interface AppFooterProps {
   systemStatus?: { maintenance: boolean; type?: 'data' | 'ui'; eta?: string | null; buildTime?: string | null; version?: string };
 }
 
-export function AppFooter({ is404Route, isGeoTooltipOpen, setIsGeoTooltipOpen, geoInfo, systemStatus }: AppFooterProps) {
+export const AppFooter = memo(function AppFooter({ is404Route, isGeoTooltipOpen, setIsGeoTooltipOpen, geoInfo, systemStatus }: AppFooterProps) {
   const { t, i18n } = useTranslation()
 
   return (
@@ -381,4 +382,4 @@ export function AppFooter({ is404Route, isGeoTooltipOpen, setIsGeoTooltipOpen, g
         </div>
       </footer>
   )
-}
+})

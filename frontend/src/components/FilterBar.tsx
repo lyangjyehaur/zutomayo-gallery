@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { shouldShowSecondaryLang } from '@/i18n';
 import { ALBUM_CATEGORIES } from '@/config/albums';
@@ -34,7 +34,7 @@ interface FilterBarProps {
   };
 }
 
-export function FilterBar({
+export const FilterBar = memo(function FilterBar({
   search,
   setSearch,
   yearFilter,
@@ -411,4 +411,4 @@ export function FilterBar({
       </div>
     </>
   );
-}
+})
