@@ -5,7 +5,7 @@ const generateShortId = () => nanoid(16);
 import { TwitterService, buildCanonicalTweetUrl, extractTweetId, normalizeTweetUrl } from './twitter.service.js';
 import { backupImageToR2 } from './r2.service.js';
 import { errorEventEmitter } from './error-events.service.js';
-import fetch from 'node-fetch';
+import { NotificationService } from './notification.service.js';
 import { Op } from 'sequelize';
 
 const parser = new Parser();
@@ -140,17 +140,12 @@ export const TwitterMonitorService = {
 
             // 發送 Bark 推送通知
             if (BARK_URL) {
-              try {
-                const message = `發現新推文！來自 ${tweetAuthor}\n包含 ${mediaList.length} 個媒體\n${tweetText}`;
-                const title = encodeURIComponent('FanArt 監聽通知');
-                const body = encodeURIComponent(message);
-                const barkReqUrl = `${BARK_URL}/${title}/${body}?url=${encodeURIComponent(sourceTweetLink)}`;
-                
-                await fetch(barkReqUrl);
-                console.log('[Twitter Monitor] Bark notification sent.');
-              } catch (barkError) {
-                console.error('[Twitter Monitor] Failed to send Bark notification:', barkError);
-              }
+              await NotificationService.send({
+                type: 'new-fanart',
+                title: 'FanArt 監聽通知',
+                body: `發現新推文！來自 ${tweetAuthor}\n包含 ${mediaList.length} 個媒體\n${tweetText}`,
+                url: sourceTweetLink,
+              });
             }
           }
         }
