@@ -80,6 +80,32 @@ export const NotificationService = {
     body: string;
     url?: string;
   }): Promise<boolean> => {
-    return NotificationService.sendBarkNotification({ title, body, url });
+    const barkResult = await NotificationService.sendBarkNotification({ title, body, url });
+
+    try {
+      const { PushSubscriptionModel } = await import('../models/push-subscription.model.js');
+      const { PushService } = await import('./push.service.js');
+      const subscriptions = await PushSubscriptionModel.findAll();
+      const payload = { type, title, body, url };
+      await Promise.allSettled(
+        subscriptions.map(sub =>
+          PushService.sendNotification(
+            { endpoint: (sub as any).endpoint, keys: { p256dh: (sub as any).p256dh, auth: (sub as any).auth } },
+            payload,
+          )
+        )
+      );
+    } catch (err) {
+      logger.warn({ err }, 'Failed to send push notifications');
+    }
+
+    try {
+      const { TelegramBotService } = await import('./telegram-bot.service.js');
+      await TelegramBotService.sendReviewNotification({ title, body, url });
+    } catch (err) {
+      logger.warn({ err }, 'Failed to send Telegram notification');
+    }
+
+    return barkResult;
   },
 };

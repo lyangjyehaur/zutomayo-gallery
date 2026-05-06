@@ -112,6 +112,17 @@
 | **POST** | `/api/fanarts/:id/status` | 管理員 | 更新指定二創圖片的狀態 (例如標記為 `organized` 或 `rejected`)。<br>Body: `{ "status": "organized" }` |
 | **POST** | `/api/webhook/waline` | 公開 | 接收 Waline 留言系統的 Webhook 推播，可用於觸發網站快取更新或社群通知。 |
 
+---
+
+## 5.5 Web Push 訂閱 (Push Subscriptions)
+*(路徑: `/api/push`)*
+
+| 請求方法 | 端點路徑 | 權限 | 功能說明 |
+| :--- | :--- | :--- | :--- |
+| **POST** | `/subscribe` | 管理員 | 註冊瀏覽器 Web Push 訂閱。<br>Body: `{ "endpoint": "https://...", "keys": { "p256dh": "...", "auth": "..." } }` |
+| **DELETE** | `/unsubscribe` | 管理員 | 移除 Web Push 訂閱。<br>Body: `{ "endpoint": "https://..." }` |
+| **GET** | `/public-key` | 公開 | 取得 VAPID 公鑰，前端用於註冊 Push 訂閱。回傳 `{ "publicKey": "..." }` |
+
 ### GET `/api/fanarts/gallery` - FanArt 畫廊查詢
 
 **Query Parameters:**
