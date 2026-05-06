@@ -699,7 +699,14 @@ export default function FancyboxViewer({
     });
   }, [processedImages, itemsPerPage, getPhotosFromRange, datasetKey]);
 
-  const pendingExternalLoadRef = useRef(false);
+  const externalDataReadyRef = useRef<((value: void) => void) | null>(null);
+
+  useEffect(() => {
+    if (externalDataReadyRef.current && displayedCountRef.current < processedImages.length) {
+      externalDataReadyRef.current();
+      externalDataReadyRef.current = null;
+    }
+  }, [processedImages.length]);
 
   const loadMore = useCallback(async () => {
     const effectiveHasMore = hasMore || externalHasMore;
@@ -708,11 +715,60 @@ export default function FancyboxViewer({
     setLoadingMore(true);
 
     if (!hasMore && externalHasMore && onExternalLoadMore) {
+      const prevLength = processedImages.length;
       try {
         await onExternalLoadMore();
       } catch {
       }
-      pendingExternalLoadRef.current = true;
+
+      if (processedImages.length > prevLength) {
+        const startIndex = displayedCountRef.current;
+        const newPhotos = await getPhotosFromRange(startIndex, itemsPerPage);
+
+        if (newPhotos.length > 0) {
+          lastBatchStartRef.current = displayedCountRef.current;
+
+          setDisplayedPhotos((prev) => {
+            const existingKeys = new Set(prev.map(p => p.originalUrl || p.full));
+            const uniqueNewPhotos = newPhotos.filter(p => !existingKeys.has(p.originalUrl || p.full));
+            if (uniqueNewPhotos.length === 0) return prev;
+            return [...prev, ...uniqueNewPhotos];
+          });
+
+          setCurrentPage((prev) => prev + 1);
+        }
+
+        setHasMore(startIndex + newPhotos.length < processedImages.length);
+      } else {
+        await new Promise<void>((resolve) => {
+          externalDataReadyRef.current = resolve;
+          setTimeout(() => {
+            if (externalDataReadyRef.current === resolve) {
+              externalDataReadyRef.current = null;
+              resolve();
+            }
+          }, 3000);
+        });
+
+        const startIndex = displayedCountRef.current;
+        const newPhotos = await getPhotosFromRange(startIndex, itemsPerPage);
+
+        if (newPhotos.length > 0) {
+          lastBatchStartRef.current = displayedCountRef.current;
+
+          setDisplayedPhotos((prev) => {
+            const existingKeys = new Set(prev.map(p => p.originalUrl || p.full));
+            const uniqueNewPhotos = newPhotos.filter(p => !existingKeys.has(p.originalUrl || p.full));
+            if (uniqueNewPhotos.length === 0) return prev;
+            return [...prev, ...uniqueNewPhotos];
+          });
+
+          setCurrentPage((prev) => prev + 1);
+        }
+
+        setHasMore(startIndex + newPhotos.length < processedImages.length);
+      }
+
       setLoadingMore(false);
       return;
     }
@@ -736,28 +792,6 @@ export default function FancyboxViewer({
     setHasMore(startIndex + newPhotos.length < processedImages.length);
     setLoadingMore(false);
   }, [externalHasMore, getPhotosFromRange, hasMore, itemsPerPage, loadingMore, onExternalLoadMore, processedImages.length]);
-
-  useEffect(() => {
-    if (pendingExternalLoadRef.current && displayedCountRef.current < processedImages.length) {
-      pendingExternalLoadRef.current = false;
-      setLoadingMore(true);
-      const startIndex = displayedCountRef.current;
-      getPhotosFromRange(startIndex, itemsPerPage).then((newPhotos) => {
-        if (newPhotos.length > 0) {
-          lastBatchStartRef.current = displayedCountRef.current;
-          setDisplayedPhotos((prev) => {
-            const existingKeys = new Set(prev.map(p => p.originalUrl || p.full));
-            const uniqueNewPhotos = newPhotos.filter(p => !existingKeys.has(p.originalUrl || p.full));
-            if (uniqueNewPhotos.length === 0) return prev;
-            return [...prev, ...uniqueNewPhotos];
-          });
-          setCurrentPage((prev) => prev + 1);
-        }
-        setHasMore(startIndex + newPhotos.length < processedImages.length);
-        setLoadingMore(false);
-      });
-    }
-  }, [processedImages.length, getPhotosFromRange, itemsPerPage]);
 
   // 實作無限滾動 (Infinite Scroll) - 僅在 autoLoadMore 開啟時生效
   useEffect(() => {

@@ -94,12 +94,13 @@ FancyboxViewer 支援從外部伺服器分頁載入資料，主要用於 FanArt 
 
 **外部載入流程：**
 1. 當 `processedImages` 全部顯示完畢（`!hasMore`）但 `externalHasMore` 為 true 時，點擊「載入更多」會呼叫 `onExternalLoadMore()`
-2. 呼叫後設定 `pendingExternalLoadRef = true` 並立即返回，等待父層更新 `images` prop
-3. 當 `processedImages.length` 增加時，`useEffect` 偵測到 `pendingExternalLoadRef`，自動從新資料中載入下一批圖片
-4. 所有載入操作都有去重保險（以 `originalUrl` 或 `full` 為 key），避免重複顯示
+2. 呼叫後檢查 `processedImages.length` 是否已增加（React 可能在 await 期間完成狀態更新）
+3. 若已增加，直接從新資料中載入下一批圖片並更新 `hasMore`
+4. 若尚未增加，透過 `externalDataReadyRef` 註冊一個 Promise resolve，等待 `processedImages.length` 變化時由 `useEffect` 觸發 resolve（最長等待 3 秒超時）
+5. 所有載入操作都有去重保險（以 `originalUrl` 或 `full` 為 key），避免重複顯示
 
-**為什麼需要 `pendingExternalLoadRef`：**
-`onExternalLoadMore()` 是非同步的，呼叫後 `processedImages` 不會立即更新。如果直接嘗試讀取新圖片，會拿到舊資料導致顯示空白。透過 ref 標記 + `useEffect` 監聽 `processedImages.length` 變化，確保新資料到達後才進行渲染。
+**為什麼需要 `externalDataReadyRef`：**
+`onExternalLoadMore()` 是非同步的，呼叫後 `processedImages` 不會立即更新。如果直接嘗試讀取新圖片，會拿到舊資料導致顯示空白。透過 ref + `useEffect` 監聽 `processedImages.length` 變化的機制，確保新資料到達後才進行渲染。相比舊的 `pendingExternalLoadRef` 輪詢方案，新方案使用事件驅動的方式，更可靠且不會因 React 批處理時序問題而遺漏更新。
 
 ---
 *備註：如果你在維護時發現排版又被撐開了，請優先檢查是否有新的外掛或組件（例如 Waline 評論）在最外層使用了 `flex` 且沒有加上 `min-w-0` 的束縛。*

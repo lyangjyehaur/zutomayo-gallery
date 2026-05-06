@@ -150,7 +150,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
         if (!mv.albums) {
           matchAlbum = false;
         } else if (Array.isArray(mv.albums)) {
-          matchAlbum = mv.albums.map(a => typeof a === 'object' ? (a as any).name.trim() : a.trim()).includes(filterAlbum);
+          matchAlbum = mv.albums.map((a: any) => typeof a === 'object' ? String(a?.name ?? '').trim() : String(a).trim()).includes(filterAlbum);
         } else if (typeof mv.albums === 'string') {
           const albumList = (mv.albums as string).split(',').map(a => a.trim());
           matchAlbum = albumList.includes(filterAlbum);
@@ -252,8 +252,8 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
 
   const loadMoreFromServer = useCallback(async () => {
     if (isLoadingGallery || !galleryMeta.hasMore) return;
-    await fetchGalleryPage(galleryFanarts.length, true, false);
-  }, [fetchGalleryPage, galleryFanarts.length, galleryMeta.hasMore, isLoadingGallery]);
+    await fetchGalleryPage(galleryMeta.offset + galleryMeta.limit, true, false);
+  }, [fetchGalleryPage, galleryMeta.offset, galleryMeta.limit, galleryMeta.hasMore, isLoadingGallery]);
 
   useEffect(() => {
     void fetchSummary();
