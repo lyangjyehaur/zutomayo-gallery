@@ -174,6 +174,8 @@ export const getFanartGallery = async (req: Request, res: Response) => {
   const seed = String(q.seed || '').trim();
   const sort = String(q.sort || 'random');
 
+  const groupInclude = { model: MediaGroupModel, as: 'group', where: { status: 'organized' }, required: true };
+
   const orderMap: Record<string, any[]> = {
     random: seed
       ? [sequelize.literal('sort_key ASC'), ['group_id', 'ASC'], ['id', 'ASC']]
@@ -183,46 +185,97 @@ export const getFanartGallery = async (req: Request, res: Response) => {
     likes: [[{ model: MediaGroupModel, as: 'group' }, 'like_count', 'DESC'], ['group_id', 'ASC'], ['id', 'ASC']],
   };
 
-  const findOptions: any = {
+  if (all) {
+    const findOptions: any = {
+      where,
+      distinct: true,
+      include: [groupInclude, mvInclude],
+      order: orderMap[sort] || orderMap.random
+    };
+    if (sort === 'random' && seed) {
+      findOptions.attributes = {
+        include: [
+          [sequelize.literal(`md5(${sequelize.escape(seed)} || "Media"."group_id"::text)`), 'sort_key']
+        ]
+      };
+    }
+    const rows = await MediaModel.findAll(findOptions);
+    const data = rows.map(r => r.toJSON());
+    res.json({ success: true, data });
+    return;
+  }
+
+  // Two-step pagination to avoid Sequelize subQuery + separate:true conflict
+  // Step 1: Get paginated IDs (no MV include, so subQuery:false works with sort_key)
+  const idFindOptions: any = {
     where,
     distinct: true,
-    include: [
-      { model: MediaGroupModel, as: 'group', where: { status: 'organized' }, required: true },
-      mvInclude
-    ],
-    order: orderMap[sort] || orderMap.random
+    include: [groupInclude],
+    order: orderMap[sort] || orderMap.random,
+    subQuery: false,
+    limit: limit + 1,
+    offset,
   };
 
   if (sort === 'random' && seed) {
-    findOptions.attributes = {
+    idFindOptions.attributes = {
       include: [
         [sequelize.literal(`md5(${sequelize.escape(seed)} || "Media"."group_id"::text)`), 'sort_key']
       ]
     };
   }
 
-  if (!all) {
-    findOptions.limit = limit + 1;
-    findOptions.offset = offset;
-  }
+  const idRows = await MediaModel.findAll(idFindOptions);
+  const ids = idRows.map(r => r.get('id') as string);
+  const hasMore = ids.length > limit;
+  const slicedIds = ids.slice(0, limit);
 
-  const rows = await MediaModel.findAll(findOptions);
-  const hasMore = !all && rows.length > limit;
-  const slicedRows = !all ? rows.slice(0, limit) : rows;
-  const data = slicedRows.map(r => r.toJSON());
-
-  if (all) {
-    res.json({ success: true, data });
+  if (slicedIds.length === 0) {
+    let total: number | null = null;
+    if (withTotal) {
+      total = await MediaModel.count({
+        where,
+        include: [groupInclude],
+        distinct: true,
+        col: 'id'
+      });
+    }
+    res.json({ success: true, data: [], meta: { limit, offset, total, hasMore } });
     return;
   }
+
+  // Step 2: Fetch full data for those IDs (with MV separate:true, no LIMIT/OFFSET needed)
+  const dataFindOptions: any = {
+    where: { id: { [Op.in]: slicedIds } },
+    include: [
+      { model: MediaGroupModel, as: 'group', required: true },
+      mvInclude
+    ],
+  };
+
+  if (sort === 'random' && seed) {
+    dataFindOptions.attributes = {
+      include: [
+        [sequelize.literal(`md5(${sequelize.escape(seed)} || "Media"."group_id"::text)`), 'sort_key']
+      ]
+    };
+    dataFindOptions.order = [sequelize.literal('sort_key ASC'), ['group_id', 'ASC'], ['id', 'ASC']];
+  } else {
+    dataFindOptions.order = orderMap[sort] || orderMap.random;
+  }
+
+  const rows = await MediaModel.findAll(dataFindOptions);
+
+  const idOrder = new Map(slicedIds.map((id, idx) => [id, idx]));
+  rows.sort((a, b) => (idOrder.get(a.get('id') as string) ?? 0) - (idOrder.get(b.get('id') as string) ?? 0));
+
+  const data = rows.map(r => r.toJSON());
 
   let total: number | null = null;
   if (withTotal) {
     total = await MediaModel.count({
       where,
-      include: [
-        { model: MediaGroupModel, as: 'group', where: { status: 'organized' }, required: true }
-      ],
+      include: [groupInclude],
       distinct: true,
       col: 'id'
     });

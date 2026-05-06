@@ -67,6 +67,12 @@ export const globalErrorHandler = (
     message = '無效的 JSON 格式';
     code = 'INVALID_JSON';
   }
+  // Sequelize 資料庫錯誤
+  else if (err.name && String(err.name).startsWith('Sequelize')) {
+    statusCode = 500;
+    message = '資料庫查詢錯誤';
+    code = 'DATABASE_ERROR';
+  }
   else if (typeof statusFromError === 'number') {
     statusCode = statusFromError;
     if (codeFromError) code = codeFromError;
