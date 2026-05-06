@@ -5,12 +5,44 @@ import { MediaGroupModel, MediaModel, MVModel, MVMediaModel, sequelize } from '.
 import { TwitterService } from '../services/twitter.service.js';
 import { backupImageToR2 } from '../services/r2.service.js';
 import { logger } from '../utils/logger.js';
+import { isTweetSourceMedia } from '../utils/media-source.js';
 
 const clampInt = (value: unknown, fallback: number, min: number, max: number): number => {
   const n = Number(value);
   if (!Number.isFinite(n)) return fallback;
   const i = Math.floor(n);
   return Math.max(min, Math.min(max, i));
+};
+
+const buildLikePatternSql = (
+  columns: string[],
+  patterns: string[],
+  replacements: Record<string, any>,
+  prefix: string,
+) => {
+  return patterns
+    .map((pattern, idx) => {
+      const key = `${prefix}${idx}`;
+      replacements[key] = pattern;
+      return `(${columns.map((column) => `${column} ILIKE :${key}`).join(' OR ')})`;
+    })
+    .join(' OR ');
+};
+
+const buildTweetGroupSql = (groupAlias: string, mediaAlias: string, replacements: Record<string, any>) => {
+  const sourceSql = buildLikePatternSql(
+    [`${groupAlias}.source_url`],
+    ['%x.com/%/status/%', '%twitter.com/%/status/%', '%mobile.twitter.com/%/status/%'],
+    replacements,
+    `${groupAlias}_source_`,
+  );
+  const mediaSql = buildLikePatternSql(
+    [`${mediaAlias}.url`, `${mediaAlias}.original_url`],
+    ['%pbs.twimg.com%', '%video.twimg.com%'],
+    replacements,
+    `${mediaAlias}_media_`,
+  );
+  return `(${sourceSql} OR EXISTS (SELECT 1 FROM media ${mediaAlias} WHERE ${mediaAlias}.group_id = ${groupAlias}.id AND (${mediaSql})))`;
 };
 
 export const listMediaGroups = async (req: Request, res: Response) => {
@@ -21,6 +53,7 @@ export const listMediaGroups = async (req: Request, res: Response) => {
 
   const whereClauses: string[] = [];
   const replacements: Record<string, any> = { limit, offset };
+  const tweetGroupSql = buildTweetGroupSql('g', 'm0', replacements);
 
   if (status) {
     whereClauses.push(`g.status = :status`);
@@ -32,8 +65,15 @@ export const listMediaGroups = async (req: Request, res: Response) => {
     );
     replacements.q = `%${q}%`;
   }
+  whereClauses.push(tweetGroupSql);
 
   const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+  const mediaJoinSql = buildLikePatternSql(
+    ['m.url', 'm.original_url'],
+    ['%pbs.twimg.com%', '%video.twimg.com%'],
+    replacements,
+    'm_media_',
+  );
 
   const countRow = await sequelize.query<{ total: number }>(
     `SELECT COUNT(*)::int AS total FROM media_groups g ${whereSql}`,
@@ -48,7 +88,7 @@ export const listMediaGroups = async (req: Request, res: Response) => {
       COUNT(m.id)::int AS media_count,
       COUNT(DISTINCT mm.mv_id)::int AS mv_count
     FROM media_groups g
-    LEFT JOIN media m ON m.group_id = g.id
+    LEFT JOIN media m ON m.group_id = g.id AND (${mediaJoinSql})
     LEFT JOIN mv_media mm ON mm.media_id = m.id
     ${whereSql}
     GROUP BY g.id
@@ -85,7 +125,11 @@ export const getMediaGroup = async (req: Request, res: Response) => {
     res.status(404).json({ success: false, error: 'Group not found' });
     return;
   }
-  res.json({ success: true, data: group.toJSON() });
+  const data = group.toJSON() as any;
+  if (Array.isArray(data.images)) {
+    data.images = data.images.filter((img: any) => isTweetSourceMedia(img));
+  }
+  res.json({ success: true, data });
 };
 
 export const updateMediaGroup = async (req: Request, res: Response) => {
@@ -170,6 +214,7 @@ export const listRepairMediaGroups = async (req: Request, res: Response) => {
     `(g.source_url IS NULL OR g.source_url = '' OR g.post_date IS NULL)`,
   ];
   const replacements: Record<string, any> = { limit, offset };
+  const tweetGroupSql = buildTweetGroupSql('g', 'm0', replacements);
 
   if (q) {
     whereClauses.push(
@@ -177,8 +222,15 @@ export const listRepairMediaGroups = async (req: Request, res: Response) => {
     );
     replacements.q = `%${q}%`;
   }
+  whereClauses.push(tweetGroupSql);
 
   const whereSql = `WHERE ${whereClauses.join(' AND ')}`;
+  const mediaJoinSql = buildLikePatternSql(
+    ['m.url', 'm.original_url'],
+    ['%pbs.twimg.com%', '%video.twimg.com%'],
+    replacements,
+    'm_media_',
+  );
 
   const countRow = await sequelize.query<{ total: number }>(
     `SELECT COUNT(*)::int AS total FROM media_groups g ${whereSql}`,
@@ -198,12 +250,13 @@ export const listRepairMediaGroups = async (req: Request, res: Response) => {
       (g.source_url IS NULL OR g.source_url = '') AS missing_source_url,
       (g.post_date IS NULL) AS missing_post_date
     FROM media_groups g
-    LEFT JOIN media m ON m.group_id = g.id
+    LEFT JOIN media m ON m.group_id = g.id AND (${mediaJoinSql})
     LEFT JOIN mv_media mm ON mm.media_id = m.id
     LEFT JOIN LATERAL (
       SELECT m2.url, m2.original_url
       FROM media m2
       WHERE m2.group_id = g.id
+        AND (${buildLikePatternSql(['m2.url', 'm2.original_url'], ['%pbs.twimg.com%', '%video.twimg.com%'], replacements, 'm2_media_')})
       ORDER BY m2.created_at ASC NULLS LAST, m2.id ASC
       LIMIT 1
     ) sm ON true

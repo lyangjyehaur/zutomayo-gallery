@@ -46,7 +46,11 @@ export function AdminOrphanMediaPage() {
         setGroupLoading(true)
         const res = await adminFetch(`${base}/system/media/groups?limit=500&offset=0`)
         const json = await res.json().catch(() => null)
-        const rows = Array.isArray(json?.items) ? json.items : Array.isArray(json?.data) ? json.data : []
+        const rows = Array.isArray(json?.data?.items)
+          ? json.data.items
+          : Array.isArray(json?.items)
+            ? json.items
+            : []
         setGroupOptions(
           rows
             .map((r: any) => {
@@ -136,7 +140,7 @@ export function AdminOrphanMediaPage() {
       <div className="border-4 border-black bg-card shadow-neo p-4">
         <div className="text-lg font-black uppercase tracking-widest">未歸屬媒體</div>
         <div className="text-xs font-mono opacity-60">
-          顯示 group_id 為空的 media。可輸入推文 URL，將媒體歸屬到對應的 media_group (以 source_url 唯一定位)。
+          顯示推文來源、且 group_id 為空的 media。可輸入推文 URL，將媒體歸屬到對應的 media_group (以 source_url 唯一定位)。
         </div>
       </div>
 
@@ -153,7 +157,7 @@ export function AdminOrphanMediaPage() {
           <Input
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            placeholder="type 篩選 (official/fanart/cover)"
+            placeholder="type 篩選 (tweet media only)"
           />
           <Button
             variant="neutral"

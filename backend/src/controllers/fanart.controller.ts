@@ -4,6 +4,7 @@ import { MediaGroupModel, MediaModel, MVMediaModel, MVModel, sequelize } from '.
 import { MVService } from '../services/mv.service.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { FANART_ALLOWED_TAGS } from '../constants/fanart-tags.js';
+import { isYoutubeMediaUrl } from '../utils/media-source.js';
 import {
   assignFanartMediaSchema,
   syncFanartMediaSchema,
@@ -25,6 +26,12 @@ const clampInt = (value: unknown, fallback: number, min: number, max: number): n
   if (!Number.isFinite(n)) return fallback;
   const i = Math.floor(n);
   return Math.max(min, Math.min(max, i));
+};
+
+const isFanartYoutubeMedia = (media: any): boolean => {
+  const url = String(media?.url || '');
+  const originalUrl = String(media?.original_url || media?.originalUrl || '');
+  return isYoutubeMediaUrl(url) || isYoutubeMediaUrl(originalUrl);
 };
 
 export const getUnorganizedFanarts = async (req: Request, res: Response) => {
@@ -52,7 +59,7 @@ export const getUnorganizedFanarts = async (req: Request, res: Response) => {
   const toOrganizeGroupIds: string[] = [];
 
   for (const group of groups) {
-    const images = group.images || [];
+    const images = (group.images || []).filter((m: any) => !isFanartYoutubeMedia(m));
     const hasAnyUnorganizedMedia = images.some((m: any) => !isMediaOrganized(m));
     if (hasAnyUnorganizedMedia) {
       keepGroups.push({
@@ -84,7 +91,7 @@ export const getDeletedFanarts = async (req: Request, res: Response) => {
     const group = row.toJSON() as any;
     return {
       ...group,
-      media: group.images || []
+      media: (group.images || []).filter((m: any) => !isFanartYoutubeMedia(m))
     };
   });
 
@@ -102,16 +109,9 @@ export const getLegacyFanarts = async (req: Request, res: Response) => {
   const data = rows
     .map(r => r.toJSON() as any)
     .filter((m: any) => {
-      const url = String(m.url || '');
-      const originalUrl = String(m.original_url || '');
-      const isYoutube =
-        url.includes('ytimg.com') ||
-        url.includes('youtube.com') ||
-        originalUrl.includes('ytimg.com') ||
-        originalUrl.includes('youtube.com');
       const missingGroup = !m.group_id || !m.group;
       const missingSource = !m.group?.source_url;
-      return isYoutube || missingGroup || missingSource;
+      return (missingGroup || missingSource) && !isFanartYoutubeMedia(m);
     });
 
   res.json({ success: true, data });
@@ -132,6 +132,18 @@ export const getFanartGallery = async (req: Request, res: Response) => {
   const source = String(q.source || '').trim();
 
   const andConditions: any[] = [{ type: 'fanart' }];
+  andConditions.push({
+    [Op.not]: {
+      [Op.or]: [
+        { url: { [Op.iLike]: '%ytimg.com%' } },
+        { url: { [Op.iLike]: '%youtube.com%' } },
+        { url: { [Op.iLike]: '%youtu.be%' } },
+        { original_url: { [Op.iLike]: '%ytimg.com%' } },
+        { original_url: { [Op.iLike]: '%youtube.com%' } },
+        { original_url: { [Op.iLike]: '%youtu.be%' } },
+      ],
+    },
+  });
   if (source) andConditions.push({ source });
   if (onlyCollab) andConditions.push({ tags: { [Op.contains]: ['tag:collab'] } });
   if (tagsAny.length > 0) {
@@ -215,7 +227,12 @@ export const getFanartGallerySummary = async (req: Request, res: Response) => {
     `
     SELECT t.tag, COUNT(DISTINCT m.id)::int AS count
     FROM unnest(ARRAY[:tags]::text[]) AS t(tag)
-    JOIN media m ON m.type = 'fanart' AND m.tags @> to_jsonb(t.tag::text)
+    JOIN media m ON m.type = 'fanart'
+      AND m.tags @> to_jsonb(t.tag::text)
+      AND NOT (
+        m.url ILIKE '%ytimg.com%' OR m.url ILIKE '%youtube.com%' OR m.url ILIKE '%youtu.be%'
+        OR m.original_url ILIKE '%ytimg.com%' OR m.original_url ILIKE '%youtube.com%' OR m.original_url ILIKE '%youtu.be%'
+      )
     JOIN media_groups g ON g.id = m.group_id AND g.status = 'organized'
     ${sourceFilter.replace(':source', ':source_for_tag')}
     GROUP BY t.tag
@@ -244,6 +261,9 @@ export const getFanartGallerySummary = async (req: Request, res: Response) => {
     whereParts.push(`m.source = :source`);
     replacements.source = source;
   }
+  whereParts.push(
+    `NOT (m.url ILIKE '%ytimg.com%' OR m.url ILIKE '%youtube.com%' OR m.url ILIKE '%youtu.be%' OR m.original_url ILIKE '%ytimg.com%' OR m.original_url ILIKE '%youtube.com%' OR m.original_url ILIKE '%youtu.be%')`,
+  );
 
   if (onlyCollab) {
     whereParts.push(`m.tags @> :collabTag::jsonb`);
@@ -291,10 +311,26 @@ export const getFanartsByTag = async (req: Request, res: Response) => {
 
   const rows = await MediaModel.findAll({
     where: {
-      type: 'fanart',
-      [Op.or]: [
-        { tags: { [Op.contains]: [tagId] } },
-        { tags: { [Op.contains]: [legacyTag] } }
+      [Op.and]: [
+        { type: 'fanart' },
+        {
+          [Op.not]: {
+            [Op.or]: [
+              { url: { [Op.iLike]: '%ytimg.com%' } },
+              { url: { [Op.iLike]: '%youtube.com%' } },
+              { url: { [Op.iLike]: '%youtu.be%' } },
+              { original_url: { [Op.iLike]: '%ytimg.com%' } },
+              { original_url: { [Op.iLike]: '%youtube.com%' } },
+              { original_url: { [Op.iLike]: '%youtu.be%' } },
+            ],
+          },
+        },
+        {
+          [Op.or]: [
+            { tags: { [Op.contains]: [tagId] } },
+            { tags: { [Op.contains]: [legacyTag] } }
+          ]
+        }
       ]
     },
     include: [{ model: MediaGroupModel, as: 'group' }],
@@ -317,7 +353,12 @@ export const getFanartTagSummary = async (req: Request, res: Response) => {
       SELECT tag, CASE WHEN tag LIKE 'tag:%' THEN substring(tag FROM 5) ELSE tag END AS legacy_tag
       FROM unnest(ARRAY[:tags]::text[]) AS tag
     ) t
-    JOIN media m ON m.type = 'fanart' AND (m.tags @> to_jsonb(t.tag::text) OR m.tags @> to_jsonb(t.legacy_tag::text))
+    JOIN media m ON m.type = 'fanart'
+      AND (m.tags @> to_jsonb(t.tag::text) OR m.tags @> to_jsonb(t.legacy_tag::text))
+      AND NOT (
+        m.url ILIKE '%ytimg.com%' OR m.url ILIKE '%youtube.com%' OR m.url ILIKE '%youtu.be%'
+        OR m.original_url ILIKE '%ytimg.com%' OR m.original_url ILIKE '%youtube.com%' OR m.original_url ILIKE '%youtu.be%'
+      )
     GROUP BY t.tag, t.legacy_tag
     `,
     {

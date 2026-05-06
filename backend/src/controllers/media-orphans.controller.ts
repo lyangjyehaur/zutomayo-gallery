@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { Op } from 'sequelize';
 import { MediaGroupModel, MediaModel, MVModel } from '../models/index.js';
+import { isTweetSourceMedia } from '../utils/media-source.js';
 
 const clampInt = (value: unknown, fallback: number, min: number, max: number): number => {
   const n = Number(value);
@@ -15,14 +16,26 @@ export const listOrphanMedia = async (req: Request, res: Response) => {
   const type = typeof req.query.type === 'string' ? req.query.type : '';
   const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
 
-  const where: any = { group_id: { [Op.is]: null } };
+  const where: any = {
+    group_id: { [Op.is]: null },
+    [Op.or]: [
+      { url: { [Op.iLike]: '%pbs.twimg.com%' } },
+      { url: { [Op.iLike]: '%video.twimg.com%' } },
+      { original_url: { [Op.iLike]: '%pbs.twimg.com%' } },
+      { original_url: { [Op.iLike]: '%video.twimg.com%' } },
+    ],
+  };
   if (type) where.type = type;
   if (q) {
-    where[Op.or] = [
-      { id: { [Op.iLike]: `%${q}%` } },
-      { url: { [Op.iLike]: `%${q}%` } },
-      { original_url: { [Op.iLike]: `%${q}%` } },
-      { caption: { [Op.iLike]: `%${q}%` } },
+    where[Op.and] = [
+      {
+        [Op.or]: [
+          { id: { [Op.iLike]: `%${q}%` } },
+          { url: { [Op.iLike]: `%${q}%` } },
+          { original_url: { [Op.iLike]: `%${q}%` } },
+          { caption: { [Op.iLike]: `%${q}%` } },
+        ],
+      },
     ];
   }
 
@@ -43,10 +56,14 @@ export const listOrphanMedia = async (req: Request, res: Response) => {
     distinct: true,
   });
 
+  const items = result.rows
+    .map((r) => r.toJSON() as any)
+    .filter((m) => isTweetSourceMedia(m));
+
   res.json({
     success: true,
     data: {
-      items: result.rows.map((r) => r.toJSON()),
+      items,
       total: result.count,
       limit,
       offset,
@@ -74,6 +91,10 @@ export const assignOrphanMediaGroup = async (req: Request, res: Response) => {
   const media = await MediaModel.findByPk(mediaId);
   if (!media) {
     res.status(404).json({ success: false, error: 'Media not found' });
+    return;
+  }
+  if (!isTweetSourceMedia(media.toJSON() as any)) {
+    res.status(400).json({ success: false, error: 'Only tweet-source media can be assigned here' });
     return;
   }
 
@@ -118,4 +139,3 @@ export const unassignOrphanMediaGroup = async (req: Request, res: Response) => {
   await media.update({ group_id: null });
   res.json({ success: true, data: true });
 };
-

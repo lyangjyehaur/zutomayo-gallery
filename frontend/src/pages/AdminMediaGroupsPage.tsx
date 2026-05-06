@@ -467,7 +467,10 @@ export function AdminMediaGroupsPage() {
 
   return (
     <div className="p-6 flex flex-col gap-4">
-      <AdminPageHeader title="推文分組" description="以 media_groups（推文）為第一級實體管理 media 與其 MV/tag 關聯。" />
+      <AdminPageHeader
+        title="推文分組"
+        description="只處理推文來源的媒體分組，YouTube cover 不會列入這個維護流程。"
+      />
 
       {error ? (
         <Alert variant="destructive">

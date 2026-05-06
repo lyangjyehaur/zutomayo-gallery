@@ -640,6 +640,8 @@ function App({
       const newFavs = isRemoving
         ? currentFavs.filter((favId) => favId !== id)
         : [...currentFavs, id];
+      // 同步更新 ref，確保 filteredData 在下一次渲染時讀到最新值
+      favoritesRef.current = newFavs;
       setFavorites(newFavs);
       if (showFavOnly) {
         setFavVersion((v) => v + 1);
@@ -663,19 +665,21 @@ function App({
           action: {
             label: "復原",
             onClick: () => {
-              setFavorites((prev) => {
-                if (prev.includes(id)) return prev;
-                const restoredFavs = [...prev, id];
-                if (!storage.set(STORAGE_KEYS.FAVORITES, restoredFavs)) {
-                  toast.error("收藏復原失敗，無法持久化保存");
-                }
-                if (typeof window !== "undefined" && "BroadcastChannel" in window) {
-                  const channel = new BroadcastChannel("favorites_sync");
-                  channel.postMessage(restoredFavs);
-                  channel.close();
-                }
-                return restoredFavs;
-              });
+              if (favoritesRef.current.includes(id)) return;
+              const restoredFavs = [...favoritesRef.current, id];
+              favoritesRef.current = restoredFavs;
+              setFavorites(restoredFavs);
+              if (showFavOnly) {
+                setFavVersion((v) => v + 1);
+              }
+              if (!storage.set(STORAGE_KEYS.FAVORITES, restoredFavs)) {
+                toast.error("收藏復原失敗，無法持久化保存");
+              }
+              if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+                const channel = new BroadcastChannel("favorites_sync");
+                channel.postMessage(restoredFavs);
+                channel.close();
+              }
               toast("已加入收藏", { description: mvTitle });
             },
           },
