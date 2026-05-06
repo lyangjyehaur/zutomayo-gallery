@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, ReactNode } from "react"
 import { useTranslation } from "react-i18next"
+import { shouldShowSecondaryLang } from "@/i18n"
 import { cn } from "@/lib/utils"
 
 type Props = {
@@ -42,7 +43,7 @@ function usePrefersReducedMotion() {
 }
 
 export default function ImageCard({ imageUrl, caption, className, children, media, isPaused, lang }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [isLoaded, setIsLoaded] = useState(false)
   const [isOverflow, setIsOverflow] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
@@ -156,7 +157,9 @@ export default function ImageCard({ imageUrl, caption, className, children, medi
               <div className="size-5 border-2 border-black/10 border-t-black animate-spin rounded-full" />
               <span className="text-[8px] font-black uppercase tracking-tighter flex flex-col items-center leading-tight">
                 <span className="opacity-40 tracking-normal">{t("app.syncing_visual", "同步視覺中...")}</span>
+                {shouldShowSecondaryLang(i18n.language) && (
                 <span className="font-mono opacity-20 normal-case">Syncing_Visual...</span>
+                )}
               </span>
             </div>
             {imageUrl && (

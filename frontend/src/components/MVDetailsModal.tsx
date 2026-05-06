@@ -21,6 +21,7 @@ import { CoverCarousel } from './MVCard';
 import './MVDetailsModal.css';
 import { MODAL_THEME } from '@/lib/theme';
 import { useTranslation } from 'react-i18next';
+import { shouldShowSecondaryLang } from '@/i18n';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
@@ -50,7 +51,7 @@ interface MVDetailsModalProps {
  * 3. 通過 CSS 和事件管理確保兩者正確協作
  */
 export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata }: MVDetailsModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const suppressCloseNavigationRef = useRef(false);
@@ -669,17 +670,23 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata }: MV
                     <span className="text-[10px] font-black uppercase tracking-widest flex flex-col leading-tight min-w-0">
                       <span className="tracking-normal flex items-baseline gap-1 min-[430px]:gap-1.5 opacity-60 min-w-0">
                         <span className="whitespace-nowrap">{t('app.signal_source', '訊號源')}</span>
+                        {shouldShowSecondaryLang(i18n.language) && (
                         <span className="text-[8px] font-mono normal-case truncate">Signal_Source</span>
+                        )}
                       </span>
                       {videoPlatform === 'youtube' && isChinaIP ? (
                         <span className="tracking-normal text-red-500 flex items-baseline gap-1 min-[430px]:gap-1.5 min-w-0">
                           <span className="whitespace-nowrap">{t('app.disconnected', '已斷開')}</span>
+                          {shouldShowSecondaryLang(i18n.language) && (
                           <span className="text-[8px] font-mono normal-case truncate">Disconnected</span>
+                          )}
                         </span>
                       ) : (
                         <span className="tracking-normal text-green-500 flex items-baseline gap-1 min-[430px]:gap-1.5 min-w-0">
                           <span className="whitespace-nowrap">{t('app.connected', '已連線')}</span>
+                          {shouldShowSecondaryLang(i18n.language) && (
                           <span className="text-[8px] font-mono normal-case truncate">Connected</span>
+                          )}
                         </span>
                       )}
                     </span>
@@ -756,7 +763,9 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata }: MV
                               </div>
                               <span className="glitch-text text-red-400 font-black tracking-widest text-[8px] min-[430px]:text-[10px] uppercase flex flex-col items-center leading-tight opacity-70">
                                 <span className="tracking-normal">{t('app.signal_disconnected', '訊號源斷開')}</span>
+                                {shouldShowSecondaryLang(i18n.language) && (
                                 <span className="text-[6px] min-[430px]:text-[8px] font-mono opacity-80 normal-case mt-0.5">Signal_Disconnected</span>
+                                )}
                               </span>
                             </div>
                             <div className="bg-black/60 backdrop-blur-sm px-4 py-2 border-2 border-red-500/50 text-red-400 text-xs min-[430px]:text-sm font-bold flex items-center gap-2">
@@ -772,7 +781,9 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata }: MV
                             </div>
                             <span className="glitch-text text-black font-black tracking-widest text-[8px] min-[430px]:text-[10px] uppercase flex flex-col items-center leading-tight opacity-70">
                               <span className="tracking-normal">{t('app.init_signal', '初始化訊號串流')}</span>
+                              {shouldShowSecondaryLang(i18n.language) && (
                               <span className="text-[6px] min-[430px]:text-[8px] font-mono opacity-80 normal-case mt-0.5">Initialize_Signal_Stream</span>
+                              )}
                             </span>
                           </div>
                         )}
@@ -825,7 +836,9 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata }: MV
                       <span className="text-[10px] font-black uppercase tracking-widest flex flex-col leading-tight">
                         <span className="tracking-normal flex items-baseline gap-1 min-[430px]:gap-1.5 opacity-60">
                           {t("app.video_info", "影像資訊")}
+                          {shouldShowSecondaryLang(i18n.language) && (
                           <span className="text-[6px] min-[430px]:text-[8px] font-mono normal-case">Video_Description_v{VERSION_CONFIG.app}</span>
+                          )}
                         </span>
                       </span>
                     </div>
@@ -916,9 +929,11 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata }: MV
                           <h3 className="text-lg font-black uppercase tracking-widest opacity-80">
                             {t("app.no_reference_art", "暫無設定圖資料")}
                           </h3>
+                          {shouldShowSecondaryLang(i18n.language) && (
                           <span className="text-[10px] font-mono opacity-40 mt-1">
                             NO_REFERENCE_ASSETS
                           </span>
+                          )}
                         </div>
                       </div>
                     )}
@@ -956,9 +971,11 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata }: MV
                       <h3 className="text-lg font-black uppercase tracking-widest opacity-80 mb-1">
                         {t("app.loading", "載入中...")}
                       </h3>
+                      {shouldShowSecondaryLang(i18n.language) && (
                       <span className="text-[10px] font-mono opacity-40 tracking-widest">
                         LOADING_ASSETS...
                       </span>
+                      )}
                     </div>
                   </div>
                 )}

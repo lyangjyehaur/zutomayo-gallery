@@ -5,8 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { resetPassword } from '@/lib/public-auth';
 import { AuthCard } from '@/components/auth/AuthCard';
+import { useTranslation } from 'react-i18next';
+import { shouldShowSecondaryLang } from '@/i18n';
 
 export function ResetPasswordPage() {
+  const { i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const params = React.useMemo(() => new URLSearchParams(location.search), [location.search]);
@@ -35,7 +38,9 @@ export function ResetPasswordPage() {
       <div className="space-y-2">
         <div className="text-xs font-black uppercase tracking-widest flex flex-col leading-tight">
           <span className="tracking-normal opacity-70">新密碼</span>
+          {shouldShowSecondaryLang(i18n.language) && (
           <span className="text-[10px] font-mono opacity-40 normal-case">NEW_PASSWORD</span>
+          )}
         </div>
         <Input
           value={password}
@@ -55,7 +60,9 @@ export function ResetPasswordPage() {
       >
         <span className="flex flex-col items-center leading-tight">
           <span className="tracking-normal">{isSubmitting ? '處理中...' : '確認重設'}</span>
+          {shouldShowSecondaryLang(i18n.language) && (
           <span className="text-[10px] font-mono opacity-60 normal-case">{isSubmitting ? 'APPLYING...' : 'APPLY_'}</span>
+          )}
         </span>
       </Button>
     </AuthCard>

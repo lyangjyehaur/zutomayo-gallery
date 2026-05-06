@@ -5,8 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { registerPublicUser } from '@/lib/public-auth';
 import { AuthCard } from '@/components/auth/AuthCard';
+import { useTranslation } from 'react-i18next';
+import { shouldShowSecondaryLang } from '@/i18n';
 
 export function PublicRegisterPage() {
+  const { i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const [email, setEmail] = React.useState('');
@@ -53,7 +56,9 @@ export function PublicRegisterPage() {
       <div className="space-y-2">
         <div className="text-xs font-black uppercase tracking-widest flex flex-col leading-tight">
           <span className="tracking-normal opacity-70">Email</span>
+          {shouldShowSecondaryLang(i18n.language) && (
           <span className="text-[10px] font-mono opacity-40 normal-case">EMAIL</span>
+          )}
         </div>
         <Input
           value={email}
@@ -68,7 +73,9 @@ export function PublicRegisterPage() {
       <div className="space-y-2">
         <div className="text-xs font-black uppercase tracking-widest flex flex-col leading-tight">
           <span className="tracking-normal opacity-70">密碼</span>
+          {shouldShowSecondaryLang(i18n.language) && (
           <span className="text-[10px] font-mono opacity-40 normal-case">PASSWORD</span>
+          )}
         </div>
         <Input
           value={password}
@@ -82,7 +89,9 @@ export function PublicRegisterPage() {
       <div className="space-y-2">
         <div className="text-xs font-black uppercase tracking-widest flex flex-col leading-tight">
           <span className="tracking-normal opacity-70">顯示名稱</span>
+          {shouldShowSecondaryLang(i18n.language) && (
           <span className="text-[10px] font-mono opacity-40 normal-case">DISPLAY_NAME</span>
+          )}
         </div>
         <Input
           value={displayName}
@@ -101,7 +110,9 @@ export function PublicRegisterPage() {
       >
         <span className="flex flex-col items-center leading-tight">
           <span className="tracking-normal">{isSubmitting ? '送出中...' : '送出註冊'}</span>
+          {shouldShowSecondaryLang(i18n.language) && (
           <span className="text-[10px] font-mono opacity-60 normal-case">{isSubmitting ? 'SUBMITTING...' : 'REGISTER_'}</span>
+          )}
         </span>
       </Button>
 

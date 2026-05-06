@@ -123,7 +123,7 @@ import { MVRouteBoundary } from "@/routes/MVRouteBoundary";
 import { IllustratorRouteBoundary } from "@/routes/IllustratorRouteBoundary";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
-import { isSupportedLang, normalizeLang } from "@/i18n";
+import { isSupportedLang, normalizeLang, shouldShowSecondaryLang } from "@/i18n";
 
 const AdminPage = React.lazy(() => import("@/pages/AdminPage").then((m) => ({ default: m.AdminPage })));
 const AdminArtistsPage = React.lazy(() => import("@/pages/AdminArtistsPage").then((m) => ({ default: m.AdminArtistsPage })));
@@ -1168,18 +1168,22 @@ function App({
       <div className={`min-h-screen bg-background flex flex-col items-center justify-center font-base text-foreground crt-lines transition-all duration-500 ease-in-out ${isTransitioningOut ? 'opacity-0 translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100'}`}>
         <div className="text-4xl font-black animate-glitch mb-4 uppercase tracking-tighter flex flex-col items-center leading-tight">
           <span className="tracking-normal">{t("app.connecting_db", "連線資料庫中...")}</span>
+          {shouldShowSecondaryLang(i18n.language) && (
           <span className="text-[14px] sm:text-[16px] font-mono opacity-60 normal-case mt-2">
             Connecting_Database...
           </span>
+          )}
         </div>
         <div className="w-64 h-4 border-2 border-border p-0.5 bg-card shadow-shadow">
           <div className="h-full bg-main animate-pulse w-1/3"></div>
         </div>
         <div className="mt-6 text-xs opacity-50 font-mono flex flex-col items-center leading-tight">
           <span className="tracking-normal mb-1">{t("app.weak_signal", "訊號微弱... 請稍候")}</span>
+          {shouldShowSecondaryLang(i18n.language) && (
           <span className="text-[10px] font-mono opacity-60 normal-case">
             SIGNAL_STRENGTH: WEAK... PLEASE_WAIT
           </span>
+          )}
         </div>
       </div>
     );
@@ -1196,9 +1200,11 @@ function App({
           
           <h2 className="text-2xl font-black mb-2 uppercase tracking-tighter flex flex-col items-center leading-tight">
             <span className="tracking-normal text-yellow-500">流量警告</span>
+            {shouldShowSecondaryLang(i18n.language) && (
             <span className="text-[10px] sm:text-xs font-mono opacity-60 normal-case mt-1 text-foreground">
               DATA_USAGE_WARNING
             </span>
+            )}
           </h2>
           
           <p className="text-sm font-bold opacity-80 mb-8 leading-relaxed">
@@ -1215,9 +1221,11 @@ function App({
             >
               {t("common.confirm", "確認並繼續")}
             </Button>
+            {shouldShowSecondaryLang(i18n.language) && (
             <p className="text-[10px] font-mono opacity-40 uppercase">
               By continuing, you accept the data usage
             </p>
+            )}
           </div>
         </div>
       </div>
@@ -1238,9 +1246,11 @@ function App({
       <div className="min-h-screen bg-background flex flex-col items-center justify-center font-base text-foreground crt-lines">
         <div className="text-2xl font-black mb-4 text-red-500 uppercase tracking-tighter flex flex-col items-center leading-tight">
           <span className="tracking-normal">{t("app.db_sync_failed", "資料庫同步失敗")}</span>
+          {shouldShowSecondaryLang(i18n.language) && (
           <span className="text-[10px] sm:text-xs font-mono opacity-60 normal-case mt-1">
             Database_Sync_Failed
           </span>
+          )}
         </div>
         <p className="text-sm opacity-70 mb-8">{error}</p>
         <Button onClick={() => window.location.reload()} variant="default" className="hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-[0px_0px_0px_0px_var(--border)]" data-umami-event="Z_Retry_Connection">{t("app.retry_connection", "重試連線")}</Button>
@@ -1542,9 +1552,11 @@ function App({
                                      group.heading.id === 'mini' ? t('app.album_category_mini', '迷你專輯') : 
                                      t('app.album_category_single', '單曲 / 其他')}
                                   </span>
+                                  {shouldShowSecondaryLang(i18n.language) && (
                                   <span className="text-[10px] font-mono opacity-50 normal-case">
                                     {group.heading.en}
                                   </span>
+                                  )}
                                 </div>
                             }
                             className="p-2 [&_[cmdk-group-items]]:flex [&_[cmdk-group-items]]:flex-col [&_[cmdk-group-items]]:gap-1"
@@ -1758,9 +1770,11 @@ function App({
               </div>
               <div className="flex flex-col items-center leading-tight mb-2">
                 <h3 className="text-xl font-black">{t("app.no_signal", "找不到訊號")}</h3>
+                {shouldShowSecondaryLang(i18n.language) && (
                 <span className="text-[10px] font-mono opacity-40">
                   NO_SIGNAL_FOUND
                 </span>
+                )}
               </div>
               <p className="text-sm opacity-60 mb-8 font-mono">{t("app.no_mv_found", "找不到符合檢索條件的 MV")}</p>
               <Button
@@ -1789,9 +1803,11 @@ function App({
               <i className="hn hn-spinner text-sm animate-spin"></i>
               <span className="flex flex-col leading-tight">
                 <span className="opacity-70">{t("common.loading", "載入中...")}</span>
+                {shouldShowSecondaryLang(i18n.language) && (
                 <span className="text-[10px] font-mono opacity-40 normal-case">
                   Loading Signal...
                 </span>
+                )}
               </span>
             </div>
           </div>
@@ -1804,9 +1820,11 @@ function App({
               <span className="w-12 h-0.5 bg-current"></span>
               <span className="flex flex-col items-center leading-tight">
                 <span className="opacity-70">{t("app.archive_boundary", "歸檔邊界")}</span>
+                {shouldShowSecondaryLang(i18n.language) && (
                 <span className="text-[10px] font-mono opacity-40">
                   END_OF_ARCHIVE
                 </span>
+                )}
               </span>
               <span className="w-12 h-0.5 bg-current"></span>
             </div>
@@ -1821,7 +1839,9 @@ function App({
               <div className="flex flex-col gap-1 md:gap-1.5 text-left">
                 <span className="text-xs md:text-sm font-black text-yellow-600 dark:text-yellow-400 flex flex-col md:flex-row md:items-center gap-1 md:gap-2 leading-tight">
                   <span>{t("app.fav_notice_1", "請注意：收藏功能基於瀏覽器本地存儲實現")}</span>
+                  {shouldShowSecondaryLang(i18n.language) && (
                   <span className="text-[10px] font-mono opacity-70 normal-case md:border-l-2 md:border-yellow-500/30 md:pl-2">LOCAL_STORAGE_WARNING</span>
+                  )}
                 </span>
                 <span className="text-[10px] md:text-xs opacity-80 text-yellow-600 dark:text-yellow-400/80 leading-relaxed">
                   {t("app.fav_notice_2", "若清除瀏覽器數據或更換設備，您的收藏項目將會丟失。")}
@@ -1860,9 +1880,11 @@ function App({
             <TooltipContent side="left" align="center" sideOffset={10}>
               <div className="flex flex-col gap-0.5">
                 <p className="text-xs font-black tracking-widest">{t("app.back_to_top", "返回頂部")}</p>
+                {shouldShowSecondaryLang(i18n.language) && (
                 <p className="text-[10px] font-mono opacity-60 normal-case">
                   TOP
                 </p>
+                )}
               </div>
             </TooltipContent>
           </Tooltip>
@@ -1888,9 +1910,11 @@ function App({
             <TooltipContent side="left" align="center" sideOffset={10}>
               <div className="flex flex-col gap-0.5">
                 <p className="text-xs font-black tracking-widest">{t("app.sort", "排序")}</p>
+                {shouldShowSecondaryLang(i18n.language) && (
                 <p className="text-[10px] font-mono opacity-60 normal-case">
                   SORT
                 </p>
+                )}
                 <p className="text-xs font-bold">
                   {sortOrder === "desc" ? t("app.newest_to_oldest", "最新 → 最舊") : t("app.oldest_to_newest", "最舊 → 最新")}
                 </p>
@@ -1915,9 +1939,11 @@ function App({
               <TooltipContent side="left" align="center" sideOffset={10}>
                 <div className="flex flex-col gap-0.5">
                   <p className="text-xs font-black tracking-widest">{t("app.install", "安裝 App")}</p>
+                  {shouldShowSecondaryLang(i18n.language) && (
                   <p className="text-[10px] font-mono opacity-60 normal-case">
                     INSTALL PWA
                   </p>
+                  )}
                   <p className="text-xs font-bold">
                     {t("app.install_pwa_desc", "將網站加入主畫面，享受全螢幕與離線瀏覽體驗！")}
                   </p>
@@ -1946,9 +1972,11 @@ function App({
             <TooltipContent side="left" align="center" sideOffset={10}>
               <div className="flex flex-col gap-0.5">
                 <p className="text-xs font-black tracking-widest">{t("app.favorite", "收藏")}</p>
+                {shouldShowSecondaryLang(i18n.language) && (
                 <p className="text-[10px] font-mono opacity-60 normal-case">
                   FAVORITES
                 </p>
+                )}
                 <p className="text-xs font-bold">
                   {showFavOnly ? t("app.back_to_all", "返回所有作品") : t("app.show_fav_only", "只看收藏")}
                 </p>
@@ -1979,7 +2007,9 @@ function App({
               <TooltipContent side="left" align="center" sideOffset={10}>
                 <div className="flex flex-col gap-0.5">
                   <p className="text-xs font-black tracking-widest">{t("submit.title", "投稿")}</p>
+                  {shouldShowSecondaryLang(i18n.language) && (
                   <p className="text-[10px] font-mono opacity-60 normal-case">SUBMIT</p>
+                  )}
                 </div>
               </TooltipContent>
             </Tooltip>
@@ -2055,9 +2085,11 @@ function App({
             <TooltipContent side="left" align="center" sideOffset={10}>
               <div className="flex flex-col gap-0.5">
                 <p className="text-xs font-black tracking-widest">{t("app.about_author", "碎碎念")}</p>
+                {shouldShowSecondaryLang(i18n.language) && (
                 <p className="text-[10px] font-mono opacity-60 normal-case">
                   ABOUT
                 </p>
+                )}
               </div>
             </TooltipContent>
           </Tooltip>
@@ -2121,7 +2153,9 @@ function App({
                           <h3 className="text-xl md:text-2xl font-black tracking-widest bg-black text-main px-3 py-1 inline-block">
                             {t("app.special_thanks", "特別感謝")}
                           </h3>
+                          {shouldShowSecondaryLang(i18n.language) && (
                           <p className="text-[10px] md:text-xs font-mono opacity-50 uppercase tracking-widest mt-2 pl-1 whitespace-nowrap">Special Thanks</p>
+                          )}
                         </div>
                         <div className="space-y-4 text-sm md:text-base font-medium">
                           <p>
@@ -2226,9 +2260,11 @@ function App({
             <TooltipContent side="left" align="center" sideOffset={10}>
               <div className="flex flex-col gap-0.5">
                 <p className="text-xs font-black tracking-widest">{t("app.feedback", "意見回饋")}</p>
+                {shouldShowSecondaryLang(i18n.language) && (
                 <p className="text-[10px] font-mono opacity-60 normal-case">
                   FEEDBACK
                 </p>
+                )}
               </div>
             </TooltipContent>
           </Tooltip>
@@ -2249,9 +2285,11 @@ function App({
             <TooltipContent side="left" align="center" sideOffset={10}>
               <div className="flex flex-col gap-0.5">
                 <p className="text-xs font-black tracking-widest">{t("app.speed_survey", "加載速度調查 (Demo)")}</p>
+                {shouldShowSecondaryLang(i18n.language) && (
                 <p className="text-[10px] font-mono opacity-60 normal-case">
                   SPEED_SURVEY
                 </p>
+                )}
               </div>
             </TooltipContent>
           </Tooltip>
@@ -2281,9 +2319,11 @@ function App({
                     <span className="opacity-90">
                       {t("app.footer_legal", "版權/法律聲明")}
                     </span>
+                    {shouldShowSecondaryLang(i18n.language) && (
                     <span className="font-mono opacity-60">
                       Legal_Signal_Broadcast
                     </span>
+                    )}
                   </div>
                 </div>
 
@@ -2316,7 +2356,7 @@ function App({
                         権利者様の方で掲載に問題がある場合や削除をご希望の際は、お手数ですがご連絡いただけますようお願い申し上げます。
                       </p>
                     )}
-                    {i18n.language !== 'en' && (
+                    {shouldShowSecondaryLang(i18n.language) && (
                       <p
                         lang="en"
                         className="text-[10px] leading-relaxed opacity-60"
@@ -2353,9 +2393,11 @@ function App({
                 <div className="flex flex-col gap-2">
                   <span className="text-xs font-black mb-2 opacity-30 flex flex-col leading-tight">
                     <span>{t("app.external_resources", "外部資源")}</span>
+                    {shouldShowSecondaryLang(i18n.language) && (
                     <span className="text-[10px] font-mono opacity-60">
                       External_Resources
                     </span>
+                    )}
                   </span>
                   <div className="flex flex-col gap-3">
                     <div className="flex flex-col gap-1 text-[10px] font-bold text-left">
@@ -2369,9 +2411,11 @@ function App({
                         <i className="hn hn-external-link text-[10px] opacity-50 shrink-0" />
                         <span className="flex items-center flex-wrap gap-x-1.5 leading-tight">
                           <span className="whitespace-nowrap">{t("app.pixel_icons", "像素圖示庫")}</span>
+                          {shouldShowSecondaryLang(i18n.language) && (
                           <span className="text-[10px] font-mono opacity-60 normal-case break-words">
                             HackerNoon Pixel Icons
                           </span>
+                          )}
                         </span>
                       </a>
                       <a
@@ -2382,9 +2426,11 @@ function App({
                         title="授權：CC BY 4.0 (CC BY 4.0 License)"
                       >
                         <span>{t("app.license", "授權：")} CC BY 4.0</span>
+                        {shouldShowSecondaryLang(i18n.language) && (
                         <span className="text-[8px] font-mono opacity-60">
                           License
                         </span>
+                        )}
                       </a>
                     </div>
 
@@ -2399,9 +2445,11 @@ function App({
                         <i className="hn hn-external-link text-[10px] opacity-50 shrink-0" />
                         <span className="flex items-center flex-wrap gap-x-1.5 leading-tight">
                           <span className="whitespace-nowrap">{t("app.pixel_font", "像素字型")}</span>
+                          {shouldShowSecondaryLang(i18n.language) && (
                           <span className="text-[10px] font-mono opacity-60 break-words">
                             Fusion Pixel Font
                           </span>
+                          )}
                         </span>
                       </a>
                       <a
@@ -2412,9 +2460,11 @@ function App({
                         title="授權：OFL 1.1 (SIL OFL 1.1)"
                       >
                         <span>{t("app.license", "授權：")} OFL 1.1</span>
+                        {shouldShowSecondaryLang(i18n.language) && (
                         <span className="text-[8px] font-mono opacity-60">
                           License
                         </span>
+                        )}
                       </a>
                     </div>
 
@@ -2429,9 +2479,11 @@ function App({
                         <i className="hn hn-external-link text-[10px] opacity-50 shrink-0" />
                         <span className="flex items-center flex-wrap gap-x-1.5 leading-tight">
                           <span className="whitespace-nowrap">{t("app.ui_design_system", "UI 設計系統")}</span>
+                          {shouldShowSecondaryLang(i18n.language) && (
                           <span className="text-[10px] font-mono opacity-60 break-words">
                             Neobrutalism UI
                           </span>
+                          )}
                         </span>
                       </a>
                       <span
@@ -2439,9 +2491,11 @@ function App({
                         title="授權：MIT (MIT License)"
                       >
                         <span>{t("app.license", "授權：")} MIT</span>
+                        {shouldShowSecondaryLang(i18n.language) && (
                         <span className="text-[8px] font-mono opacity-60">
                           License
                         </span>
+                        )}
                       </span>
                     </div>
 
@@ -2456,9 +2510,11 @@ function App({
                         <i className="hn hn-external-link text-[10px] opacity-50 shrink-0" />
                         <span className="flex items-center flex-wrap gap-x-1.5 leading-tight">
                           <span className="whitespace-nowrap">{t("app.lightbox_ui", "燈箱元件")}</span>
+                          {shouldShowSecondaryLang(i18n.language) && (
                           <span className="text-[10px] font-mono opacity-60 break-words">
                             Fancybox UI
                           </span>
+                          )}
                         </span>
                       </a>
                       <span
@@ -2466,9 +2522,11 @@ function App({
                         title="授權：GPLv3 (GPLv3 License)"
                       >
                         <span>{t("app.license", "授權：")} GPLv3</span>
+                        {shouldShowSecondaryLang(i18n.language) && (
                         <span className="text-[8px] font-mono opacity-60">
                           License
                         </span>
+                        )}
                       </span>
                     </div>
                   </div>
@@ -2652,9 +2710,11 @@ function App({
             <h2 className="text-xl font-black uppercase tracking-widest flex items-center gap-2">
               <i className="hn hn-message text-2xl"></i> {t("app.feedback", "意見回饋")}
             </h2>
+            {shouldShowSecondaryLang(i18n.language) && (
             <span className="text-[10px] font-bold opacity-50 font-mono normal-case">
               {t("app.feedback_subtitle", "Feedback")}
             </span>
+            )}
           </div>
           <p className="text-xs font-bold text-foreground/70 mt-1">
             {t("app.feedback_desc", "有任何建議或發現 Bug，歡迎在這裡留言告訴我！")}

@@ -3,6 +3,7 @@ import { Button } from "./button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { shouldShowSecondaryLang } from "@/i18n";
 
 type Theme = "light" | "dark";
 
@@ -11,7 +12,7 @@ interface ThemeToggleProps {
 }
 
 const ThemeToggle: React.FC<ThemeToggleProps> = ({ isIconOnly = false }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [theme, setTheme] = useState<Theme>(() => {
     // 從localStorage或系統偏好獲取主題
     if (typeof window !== "undefined") {
@@ -87,7 +88,9 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ isIconOnly = false }) => {
       <TooltipContent side="left" align="center" sideOffset={10}>
         <div className="flex flex-col gap-0.5">
           <p className="text-xs font-black tracking-widest">{t("app.lighting", "照明")}</p>
+          {shouldShowSecondaryLang(i18n.language) && (
           <p className="text-[10px] font-mono opacity-60 normal-case">ILLUMINATION</p>
+          )}
           <p className="text-xs font-bold">
             {theme === "light" ? t("app.turn_off_desc", "關閉光源，回歸「永遠深夜」") : t("app.turn_on_desc", "確認開燈嗎？「永遠深夜」才是最佳體驗")}
           </p>

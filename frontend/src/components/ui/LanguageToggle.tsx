@@ -12,7 +12,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "./dropdown-menu";
-import { isSupportedLang } from "@/i18n";
+import { isSupportedLang, shouldShowSecondaryLang } from "@/i18n";
 
 interface LanguageToggleProps {
   isIconOnly?: boolean;
@@ -96,7 +96,7 @@ export const LanguageToggle: React.FC<LanguageToggleProps> = ({ isIconOnly = fal
             >
               <div className="flex flex-col gap-0.5">
                 <p className="text-xs font-black tracking-widest">{t("app.language", "語言")}</p>
-                {i18n.language !== 'en' && (
+                {shouldShowSecondaryLang(i18n.language) && (
                   <p className="text-[10px] font-mono opacity-60 normal-case">LANGUAGE</p>
                 )}
                 <p className="text-xs font-bold">{t("app.change_language", "切換顯示語言")}</p>

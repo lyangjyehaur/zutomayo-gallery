@@ -32,6 +32,7 @@ interface MVCardProps {
 }
 
 import { useTranslation } from 'react-i18next';
+import { shouldShowSecondaryLang } from '@/i18n';
 
 const getRandomInt = (min: number, max: number) => {
   const a = Math.ceil(min);
@@ -42,7 +43,7 @@ const getRandomInt = (min: number, max: number) => {
 const sample = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
 
 export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, isPaused, forceLoad = false, hideCrt = false, initialDelay, mode = 'thumb' }: { coverImages: string[]; title: string; isPaused?: boolean; forceLoad?: boolean; hideCrt?: boolean; initialDelay?: number; mode?: import('@/lib/image').ProxyMode }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const urls = useMemo(() => {
     const normalized = (coverImages || []).map((u) => u?.trim()).filter(Boolean) as string[];
     return normalized;
@@ -225,7 +226,9 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
           <div className="size-5 border-2 border-black/10 border-t-black animate-spin rounded-full" />
           <span className="text-[8px] font-black uppercase tracking-tighter flex flex-col items-center leading-tight">
             <span className="opacity-40 tracking-normal">{t("app.syncing_visual", "同步視覺中...")}</span>
+            {shouldShowSecondaryLang(i18n.language) && (
             <span className="font-mono opacity-20 normal-case">Syncing_Visual...</span>
+            )}
           </span>
         </div>
       )}
@@ -348,7 +351,7 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
 });
 
 export const MVCard = memo(function MVCard({ mv, isFav, onToggleFav, onClick, isPaused }: MVCardProps & { isPaused?: boolean }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   
   // 處理藝術家名稱，過濾掉 "未知"、"Unknown" 等字串，若全為空則使用 t('app.unknown_artist')
   const artistName = mv.creators && mv.creators.length > 0
@@ -394,7 +397,9 @@ export const MVCard = memo(function MVCard({ mv, isFav, onToggleFav, onClick, is
               <div className="min-w-0 flex-1">
                 <div className={`mb-1 font-black opacity-70 flex items-baseline ${!isVeryCompact ? 'gap-1.5' : 'gap-1'}`}>
                   <span className={`tracking-normal ${!isVeryCompact ? 'tracking-[0.2em]' : 'tracking-[0.1em]'}`}>{t('app.release', '發行')}</span>
+                  {shouldShowSecondaryLang(i18n.language) && (
                   <span className="text-[8px] font-mono opacity-60 normal-case tracking-normal">Release</span>
+                  )}
                 </div>
                 <p className={`truncate text-center border-2 border-border bg-main text-main-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] h-[24px] flex items-center justify-center ${!isVeryCompact ? 'px-2' : 'px-1.5'}`}>
                   {mv.date}
@@ -407,11 +412,15 @@ export const MVCard = memo(function MVCard({ mv, isFav, onToggleFav, onClick, is
                   {!isCompact ? (
                     <>
                       <span className={`tracking-normal ${!isVeryCompact ? 'tracking-[0.2em]' : 'tracking-[0.1em]'}`}>{t('app.creator', '製作')}</span>
+                      {shouldShowSecondaryLang(i18n.language) && (
                       <span className="text-[8px] font-mono opacity-60 normal-case tracking-normal">Artist</span>
+                      )}
                     </>
                   ) : (
                     <>
+                      {shouldShowSecondaryLang(i18n.language) && (
                       <span className="text-[8px] font-mono opacity-60 normal-case tracking-normal">Artist</span>
+                      )}
                       <span className={`tracking-normal ${!isVeryCompact ? 'tracking-[0.2em]' : 'tracking-[0.1em]'}`}>{t('app.creator', '製作')}</span>
                     </>
                   )}
@@ -427,7 +436,9 @@ export const MVCard = memo(function MVCard({ mv, isFav, onToggleFav, onClick, is
               <div className="min-w-0 text-left shrink-0 ml-2">
                 <div className={`mb-1 font-black opacity-70 flex items-baseline justify-start ${!isVeryCompact ? 'gap-1.5' : 'gap-1'}`}>
                   <span className={`tracking-normal ${!isVeryCompact ? 'tracking-[0.2em]' : 'tracking-[0.1em]'}`}>{t('app.favorite', '收藏')}</span>
+                  {shouldShowSecondaryLang(i18n.language) && (
                   <span className="text-[8px] font-mono opacity-60 normal-case tracking-normal">Favorite</span>
+                  )}
                 </div>
                 <div 
                   onClick={(e) => e.stopPropagation()} 
@@ -452,7 +463,9 @@ export const MVCard = memo(function MVCard({ mv, isFav, onToggleFav, onClick, is
             <div className={`flex items-center justify-between border-t-2 border-border/20 ${!isVeryCompact ? 'pt-3' : 'pt-2'}`}>
               <div className={`font-black opacity-70 flex items-baseline ${!isVeryCompact ? 'tracking-[0.2em] gap-1.5' : 'tracking-[0.1em] gap-1'}`}>
                 <span className="tracking-normal">{t('app.favorite', '收藏')}</span>
+                {shouldShowSecondaryLang(i18n.language) && (
                 <span className="text-[8px] font-mono opacity-60 normal-case tracking-normal">Favorite</span>
+                )}
               </div>
               <div 
                 onClick={(e) => e.stopPropagation()} 

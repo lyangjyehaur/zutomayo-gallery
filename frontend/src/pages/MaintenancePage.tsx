@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { useTranslation } from "react-i18next";
+import { shouldShowSecondaryLang } from "@/i18n";
 import { VERSION_CONFIG } from "@/config/version";
 import { useGeoLabel } from "@/hooks/useGeoLabel";
 import {
@@ -15,7 +16,7 @@ interface MaintenancePageProps {
 }
 
 export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [timeLeft, setTimeLeft] = useState<string>('');
   const geoInfo = useGeoLabel();
 
@@ -85,10 +86,10 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
             <div className="w-2.5 h-2.5 bg-yellow-500 animate-pulse shadow-[2px_2px_0_0_rgba(234,179,8,0.4)]"></div>
             <span className="text-[10px] font-black uppercase tracking-widest flex flex-col leading-tight">
               <span className="tracking-normal flex items-baseline gap-1.5 opacity-60">
-                {t('maintenance.status', '系統狀態')} <span className="text-[8px] font-mono normal-case">System_Status</span>
+                {t('maintenance.status', '系統狀態')} {shouldShowSecondaryLang(i18n.language) && <span className="text-[8px] font-mono normal-case">System_Status</span>}
               </span>
               <span className="tracking-normal text-yellow-500 flex items-baseline gap-1.5">
-                {type === 'ui' ? t('maintenance.upgrading', '升級中') : t('maintenance.maintaining', '維護中')} <span className="text-[8px] font-mono normal-case">{type === 'ui' ? 'Upgrading' : 'Maintenance'}</span>
+                {type === 'ui' ? t('maintenance.upgrading', '升級中') : t('maintenance.maintaining', '維護中')} {shouldShowSecondaryLang(i18n.language) && <span className="text-[8px] font-mono normal-case">{type === 'ui' ? 'Upgrading' : 'Maintenance'}</span>}
               </span>
             </span>
           </div>
@@ -104,7 +105,7 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
               {type === 'ui' ? t('maintenance.title_ui', '系統升級中') : t('maintenance.title_sys', '系統維護中')}
             </h1>
             <p className="text-xs font-mono opacity-60 tracking-widest uppercase">
-              {type === 'ui' ? 'SYSTEM_UPGRADE_IN_PROGRESS' : 'SYSTEM_UNDER_MAINTENANCE'}
+              {shouldShowSecondaryLang(i18n.language) && (type === 'ui' ? 'SYSTEM_UPGRADE_IN_PROGRESS' : 'SYSTEM_UNDER_MAINTENANCE')}
             </p>
           </div>
           
@@ -119,11 +120,15 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
           <div className="mt-4 px-8 py-3 border-2 border-black bg-black text-main uppercase flex flex-col items-center gap-3 shadow-[4px_4px_0_0_rgba(0,0,0,0.3)]">
             <span className="flex flex-col items-center leading-tight opacity-80">
               <span className="tracking-normal font-bold text-xs">{t('maintenance.eta', '預估恢復時間')}</span>
+              {shouldShowSecondaryLang(i18n.language) && (
               <span className="text-[8px] font-mono opacity-60 normal-case mt-0.5">ESTIMATED_TIME_TO_RECOVERY</span>
+              )}
             </span>
             <span className="flex flex-col items-center leading-tight text-white glitch-text">
               <span className="tracking-normal font-black text-sm">{timeLeft || t('maintenance.unknown', '未定')}</span>
+              {shouldShowSecondaryLang(i18n.language) && (
               <span className="text-[8px] font-mono opacity-60 normal-case mt-0.5 text-main">{!eta ? 'UNKNOWN' : 'COUNTDOWN'}</span>
+              )}
             </span>
           </div>
         </div>
@@ -148,9 +153,9 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
               <i className="hn hn-heart-solid text-red-500 group-hover:animate-pulse text-[12px] leading-none"></i>
             </div>
             <span className="text-[8px] font-mono">
-              <span className="opacity-60">MADE_WITH{" "}</span>
+              {shouldShowSecondaryLang(i18n.language) && (<><span className="opacity-60">MADE_WITH{" "}</span>
               <i className="hn hn-heart-solid opacity-90 text-red-500 group-hover:animate-pulse text-[10px] leading-none"></i>{" "}
-              <span className="opacity-60">BY_DANERSAKA</span>
+              <span className="opacity-60">BY_DANERSAKA</span></>)}
             </span>
           </div>
         </a>

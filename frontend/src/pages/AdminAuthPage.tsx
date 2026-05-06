@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AuthCard } from "@/components/auth/AuthCard"
+import { useTranslation } from "react-i18next"
+import { shouldShowSecondaryLang } from "@/i18n"
 
 const getTo = (raw: string | null) => {
   const v = typeof raw === "string" ? raw : ""
@@ -18,6 +20,7 @@ const getTo = (raw: string | null) => {
 }
 
 export function AdminAuthPage() {
+  const { i18n } = useTranslation()
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const [isInitializing, setIsInitializing] = React.useState(true)
@@ -134,7 +137,9 @@ export function AdminAuthPage() {
           <Link to="/" className="hover:underline hover:text-main transition-colors uppercase">
             <span className="flex flex-col items-end leading-tight">
               <span className="tracking-normal">{'<'} 返回首頁</span>
+              {shouldShowSecondaryLang(i18n.language) && (
               <span className="text-[10px] font-mono opacity-60 normal-case">Return_Home</span>
+              )}
             </span>
           </Link>
         </div>
@@ -149,7 +154,9 @@ export function AdminAuthPage() {
           <div className="space-y-2">
             <div className="text-xs font-black uppercase tracking-widest flex flex-col leading-tight">
               <span className="tracking-normal opacity-70">帳號</span>
+              {shouldShowSecondaryLang(i18n.language) && (
               <span className="text-[10px] font-mono opacity-40 normal-case">USERNAME</span>
+              )}
             </div>
             <Input
               value={username}
@@ -165,7 +172,9 @@ export function AdminAuthPage() {
           <div className="space-y-2">
             <div className="text-xs font-black uppercase tracking-widest flex flex-col leading-tight">
               <span className="tracking-normal opacity-70">密碼</span>
+              {shouldShowSecondaryLang(i18n.language) && (
               <span className="text-[10px] font-mono opacity-40 normal-case">PASSWORD</span>
+              )}
             </div>
             <Input
               value={password}
@@ -187,7 +196,9 @@ export function AdminAuthPage() {
           >
             <span className="flex flex-col items-center leading-tight">
               <span className="tracking-normal">{isSubmitting ? "驗證中..." : "登入"}</span>
+              {shouldShowSecondaryLang(i18n.language) && (
               <span className="text-[10px] font-mono opacity-60 normal-case">{isSubmitting ? "VERIFYING..." : "LOGIN_"}</span>
+              )}
             </span>
           </Button>
 
@@ -198,7 +209,9 @@ export function AdminAuthPage() {
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-card px-2 text-black/50 font-bold flex flex-col items-center leading-tight">
                 <span className="tracking-normal">或</span>
+                {shouldShowSecondaryLang(i18n.language) && (
                 <span className="text-[10px] font-mono opacity-60 normal-case">OR</span>
+                )}
               </span>
             </div>
           </div>
@@ -213,7 +226,9 @@ export function AdminAuthPage() {
             <i className="hn hn-user text-xl" />
             <span className="flex flex-col items-center leading-tight">
               <span className="tracking-normal">使用 Passkey 登入</span>
+              {shouldShowSecondaryLang(i18n.language) && (
               <span className="text-[10px] font-mono opacity-60 normal-case">PASSKEY LOGIN</span>
+              )}
             </span>
           </Button>
           <div className="text-[10px] font-mono opacity-50 leading-tight -mt-2">

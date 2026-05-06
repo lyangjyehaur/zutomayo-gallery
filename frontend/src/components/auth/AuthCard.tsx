@@ -1,5 +1,7 @@
 import React from "react"
 import { cn } from "@/lib/utils"
+import { useTranslation } from "react-i18next"
+import { shouldShowSecondaryLang } from "@/i18n"
 
 type HeaderTone = "admin" | "public"
 
@@ -27,6 +29,7 @@ export function AuthCard({
   bodyClassName,
 }: AuthCardProps) {
   const headerBg = headerTone === "admin" ? "bg-black text-white" : "bg-black text-white"
+  const { i18n } = useTranslation();
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center font-mono text-foreground crt-lines p-4 relative overflow-hidden">
@@ -43,7 +46,9 @@ export function AuthCard({
             <i className={cn(iconClassName, "text-base")} />
             <span className="flex flex-col leading-tight">
               <span className="tracking-normal opacity-90">{title}</span>
+              {shouldShowSecondaryLang(i18n.language) && (
               <span className="text-[10px] font-mono opacity-60 normal-case">{code}</span>
+              )}
             </span>
           </span>
           <div className="flex gap-2">

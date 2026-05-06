@@ -5,8 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { loginPublicUser, usePublicMe } from '@/lib/public-auth';
 import { AuthCard } from '@/components/auth/AuthCard';
+import { useTranslation } from 'react-i18next';
+import { shouldShowSecondaryLang } from '@/i18n';
 
 export function PublicLoginPage() {
+  const { i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const { data: me, mutate, isLoading } = usePublicMe();
@@ -53,7 +56,9 @@ export function PublicLoginPage() {
       <div className="space-y-2">
         <div className="text-xs font-black uppercase tracking-widest flex flex-col leading-tight">
           <span className="tracking-normal opacity-70">Email</span>
+          {shouldShowSecondaryLang(i18n.language) && (
           <span className="text-[10px] font-mono opacity-40 normal-case">EMAIL</span>
+          )}
         </div>
         <Input
           value={email}
@@ -68,7 +73,9 @@ export function PublicLoginPage() {
       <div className="space-y-2">
         <div className="text-xs font-black uppercase tracking-widest flex flex-col leading-tight">
           <span className="tracking-normal opacity-70">密碼</span>
+          {shouldShowSecondaryLang(i18n.language) && (
           <span className="text-[10px] font-mono opacity-40 normal-case">PASSWORD</span>
+          )}
         </div>
         <Input
           value={password}
@@ -88,7 +95,9 @@ export function PublicLoginPage() {
       >
         <span className="flex flex-col items-center leading-tight">
           <span className="tracking-normal">{isSubmitting ? '驗證中...' : '登入'}</span>
+          {shouldShowSecondaryLang(i18n.language) && (
           <span className="text-[10px] font-mono opacity-60 normal-case">{isSubmitting ? 'VERIFYING...' : 'LOGIN_'}</span>
+          )}
         </span>
       </Button>
 

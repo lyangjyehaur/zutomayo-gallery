@@ -14,6 +14,7 @@ import { getProxyImgUrl, isMediaVideo } from '@/lib/image';
 import { GALLERY_BREAKPOINTS } from '@/components/galleryBreakpoints';
 export { GALLERY_BREAKPOINTS } from '@/components/galleryBreakpoints';
 import { useTranslation } from 'react-i18next';
+import { shouldShowSecondaryLang } from '@/i18n';
 
 interface FancyboxViewerProps {
   images: MVMedia[];
@@ -334,7 +335,7 @@ interface PhotoItemProps {
 }
 
 const PhotoItem = React.memo(function PhotoItem({ photo, index, onPhotoClick, delayMs, isNewItem = true }: PhotoItemProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [isLoaded, setIsLoaded] = useState(() => loadedImagesCache.has(photo.src));
   const [actualDimensions, setActualDimensions] = useState<{ width: number; height: number } | null>(
     () => (photo.width && photo.height) 
@@ -398,7 +399,9 @@ const PhotoItem = React.memo(function PhotoItem({ photo, index, onPhotoClick, de
               <div className="size-5 border-2 border-black/10 border-t-black animate-spin rounded-full" />
               <span className="text-[8px] font-black uppercase tracking-tighter flex flex-col items-center leading-tight">
                 <span className="opacity-40 tracking-normal">{t("app.syncing_visual", "同步視覺中...")}</span>
+                {shouldShowSecondaryLang(i18n.language) && (
                 <span className="font-mono opacity-20 normal-case">Syncing_Visual...</span>
+                )}
               </span>
             </div>
 
@@ -536,7 +539,7 @@ export default function FancyboxViewer({
   onLightboxClose?: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   // 獨立模式的 Hooks
   useEffect(() => {
@@ -1220,7 +1223,9 @@ export default function FancyboxViewer({
             {headerTitle || (
               <span className="flex flex-col leading-tight">
                 <span className="tracking-normal">Fancybox {t("app.debug_terminal", "除錯終端")}</span>
+                {shouldShowSecondaryLang(i18n.language) && (
                 <span className="text-[10px] font-mono opacity-50 normal-case">Fancybox_Debug_Terminal</span>
+                )}
               </span>
             )}
           </h1>
@@ -1230,9 +1235,11 @@ export default function FancyboxViewer({
                 <span className="tracking-normal">
                   {t("app.source", "來源：")}{mvId ? `${t("app.specific_mv", "指定 MV：")}${mvId}` : t("app.site_wide", "全站資料")} ｜ {t("app.material_count", "素材數：")}{displayedPhotos.length}
                 </span>
+                {shouldShowSecondaryLang(i18n.language) && (
                 <span className="text-[10px] font-mono opacity-50 normal-case">
                   Source: {mvId ? `Target_MV: ${mvId}` : 'Full_Archive'} | Assets_Count: {displayedPhotos.length}
                 </span>
+                )}
               </span>
             )}
           </p>
@@ -1267,12 +1274,14 @@ export default function FancyboxViewer({
                 <div className="w-2 h-2 bg-ztmy-green animate-pulse" style={{ animationDelay: '300ms' }} />
                 <div className="w-2 h-2 bg-black dark:bg-white animate-pulse shadow-[0_0_8px_rgba(255,255,255,0.8)]" style={{ animationDelay: '600ms' }} />
               </div>
-              <span className="tracking-[0.2em] font-black uppercase text-sm mb-1 ztmy-cyber-text" data-text="INITIALIZING_DATA_STREAM...">
-                INITIALIZING_DATA_STREAM...
+              <span className="tracking-[0.2em] font-black uppercase text-sm mb-1 ztmy-cyber-text" data-text={shouldShowSecondaryLang(i18n.language) ? "INITIALIZING_DATA_STREAM..." : undefined}>
+                {shouldShowSecondaryLang(i18n.language) ? "INITIALIZING_DATA_STREAM..." : t("common.loading", "載入中...")}
               </span>
+              {shouldShowSecondaryLang(i18n.language) && (
               <span className="text-[10px] font-mono normal-case tracking-widest opacity-60">
                 [ ASSETS: {displayedPhotos.length} / {processedImages.length} ]
               </span>
+              )}
             </div>
           ) : (
             <button
@@ -1287,9 +1296,11 @@ export default function FancyboxViewer({
                 <span className="tracking-normal">
                   {loadingMore ? t("common.loading", "載入中...") : t("common.load_more", "載入更多")} ({displayedPhotos.length} / {processedImages.length})
                 </span>
+                {shouldShowSecondaryLang(i18n.language) && (
                 <span className="text-[10px] font-mono opacity-60 normal-case">
                   {loadingMore ? 'Loading...' : 'Load_More_Assets'}
                 </span>
+                )}
               </span>
             </button>
           )}
@@ -1302,7 +1313,9 @@ export default function FancyboxViewer({
             <span className="w-12 h-0.5 bg-current"></span>
             <span className="flex flex-col items-center leading-tight">
               <span className="opacity-70">{t("app.archive_boundary", "歸檔邊界")}</span>
+              {shouldShowSecondaryLang(i18n.language) && (
               <span className="text-[10px] font-mono opacity-40">END_OF_ARCHIVE</span>
+              )}
             </span>
             <span className="w-12 h-0.5 bg-current"></span>
           </div>

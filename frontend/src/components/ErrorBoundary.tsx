@@ -1,6 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Translation } from 'react-i18next';
+import { shouldShowSecondaryLang } from '@/i18n';
 
 interface Props {
   children: ReactNode;
@@ -89,7 +90,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
       return (
         <Translation>
-          {(t) => (
+          {(t, { i18n }) => (
             <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 font-mono text-foreground crt-lines">
               <div className="max-w-2xl w-full border-4 border-red-500 bg-card p-8 shadow-[8px_8px_0px_0px_rgba(239,68,68,1)]">
                 {/* 錯誤圖標 */}
@@ -102,14 +103,18 @@ export class ErrorBoundary extends Component<Props, State> {
                   <h1 className="text-3xl font-black text-center uppercase tracking-tighter text-red-500">
                     {t('error.critical_error', '系統發生嚴重錯誤')}
                   </h1>
+                  {shouldShowSecondaryLang(i18n.language) && (
                   <span className="text-[10px] font-mono opacity-50 normal-case text-red-400">System_Critical_Error</span>
+                  )}
                 </div>
 
                 {/* 錯誤信息 */}
                 <div className="bg-black/30 border-2 border-red-500/30 p-4 mb-6 font-mono text-sm">
                   <div className="text-red-400 mb-2 flex flex-col leading-tight">
                     <span>{t('error.error_info', '錯誤資訊')}</span>
+                    {shouldShowSecondaryLang(i18n.language) && (
                     <span className="text-[10px] font-mono opacity-60 normal-case">Error_Details:</span>
+                    )}
                   </div>
                   <p className="text-red-300/80 break-all">
                     {this.state.error?.message || t('error.unknown_error', '未知錯誤 (Unknown error occurred)')}
@@ -120,7 +125,9 @@ export class ErrorBoundary extends Component<Props, State> {
                       <summary className="cursor-pointer text-red-400 hover:text-red-300">
                         <span className="flex flex-col leading-tight">
                           <span>{t('error.stack_trace', '堆疊追蹤')}</span>
+                          {shouldShowSecondaryLang(i18n.language) && (
                           <span className="text-[10px] font-mono opacity-60 normal-case">Stack_Trace</span>
+                          )}
                         </span>
                       </summary>
                       <pre className="mt-2 text-xs text-red-300/60 overflow-auto max-h-40 whitespace-pre-wrap">
@@ -176,7 +183,9 @@ export class ErrorBoundary extends Component<Props, State> {
                   <span className="inline-block bg-red-500/20 text-red-400 px-3 py-1 text-xs font-mono border border-red-500/30">
                     <span className="flex flex-col items-center leading-tight">
                       <span className="tracking-normal">{t('error.status_500', '狀態碼：500（內部錯誤）')}</span>
+                      {shouldShowSecondaryLang(i18n.language) && (
                       <span className="text-[10px] font-mono opacity-60 normal-case">STATUS_CODE: 500_INTERNAL_ERROR</span>
+                      )}
                     </span>
                   </span>
                 </div>
@@ -185,7 +194,9 @@ export class ErrorBoundary extends Component<Props, State> {
               {/* 底部信息 */}
               <p className="mt-8 text-xs opacity-50 font-mono flex flex-col items-center leading-tight">
                 <span className="tracking-normal">{t('error.contact_support', '若此錯誤持續發生，請聯絡管理者')}</span>
+                {shouldShowSecondaryLang(i18n.language) && (
                 <span className="text-[10px] font-mono opacity-60 normal-case">If this error persists, please contact support.</span>
+                )}
               </p>
             </div>
           )}

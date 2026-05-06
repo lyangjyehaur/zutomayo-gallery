@@ -22,6 +22,13 @@ export function normalizeLang(lng: string | null | undefined): SupportedLang {
   return 'zh-TW';
 }
 
+export const SECONDARY_LANG_HIDDEN_LOCALES = ['en', 'es'] as const;
+
+export function shouldShowSecondaryLang(lng: string | null | undefined): boolean {
+  if (!lng) return true;
+  return !SECONDARY_LANG_HIDDEN_LOCALES.includes(lng as any);
+}
+
 i18n
   // 偵測用戶語言
   .use(LanguageDetector)
