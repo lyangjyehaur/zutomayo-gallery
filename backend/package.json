@@ -1,6 +1,6 @@
 {
   "name": "ztmy-gallery-server",
-  "version": "3.6.2",
+  "version": "3.6.3",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
