@@ -8,7 +8,6 @@ import { errorEventEmitter, type BackendErrorEvent } from '../services/error-eve
 import { BackendErrorLogModel } from '../models/index.js';
 import { getCountryCode, getFullGeoInfo } from '../services/geo.service.js';
 import { redisClient } from '../services/redis.service.js';
-import { resolveCorsOrigin } from '../utils/cors.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
 import {
@@ -383,42 +382,6 @@ export const clearRedisApiCache = async (req: Request, res: Response) => {
 
   await redisClient.del(keys);
   res.json({ success: true, data: { cleared: keys.length } });
-};
-
-export const streamBackendErrors = (req: Request, res: Response) => {
-  const corsOrigin = resolveCorsOrigin(req.headers.origin) || '*';
-
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    Connection: 'keep-alive',
-    'X-Accel-Buffering': 'no',
-    'Access-Control-Allow-Origin': corsOrigin,
-    'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
-  });
-
-  res.write(`data: ${JSON.stringify({ type: 'connected', timestamp: new Date().toISOString() })}\n\n`);
-
-  const history = errorEventEmitter.getHistory();
-  if (history.length > 0) {
-    res.write(`data: ${JSON.stringify({ type: 'history', events: history })}\n\n`);
-  }
-
-  const onEvent = (event: BackendErrorEvent) => {
-    res.write(`data: ${JSON.stringify({ type: 'error', event })}\n\n`);
-  };
-
-  errorEventEmitter.on('error-event', onEvent);
-
-  const heartbeat = setInterval(() => {
-    res.write(`:heartbeat\n\n`);
-  }, 15000);
-
-  req.on('close', () => {
-    errorEventEmitter.off('error-event', onEvent);
-    clearInterval(heartbeat);
-  });
 };
 
 export const listErrorLogs = async (req: Request, res: Response, next: NextFunction) => {

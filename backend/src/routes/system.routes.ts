@@ -10,7 +10,6 @@ import {
   toggleMaintenance,
   updateDictionaries,
   clearRedisApiCache,
-  streamBackendErrors,
   listErrorLogs,
   resolveErrorLog,
   batchResolveErrorLogs,
@@ -81,8 +80,6 @@ router.patch('/dicts/:id', requirePermission(ADMIN_PERMISSIONS.SYSTEM_DICTS), as
 router.delete('/dicts/:id', requirePermission(ADMIN_PERMISSIONS.SYSTEM_DICTS), asyncHandler(deleteDictionary));
 
 router.post('/cache/clear', requirePermission(ADMIN_PERMISSIONS.SYSTEM_CACHE), asyncHandler(clearRedisApiCache));
-
-router.get('/errors/stream', requirePermission(ADMIN_PERMISSIONS.SYSTEM_CACHE), streamBackendErrors);
 
 router.get('/errors', requirePermission(ADMIN_PERMISSIONS.SYSTEM_CACHE), asyncHandler(listErrorLogs));
 router.patch('/errors/:id/resolve', requirePermission(ADMIN_PERMISSIONS.SYSTEM_CACHE), asyncHandler(resolveErrorLog));
