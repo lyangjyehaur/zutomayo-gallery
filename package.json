@@ -1,6 +1,6 @@
 {
   "name": "zutomayo-gallery",
-  "version": "3.6.3",
+  "version": "3.6.4",
   "type": "module",
   "packageManager": "npm@11.12.1",
   "engines": {

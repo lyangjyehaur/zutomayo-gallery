@@ -27,4 +27,6 @@ export const getFanartGalleryQuerySchema = z.object({
   mvIds: z.string().optional(),
   onlyCollab: z.string().optional(),
   source: z.string().optional(),
+  seed: z.string().regex(/^[a-zA-Z0-9]+$/).max(32).optional(),
+  sort: z.enum(['random', 'date_desc', 'date_asc', 'likes']).optional().default('random'),
 });

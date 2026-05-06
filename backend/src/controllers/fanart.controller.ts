@@ -166,6 +166,18 @@ export const getFanartGallery = async (req: Request, res: Response) => {
     mvInclude.where = { id: mvIds };
   }
 
+  const seed = String(q.seed || '').trim();
+  const sort = String(q.sort || 'random');
+
+  const orderMap: Record<string, any[]> = {
+    random: seed
+      ? [sequelize.literal(`md5("media"."group_id"::text || '${seed}')`), ['group_id', 'ASC'], ['id', 'ASC']]
+      : [[{ model: MediaGroupModel, as: 'group' }, 'post_date', 'DESC'], ['group_id', 'ASC'], ['id', 'ASC']],
+    date_desc: [[{ model: MediaGroupModel, as: 'group' }, 'post_date', 'DESC'], ['group_id', 'ASC'], ['id', 'ASC']],
+    date_asc: [[{ model: MediaGroupModel, as: 'group' }, 'post_date', 'ASC'], ['group_id', 'ASC'], ['id', 'ASC']],
+    likes: [[{ model: MediaGroupModel, as: 'group' }, 'like_count', 'DESC'], ['group_id', 'ASC'], ['id', 'ASC']],
+  };
+
   const findOptions: any = {
     where,
     distinct: true,
@@ -173,7 +185,7 @@ export const getFanartGallery = async (req: Request, res: Response) => {
       { model: MediaGroupModel, as: 'group', where: { status: 'organized' }, required: true },
       mvInclude
     ],
-    order: [[{ model: MediaGroupModel, as: 'group' }, 'post_date', 'DESC'], ['id', 'DESC']]
+    order: orderMap[sort] || orderMap.random
   };
 
   if (!all) {

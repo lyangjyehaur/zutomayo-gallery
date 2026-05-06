@@ -81,9 +81,49 @@
 
 | 請求方法 | 端點路徑 | 權限 | 功能說明 |
 | :--- | :--- | :--- | :--- |
+| **GET** | `/api/fanarts/gallery` | 公開 | 取得 FanArt 畫廊資料（分頁）。支援篩選與多種排序方式。 |
+| **GET** | `/api/fanarts/gallery/summary` | 公開 | 取得 FanArt 畫廊的篩選統計資料（標籤計數、MV 計數）。 |
 | **GET** | `/api/fanarts/unorganized` | 管理員 | 取得爬蟲抓取但尚未被分類或整理的 Twitter 二創圖片 (Fanart) 列表。 |
 | **POST** | `/api/fanarts/:id/status` | 管理員 | 更新指定二創圖片的狀態 (例如標記為 `organized` 或 `rejected`)。<br>Body: `{ "status": "organized" }` |
 | **POST** | `/api/webhook/waline` | 公開 | 接收 Waline 留言系統的 Webhook 推播，可用於觸發網站快取更新或社群通知。 |
+
+### GET `/api/fanarts/gallery` - FanArt 畫廊查詢
+
+**Query Parameters:**
+
+| 參數 | 類型 | 預設值 | 說明 |
+| :--- | :--- | :--- | :--- |
+| `limit` | number | 200 | 每頁筆數 (1~500) |
+| `offset` | number | 0 | 分頁偏移量 |
+| `withTotal` | string | - | 設為 `1` 時回傳總數 |
+| `all` | string | - | 設為 `1` 時回傳全部資料（不分頁） |
+| `tags` | string | - | 逗號分隔的標籤篩選 (如 `tag:acane,tag:real`) |
+| `mvIds` | string | - | 逗號分隔的 MV ID 篩選 |
+| `onlyCollab` | string | - | 設為 `1` 時只顯示合作標籤作品 |
+| `source` | string | - | 來源篩選 (如 `submission`) |
+| `sort` | enum | `random` | 排序方式：`random`（隨機）、`date_desc`（最新）、`date_asc`（最舊）、`likes`（按讚數） |
+| `seed` | string | - | 隨機排序種子 (1~32 位字母數字)，僅 `sort=random` 時生效。相同 seed 產生相同排序，確保分頁不重複 |
+
+**排序行為說明：**
+- 所有排序方式皆以 group 為單位排序，同一 group 的 media 不會被拆散
+- `random`：使用 `md5(group_id || seed)` 進行確定性隨機排序；未提供 seed 時 fallback 為日期降序
+- `date_desc`：按 group 的 `post_date` 降序（最新優先）
+- `date_asc`：按 group 的 `post_date` 升序（最舊優先）
+- `likes`：按 group 的 `like_count` 降序（最多讚優先）
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [...],
+  "meta": {
+    "limit": 48,
+    "offset": 0,
+    "total": 500,
+    "hasMore": true
+  }
+}
+```
 
 ---
 

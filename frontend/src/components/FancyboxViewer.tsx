@@ -518,6 +518,7 @@ export default function FancyboxViewer({
   resetKey,
   onLightboxOpen,
   onLightboxClose,
+  total,
 }: {
   images?: any[];
   children?: React.ReactNode;
@@ -537,6 +538,7 @@ export default function FancyboxViewer({
   resetKey?: string;
   onLightboxOpen?: () => void;
   onLightboxClose?: () => void;
+  total?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { t, i18n } = useTranslation();
@@ -697,6 +699,8 @@ export default function FancyboxViewer({
     });
   }, [processedImages, itemsPerPage, getPhotosFromRange, datasetKey]);
 
+  const pendingExternalLoadRef = useRef(false);
+
   const loadMore = useCallback(async () => {
     const effectiveHasMore = hasMore || externalHasMore;
     if (loadingMore || !effectiveHasMore) return;
@@ -708,6 +712,9 @@ export default function FancyboxViewer({
         await onExternalLoadMore();
       } catch {
       }
+      pendingExternalLoadRef.current = true;
+      setLoadingMore(false);
+      return;
     }
 
     const startIndex = displayedCountRef.current;
@@ -729,6 +736,28 @@ export default function FancyboxViewer({
     setHasMore(startIndex + newPhotos.length < processedImages.length);
     setLoadingMore(false);
   }, [externalHasMore, getPhotosFromRange, hasMore, itemsPerPage, loadingMore, onExternalLoadMore, processedImages.length]);
+
+  useEffect(() => {
+    if (pendingExternalLoadRef.current && displayedCountRef.current < processedImages.length) {
+      pendingExternalLoadRef.current = false;
+      setLoadingMore(true);
+      const startIndex = displayedCountRef.current;
+      getPhotosFromRange(startIndex, itemsPerPage).then((newPhotos) => {
+        if (newPhotos.length > 0) {
+          lastBatchStartRef.current = displayedCountRef.current;
+          setDisplayedPhotos((prev) => {
+            const existingKeys = new Set(prev.map(p => p.originalUrl || p.full));
+            const uniqueNewPhotos = newPhotos.filter(p => !existingKeys.has(p.originalUrl || p.full));
+            if (uniqueNewPhotos.length === 0) return prev;
+            return [...prev, ...uniqueNewPhotos];
+          });
+          setCurrentPage((prev) => prev + 1);
+        }
+        setHasMore(startIndex + newPhotos.length < processedImages.length);
+        setLoadingMore(false);
+      });
+    }
+  }, [processedImages.length, getPhotosFromRange, itemsPerPage]);
 
   // 實作無限滾動 (Infinite Scroll) - 僅在 autoLoadMore 開啟時生效
   useEffect(() => {
@@ -1279,7 +1308,7 @@ export default function FancyboxViewer({
               </span>
               {shouldShowSecondaryLang(i18n.language) && (
               <span className="text-[10px] font-mono normal-case tracking-widest opacity-60">
-                [ ASSETS: {displayedPhotos.length} / {processedImages.length} ]
+                [ ASSETS: {displayedPhotos.length} / {total ?? processedImages.length} ]
               </span>
               )}
             </div>
@@ -1294,7 +1323,7 @@ export default function FancyboxViewer({
             >
               <span className="flex flex-col items-center leading-tight">
                 <span className="tracking-normal">
-                  {loadingMore ? t("common.loading", "載入中...") : t("common.load_more", "載入更多")} ({displayedPhotos.length} / {processedImages.length})
+                  {loadingMore ? t("common.loading", "載入中...") : t("common.load_more", "載入更多")} ({displayedPhotos.length} / {total ?? processedImages.length})
                 </span>
                 {shouldShowSecondaryLang(i18n.language) && (
                 <span className="text-[10px] font-mono opacity-60 normal-case">

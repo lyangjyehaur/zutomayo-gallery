@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MVItem } from '@/lib/types';
 import { Label } from '@/components/ui/label';
@@ -30,6 +30,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
   });
   const [summary, setSummary] = useState<{ tagCounts: Record<string, number>; mvCounts: Record<string, number> } | null>(null);
   const [isLoadingGallery, setIsLoadingGallery] = useState(false);
+  const randomSeedRef = useRef(Math.random().toString(36).substring(2, 10));
   
   // 提取所有有圖片的 MV 作為篩選選項
   const availableMVs = useMemo(() => {
@@ -135,11 +136,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
       };
     });
 
-    return list.sort((a: any, b: any) => {
-      const dateA = a.tweetDate || '';
-      const dateB = b.tweetDate || '';
-      return String(dateB).localeCompare(String(dateA));
-    });
+    return list;
   }, [galleryFanarts]);
 
   // 根據初篩條件過濾顯示的 MV 選項
@@ -165,6 +162,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
   }, [availableMVs, filterYear, filterAlbum]);
 
   const [isFilterExpanded, setIsFilterExpanded] = useState<boolean>(false);
+  const [sortBy, setSortBy] = useState<'random' | 'date_desc' | 'date_asc' | 'likes'>('random');
 
   const selectedSpecialTags = useMemo(() => {
     const tags: string[] = [];
@@ -178,8 +176,8 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
   const filterKey = useMemo(() => {
     const mvIds = [...selectedMvs].sort();
     const tags = [...selectedSpecialTags].sort();
-    return JSON.stringify({ mvIds, tags, onlyCollab, onlySubmitted });
-  }, [selectedMvs, selectedSpecialTags, onlyCollab, onlySubmitted]);
+    return JSON.stringify({ mvIds, tags, onlyCollab, onlySubmitted, sortBy });
+  }, [selectedMvs, selectedSpecialTags, onlyCollab, onlySubmitted, sortBy]);
 
   const mvFanArtCounts = useMemo(() => {
     const map = new Map<string, number>();
@@ -227,6 +225,8 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
         if (onlyCollab) params.set('onlyCollab', '1');
         if (selectedSpecialTags.length > 0) params.set('tags', selectedSpecialTags.join(','));
         if (selectedMvs.length > 0) params.set('mvIds', selectedMvs.join(','));
+        if (sortBy === 'random') params.set('seed', randomSeedRef.current);
+        params.set('sort', sortBy);
 
         const res = await fetch(`${baseApiUrl}/fanarts/gallery?${params.toString()}`);
         const data = await res.json();
@@ -247,7 +247,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
         setIsLoadingGallery(false);
       }
     },
-    [baseApiUrl, galleryMeta.limit, onlyCollab, onlySubmitted, selectedMvs, selectedSpecialTags]
+    [baseApiUrl, galleryMeta.limit, onlyCollab, onlySubmitted, selectedMvs, selectedSpecialTags, sortBy]
   );
 
   const loadMoreFromServer = useCallback(async () => {
@@ -260,6 +260,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
   }, [fetchSummary]);
 
   useEffect(() => {
+    randomSeedRef.current = Math.random().toString(36).substring(2, 10);
     setGalleryFanarts([]);
     setGalleryMeta((prev) => ({ ...prev, offset: 0, total: null, hasMore: false }));
     void fetchGalleryPage(0, false, true);
@@ -481,6 +482,32 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
         </div>
       </div>
 
+      {/* 排序選擇 */}
+      {fancyboxImages.length > 0 && (
+        <div className="max-w-[1600px] mx-auto px-4 md:px-8 mb-4 flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-black uppercase tracking-widest opacity-50 mr-1">{t('fanart.sort_by', '排序')}</span>
+          {([
+            { key: 'random' as const, label: t('fanart.sort_random', '隨機'), icon: 'hn-shuffle' },
+            { key: 'date_desc' as const, label: t('fanart.sort_newest', '最新'), icon: 'hn-arrow-down' },
+            { key: 'date_asc' as const, label: t('fanart.sort_oldest', '最舊'), icon: 'hn-arrow-up' },
+            { key: 'likes' as const, label: t('fanart.sort_likes', '按讚'), icon: 'hn-heart' },
+          ]).map(opt => (
+            <button
+              key={opt.key}
+              onClick={() => setSortBy(opt.key)}
+              className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider border-2 transition-all flex items-center gap-1.5 ${
+                sortBy === opt.key
+                  ? 'bg-black text-white border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'
+                  : 'bg-white border-black/20 hover:border-black hover:bg-black/5'
+              }`}
+            >
+              <i className={`hn ${opt.icon} text-[10px]`}></i>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* FanArt 畫廊區塊 */}
       {fancyboxImages.length > 0 ? (
         <div className="max-w-[1600px] mx-auto px-4 md:px-8 pb-12">
@@ -494,6 +521,7 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
             onExternalLoadMore={loadMoreFromServer}
             resetKey={filterKey}
             showHeader={false}
+            total={galleryMeta.total ?? undefined}
             breakpointColumns={{ default: 1, 640: 2, 1024: 3, 1280: 4 }}
             className="!p-0 !min-h-0"
           />
