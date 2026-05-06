@@ -26,7 +26,7 @@ export function useBackendErrorStream(enabled: boolean) {
 
     const base = getApiRoot();
     const url = `${base}/system/errors/stream`;
-    const es = new EventSource(url);
+    const es = new EventSource(url, { withCredentials: true });
 
     es.onmessage = (event) => {
       try {
