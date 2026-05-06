@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { format, parse } from 'date-fns';
 import { toast } from 'sonner';
+import { formatApiError } from '@/lib/api-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MultiSelect, Option } from '@/components/ui/multi-select';
@@ -135,8 +136,8 @@ export function AdminStagingFanartPage() {
       if (data.success) {
         setMvs(buildMvTagOptions(data.data) as Option[]);
       }
-    } catch (error) {
-      console.error('Failed to fetch MVs', error);
+    } catch (error: any) {
+      toast.error(formatApiError(error, '載入 MV 失敗'));
     }
   }, [baseApiUrl]);
 
@@ -147,9 +148,11 @@ export function AdminStagingFanartPage() {
       const data = await res.json();
       if (data.success) {
         setProgress(data.data);
+      } else {
+        toast.error(formatApiError(data, '載入進度失敗'));
       }
-    } catch (error) {
-      console.error('Failed to fetch progress', error);
+    } catch (error: any) {
+      toast.error(formatApiError(error, '載入進度失敗'));
     } finally {
       setIsProgressLoading(false);
     }
@@ -164,10 +167,10 @@ export function AdminStagingFanartPage() {
         setFanarts(data.data);
         setTotalPages(data.meta.totalPages);
       } else {
-        toast.error(data.error || 'Failed to fetch');
+        toast.error(formatApiError(data, '載入待審 FanArt 失敗'));
       }
-    } catch (error) {
-      toast.error('Failed to fetch staging fanarts');
+    } catch (error: any) {
+      toast.error(formatApiError(error, '載入待審 FanArt 失敗'));
     } finally {
       setIsLoading(false);
     }
@@ -237,10 +240,10 @@ export function AdminStagingFanartPage() {
         toast.success('Crawler started');
         fetchProgress();
       } else {
-        toast.error(data.error || 'Failed to start crawler');
+        toast.error(formatApiError(data, '啟動爬蟲失敗'));
       }
-    } catch (error) {
-      toast.error('Failed to trigger crawler');
+    } catch (error: any) {
+      toast.error(formatApiError(error, '啟動爬蟲失敗'));
     } finally {
       setIsTriggering(false);
     }
@@ -294,10 +297,10 @@ export function AdminStagingFanartPage() {
           fetchFanarts(page, viewStatus);
         }
       } else {
-        toast.error(data.error || `Failed to ${action}`);
+        toast.error(formatApiError(data, `Failed to ${action}`));
       }
-    } catch (error) {
-      toast.error(`Failed to ${action} staging fanart`);
+    } catch (error: any) {
+      toast.error(formatApiError(error, `Failed to ${action} staging fanart`));
     }
   };
 
@@ -339,7 +342,7 @@ export function AdminStagingFanartPage() {
         } else {
           failCount++;
         }
-      } catch (error) {
+      } catch (error: any) {
         failCount++;
       }
     }
@@ -377,10 +380,10 @@ export function AdminStagingFanartPage() {
         fetchFanarts(page, viewStatus);
         fetchProgress();
       } else {
-        toast.error(data.error || '批次還原失敗');
+        toast.error(formatApiError(data, '批次還原失敗'));
       }
-    } catch (error) {
-      toast.error('批次還原失敗');
+    } catch (error: any) {
+      toast.error(formatApiError(error, '批次還原失敗'));
     } finally {
       setIsLoading(false);
     }

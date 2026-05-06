@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MultiSelect, Option } from '@/components/ui/multi-select';
 import { toast } from 'sonner';
+import { formatApiError } from '@/lib/api-error';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { usePublicMe } from '@/lib/public-auth';
 import { getApiRoot } from '@/lib/admin-api';
@@ -120,7 +121,7 @@ export function SubmitFanArtPage({ mvData }: SubmitFanArtPageProps) {
       }
       toast.success('已建立草稿');
     } catch (e: any) {
-      toast.error(`建立草稿失敗：${String(e?.message || e)}`);
+      toast.error(formatApiError(e, '建立草稿失敗'));
     } finally {
       setIsBusy(false);
     }
@@ -139,7 +140,7 @@ export function SubmitFanArtPage({ mvData }: SubmitFanArtPageProps) {
       if (!res.ok || !json?.success) throw new Error(String(json?.error || 'SAVE_FAILED'));
       toast.success('已儲存草稿');
     } catch (e: any) {
-      toast.error(`儲存失敗：${String(e?.message || e)}`);
+      toast.error(formatApiError(e, '儲存失敗'));
     } finally {
       setIsBusy(false);
     }
@@ -162,7 +163,7 @@ export function SubmitFanArtPage({ mvData }: SubmitFanArtPageProps) {
       setMedia(Array.isArray(data.media) ? data.media : []);
       setStatus(String(data.status || 'draft'));
     } catch (e: any) {
-      toast.error(`載入失敗：${String(e?.message || e)}`);
+      toast.error(formatApiError(e, '載入失敗'));
     } finally {
       setIsBusy(false);
     }
@@ -185,7 +186,7 @@ export function SubmitFanArtPage({ mvData }: SubmitFanArtPageProps) {
       setMedia(Array.isArray(json.data) ? json.data : []);
       toast.success('已加入 Tweet 媒體');
     } catch (e: any) {
-      toast.error(`加入 Tweet 失敗：${String(e?.message || e)}`);
+      toast.error(formatApiError(e, '加入 Tweet 失敗'));
     } finally {
       setIsBusy(false);
     }
@@ -216,7 +217,7 @@ export function SubmitFanArtPage({ mvData }: SubmitFanArtPageProps) {
       if (input) input.value = '';
       toast.success('已上傳檔案');
     } catch (e: any) {
-      toast.error(`上傳失敗：${String(e?.message || e)}`);
+      toast.error(formatApiError(e, '上傳失敗'));
     } finally {
       setIsBusy(false);
     }
@@ -240,7 +241,7 @@ export function SubmitFanArtPage({ mvData }: SubmitFanArtPageProps) {
       setStatus('pending');
       toast.success('已送出審核');
     } catch (e: any) {
-      toast.error(`送審失敗：${String(e?.message || e)}`);
+      toast.error(formatApiError(e, '送審失敗'));
     } finally {
       setIsBusy(false);
     }
@@ -263,7 +264,8 @@ export function SubmitFanArtPage({ mvData }: SubmitFanArtPageProps) {
       if (res.ok && json?.success && Array.isArray(json.data)) {
         setLocalList(json.data);
       }
-    } catch {
+    } catch (err: any) {
+      toast.error(formatApiError(err, '載入投稿記錄失敗'));
     }
   }, [baseApiUrl]);
 

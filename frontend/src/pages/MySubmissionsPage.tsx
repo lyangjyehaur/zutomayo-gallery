@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { formatApiError } from '@/lib/api-error';
 import { Button } from '@/components/ui/button';
 import { logoutPublicUser, usePublicMe } from '@/lib/public-auth';
 import { getApiRoot } from '@/lib/admin-api';
@@ -36,7 +37,7 @@ export function MySubmissionsPage() {
       const data = await fetchJson(`${baseApiUrl}/submissions/me/list`);
       setRows(Array.isArray(data) ? data : []);
     } catch (e: any) {
-      toast.error(`載入失敗：${String(e?.message || e)}`);
+      toast.error(formatApiError(e, '載入失敗'));
       setRows([]);
     } finally {
       setIsBusy(false);
@@ -56,7 +57,7 @@ export function MySubmissionsPage() {
       toast.success('已登出');
       navigate(`/${activeLang}/login`, { replace: true });
     } catch (e: any) {
-      toast.error(`登出失敗：${String(e?.message || e)}`);
+      toast.error(formatApiError(e, '登出失敗'));
     } finally {
       setIsBusy(false);
     }

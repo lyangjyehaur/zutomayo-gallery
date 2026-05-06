@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { logger } from '../utils/logger.js';
+import { errorEventEmitter } from '../services/error-events.service.js';
 
 // 自定義錯誤類
 export class AppError extends Error {
@@ -92,8 +93,20 @@ export const globalErrorHandler = (
     ip: req.ip,
     stack: isDev ? err.stack : undefined,
   }, 'Unhandled error');
-  
-  // 發送響應
+
+  errorEventEmitter.emitError({
+    source: 'request',
+    message,
+    stack: err.stack,
+    statusCode,
+    code,
+    method: req.method,
+    url: req.originalUrl,
+    requestId: (req as any).id,
+    ip: req.ip,
+    details,
+  });
+
   res.status(statusCode).json({
     success: false,
     error: message,

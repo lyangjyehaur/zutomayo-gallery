@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { formatApiError } from '@/lib/api-error';
 import { verifyEmail } from '@/lib/public-auth';
 import { AuthCard } from '@/components/auth/AuthCard';
 
@@ -22,7 +23,7 @@ export function VerifyEmailCallbackPage() {
         await verifyEmail(token);
         toast.success('驗證成功，已登入');
       } catch (e: any) {
-        toast.error(`驗證失敗：${String(e?.message || e)}`);
+      toast.error(formatApiError(e, '驗證失敗'));
       }
       navigate(redirect, { replace: true });
     };

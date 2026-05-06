@@ -1,6 +1,7 @@
 import React from "react"
 import { startRegistration } from "@simplewebauthn/browser"
 import { toast } from "sonner"
+import { formatApiError } from "@/lib/api-error"
 
 import { adminFetch, getAuthApiBase } from "@/lib/admin-api"
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader"
@@ -95,7 +96,7 @@ export function AdminAccountPage() {
       toast.success("已保存帳戶資料")
       window.location.reload()
     } catch (e: any) {
-      toast.error(`保存失敗：${String(e?.message || e)}`)
+      toast.error(formatApiError(e, '保存失敗'));
     } finally {
       setProfileLoading(false)
     }
@@ -123,7 +124,7 @@ export function AdminAccountPage() {
       setNewName("")
       await load()
     } catch (e: any) {
-      toast.error(`Passkey 註冊失敗：${String(e?.message || e)}`)
+      toast.error(formatApiError(e, 'Passkey 註冊失敗'));
     } finally {
       setLoading(false)
     }
@@ -140,7 +141,7 @@ export function AdminAccountPage() {
       setRemoveId(null)
       await load()
     } catch (e: any) {
-      toast.error(`刪除失敗：${String(e?.message || e)}`)
+      toast.error(formatApiError(e, '刪除失敗'));
     } finally {
       setLoading(false)
     }

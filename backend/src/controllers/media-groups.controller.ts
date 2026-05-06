@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid';
 import { MediaGroupModel, MediaModel, MVModel, MVMediaModel, sequelize } from '../models/index.js';
 import { TwitterService } from '../services/twitter.service.js';
 import { backupImageToR2 } from '../services/r2.service.js';
+import { errorEventEmitter } from '../services/error-events.service.js';
 import { logger } from '../utils/logger.js';
 import { isTweetSourceMedia } from '../utils/media-source.js';
 
@@ -611,6 +612,14 @@ export const previewReparseTwitter = async (req: Request, res: Response) => {
     res.json({ success: true, data: { results, errors } });
   } catch (error: any) {
     logger.error({ err: error }, 'previewReparseTwitter failed');
+    errorEventEmitter.emitError({
+      source: 'request',
+      message: `previewReparseTwitter failed: ${error?.message || error}`,
+      stack: error?.stack,
+      statusCode: 500,
+      method: 'POST',
+      url: '/api/admin/media-groups/reparse-twitter/preview',
+    });
     res.status(500).json({ success: false, error: String(error?.message || error) });
   }
 };
@@ -810,6 +819,14 @@ export const applyReparseTwitter = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     logger.error({ err: error }, 'applyReparseTwitter failed');
+    errorEventEmitter.emitError({
+      source: 'request',
+      message: `applyReparseTwitter failed: ${error?.message || error}`,
+      stack: error?.stack,
+      statusCode: 500,
+      method: 'POST',
+      url: '/api/admin/media-groups/reparse-twitter/apply',
+    });
     res.status(500).json({ success: false, error: String(error?.message || error) });
   }
 };

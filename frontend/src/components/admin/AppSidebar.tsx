@@ -18,6 +18,7 @@ import {
   Megaphone,
   Settings2,
   SlidersHorizontal,
+  TriangleAlert,
   UserCog,
   Users,
   Wrench,
@@ -71,6 +72,7 @@ const iconForPath = (path: string) => {
   if (p === "/admin/system/group-repair") return Wrench
   if (p === "/admin/system/media-groups") return Layers
   if (p === "/admin/system/orphans") return Link2
+  if (p === "/admin/system/errors") return TriangleAlert
   if (p === "/admin/system/users") return UserCog
   if (p.startsWith("/admin/system/")) return Settings2
   return FileText

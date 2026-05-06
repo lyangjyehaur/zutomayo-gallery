@@ -1,5 +1,6 @@
 import { Meilisearch } from 'meilisearch';
 import { getMVsFromDB } from './v2_mapper.js';
+import { errorEventEmitter } from './error-events.service.js';
 import { logger } from '../utils/logger.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -58,6 +59,12 @@ export const initMeiliSearch = async () => {
     logger.info('[Meilisearch] Indices settings updated.');
   } catch (error) {
     logger.error({ err: error }, '[Meilisearch] Initialization failed');
+    errorEventEmitter.emitError({
+      source: 'cron',
+      message: `Meilisearch initialization failed: ${error instanceof Error ? error.message : String(error)}`,
+      stack: error instanceof Error ? error.stack : undefined,
+      details: { phase: 'meili-init' },
+    });
   }
 };
 
@@ -115,5 +122,11 @@ export const syncDataToMeili = async () => {
     logger.info('[Meilisearch] Sync process completed.');
   } catch (error) {
     logger.error({ err: error }, '[Meilisearch] Failed to sync data');
+    errorEventEmitter.emitError({
+      source: 'cron',
+      message: `Meilisearch data sync failed: ${error instanceof Error ? error.message : String(error)}`,
+      stack: error instanceof Error ? error.stack : undefined,
+      details: { phase: 'meili-sync' },
+    });
   }
 };

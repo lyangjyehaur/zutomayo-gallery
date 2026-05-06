@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid';
 const generateShortId = () => nanoid(16);
 import { TwitterService, buildCanonicalTweetUrl, extractTweetId, normalizeTweetUrl } from './twitter.service.js';
 import { backupImageToR2 } from './r2.service.js';
+import { errorEventEmitter } from './error-events.service.js';
 import fetch from 'node-fetch';
 import { Op } from 'sequelize';
 
@@ -38,6 +39,12 @@ export const TwitterMonitorService = {
             mediaList = await TwitterService.extractMediaFromTweet(tweetLink);
           } catch (e) {
             console.error(`[Twitter Monitor] Failed to extract media for ${tweetLink}:`, e);
+            errorEventEmitter.emitError({
+              source: 'cron',
+              message: `Twitter monitor: failed to extract media for ${tweetLink}`,
+              stack: e instanceof Error ? e.stack : undefined,
+              details: { phase: 'twitter-monitor-extract', tweetLink },
+            });
             continue;
           }
 
@@ -150,6 +157,12 @@ export const TwitterMonitorService = {
       return { success: true, processedCount: newTweetsCount, timestamp: new Date().toISOString() };
     } catch (error: any) {
       console.error('[Twitter Monitor] Error fetching or parsing RSS:', error);
+      errorEventEmitter.emitError({
+        source: 'cron',
+        message: `Twitter monitor RSS check failed: ${error.message}`,
+        stack: error.stack,
+        details: { phase: 'twitter-monitor-rss' },
+      });
       throw new Error(`Failed to check RSS: ${error.message}`);
     }
   }

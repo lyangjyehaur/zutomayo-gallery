@@ -2,6 +2,7 @@ import React from "react"
 import { Helmet } from "react-helmet-async"
 import { useCreate, useCustomMutation, useInvalidate, useList, useUpdate } from "@refinedev/core"
 import { toast } from "sonner"
+import { formatApiError } from "@/lib/api-error"
 import type { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown } from "lucide-react"
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader"
@@ -92,7 +93,7 @@ export function AdminSystemUsersPage() {
         avatar_url: newAvatarUrl.trim() || null,
       },
       successNotification: { message: "已新增使用者", type: "success" },
-      errorNotification: (err: any) => ({ message: "新增失敗", description: err?.message, type: "error" }),
+      errorNotification: (err: any) => ({ message: "新增失敗", description: formatApiError(err), type: "error" }),
     })
     setNewUsername("")
     setNewPassword("")
@@ -109,7 +110,7 @@ export function AdminSystemUsersPage() {
       id: row.id,
       values: { is_active: next },
       successNotification: { message: "已更新狀態", type: "success" },
-      errorNotification: (err: any) => ({ message: "更新失敗", description: err?.message, type: "error" }),
+      errorNotification: (err: any) => ({ message: "更新失敗", description: formatApiError(err), type: "error" }),
     })
     await invalidate({ resource: "systemUsers", invalidates: ["list"] })
   }, [invalidate, updateUser])
@@ -140,7 +141,7 @@ export function AdminSystemUsersPage() {
         avatar_url: profileAvatarUrl.trim() || null,
       },
       successNotification: { message: "已更新使用者資料", type: "success" },
-      errorNotification: (err: any) => ({ message: "更新失敗", description: err?.message, type: "error" }),
+      errorNotification: (err: any) => ({ message: "更新失敗", description: formatApiError(err), type: "error" }),
     })
     setProfileDialogOpen(false)
     setProfileUser(null)
@@ -160,7 +161,7 @@ export function AdminSystemUsersPage() {
         {
           loading: "更新中...",
           success: "已更新密碼",
-          error: (err: any) => `更新失敗：${String(err?.message || err)}`,
+          error: (err: any) => formatApiError(err, '更新密碼失敗'),
         },
       )
       setPwConfirmOpen(false)
@@ -168,7 +169,8 @@ export function AdminSystemUsersPage() {
       setPwUser(null)
       setPwValue("")
       setPwConfirmValue("")
-    } catch {
+    } catch (err: any) {
+      toast.error(formatApiError(err, '更新密碼失敗'));
     }
   }, [custom, pwUser, pwValue])
 
@@ -267,7 +269,7 @@ export function AdminSystemUsersPage() {
       method: "put",
       values: { roles: rolesValue },
       successNotification: { message: "已更新角色", type: "success" },
-      errorNotification: (err: any) => ({ message: "更新失敗", description: err?.message, type: "error" }),
+      errorNotification: (err: any) => ({ message: "更新失敗", description: formatApiError(err), type: "error" }),
     })
     setRolesDialogOpen(false)
     setRolesUser(null)

@@ -1,5 +1,6 @@
 import React from "react"
 import { toast } from "sonner"
+import { formatApiError } from "@/lib/api-error"
 
 import { adminFetch, getApiRoot } from "@/lib/admin-api"
 import Marquee from "@/components/ui/marquee"
@@ -112,7 +113,9 @@ export function AdminSystemAnnouncementsPage() {
       setItems(list)
       setOrder(ord)
     } catch (e: any) {
-      setError(String(e?.message || e))
+      const msg = formatApiError(e, '載入公告失敗');
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false)
     }
@@ -152,8 +155,9 @@ export function AdminSystemAnnouncementsPage() {
       const json = await res.json().catch(() => null)
       if (!res.ok || !json?.success) throw new Error(String(json?.error || "SAVE_ORDER_FAILED"))
     } catch (e: any) {
-      toast.error("保存排序失敗")
-      setError(String(e?.message || e))
+      const msg = formatApiError(e, '保存排序失敗');
+      toast.error(msg);
+      setError(msg);
     }
   }
 
@@ -194,7 +198,9 @@ export function AdminSystemAnnouncementsPage() {
       setEditOpen(false)
       await fetchList()
     } catch (e: any) {
-      setError(String(e?.message || e))
+      const msg = formatApiError(e, '保存公告失敗');
+      setError(msg);
+      toast.error(msg);
     } finally {
       setEditSaving(false)
     }
@@ -212,8 +218,9 @@ export function AdminSystemAnnouncementsPage() {
       const json = await res.json().catch(() => null)
       if (!res.ok || !json?.success) throw new Error(String(json?.error || "TOGGLE_FAILED"))
     } catch (e: any) {
-      toast.error("更新狀態失敗")
-      setError(String(e?.message || e))
+      const msg = formatApiError(e, '更新狀態失敗');
+      toast.error(msg);
+      setError(msg);
       await fetchList()
     }
   }
@@ -235,7 +242,9 @@ export function AdminSystemAnnouncementsPage() {
       setDeletingId(null)
       await fetchList()
     } catch (e: any) {
-      setError(String(e?.message || e))
+      const msg = formatApiError(e, '刪除公告失敗');
+      setError(msg);
+      toast.error(msg);
     }
   }
 

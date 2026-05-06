@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { formatApiError } from '@/lib/api-error';
 import { Music } from 'lucide-react';
 import { getAppleMusicImgUrl } from '@/lib/image';
 import { getAlbumApiBase, getR2Domain } from '@/lib/admin-api';
@@ -26,10 +27,10 @@ export function AppleMusicGalleryPage() {
         if (json.success) {
           setAlbums(json.data);
         } else {
-          toast.error(t('app.fetch_failed', '載入資料失敗'));
+          toast.error(formatApiError(json, '載入資料失敗'));
         }
       } catch (err) {
-        toast.error(t('app.fetch_failed', '載入資料失敗'));
+        toast.error(formatApiError(err, '載入資料失敗'));
       } finally {
         setIsLoading(false);
       }

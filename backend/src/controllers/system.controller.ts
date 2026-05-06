@@ -1,8 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
+import { Op } from 'sequelize';
 import { GeoRawLogModel, SysConfigModel, SysDictionaryModel, sequelize } from '../models/index.js';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { errorEventEmitter, type BackendErrorEvent } from '../services/error-events.service.js';
+import { BackendErrorLogModel } from '../models/index.js';
 import { getCountryCode, getFullGeoInfo } from '../services/geo.service.js';
 import { redisClient } from '../services/redis.service.js';
 import { AppError } from '../middleware/errorHandler.js';
@@ -379,4 +382,155 @@ export const clearRedisApiCache = async (req: Request, res: Response) => {
 
   await redisClient.del(keys);
   res.json({ success: true, data: { cleared: keys.length } });
+};
+
+export const streamBackendErrors = (req: Request, res: Response) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+
+  res.write(`data: ${JSON.stringify({ type: 'connected', timestamp: new Date().toISOString() })}\n\n`);
+
+  const history = errorEventEmitter.getHistory();
+  if (history.length > 0) {
+    res.write(`data: ${JSON.stringify({ type: 'history', events: history })}\n\n`);
+  }
+
+  const onEvent = (event: BackendErrorEvent) => {
+    res.write(`data: ${JSON.stringify({ type: 'error', event })}\n\n`);
+  };
+
+  errorEventEmitter.on('error-event', onEvent);
+
+  const heartbeat = setInterval(() => {
+    res.write(`:heartbeat\n\n`);
+  }, 15000);
+
+  req.on('close', () => {
+    errorEventEmitter.off('error-event', onEvent);
+    clearInterval(heartbeat);
+  });
+};
+
+export const listErrorLogs = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const {
+      page = '1',
+      limit = '50',
+      source,
+      error_code,
+      status_code,
+      severity,
+      resolved,
+      search,
+      start_date,
+      end_date,
+    } = req.query as Record<string, string>;
+
+    const pageNum = Math.max(1, Number(page) || 1);
+    const limitNum = Math.min(200, Math.max(1, Number(limit) || 50));
+    const offset = (pageNum - 1) * limitNum;
+
+    const where: any = {};
+
+    if (source) where.source = source;
+    if (error_code) where.error_code = error_code;
+    if (status_code) where.status_code = Number(status_code);
+    if (resolved === 'true') where.resolved = true;
+    else if (resolved === 'false') where.resolved = false;
+
+    if (severity === 'server') {
+      where[Op.or] = [
+        { source: { [Op.ne]: 'request' } },
+        { status_code: { [Op.gte]: 500 } },
+        { status_code: null },
+      ];
+    } else if (severity === 'client') {
+      where.source = 'request';
+      where.status_code = { [Op.lt]: 500 };
+    }
+
+    if (start_date || end_date) {
+      where.created_at = {};
+      if (start_date) where.created_at[Op.gte] = new Date(start_date);
+      if (end_date) where.created_at[Op.lte] = new Date(end_date);
+    }
+
+    if (search) {
+      where[Op.or] = [
+        { message: { [Op.iLike]: `%${search}%` } },
+        { stack: { [Op.iLike]: `%${search}%` } },
+        { url: { [Op.iLike]: `%${search}%` } },
+        { request_id: { [Op.iLike]: `%${search}%` } },
+      ];
+    }
+
+    const { rows, count } = await BackendErrorLogModel.findAndCountAll({
+      where,
+      order: [['created_at', 'DESC']],
+      offset,
+      limit: limitNum,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        rows,
+        total: count,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(count / limitNum),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const resolveErrorLog = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { resolved } = req.body;
+    const username = (req as any).user?.username || 'unknown';
+
+    const log = await BackendErrorLogModel.findByPk(id);
+    if (!log) {
+      res.status(404).json({ success: false, error: 'Error log not found' });
+      return;
+    }
+
+    await log.update({
+      resolved: resolved !== false,
+      resolved_by: resolved !== false ? username : null,
+      resolved_at: resolved !== false ? new Date() : null,
+    });
+
+    res.json({ success: true, data: log });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const batchResolveErrorLogs = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { ids } = req.body as { ids: string[] };
+    const username = (req as any).user?.username || 'unknown';
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      res.status(400).json({ success: false, error: 'ids is required' });
+      return;
+    }
+
+    const [updated] = await BackendErrorLogModel.update(
+      { resolved: true, resolved_by: username, resolved_at: new Date() },
+      { where: { id: { [Op.in]: ids }, resolved: false } },
+    );
+
+    res.json({ success: true, data: { updated } });
+  } catch (err) {
+    next(err);
+  }
 };

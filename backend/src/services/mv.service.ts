@@ -3,6 +3,7 @@ import { meiliClient, syncDataToMeili } from './meili.service.js';
 import { getMVsFromDB, saveMVsToDB } from './v2_mapper.js';
 import { MVModel } from '../models/index.js';
 import { sequelize } from '../models/index.js';
+import { errorEventEmitter } from './error-events.service.js';
 import { logger } from '../utils/logger.js';
 
 // 運行時數據緩存，支持熱更新
@@ -169,7 +170,15 @@ export class MVService {
     runtimeData = finalData;
     
     // 背景同步至 Meilisearch (不阻塞 API 回應)
-    syncDataToMeili().catch(err => logger.error({ err }, '[MVService] Background sync to Meilisearch failed'));
+    syncDataToMeili().catch(err => {
+      logger.error({ err }, '[MVService] Background sync to Meilisearch failed');
+      errorEventEmitter.emitError({
+        source: 'cron',
+        message: `Background Meilisearch sync failed: ${err instanceof Error ? err.message : String(err)}`,
+        stack: err instanceof Error ? err.stack : undefined,
+        details: { phase: 'mv-sync-meili' },
+      });
+    });
     
     // 計算總數
     result.totalUpdated = result.updated.length;

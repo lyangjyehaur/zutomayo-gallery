@@ -391,12 +391,12 @@ MVModel.belongsToMany(KeywordModel, { through: MVKeywordModel, foreignKey: 'mv_i
 KeywordModel.belongsToMany(MVModel, { through: MVKeywordModel, foreignKey: 'keyword_id', otherKey: 'mv_id', as: 'mvs' });
 
 // Media <-> MediaGroup
-MediaGroupModel.hasMany(MediaModel, { foreignKey: 'group_id', as: 'images' }); // Keep alias 'images' for frontend compatibility
-MediaModel.belongsTo(MediaGroupModel, { foreignKey: 'group_id', as: 'group' });
+MediaGroupModel.hasMany(MediaModel, { foreignKey: 'group_id', as: 'images', constraints: false });
+MediaModel.belongsTo(MediaGroupModel, { foreignKey: 'group_id', as: 'group', constraints: false });
 
 // Album <-> AppleMusicAlbum
-AlbumModel.belongsTo(AppleMusicAlbumModel, { foreignKey: 'apple_music_album_id', as: 'appleMusicAlbum' });
-AppleMusicAlbumModel.hasMany(AlbumModel, { foreignKey: 'apple_music_album_id', as: 'albums' });
+AlbumModel.belongsTo(AppleMusicAlbumModel, { foreignKey: 'apple_music_album_id', as: 'appleMusicAlbum', constraints: false });
+AppleMusicAlbumModel.hasMany(AlbumModel, { foreignKey: 'apple_music_album_id', as: 'albums', constraints: false });
 
 // Submission <-> MV
 FanartSubmissionModel.belongsToMany(MVModel, { through: FanartSubmissionMvModel, foreignKey: 'submission_id', otherKey: 'mv_id', as: 'mvs' });
@@ -455,6 +455,36 @@ export const AdminMenuModel = sequelize.define('AdminMenu', {
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at',
+});
+
+export const BackendErrorLogModel = sequelize.define('BackendErrorLog', {
+  id: { type: DataTypes.STRING(36), primaryKey: true, defaultValue: generateShortId, comment: '錯誤日誌唯一識別碼' },
+  source: { type: DataTypes.STRING, allowNull: false, comment: '錯誤來源 (request/uncaught/unhandled_rejection/cron/queue)' },
+  message: { type: DataTypes.TEXT, allowNull: false, comment: '錯誤訊息' },
+  stack: { type: DataTypes.TEXT, allowNull: true, comment: '堆疊追蹤' },
+  status_code: { type: DataTypes.INTEGER, allowNull: true, comment: 'HTTP 狀態碼' },
+  error_code: { type: DataTypes.STRING, allowNull: true, comment: '錯誤代碼' },
+  method: { type: DataTypes.STRING(10), allowNull: true, comment: 'HTTP 方法' },
+  url: { type: DataTypes.TEXT, allowNull: true, comment: '請求 URL' },
+  request_id: { type: DataTypes.STRING, allowNull: true, comment: '請求 ID' },
+  ip: { type: DataTypes.STRING, allowNull: true, comment: '客戶端 IP' },
+  details: { type: DataTypes.JSONB, allowNull: true, comment: '額外詳情 (JSONB)' },
+  resolved: { type: DataTypes.BOOLEAN, defaultValue: false, comment: '是否已標記解決' },
+  resolved_by: { type: DataTypes.STRING, allowNull: true, comment: '解決者' },
+  resolved_at: { type: DataTypes.DATE, allowNull: true, comment: '解決時間' },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '發生時間' },
+}, {
+  tableName: 'backend_error_logs',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: false,
+  indexes: [
+    { fields: ['source'] },
+    { fields: ['status_code'] },
+    { fields: ['error_code'] },
+    { fields: ['resolved'] },
+    { fields: ['created_at'] },
+  ],
 });
 
 export const syncModels = async (options: { alter?: boolean } = {}) => {

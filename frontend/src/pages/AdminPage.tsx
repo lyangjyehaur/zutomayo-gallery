@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useCustomMutation, useInvalidate, useList } from "@refinedev/core"
 import { VERSION_CONFIG } from '@/config/version';
-import { toast } from "sonner"
+import { toast } from 'sonner';
+import { formatApiError } from '@/lib/api-error';
 import { adminFetch, getMvsApiBase, getSystemApiBase } from "@/lib/admin-api";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -779,7 +780,8 @@ export function AdminPage() {
         if (json && typeof json === "object" && "maintenance" in json) {
           setSystemStatus(json as any)
         }
-      } catch {
+      } catch (err: any) {
+        toast.error(formatApiError(err, '載入系統狀態失敗'));
       }
     }
     run()
@@ -1152,7 +1154,10 @@ export function AdminPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: proxiedUrl }),
       });
-      if (!response.ok) throw new Error('Network Error');
+      if (!response.ok) {
+        const errData = await response.json().catch(() => null);
+        throw new Error(errData?.error || `探測失敗 HTTP ${response.status}`);
+      }
       return await response.json();
     } catch (err) {
       throw err;
@@ -1387,8 +1392,9 @@ export function AdminPage() {
             newImages[imgIdx] = { ...newImages[imgIdx], width, height };
             return { ...mv, images: newImages };
           }));
-        } catch (err) {
+        } catch (err: any) {
           failed.push(imgIdx);
+          console.warn(`探測圖片 ${imgIdx} 失敗:`, formatApiError(err));
         } finally {
           setBatchStatus(prev => prev ? { ...prev, current: prev.current + 1 } : null);
         }
@@ -1406,7 +1412,7 @@ export function AdminPage() {
       toast.success('所有圖片尺寸獲取完成');
       setTimeout(() => setBatchStatus(null), 3000);
     } else {
-      toast.error(`任務結束，其中 ${failed.length} 張圖片獲取失敗`);
+      toast.error(`任務結束，其中 ${failed.length} 張圖片獲取失敗，請查看 Console 取得詳細資訊`);
     }
   };
 
@@ -1436,7 +1442,7 @@ export function AdminPage() {
           throw new Error('推文中找不到媒體');
         }
       } catch (err: any) {
-        toast.error('推文解析失敗: ' + err.message);
+        toast.error(formatApiError(err, '推文解析失敗'));
         return;
       }
     }
@@ -1517,7 +1523,7 @@ export function AdminPage() {
 
       toast.success('尺寸偵測完成');
     } catch (err: any) {
-      toast.error('尺寸獲取失敗: ' + err.message);
+      toast.error(formatApiError(err, '尺寸獲取失敗'));
     }
   };
 
@@ -1845,7 +1851,7 @@ export function AdminPage() {
             return '數據回寫成功';
           },
           error: (err: any) => {
-            return `儲存失敗: ${err.message}`;
+            return formatApiError(err, '儲存失敗');
           },
         }
       );

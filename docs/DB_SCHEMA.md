@@ -21,6 +21,33 @@
 | `created_at` | `TIMESTAMP` | | 建立時間 |
 | `updated_at` | `TIMESTAMP` | | 更新時間 |
 
+### 4.6. `backend_error_logs` (後端錯誤日誌表)
+記錄後端運行時產生的所有異常，包含請求錯誤、未捕獲異常、未處理的 Promise Rejection 等。支援即時 SSE 推送與後台查詢。
+| 欄位名稱 | 型別 | 約束 | 說明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `VARCHAR(36)` | `PRIMARY KEY` | 錯誤日誌唯一識別碼 (使用 NanoID) |
+| `source` | `VARCHAR(50)` | `NOT NULL` | 錯誤來源：`'request'` (請求錯誤), `'uncaught'` (未捕獲異常), `'unhandled_rejection'` (未處理 Promise), `'cron'` (定時任務), `'queue'` (佇列任務) |
+| `message` | `TEXT` | `NOT NULL` | 錯誤訊息 |
+| `stack` | `TEXT` | `NULL` | 堆疊追蹤 |
+| `status_code` | `INTEGER` | `NULL` | HTTP 狀態碼 (僅請求錯誤有值) |
+| `error_code` | `VARCHAR(100)` | `NULL` | 錯誤代碼 (如 `DATABASE_ERROR`, `VALIDATION_ERROR`) |
+| `method` | `VARCHAR(10)` | `NULL` | HTTP 方法 (GET/POST/PUT/DELETE) |
+| `url` | `TEXT` | `NULL` | 請求 URL |
+| `request_id` | `VARCHAR(255)` | `NULL` | 請求 ID，用於追查後端 log |
+| `ip` | `VARCHAR(255)` | `NULL` | 客戶端 IP |
+| `details` | `JSONB` | `NULL` | 額外詳情 (如 Zod 驗證錯誤的欄位列表) |
+| `resolved` | `BOOLEAN` | `DEFAULT false` | 是否已標記解決 |
+| `resolved_by` | `VARCHAR(255)` | `NULL` | 標記解決的管理員帳號 |
+| `resolved_at` | `TIMESTAMP` | `NULL` | 標記解決的時間 |
+| `created_at` | `TIMESTAMP` | | 錯誤發生時間 |
+
+**索引：**
+- `source` — 按來源篩選
+- `status_code` — 按 HTTP 狀態碼篩選
+- `error_code` — 按錯誤代碼篩選
+- `resolved` — 按解決狀態篩選
+- `created_at` — 按時間排序與範圍查詢
+
 ### 1.2. `media` (統一媒體表，原 images)
 儲存系統中所有的媒體資源，包含 MV 封面圖、官方設定資料圖、以及社群二創影片/圖片 (FanArt)。
 | 欄位名稱 | 型別 | 約束 | 說明 |

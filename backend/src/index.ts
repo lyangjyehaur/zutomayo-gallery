@@ -22,6 +22,7 @@ import publicAuthRoutes from './routes/public-auth.routes.js';
 import submissionRoutes from './routes/submissions.routes.js';
 import adminSubmissionRoutes from './routes/admin-submissions.routes.js';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import { errorEventEmitter } from './services/error-events.service.js';
 import { sequelize, AuthPasskey, AuthSetting } from './services/pg.service.js';
 import { initGeoService } from './services/geo.service.js';
 import { initRedis, redisClient, deleteKeysByPattern } from './services/redis.service.js';
@@ -281,6 +282,12 @@ const initServices = async () => {
       logger.info('Database migrations executed successfully');
     } catch (migErr) {
       logger.error({ err: migErr }, 'Migration failed during startup');
+      errorEventEmitter.emitError({
+        source: 'uncaught',
+        message: `Migration failure: ${migErr instanceof Error ? migErr.message : String(migErr)}`,
+        stack: migErr instanceof Error ? migErr.stack : undefined,
+        details: { phase: 'migration' },
+      });
     }
 
     const schemaMode = process.env.DB_SCHEMA_MODE || (isProduction ? 'safe' : 'alter');
@@ -314,7 +321,15 @@ const initServices = async () => {
 
     await initQueues();
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    const errStack = error instanceof Error ? error.stack : undefined;
     logger.error({ err: error }, 'Failed to initialize services');
+    errorEventEmitter.emitError({
+      source: 'uncaught',
+      message: `Startup failure: ${errMsg}`,
+      stack: errStack,
+      details: { phase: 'initServices' },
+    });
     process.exit(1);
   }
 };
@@ -324,4 +339,24 @@ await initServices();
 app.listen(PORT, () => {
   logger.info({ port: PORT }, 'ZTMY Backend running');
   logger.info({ env: process.env.NODE_ENV || 'development' }, 'Environment');
+});
+
+process.on('uncaughtException', (err) => {
+  logger.fatal({ err }, 'Uncaught exception');
+  errorEventEmitter.emitError({
+    source: 'uncaught',
+    message: err.message || 'Uncaught exception',
+    stack: err.stack,
+  });
+});
+
+process.on('unhandledRejection', (reason) => {
+  const message = reason instanceof Error ? reason.message : String(reason);
+  const stack = reason instanceof Error ? reason.stack : undefined;
+  logger.fatal({ reason }, 'Unhandled rejection');
+  errorEventEmitter.emitError({
+    source: 'unhandled_rejection',
+    message,
+    stack,
+  });
 });

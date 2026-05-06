@@ -5,6 +5,7 @@ import { nanoid } from 'nanoid';
 import { Op, Sequelize } from 'sequelize';
 import { runCrawler } from '../scripts/fetch-zutomayo-art-tweets.js';
 import { moveFileInR2, uploadBufferToR2 } from '../services/r2.service.js';
+import { errorEventEmitter } from '../services/error-events.service.js';
 import crypto from 'crypto';
 import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
@@ -57,6 +58,12 @@ export const triggerCrawler = async (req: Request, res: Response) => {
   
   runCrawler(searchTerms, startDate, endDate, maxItems).catch(err => {
     logger.error({ err }, '[Crawler Error] Background crawler failed');
+    errorEventEmitter.emitError({
+      source: 'cron',
+      message: `Background crawler failed: ${err instanceof Error ? err.message : String(err)}`,
+      stack: err instanceof Error ? err.stack : undefined,
+      details: { phase: 'fanart-crawler', searchTerms, startDate, endDate },
+    });
   });
 
   res.json({

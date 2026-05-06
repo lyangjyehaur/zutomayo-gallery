@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { errorEventEmitter } from '../services/error-events.service.js';
 import { logger } from '../utils/logger.js';
 
 /**
@@ -85,6 +86,14 @@ export const handleWalineWebhook = async (req: Request, res: Response) => {
     }
   } catch (error) {
     logger.error({ err: error }, 'Error handling Waline webhook');
+    errorEventEmitter.emitError({
+      source: 'request',
+      message: `Waline webhook handler failed: ${error instanceof Error ? error.message : String(error)}`,
+      stack: error instanceof Error ? error.stack : undefined,
+      statusCode: 500,
+      method: req.method,
+      url: req.originalUrl,
+    });
     return res.status(500).json({ success: false, error: 'Internal server error' });
   }
 };

@@ -5,6 +5,7 @@ import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
 import { runR2Sync } from './r2-sync.service.js';
+import { errorEventEmitter } from './error-events.service.js';
 import { logger } from '../utils/logger.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -66,6 +67,12 @@ if (isProduction || hasRedisUrl) {
 
   worker.on('failed', (job, err) => {
     logger.error({ jobId: job?.id, err }, '[BullMQ] Job failed');
+    errorEventEmitter.emitError({
+      source: 'queue',
+      message: `[twitter-monitor] Job ${job?.id ?? '?'} failed: ${err.message}`,
+      stack: err.stack,
+      details: { jobId: job?.id, jobName: job?.name, queueName: 'twitter-monitor' },
+    });
   });
 
   const mediaWorker = new Worker('media-tasks', async (job: Job) => {
@@ -84,6 +91,12 @@ if (isProduction || hasRedisUrl) {
 
   mediaWorker.on('failed', (job, err) => {
     logger.error({ jobId: job?.id, err }, '[BullMQ] Job failed');
+    errorEventEmitter.emitError({
+      source: 'queue',
+      message: `[media-tasks] Job ${job?.id ?? '?'} failed: ${err.message}`,
+      stack: err.stack,
+      details: { jobId: job?.id, jobName: job?.name, queueName: 'media-tasks' },
+    });
   });
 }
 

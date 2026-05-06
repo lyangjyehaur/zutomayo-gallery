@@ -1,5 +1,6 @@
 import React from "react"
 import { toast } from "sonner"
+import { formatApiError } from "@/lib/api-error"
 import { Link } from "react-router-dom"
 
 import { adminFetch, getApiRoot } from "@/lib/admin-api"
@@ -192,7 +193,9 @@ export function AdminMediaGroupRepairPage() {
       setItems(Array.isArray(json?.data?.items) ? json.data.items : [])
       setTotal(Number(json?.data?.total || 0) || 0)
     } catch (e: any) {
-      setError(String(e?.message || e))
+      const msg = formatApiError(e, '載入修復列表失敗');
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false)
     }
@@ -292,7 +295,9 @@ export function AdminMediaGroupRepairPage() {
       setEditRow(null)
       await fetchList()
     } catch (e: any) {
-      setError(String(e?.message || e))
+      const msg = formatApiError(e, '保存分組失敗');
+      setError(msg);
+      toast.error(msg);
     } finally {
       setEditSaving(false)
     }
@@ -329,7 +334,9 @@ export function AdminMediaGroupRepairPage() {
       setMergeRow(null)
       await fetchList()
     } catch (e: any) {
-      setError(String(e?.message || e))
+      const msg = formatApiError(e, '合併分組失敗');
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -352,7 +359,9 @@ export function AdminMediaGroupRepairPage() {
       setUnassignRow(null)
       await fetchList()
     } catch (e: any) {
-      setError(String(e?.message || e))
+      const msg = formatApiError(e, '拆分分組失敗');
+      setError(msg);
+      toast.error(msg);
     }
   }
 

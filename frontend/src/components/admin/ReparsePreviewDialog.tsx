@@ -1,5 +1,6 @@
 import React from "react"
 import { toast } from "sonner"
+import { formatApiError } from "@/lib/api-error"
 import { adminFetch, getApiRoot } from "@/lib/admin-api"
 import { getProxyImgUrl } from "@/lib/image"
 import { Button } from "@/components/ui/button"
@@ -133,7 +134,9 @@ export function ReparsePreviewDialog({
       setSelectedMediaFields(allMediaFields)
       setSelectedNewUrls(allNew)
     } catch (e: any) {
-      setError(String(e?.message || e))
+      const msg = formatApiError(e, '載入預覽失敗');
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false)
     }
@@ -238,7 +241,9 @@ export function ReparsePreviewDialog({
         onComplete()
         onOpenChange(false)
       } catch (e: any) {
-        setError(String(e?.message || e))
+        const msg = formatApiError(e, '套用解析結果失敗');
+        setError(msg);
+        toast.error(msg);
         setApplyProgress(null)
       } finally {
         setApplying(false)

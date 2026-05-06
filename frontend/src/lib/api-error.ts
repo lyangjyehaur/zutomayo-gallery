@@ -63,3 +63,34 @@ export const throwApiError = (
 ): never => {
   throw createApiError(payload, fallback, res.status)
 }
+
+export const formatApiError = (err: unknown, context?: string): string => {
+  const e = err as ApiErrorLike | null | undefined
+  const mainMsg = e?.message || String(err || "未知錯誤")
+  const parts: string[] = []
+
+  if (context) {
+    parts.push(`${context}：${mainMsg}`)
+  } else {
+    parts.push(mainMsg)
+  }
+
+  const details: string[] = []
+  const code = e?.code
+  if (code && String(code) !== mainMsg) details.push(`code=${code}`)
+  const status = e?.statusCode || e?.status
+  if (status) details.push(`HTTP ${status}`)
+  if (e?.requestId) details.push(`req=${e.requestId}`)
+
+  if (details.length > 0) {
+    parts.push(`(${details.join(", ")})`)
+  }
+
+  return parts.join(" ")
+}
+
+export const throwIfApiError = async (res: Response, fallbackMsg: string): Promise<void> => {
+  if (res.ok) return
+  const json = await res.json().catch(() => null)
+  throw createApiError(json, fallbackMsg, res.status)
+}

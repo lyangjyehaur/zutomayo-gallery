@@ -9,6 +9,7 @@
 4. [專輯管理 (Albums)](#4-專輯管理-albums)
 5. [二創與社群 (Fanarts & Webhooks)](#5-二創與社群-fanarts--webhooks)
 6. [SEO 與網站地圖 (Sitemap)](#6-seo-與網站地圖-sitemap)
+7. [後端錯誤日誌 (Backend Error Logs)](#7-後端錯誤日誌-backend-error-logs)
 
 ## 通用說明
 - **Base URL**: `/api`
@@ -51,6 +52,10 @@
 | **POST** | `/dicts` | 管理員 | 更新系統設定字典檔。 |
 | **POST** | `/r2-sync` | 管理員/Token | 觸發將推特圖片同步至 Cloudflare R2 儲存桶的背景任務。可接受 `x-r2-sync-token` 作為自動化腳本的驗證。 |
 | **POST** | `/r2-rebuild` | 管理員/Token | 重建 Cloudflare R2 圖片緩存庫。 |
+| **GET** | `/errors/stream` | 管理員 | **SSE 即時推送**：後端異常事件串流。管理員連接後可即時接收後端運行時產生的錯誤事件，包含歷史錯誤與即時錯誤。 |
+| **GET** | `/errors` | 管理員 | 查詢後端錯誤日誌（分頁）。支援多種篩選條件。 |
+| **PATCH** | `/errors/:id/resolve` | 管理員 | 標記或取消標記指定錯誤為已解決。Body: `{ "resolved": true/false }` |
+| **POST** | `/errors/batch-resolve` | 管理員 | 批次標記多筆錯誤為已解決。Body: `{ "ids": ["id1", "id2", ...] }` |
 
 ---
 
@@ -158,3 +163,100 @@
 | 請求方法 | 端點路徑 | 權限 | 功能說明 |
 | :--- | :--- | :--- | :--- |
 | **GET** | `/api/sitemap.xml` | 公開 | 動態產生 XML 格式的 Sitemap。包含所有 MV 詳細頁、Fanart 頁面以及**圖片節點 (`<image:image>`)**。並支援多語系 (zh, ja, en) 索引，專供 Googlebot 等搜尋引擎爬蟲抓取以提升 SEO 排名。 |
+
+---
+
+## 7. 後端錯誤日誌 (Backend Error Logs)
+*(路徑: `/api/system/errors`)*
+
+後端運行時產生的所有異常（包含請求錯誤、未捕獲異常、未處理的 Promise Rejection 等）都會自動記錄至 `backend_error_logs` 資料表，並透過 SSE 即時推送給已連接的管理員前端。
+
+### 7.1. SSE 即時推送
+
+**GET `/api/system/errors/stream`**
+
+此端點使用 Server-Sent Events (SSE) 協議，管理員連接後可即時接收後端異常事件。
+
+**事件格式：**
+
+| 事件類型 | 說明 |
+| :--- | :--- |
+| `connected` | 連接成功，包含 `timestamp` |
+| `history` | 連接時推送的歷史錯誤（記憶體中最近 200 筆），包含 `events` 陣列 |
+| `error` | 即時錯誤事件，包含完整的 `event` 物件 |
+
+**錯誤事件欄位：**
+
+| 欄位 | 類型 | 說明 |
+| :--- | :--- | :--- |
+| `id` | string | 錯誤唯一識別碼 |
+| `timestamp` | string | ISO 8601 時間戳 |
+| `source` | string | 錯誤來源：`request` / `uncaught` / `unhandled_rejection` / `cron` / `queue` |
+| `message` | string | 錯誤訊息 |
+| `stack` | string? | 堆疊追蹤 |
+| `statusCode` | number? | HTTP 狀態碼 |
+| `code` | string? | 錯誤代碼 |
+| `method` | string? | HTTP 方法 |
+| `url` | string? | 請求 URL |
+| `requestId` | string? | 請求 ID |
+| `ip` | string? | 客戶端 IP |
+| `details` | any? | 額外詳情 |
+
+**連線保持：** 每 15 秒發送心跳 (`:heartbeat`)，防止連線超時。
+
+### 7.2. 查詢錯誤日誌
+
+**GET `/api/system/errors`**
+
+**Query Parameters:**
+
+| 參數 | 類型 | 預設值 | 說明 |
+| :--- | :--- | :--- | :--- |
+| `page` | number | 1 | 頁碼 |
+| `limit` | number | 50 | 每頁筆數 (1~200) |
+| `source` | string | - | 依來源篩選：`request` / `uncaught` / `unhandled_rejection` / `cron` / `queue` |
+| `severity` | string | - | 依嚴重程度篩選：`server`（僅 5xx+ 及非請求來源）/ `client`（僅 4xx 請求錯誤）/ `all`（不篩選） |
+| `resolved` | string | - | 依解決狀態篩選：`true` / `false` |
+| `error_code` | string | - | 依錯誤代碼篩選 |
+| `status_code` | number | - | 依 HTTP 狀態碼篩選 |
+| `search` | string | - | 全文搜尋（匹配 message、stack、url、request_id） |
+| `start_date` | string | - | 起始日期 (ISO 8601) |
+| `end_date` | string | - | 結束日期 (ISO 8601) |
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "rows": [...],
+    "total": 120,
+    "page": 1,
+    "limit": 50,
+    "totalPages": 3
+  }
+}
+```
+
+### 7.3. 標記錯誤解決
+
+**PATCH `/api/system/errors/:id/resolve`**
+
+```json
+// Request
+{ "resolved": true }
+
+// Response
+{ "success": true, "data": { ...updated log } }
+```
+
+### 7.4. 批次標記解決
+
+**POST `/api/system/errors/batch-resolve`**
+
+```json
+// Request
+{ "ids": ["id1", "id2", "id3"] }
+
+// Response
+{ "success": true, "data": { "updated": 3 } }
+```

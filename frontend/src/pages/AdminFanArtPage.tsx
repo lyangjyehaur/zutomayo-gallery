@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
+import { formatApiError } from '@/lib/api-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MultiSelect, Option } from '@/components/ui/multi-select';
@@ -37,8 +38,8 @@ export function AdminFanArtPage() {
       if (data.success) {
         setMvData(data.data);
       }
-    } catch (err) {
-      toast.error('Failed to fetch MVs');
+    } catch (err: any) {
+      toast.error(formatApiError(err, '載入 MV 失敗'));
     }
   };
 
@@ -48,9 +49,11 @@ export function AdminFanArtPage() {
       const data = await res.json();
       if (data.success) {
         setUnorganizedGroups(data.data);
+      } else {
+        toast.error(formatApiError(data, '載入未整理 FanArt 失敗'));
       }
-    } catch (err) {
-      toast.error('Failed to fetch unorganized fanarts');
+    } catch (err: any) {
+      toast.error(formatApiError(err, '載入未整理 FanArt 失敗'));
     }
   };
 
@@ -60,9 +63,11 @@ export function AdminFanArtPage() {
       const data = await res.json();
       if (data.success) {
         setDeletedGroups(data.data);
+      } else {
+        toast.error(formatApiError(data, '載入已捨棄 FanArt 失敗'));
       }
-    } catch (err) {
-      toast.error('Failed to fetch deleted fanarts');
+    } catch (err: any) {
+      toast.error(formatApiError(err, '載入已捨棄 FanArt 失敗'));
     }
   };
 
@@ -72,9 +77,11 @@ export function AdminFanArtPage() {
       const data = await res.json();
       if (data.success) {
         setLegacyMedia(data.data);
+      } else {
+        toast.error(formatApiError(data, '載入舊資料失敗'));
       }
-    } catch (err) {
-      toast.error('Failed to fetch legacy fanarts');
+    } catch (err: any) {
+      toast.error(formatApiError(err, '載入舊資料失敗'));
     }
   };
 
@@ -84,9 +91,11 @@ export function AdminFanArtPage() {
       const data = await res.json();
       if (data.success) {
         setTagSummary(data.data || {});
+      } else {
+        toast.error(formatApiError(data, '載入標籤統計失敗'));
       }
-    } catch (err) {
-      toast.error('Failed to fetch tag summary');
+    } catch (err: any) {
+      toast.error(formatApiError(err, '載入標籤統計失敗'));
     }
   };
 
@@ -98,9 +107,10 @@ export function AdminFanArtPage() {
         setTagMedia(Array.isArray(data.data) ? data.data : []);
       } else {
         setTagMedia([]);
+        toast.error(formatApiError(data, '載入標籤 FanArt 失敗'));
       }
-    } catch (err) {
-      toast.error('Failed to fetch fanarts by tag');
+    } catch (err: any) {
+      toast.error(formatApiError(err, '載入標籤 FanArt 失敗'));
       setTagMedia([]);
     }
   };
@@ -238,10 +248,10 @@ export function AdminFanArtPage() {
         fetchData(); // refresh mv data
         fetchTagSummary();
       } else {
-        toast.error(data.error || '保存失敗');
+        toast.error(formatApiError(data, '保存失敗'));
       }
-    } catch (err) {
-      toast.error('保存發生錯誤');
+    } catch (err: any) {
+      toast.error(formatApiError(err, '保存發生錯誤'));
     }
   };
 
@@ -264,8 +274,8 @@ export function AdminFanArtPage() {
         setUnorganizedGroups(prev => prev.filter(g => g.id !== groupId));
         fetchDeleted();
       }
-    } catch (e) {
-      toast.error('刪除失敗');
+    } catch (e: any) {
+      toast.error(formatApiError(e, '刪除失敗'));
     }
   };
 
@@ -281,8 +291,8 @@ export function AdminFanArtPage() {
         setDeletedGroups(prev => prev.filter(g => g.id !== groupId));
         fetchUnorganized();
       }
-    } catch (e) {
-      toast.error('還原失敗');
+    } catch (e: any) {
+      toast.error(formatApiError(e, '還原失敗'));
     }
   };
 
@@ -301,10 +311,10 @@ export function AdminFanArtPage() {
         fetchTagSummary();
         if (activeTab.startsWith('tag:')) fetchFanartsByTag(activeTab);
       } else {
-        toast.error(data.error || '更新失敗');
+        toast.error(formatApiError(data, '更新失敗'));
       }
-    } catch (err) {
-      toast.error('更新發生錯誤');
+    } catch (err: any) {
+      toast.error(formatApiError(err, '更新發生錯誤'));
     }
   };
 
@@ -373,7 +383,7 @@ export function AdminFanArtPage() {
         toast.warning(`完成，但有 ${currentFailedUrls.length} 個連結解析失敗`);
       }
     } catch (err: any) {
-      toast.error('解析過程發生錯誤');
+      toast.error(formatApiError(err, '解析過程發生錯誤'));
       setBatchStatus(null);
     } finally {
       setIsParsing(false);
@@ -416,7 +426,7 @@ export function AdminFanArtPage() {
       setParseMvSelection([]);
       fetchData();
     } catch (e: any) {
-      toast.error('保存時發生錯誤');
+      toast.error(formatApiError(e, '保存時發生錯誤'));
     } finally {
       setIsSaving(false);
     }

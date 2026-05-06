@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { formatApiError } from '@/lib/api-error';
 import { MVItem } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { WalineComments } from '@/components/WalineComments';
@@ -208,8 +210,8 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
       if (res.ok && data?.success && data?.data) {
         setSummary(data.data);
       }
-    } catch (err) {
-      console.error('Failed to fetch fanart summary:', err);
+    } catch (err: any) {
+      toast.error(formatApiError(err, '載入摘要失敗'));
     }
   }, [baseApiUrl, onlyCollab, onlySubmitted, selectedSpecialTags]);
 
@@ -230,7 +232,10 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
 
         const res = await fetch(`${baseApiUrl}/fanarts/gallery?${params.toString()}`);
         const data = await res.json();
-        if (!res.ok || !data?.success || !Array.isArray(data.data)) throw new Error('BAD_PAYLOAD');
+        if (!res.ok || !data?.success || !Array.isArray(data.data)) {
+          const errMsg = data?.error || data?.code || `REQUEST_FAILED (${res.status})`;
+          throw new Error(errMsg);
+        }
 
         const meta = data.meta || {};
         setGalleryFanarts((prev) => (append ? [...prev, ...data.data] : data.data));
@@ -240,7 +245,8 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
           total: meta.total ?? prev.total,
           hasMore: !!meta.hasMore
         }));
-      } catch {
+      } catch (err: any) {
+        toast.error(formatApiError(err, '載入失敗'));
         if (!append) setGalleryFanarts([]);
         setGalleryMeta((prev) => ({ ...prev, hasMore: false }));
       } finally {

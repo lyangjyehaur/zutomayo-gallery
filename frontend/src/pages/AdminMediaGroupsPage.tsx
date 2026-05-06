@@ -1,5 +1,6 @@
 import React from "react"
 import { toast } from "sonner"
+import { formatApiError } from "@/lib/api-error"
 import { Link, useSearchParams } from "react-router-dom"
 
 import { adminFetch, getApiRoot } from "@/lib/admin-api"
@@ -140,7 +141,8 @@ export function AdminMediaGroupsPage() {
       if (res.ok && json?.success && Array.isArray(json?.data)) {
         setMvData(json.data)
       }
-    } catch {
+    } catch (err: any) {
+      toast.error(formatApiError(err, '載入 MV 失敗'));
     }
   }, [base])
 
@@ -163,7 +165,9 @@ export function AdminMediaGroupsPage() {
       setItems(Array.isArray(json?.data?.items) ? json.data.items : [])
       setTotal(Number(json?.data?.total || 0) || 0)
     } catch (e: any) {
-      setError(String(e?.message || e))
+      const msg = formatApiError(e, '載入分組列表失敗');
+      setError(msg);
+      toast.error(msg);
     } finally {
       setListLoading(false)
     }
@@ -186,7 +190,9 @@ export function AdminMediaGroupsPage() {
         const sorted = [...images].sort((a, b) => String(a.id).localeCompare(String(b.id)))
         setDetail({ ...(d || {}), images: sorted })
       } catch (e: any) {
-        setError(String(e?.message || e))
+        const msg = formatApiError(e, '載入分組詳情失敗');
+        setError(msg);
+        toast.error(msg);
         setDetail(null)
       } finally {
         setDetailLoading(false)
@@ -234,7 +240,9 @@ export function AdminMediaGroupsPage() {
       await fetchList()
       await fetchDetail(detail.id)
     } catch (e: any) {
-      setError(String(e?.message || e))
+      const msg = formatApiError(e, '保存分組失敗');
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSavingGroup(false)
     }
@@ -295,7 +303,9 @@ export function AdminMediaGroupsPage() {
         toast.success("已同步關聯")
         if (detail?.id) await fetchDetail(detail.id)
       } catch (e: any) {
-        setError(String(e?.message || e))
+        const msg = formatApiError(e, '同步關聯失敗');
+        setError(msg);
+        toast.error(msg);
       } finally {
         setSavingMediaId(null)
       }
@@ -418,12 +428,17 @@ export function AdminMediaGroupsPage() {
             if (!r.ok || !j?.success) throw new Error(String(j?.error || "ASSIGN_FAILED"))
           })
           ok += 1
-        } catch {
+        } catch (err: any) {
+          console.warn(`歸屬媒體 ${id} 失敗:`, formatApiError(err));
           failed += 1
         }
       }
       if (ok > 0) toast.success(`已歸屬 ${ok} 筆`)
-      if (failed > 0) setError(`歸屬失敗 ${failed} 筆（可能不是 orphan 或 id 不存在）`)
+      if (failed > 0) {
+        const msg = `歸屬失敗 ${failed} 筆，請查看 Console 取得詳細資訊`;
+        setError(msg);
+        toast.error(msg);
+      }
       if (detail?.id) await fetchDetail(detail.id)
     },
     [base, detail, fetchDetail],
@@ -454,7 +469,9 @@ export function AdminMediaGroupsPage() {
       setOrphanItems(Array.isArray(json?.data?.items) ? json.data.items : [])
       setOrphanTotal(Number(json?.data?.total || 0) || 0)
     } catch (e: any) {
-      setError(String(e?.message || e))
+      const msg = formatApiError(e, '載入未歸屬媒體失敗');
+      setError(msg);
+      toast.error(msg);
     } finally {
       setOrphanListLoading(false)
     }

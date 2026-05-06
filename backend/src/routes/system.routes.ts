@@ -10,6 +10,10 @@ import {
   toggleMaintenance,
   updateDictionaries,
   clearRedisApiCache,
+  streamBackendErrors,
+  listErrorLogs,
+  resolveErrorLog,
+  batchResolveErrorLogs,
 } from '../controllers/system.controller.js';
 import { assignOrphanMediaGroup, listOrphanMedia, unassignOrphanMediaGroup } from '../controllers/media-orphans.controller.js';
 import { getMediaGroup, listMediaGroups, listRepairMediaGroups, mergeMediaGroups, syncMediaRelations, unassignMediaGroup, updateMediaGroup, previewReparseTwitter, applyReparseTwitter } from '../controllers/media-groups.controller.js';
@@ -19,6 +23,7 @@ import { rebuildR2 } from '../controllers/r2_rebuild.js';
 import { ADMIN_PERMISSIONS } from '../constants/admin-permissions.js';
 import { requireAnyPermission, requirePermission } from '../middleware/auth.middleware.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
+import { errorEventEmitter } from '../services/error-events.service.js';
 
 const router = Router();
 
@@ -76,6 +81,12 @@ router.patch('/dicts/:id', requirePermission(ADMIN_PERMISSIONS.SYSTEM_DICTS), as
 router.delete('/dicts/:id', requirePermission(ADMIN_PERMISSIONS.SYSTEM_DICTS), asyncHandler(deleteDictionary));
 
 router.post('/cache/clear', requirePermission(ADMIN_PERMISSIONS.SYSTEM_CACHE), asyncHandler(clearRedisApiCache));
+
+router.get('/errors/stream', requirePermission(ADMIN_PERMISSIONS.SYSTEM_CACHE), streamBackendErrors);
+
+router.get('/errors', requirePermission(ADMIN_PERMISSIONS.SYSTEM_CACHE), asyncHandler(listErrorLogs));
+router.patch('/errors/:id/resolve', requirePermission(ADMIN_PERMISSIONS.SYSTEM_CACHE), asyncHandler(resolveErrorLog));
+router.post('/errors/batch-resolve', requirePermission(ADMIN_PERMISSIONS.SYSTEM_CACHE), asyncHandler(batchResolveErrorLogs));
 
 const requireMediaToolPermission = requireAnyPermission([
   ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS,
@@ -154,6 +165,14 @@ router.get('/image/proxy', (req, res) => {
     const signature = hmac.digest('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     res.redirect(302, `${imgProxyDomain}/${signature}${path}`);
   }).catch(err => {
+    errorEventEmitter.emitError({
+      source: 'request',
+      message: `Image proxy crypto error: ${err instanceof Error ? err.message : String(err)}`,
+      stack: err instanceof Error ? err.stack : undefined,
+      statusCode: 500,
+      method: 'GET',
+      url: req.originalUrl,
+    });
     res.status(500).json({ error: 'crypto error' });
   });
 });

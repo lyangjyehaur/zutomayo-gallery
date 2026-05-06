@@ -1,5 +1,6 @@
 import React from "react"
 import { toast } from "sonner"
+import { formatApiError } from "@/lib/api-error"
 
 import { adminFetch, getApiRoot } from "@/lib/admin-api"
 import { getProxyImgUrl, isMediaVideo } from "@/lib/image"
@@ -64,7 +65,8 @@ export function AdminOrphanMediaPage() {
             })
             .filter(Boolean) as any,
         )
-      } catch {
+      } catch (err: any) {
+        toast.error(formatApiError(err, '載入分組選項失敗'));
       } finally {
         setGroupLoading(false)
       }
@@ -89,7 +91,9 @@ export function AdminOrphanMediaPage() {
       setItems(nextItems)
       setTotal(Number(json?.data?.total || 0) || 0)
     } catch (e: any) {
-      setError(String(e?.message || e))
+      const msg = formatApiError(e, '載入未歸屬媒體失敗');
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false)
     }
@@ -124,7 +128,9 @@ export function AdminOrphanMediaPage() {
         })
         await fetchList()
       } catch (e: any) {
-        setError(String(e?.message || e))
+        const msg = formatApiError(e, '歸屬失敗');
+        setError(msg);
+        toast.error(msg);
       } finally {
         setSavingId(null)
       }

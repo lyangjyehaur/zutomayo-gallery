@@ -1,6 +1,7 @@
 import React from "react"
 import { useCan } from "@refinedev/core"
 import { toast } from "sonner"
+import { formatApiError } from "@/lib/api-error"
 
 import { adminFetch } from "@/lib/admin-api"
 import { Button } from "@/components/ui/button"
@@ -88,7 +89,9 @@ export function AdminMVSettingsPage({
       const cleared = data?.data?.cleared
       toast.success(typeof cleared === "number" ? `已清除 Redis 快取 ${cleared} 筆` : "已清除 Redis 快取")
     } catch (e: any) {
-      setError(String(e?.message || e))
+      const msg = formatApiError(e, '清除快取失敗');
+      setError(msg);
+      toast.error(msg);
     } finally {
       setIsClearingRedisCache(false)
     }
@@ -128,7 +131,9 @@ export function AdminMVSettingsPage({
       toast.success("全局設定已保存")
       onRefresh?.()
     } catch (e: any) {
-      setError(String(e?.message || e))
+      const msg = formatApiError(e, '保存設定失敗');
+      setError(msg);
+      toast.error(msg);
     } finally {
       setIsSaving(false)
     }

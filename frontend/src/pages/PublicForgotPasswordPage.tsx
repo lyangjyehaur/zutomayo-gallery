@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { formatApiError } from '@/lib/api-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { requestPasswordReset } from '@/lib/public-auth';
@@ -32,7 +33,7 @@ export function PublicForgotPasswordPage() {
       toast.success('如果帳號存在，已寄出重設密碼信件');
       navigate(`/${activeLang}/login`, { replace: true });
     } catch (e: any) {
-      toast.error(`操作失敗：${String(e?.message || e)}`);
+      toast.error(formatApiError(e, '操作失敗'));
     } finally {
       setIsSubmitting(false);
     }

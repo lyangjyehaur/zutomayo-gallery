@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { formatApiError } from '@/lib/api-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { registerPublicUser } from '@/lib/public-auth';
@@ -43,7 +44,7 @@ export function PublicRegisterPage() {
       }
       navigate(`/${activeLang}/login`, { replace: true });
     } catch (e: any) {
-      toast.error(`註冊失敗：${String(e?.message || e)}`);
+      toast.error(formatApiError(e, '註冊失敗'));
     } finally {
       setIsSubmitting(false);
     }

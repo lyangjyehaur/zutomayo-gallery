@@ -49,6 +49,7 @@ export const seedAdminRBAC = async (): Promise<void> => {
     { label: '推文修復', path: '/admin/system/group-repair', sort: 150, permission: ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS },
     { label: '推文分組', path: '/admin/system/media-groups', sort: 160, permission: ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS },
     { label: '未歸屬媒體', path: '/admin/system/orphans', sort: 170, permission: ADMIN_PERMISSIONS.SYSTEM_MEDIA_ORPHANS },
+    { label: '錯誤日誌', path: '/admin/system/errors', sort: 180, permission: ADMIN_PERMISSIONS.SYSTEM_CACHE },
   ];
   const legacyPermissionByPath = new Map<string, string>([
     ['/admin/dicts', 'admin:system:menus'],

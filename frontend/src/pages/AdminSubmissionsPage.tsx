@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { formatApiError } from '@/lib/api-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { adminFetch, getApiRoot } from '@/lib/admin-api';
@@ -54,7 +55,7 @@ export function AdminSubmissionsPage() {
       setTotalPages(Number(meta.totalPages || 1) || 1);
     } catch (e: any) {
       setRows([]);
-      toast.error(`載入失敗：${String(e?.message || e)}`);
+      toast.error(formatApiError(e, '載入失敗'));
     } finally {
       setIsLoading(false);
     }
@@ -81,7 +82,7 @@ export function AdminSubmissionsPage() {
       toast.success('已通過');
       await fetchList();
     } catch (e: any) {
-      toast.error(`通過失敗：${String(e?.message || e)}`);
+      toast.error(formatApiError(e, '通過失敗'));
     } finally {
       setBusy(id, false);
     }
@@ -105,7 +106,7 @@ export function AdminSubmissionsPage() {
       toast.success('已退回');
       await fetchList();
     } catch (e: any) {
-      toast.error(`退回失敗：${String(e?.message || e)}`);
+      toast.error(formatApiError(e, '退回失敗'));
     } finally {
       setBusy(id, false);
     }

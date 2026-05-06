@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { formatApiError } from '@/lib/api-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { loginPublicUser, usePublicMe } from '@/lib/public-auth';
@@ -42,7 +43,7 @@ export function PublicLoginPage() {
       if (msg === 'EMAIL_NOT_VERIFIED') {
         toast.error('Email 尚未驗證，請先完成註冊信件驗證');
       } else {
-        toast.error(`登入失敗：${msg}`);
+        toast.error(formatApiError(e, '登入失敗'));
       }
     } finally {
       setIsSubmitting(false);

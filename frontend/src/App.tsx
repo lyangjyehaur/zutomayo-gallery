@@ -140,6 +140,7 @@ const AdminAuthPage = React.lazy(() => import("@/pages/AdminAuthPage").then((m) 
 const AdminSystemAnnouncementsPage = React.lazy(() => import("@/pages/AdminSystemAnnouncementsPage").then((m) => ({ default: m.AdminSystemAnnouncementsPage })));
 const AdminMVSettingsPage = React.lazy(() => import("@/pages/AdminMVSettingsPage").then((m) => ({ default: m.AdminMVSettingsPage })));
 const AdminOrphanMediaPage = React.lazy(() => import("@/pages/AdminOrphanMediaPage").then((m) => ({ default: m.AdminOrphanMediaPage })));
+const AdminErrorLogsPage = React.lazy(() => import("@/pages/AdminErrorLogsPage").then((m) => ({ default: m.AdminErrorLogsPage })));
 const AdminMediaGroupsPage = React.lazy(() => import("@/pages/AdminMediaGroupsPage").then((m) => ({ default: m.AdminMediaGroupsPage })));
 const AdminMediaGroupRepairPage = React.lazy(() => import("@/pages/AdminMediaGroupRepairPage").then((m) => ({ default: m.AdminMediaGroupRepairPage })));
 const AdminAccountPage = React.lazy(() => import("@/pages/AdminAccountPage").then((m) => ({ default: m.AdminAccountPage })));
@@ -3181,6 +3182,7 @@ export default function RootApp() {
               <Route path="system/media-groups" element={adminRoute("systemMediaGroups", <AdminMediaGroupsPage />)} />
               <Route path="system/group-repair" element={adminRoute("systemGroupRepair", <AdminMediaGroupRepairPage />)} />
               <Route path="system/orphans" element={adminRoute("systemOrphans", <AdminOrphanMediaPage />)} />
+              <Route path="system/errors" element={adminRoute(undefined, <AdminErrorLogsPage />)} />
             </Route>
             <Route path="/debug/fb/:mvid?" element={<React.Suspense fallback={pageFallback}><DebugFancyboxMasonry /></React.Suspense>} />
             <Route path="/debug/modal" element={<React.Suspense fallback={pageFallback}><DebugMVModalLightbox /></React.Suspense>} />

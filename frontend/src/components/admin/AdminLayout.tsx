@@ -2,7 +2,9 @@ import React from "react"
 import { Link, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom"
 import { Refine } from "@refinedev/core"
 import { toast } from "sonner"
+import { formatApiError } from "@/lib/api-error"
 import { adminFetch, getAuthApiBase } from "@/lib/admin-api"
+import { useBackendErrorStream } from "@/lib/use-backend-error-stream"
 import {
   adminAccessControlProvider,
   adminAuthProvider,
@@ -29,6 +31,7 @@ export default function AdminLayout() {
   const [isAuthed, setIsAuthed] = React.useState(false)
   const [me, setMe] = React.useState<AdminMePayload | null>(null)
   const [logoutError, setLogoutError] = React.useState<string | null>(null)
+  const { errorCount, resetCount } = useBackendErrorStream(isAuthed)
 
   const permissions = React.useMemo(() => {
     if (me?.permissions && Array.isArray(me.permissions)) return me.permissions
@@ -80,8 +83,10 @@ export default function AdminLayout() {
       clearAdminMeCache()
       toast.success("已登出")
     } catch (e: any) {
-      setLogoutError(`登出失敗：${String(e?.message || e)}`)
-      return
+      const msg = formatApiError(e, '登出失敗');
+      setLogoutError(msg);
+      toast.error(msg);
+      return;
     }
     setMe(null)
     setIsAuthed(false)
@@ -117,6 +122,7 @@ export default function AdminLayout() {
       ["/admin/system/group-repair", "推文修復"],
       ["/admin/system/media-groups", "推文分組"],
       ["/admin/system/orphans", "未歸屬媒體"],
+      ["/admin/system/errors", "錯誤日誌"],
     ])
   }, [])
 
@@ -245,6 +251,15 @@ export default function AdminLayout() {
               </MenubarContent>
             </MenubarMenu>
           </Menubar>
+          {errorCount > 0 && (
+            <Link
+              to="/admin/system/errors"
+              onClick={() => resetCount()}
+              className="relative inline-flex items-center gap-1.5 rounded-md border-2 border-red-500 bg-red-50 px-2.5 py-1 text-xs font-bold text-red-700 hover:bg-red-100 transition-colors"
+            >
+              ⚠️ {errorCount} 錯誤
+            </Link>
+          )}
         </header>
         <div className="flex-1 min-w-0">
           {logoutError ? (

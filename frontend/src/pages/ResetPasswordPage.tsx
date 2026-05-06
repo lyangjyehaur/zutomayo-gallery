@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { formatApiError } from '@/lib/api-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { resetPassword } from '@/lib/public-auth';
@@ -27,7 +28,7 @@ export function ResetPasswordPage() {
       toast.success('已重設密碼並登入');
       navigate(redirect, { replace: true });
     } catch (e: any) {
-      toast.error(`重設失敗：${String(e?.message || e)}`);
+      toast.error(formatApiError(e, '重設失敗'));
     } finally {
       setIsSubmitting(false);
     }
