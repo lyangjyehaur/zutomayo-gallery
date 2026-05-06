@@ -155,10 +155,10 @@ deploy.conf
 deploy-local.sh
 deploy-local.conf
 
-# Agent memory
+# Agent local-only files
 memory.md
-backend-memory.md
 frontend-memory.md
+backend-memory.md
 .trae/
 
 # Web Scraper
@@ -180,3 +180,5 @@ frontend/pnpm-lock.yaml
 
 # WorkBuddy workspace
 .workbuddy/
+agents.md
+AGENTS.md

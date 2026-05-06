@@ -1,140 +1,240 @@
 # ZUTOMAYO Gallery - 專案 Code Wiki
 
-這份文件提供了 `zutomayo-gallery` 專案的全面技術解析，涵蓋了整體架構、目錄結構、模組職責、關鍵函數與資料流。
+這份文件是 `zutomayo-gallery` 的廣角導覽，用來快速理解目前專案的整體結構、模組職責與主要資料流。
 
-## 1. 專案整體架構 (Overall Architecture)
+注意：
 
-本專案是一個展示 ZUTOMAYO (永遠是深夜有多好。) MV 設定圖的線上畫廊，並附帶強大的後台管理系統。
-專案採用**前後端分離 (Client-Server Architecture)** 的設計：
+- 這份文件不是最高優先的真相來源。
+- 若本文與實際代碼、`package.json`、migration、API 定義或更聚焦的文檔衝突，請以高優先級來源為準。
+- 新對話與新任務應先依照 `AGENTS.md`、`memory.md`、`docs-index.md` 的閱讀策略建立上下文。
 
-*   **前端 (Frontend)**: 基於 React 18 + TypeScript，使用 Vite 作為建構工具。UI 樣式使用 Tailwind CSS 4.0 搭配 shadcn/ui 打造獨特的 Neobrutalism（新粗野主義）風格。具備 PWA 支援、多語言 (i18n)、以及複雜的瀑布流畫廊與燈箱展示功能。
-*   **後端 (Backend)**: 基於 Node.js + Express + TypeScript。使用 `better-sqlite3` 作為本地資料庫引擎，並實作了基於記憶體的 Runtime Cache 提升讀取效能。支援 WebAuthn (Passkeys / 通行密鑰) 無密碼登入。
-*   **部署模式**: 支援靜態分離部署 (如前端部署於 Vercel，後端部署於 VPS)，或透過 Nginx 反向代理的整合部署。
+## 1. 專案整體架構
 
----
+本專案是一個展示 ZUTOMAYO MV、設定圖、相關媒體與二創內容的網站，同時提供管理後台與投稿相關能力。
 
-## 2. 專案目錄結構 (Project Structure)
+目前架構為前後端分離，另有一個可選的獨立圖床子應用：
+
+- 前端：`frontend/`
+  - React 18 + TypeScript + Vite
+  - Tailwind CSS 4 + shadcn/ui
+  - 負責公開畫廊、MV 詳情、管理後台頁面、國際化、PWA 與客戶端互動
+- 後端：`backend/`
+  - Express + TypeScript
+  - PostgreSQL + Sequelize + Umzug
+  - 負責 MV、媒體、投稿、認證、權限、系統設定與管理 API
+- 可選子應用：`image-hosting/`
+  - Next.js 應用
+  - 主要服務獨立圖床、儲存與管理場景
+
+目前的主資料庫是 PostgreSQL。`better-sqlite3` 仍存在，但主要用於遺留資料恢復、遷移腳本或備份讀取，不是現行主存儲。
+
+## 2. 專案目錄結構
 
 ```text
 zutomayo-gallery/
-├── frontend/                      # 前端 React 應用程式
+├── frontend/                      # React + Vite 前端應用
 │   ├── src/
-│   │   ├── components/            # React 共用組件 (含 shadcn/ui)
-│   │   │   ├── ui/                # 基礎 UI 元件庫
-│   │   │   ├── MVCard.tsx         # 畫廊列表的單一 MV 卡片
-│   │   │   └── MVDetailsModal.tsx # MV 詳情與影片播放彈窗
-│   │   ├── config/                # 靜態設定檔 (如相簿分類、Storage Key)
-│   │   ├── hooks/                 # 自定義 React Hooks (如 useLazyImage)
-│   │   ├── lib/                   # 工具函數 (Image Proxy, Geo, 類型定義)
-│   │   ├── locales/               # i18n 多國語言翻譯檔
-│   │   ├── pages/                 # 獨立頁面 (AdminPage, NotFoundPage)
-│   │   ├── App.tsx                # 主應用程式與路由佈局
-│   │   └── main.tsx               # 前端程式進入點
-│   ├── index.html                 # HTML 模板
-│   └── vite.config.js             # Vite 建構設定
+│   │   ├── components/            # 共用 React 組件與 UI 元件
+│   │   ├── pages/                 # 頁面組件
+│   │   ├── hooks/                 # 自定義 Hooks
+│   │   ├── lib/                   # 客戶端工具、API 與型別
+│   │   ├── config/                # 前端設定
+│   │   ├── locales/               # i18n 語系檔
+│   │   ├── debug/                 # 除錯與實驗頁面
+│   │   ├── App.tsx                # 前端主路由與公開站主入口
+│   │   └── main.tsx               # 啟動點
+│   ├── docs/                      # 前端專屬設計說明
+│   └── package.json
 │
-├── backend/                       # 後端 Node.js 應用程式
-│   ├── data/                      # SQLite 資料庫存放位置 (database.sqlite)
+├── backend/                       # Express API 與資料維護邏輯
 │   ├── src/
-│   │   ├── controllers/           # API 路由控制器 (處理 Request/Response)
-│   │   ├── middleware/            # Express 中介軟體 (限流、錯誤處理)
-│   │   ├── routes/                # Express 路由定義
-│   │   ├── services/              # 核心業務邏輯 (資料庫存取、認證)
-│   │   ├── validators/            # Zod 資料驗證器
-│   │   └── index.ts               # 後端程式進入點
-│   └── package.json               # 後端依賴管理
+│   │   ├── controllers/           # Request/Response 邏輯
+│   │   ├── routes/                # 路由掛載
+│   │   ├── services/              # 業務邏輯與外部整合
+│   │   ├── models/                # Sequelize 模型與關聯
+│   │   ├── validators/            # Zod 驗證
+│   │   ├── middleware/            # Auth、快取、錯誤處理等
+│   │   ├── migrations/            # Umzug migrations
+│   │   └── scripts/               # 維運、遷移、恢復腳本
+│   ├── API_DOCS.md                # API 參考文檔
+│   └── package.json
 │
-└── deploy.sh                      # 伺服器自動化部署腳本
+├── docs/                          # 跨模組設計文檔
+├── image-hosting/                 # 可選獨立圖床服務
+├── AGENTS.md                      # AI 協作入口規則
+├── memory.md                      # 跨端共享記憶
+├── docs-index.md                  # 任務導向文檔索引
+└── CODE_WIKI.md                   # 廣角導覽
 ```
 
----
+## 3. 主要模組職責
 
-## 3. 主要模組職責 (Main Modules & Responsibilities)
+### 前端
 
-### 🎨 前端模組 (Frontend)
+- `frontend/src/App.tsx`
+  - 公開站主入口
+  - 整合路由、SWR 取數、系統狀態、公開頁面裝配與部分列表互動
+  - 使用 `useSWR` 請求 MV 資料、metadata 與 system status
+- `frontend/src/pages/AdminPage.tsx`
+  - 管理後台主頁之一
+  - 體量很大，承載資料編輯、維護工具與多種管理入口
+- `frontend/src/components/FancyboxViewer.tsx`
+  - 處理正式站燈箱瀏覽
+- `frontend/src/components/MVDetailsModal.tsx`
+  - 顯示 MV 詳情、媒體與外部影片播放入口
+- `frontend/src/lib/`
+  - 放置 API 存取、管理端工具、共用型別與客戶端工具函數
 
-*   **核心佈局與路由 (`App.tsx`)**: 
-    作為應用的主入口，負責獲取資料、管理全局狀態（搜尋關鍵字、過濾條件、排序方式）。透過 `IntersectionObserver` 實作無限滾動 (Infinite Scroll) 來渲染 MV 卡片。
-*   **畫廊與燈箱展示 (`FancyboxViewer.tsx`, `MVDetailsModal.tsx`)**:
-    *   `MVDetailsModal`: 點擊 MV 卡片後彈出的 Modal，整合了 YouTube / Bilibili 雙平台的影片 iframe 播放器，並能根據客戶端 IP (中國大陸與否) 自動切換預設播放源。
-    *   `FancyboxViewer`: 負責將 MV 的「設定圖/插畫」以瀑布流 (Masonry) 佈局呈現，點擊圖片會啟動全螢幕燈箱。
-*   **特效元件 (`CoverCarousel` in `MVCard.tsx`)**:
-    為了解決列表圖片單調的問題，實作了包含 Glitch (故障)、VHS、Scan-wipe (掃描線擦除) 等隨機過場特效的圖片輪播元件。
-*   **資料獲取與快取**: 
-    使用 `useSWR` 進行 API 資料的請求與客戶端快取，避免頻繁發送網路請求。
-*   **國際化 (i18n)**:
-    整合 `react-i18next`，根據 URL 路由 (例如 `/zh-TW/`, `/ja/`) 或瀏覽器語言自動切換介面文字。
+### 後端
 
-### ⚙️ 後端模組 (Backend)
+- `backend/src/controllers/mv.controller.ts`
+  - 提供 MV 讀取、更新、探測圖片尺寸與 metadata 相關 API
+- `backend/src/services/mv.service.ts`
+  - 管理 MV 讀取與更新流程
+  - 使用運行時快取 `runtimeData`
+  - 寫入成功後可背景同步至 Meilisearch
+- `backend/src/services/v2_mapper.ts`
+  - 在 PostgreSQL 關聯式模型與前端仍使用的相容 JSON 結構之間做映射
+  - `getMVsFromDB()` 將關聯式資料轉成前端可直接使用的結構
+  - `saveMVsToDB()` 將編輯資料拆回 MV、Artist、Album、Keyword、Media 等表
+- `backend/src/models/index.ts`
+  - 定義目前主系統使用的 Sequelize 模型與關聯
+  - 包含 MV、Media、Artist、Album、Keyword、MediaGroup、PublicUser、AdminUser 等核心實體
+- `backend/src/controllers/auth.controller.ts` + `backend/src/services/auth.service.ts`
+  - 管理員登入、Passkey 註冊與驗證
+  - 採 session-based auth，並支援 WebAuthn / Passkeys
+- `backend/src/controllers/media-groups.controller.ts`
+  - 管理媒體分組、推文來源媒體與維護流程
+- `backend/src/controllers/fanart.controller.ts`
+  - 提供 fanart 展示與相關彙整資料
+- `backend/src/controllers/admin-submissions.controller.ts`
+  - 管理投稿審核、媒體搬運與後續整理流程
 
-*   **MV 資料管理 (`mv.controller.ts`, `mv.service.ts`)**:
-    負責處理前端的資料請求。`MVService` 實作了一層 Runtime Cache (將 SQLite 資料預先載入記憶體)，大幅提升讀取效能。支援全量更新與部分更新，並自動將 JSON 陣列與 SQLite 的字串欄位進行序列化/反序列化。
-*   **無密碼認證 (`auth.controller.ts`, `auth.service.ts`)**:
-    整合 `@simplewebauthn/server`，允許管理員使用裝置的生物辨識或通行密鑰 (Passkeys) 進行登入，無需輸入傳統密碼。
-*   **資料庫服務 (`db.service.ts`)**:
-    封裝 `better-sqlite3`。負責初始化 SQLite 檔案，並具備**自動遷移 (Auto-migration)** 能力：啟動時若發現 `mvs` 表缺少欄位，會自動執行 `ALTER TABLE` 補齊。
-*   **推文媒體解析 (`twitter.service.ts`)**:
-    供管理後台使用的輔助功能，能解析 Twitter (X) 連結並自動提取其中的圖片與影片資源。
+## 4. 目前資料模型重點
 
----
+目前不是單表 JSON 存儲模型，而是以 PostgreSQL 關聯式模型為主：
 
-## 4. 關鍵類別與函數說明 (Key Classes & Functions)
+- `mvs`
+  - MV 核心資訊，如標題、年份、日期、YouTube、Bilibili、描述
+- `media`
+  - 所有媒體資源，包括 cover、official、fanart 等
+- `artists`
+  - 創作者資料
+- `albums`
+  - 專輯資料
+- `keywords`
+  - 搜尋與分類標籤
+- 關聯表
+  - `mv_media`
+  - `mv_artists`
+  - `mv_albums`
+  - `mv_keywords`
+- 補充表
+  - `media_groups`
+  - `sys_configs`
+  - `sys_announcements`
+  - `staging_fanarts`
+  - `public_users`
+  - `auth_passkeys`
 
-### 前端關鍵函數
-*   `useLazyImage()` (in `frontend/src/hooks/useLazyImage.ts`):
-    自定義 Hook，透過 `IntersectionObserver` 偵測元素是否進入可視範圍。用於 MV 卡片的進場動畫與圖片的延遲加載 (Lazy Loading)，優化首屏渲染效能。
-*   `CoverCarousel` (in `frontend/src/components/MVCard.tsx`):
-    一個複雜的 React 記憶化元件 (`React.memo`)。內部使用了多個 `setTimeout` 與 `requestAnimationFrame` 來隨機觸發圖片切換與 CSS 濾鏡動畫，並監聽系統的 `prefers-reduced-motion` 屬性以適應無障礙需求。
-*   `App.tsx` 內的 `filteredData` (useMemo):
-    前端的核心過濾引擎。每次 `mvData`、搜尋字詞 (`search`)、或標籤 (`yearFilter`, `albumFilter`, `artistFilter`) 變更時，會重新計算並排序出應顯示的 MV 列表。
+前端仍消費近似舊版的聚合 JSON 結構，因此後端透過 `v2_mapper.ts` 做雙向轉換，讓前端暫時不必直接承擔完整關聯式資料模型。
 
-### 後端關鍵函數
-*   `sequelize` (in `backend/src/services/pg.service.ts`):
-    透過 Sequelize 連線 PostgreSQL，並提供主站資料表（如 `mvs`、`fanarts`）的 ORM 入口。
-*   `migrate` (in `backend/src/scripts/migrate.ts`):
-    使用 Umzug 執行 migrations（`backend/src/migrations`），用於資料表結構演進。
-*   `probeImage()` (in `backend/src/controllers/mv.controller.ts`):
-    利用 `probe-image-size` 套件，在不下載完整圖片的情況下，讀取遠端圖片的標頭 (Header) 以獲取圖片的寬高尺寸。這對於前端瀑布流佈局的預先佔位非常重要。
+## 5. 關鍵類別與函數
 
----
+### 前端
 
-## 5. 依賴關係 (Dependencies)
+- `RootApp()` in `frontend/src/App.tsx`
+  - 以 `useSWR` 同時讀取 MV 資料、metadata 與系統維護狀態
+  - 根據路由與系統狀態決定是否顯示公開站、管理頁或維護頁
+- `useLazyImage()` in `frontend/src/hooks/useLazyImage.ts`
+  - 以 `IntersectionObserver` 處理延遲載入與進場時機
+- `CoverCarousel` in `frontend/src/components/MVCard.tsx`
+  - 處理卡片封面輪播與視覺特效
 
-### 前端 (Frontend)
-*   **UI 框架**: `react` (18.3.1), `react-dom`
-*   **路由與狀態**: `react-router-dom` (6.22), `swr` (2.4)
-*   **樣式與組件**: `tailwindcss` (4.0), `shadcn/ui` (Radix UI)
-*   **視覺展示**: `@fancyapps/ui` (6.1), `lightgallery` (2.9, debug/測試用途), `masonry-layout`
-*   **認證與編輯**: `@simplewebauthn/browser` (WebAuthn), `@monaco-editor/react` (程式碼編輯器)
-*   **多語言**: `i18next`, `react-i18next`
+### 後端
 
-### 後端 (Backend)
-*   **伺服器框架**: `express` (4.19), `cors`, `helmet` (資安防護)
-*   **資料庫**: PostgreSQL（`pg` + `sequelize`），`better-sqlite3` 主要用於遺留資料/遷移腳本
-*   **認證與安全**: `@simplewebauthn/server` (13.3), `bcrypt`, `express-rate-limit` (防刷機制)
-*   **資料驗證**: `zod`
-*   **工具**: `probe-image-size` (獲取遠端圖片尺寸), `geoip-lite` (IP 地理位置解析)
+- `sequelize` in `backend/src/services/pg.service.ts`
+  - PostgreSQL 主連線
+- `getMVsFromDB()` in `backend/src/services/v2_mapper.ts`
+  - 從關聯模型讀出資料並格式化為前端可用結構
+- `saveMVsToDB()` in `backend/src/services/v2_mapper.ts`
+  - 將編輯結果拆解並寫入 MV 與多個關聯表
+- `MVService.getAllMVs()` / `MVService.updateAllMVs()` in `backend/src/services/mv.service.ts`
+  - 負責 MV 快取、部分更新、全量更新與同步流程
+- `updateMVs()` / `probeImage()` in `backend/src/controllers/mv.controller.ts`
+  - 提供管理端更新入口與圖片尺寸探測
+- `generateAuthOptions()` / `verifyAuth()` in `backend/src/controllers/auth.controller.ts`
+  - 管理員 Passkey 認證主流程
+- `migrate` in `backend/src/scripts/migrate.ts`
+  - 執行 Umzug migrations
 
----
+## 6. 依賴關係
 
-## 6. 專案運作方式與資料流 (Data Flow)
+### 前端
 
-### 1. 頁面初始化與資料讀取 (Read Flow)
-1. 使用者訪問網站，React 載入並執行 `App.tsx`。
-2. `useSWR` 發送 GET 請求至 `/api/mvs`。
-3. 後端 `mv.controller.ts` 接收請求，呼叫 `MVService.getAllMVs()`。
-4. `MVService` 檢查記憶體中是否有 `runtimeData` 快取。若有則直接返回；若無，則查詢 SQLite `mvs` 表，將字串反序列化為 JSON，存入快取並返回。
-5. 前端接收資料後，經過本地過濾器，渲染出瀑布流卡片。
+- UI 與路由：`react`, `react-dom`, `react-router-dom`
+- 資料讀取：`swr`, `@tanstack/react-query`, `@refinedev/*`
+- 樣式與組件：`tailwindcss`, `@radix-ui/*`, `shadcn`
+- 視覺展示：`@fancyapps/ui`, `masonry-layout`, `lightgallery`（主要保留 debug 用途）
+- 編輯與整合：`@monaco-editor/react`, `@simplewebauthn/browser`, `@waline/client`
+- 多語系：`i18next`, `react-i18next`
 
-### 2. 後台資料更新 (Write Flow)
-1. 管理員訪問 `/admin/*` 時，若尚未登入會被導向 `/admin/auth`，並可使用 Session 或 Passkey 完成登入。
-2. 驗證通過後，管理員在 Monaco Editor 中修改 JSON 資料，點擊儲存。
-3. 前端發送 POST 請求至 `/api/mvs/update`。
-4. 後端透過 `zod` 進行嚴格的格式驗證 (`validateMVs`)。
-5. 驗證通過後，`MVService` 開啟 SQLite Transaction，執行 `DELETE` 與 `INSERT OR REPLACE`，完成資料持久化。
-6. 更新 `runtimeData` 快取，並回傳成功訊息給前端。
+### 後端
 
-### 3. 多媒體資源加載策略
-*   本專案**不**直接在伺服器儲存大量的原圖檔案。圖片的 URL 大多指向外部圖床或社群媒體 (如 Twitter)。
-*   為了解決跨域 (CORS) 或防盜鏈 (Hotlink protection) 的問題，前端使用了 `getProxyImgUrl` 函數，將圖片 URL 透過反向代理伺服器 (Image Proxy) 進行轉發載入。所有請求皆透過後端 `/api/system/image/proxy` 進行安全簽名。
-*   影片播放則透過 YouTube 或 Bilibili 的官方 iframe API 進行嵌入，並根據使用者的 IP 自動選擇最適合的連線來源。
+- API 與安全：`express`, `cors`, `helmet`, `express-session`, `express-rate-limit`
+- 資料庫：`pg`, `sequelize`, `umzug`
+- 驗證與認證：`zod`, `bcrypt`, `@simplewebauthn/server`
+- 快取與搜尋：`redis`, `ioredis`, `bullmq`, `meilisearch`
+- 媒體與外部服務：`probe-image-size`, `@aws-sdk/client-s3`, `rss-parser`, `apify-client`
+- 遺留與維護：`better-sqlite3` 僅用於遷移、恢復與舊資料處理
+
+## 7. 主要資料流
+
+### 1. 公開站讀取流程
+
+1. 使用者訪問網站，前端載入 `frontend/src/App.tsx`。
+2. `useSWR` 請求 MV API、metadata API 與 system status API。
+3. 後端 `mv.controller.ts` 呼叫 `MVService`。
+4. `MVService` 先檢查運行時快取 `runtimeData`。
+5. 若快取不存在或需要重建，則透過 `getMVsFromDB()` 從 PostgreSQL 讀取 MV、Artist、Album、Keyword、Media 等關聯資料。
+6. `v2_mapper.ts` 將關聯式資料轉為前端相容結構並回傳。
+7. 前端再做本地搜尋、篩選、排序與畫面渲染。
+
+### 2. 管理後台更新流程
+
+1. 管理員進入 `/admin/*`，先通過登入與權限檢查。
+2. 管理頁提交更新資料到後端，例如 MV 編輯或維護操作。
+3. 後端 controller 使用 Zod 驗證輸入。
+4. `MVService.updateAllMVs()` 決定全量更新、部分更新與刪除清單。
+5. `saveMVsToDB()` 在 transaction 中重建 MV 與相關 metadata / media 關聯。
+6. 寫入成功後更新 `runtimeData`，並清理 API 快取。
+7. 若有啟用搜尋服務，背景同步到 Meilisearch。
+
+### 3. 管理員認證流程
+
+1. 管理員可使用密碼登入，並可在登入後註冊 Passkey。
+2. Passkey 認證由前端呼叫後端的 options / verify API。
+3. 後端使用 session 保存 challenge 與暫存認證上下文。
+4. 驗證成功後將管理員身份寫入 session，供後續管理 API 使用。
+
+### 4. 媒體與外部資源流程
+
+- 圖片來源可能是 Twitter、YouTube、R2 或其他外部來源。
+- 部分媒體會經過 proxy 或 R2 備份，以解決展示、穩定性與維護需求。
+- 媒體分組、投稿媒體與 MV cover 有不同維護邊界，不能混成同一條流程。
+- `MV` cover 維護必須與 tweet-source media、orphan media、fanart 管理分開處理。
+
+## 8. 與其他文檔的關係
+
+- 若要快速判斷先讀哪些文檔，先看 `docs-index.md`
+- 若要看跨端共享背景，讀 `memory.md`
+- 若要看前端穩定約束，讀 `frontend-memory.md`
+- 若要看後端穩定約束，讀 `backend-memory.md`
+- 若要看 API 細節，讀 `backend/API_DOCS.md`
+- 若要看資料庫與媒體設計，讀 `docs/DB_SCHEMA.md`、`docs/MEDIA_FLOW.md`、`docs/MEDIA_PROCESSING_ARCHITECTURE.md`
+
+## 9. 維護原則
+
+- 修改程式碼時，若影響架構、資料流、API、資料模型或維運方式，應同步更新對應文檔。
+- `CODE_WIKI.md` 應保持在「快速導覽」層級，不要變成重複維護所有細節的唯一文檔。
+- 更細的準確說明應放在專門文檔，再由 `docs-index.md` 與 memory 文檔負責導流。
