@@ -1,5 +1,6 @@
 import useSWR from 'swr';
 import { getApiRoot } from './admin-api';
+import { createApiError, readJsonResponse } from './api-error';
 
 export type PublicUser = {
   id: string;
@@ -14,9 +15,9 @@ const baseApiUrl = getApiRoot();
 
 const fetchJson = async (url: string, init?: RequestInit) => {
   const res = await fetch(url, { credentials: 'include', ...init });
-  const json = await res.json().catch(() => null);
+  const json = await readJsonResponse<{ success?: boolean; data?: any }>(res);
   if (!res.ok || !json?.success) {
-    throw new Error(String(json?.error || json?.message || 'REQUEST_FAILED'));
+    throw createApiError(json, 'REQUEST_FAILED', res.status);
   }
   return json.data;
 };

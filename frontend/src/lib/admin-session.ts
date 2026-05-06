@@ -1,4 +1,5 @@
 import { adminFetch, getAuthApiBase } from "@/lib/admin-api"
+import { readJsonResponse } from "@/lib/api-error"
 
 export type AdminMePayload = {
   username?: string
@@ -24,7 +25,7 @@ export const fetchAdminMe = async (): Promise<AdminMePayload | null> => {
   if (!mePromise) {
     mePromise = (async () => {
       const res = await adminFetch(`${getAuthApiBase()}/me`)
-      const json = (await res.json().catch(() => null)) as ApiResponse<AdminMePayload> | null
+      const json = (await readJsonResponse<ApiResponse<AdminMePayload>>(res))
       if (!res.ok || !json?.success) return null
       return json.data
     })().catch(() => null)

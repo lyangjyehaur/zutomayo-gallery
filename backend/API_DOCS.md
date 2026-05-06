@@ -17,6 +17,26 @@
 - **資料壓縮**: 所有大型 JSON 回應皆預設啟用 Gzip/Brotli 壓縮。
 - **認證方式**: 標示為 **[管理員]** 的 API，請求時必須攜帶有效的 Auth Cookie/Token (由 Auth API 登入後簽發)。
 
+### 錯誤回應格式
+當 API 發生錯誤時，會回傳統一的 JSON envelope：
+
+```json
+{
+  "success": false,
+  "error": "VISIBLE_MESSAGE",
+  "code": "MACHINE_CODE",
+  "statusCode": 400,
+  "requestId": "req-xxx",
+  "details": []
+}
+```
+
+- `error`：給前端顯示的主要訊息。
+- `code`：機器可讀的錯誤代碼，預設與 `AppError` 訊息相同。
+- `statusCode`：HTTP status code，方便前端與除錯工具使用。
+- `requestId`：追查後端 log 用的請求識別碼。
+- `details`：驗證錯誤或額外 context，只有在需要時才回傳。
+
 ---
 
 ## 1. 系統與基礎設定 (System & Core)

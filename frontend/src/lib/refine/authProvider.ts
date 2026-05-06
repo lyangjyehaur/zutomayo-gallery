@@ -1,5 +1,6 @@
 import type { AuthProvider } from "@refinedev/core"
 import { adminFetch, getAuthApiBase } from "@/lib/admin-api"
+import { createApiError, readJsonResponse } from "@/lib/api-error"
 import { clearAdminMeCache, fetchAdminMe } from "@/lib/admin-session"
 
 export const adminAuthProvider: AuthProvider = {
@@ -10,10 +11,9 @@ export const adminAuthProvider: AuthProvider = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username: params.username, password: params.password }),
     })
-    const json = (await res.json().catch(() => null)) as { success?: boolean; error?: string; message?: string } | null
+    const json = await readJsonResponse<{ success?: boolean; error?: string; message?: string }>(res)
     if (!res.ok || !json?.success) {
-      const msg = (json as any)?.error || (json as any)?.message || "LOGIN_FAILED"
-      return { success: false, error: new Error(String(msg)) }
+      return { success: false, error: createApiError(json, "LOGIN_FAILED", res.status) }
     }
     clearAdminMeCache()
     return { success: true }

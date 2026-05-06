@@ -4,14 +4,15 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { logoutPublicUser, usePublicMe } from '@/lib/public-auth';
 import { getApiRoot } from '@/lib/admin-api';
+import { createApiError, readJsonResponse } from '@/lib/api-error';
 
 const baseApiUrl = getApiRoot();
 
 const fetchJson = async (url: string) => {
   const res = await fetch(url, { credentials: 'include' });
-  const json = await res.json().catch(() => null);
+  const json = await readJsonResponse<{ success?: boolean; data?: any; error?: string; message?: string }>(res);
   if (!res.ok || !json?.success) {
-    throw new Error(String(json?.error || json?.message || 'REQUEST_FAILED'));
+    throw createApiError(json, 'REQUEST_FAILED', res.status);
   }
   return json.data;
 };

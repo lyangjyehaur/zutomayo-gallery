@@ -202,7 +202,6 @@ export const getFanartGallery = async (req: Request, res: Response) => {
   }
 
   if (!all) {
-    findOptions.subQuery = false;
     findOptions.limit = limit + 1;
     findOptions.offset = offset;
   }

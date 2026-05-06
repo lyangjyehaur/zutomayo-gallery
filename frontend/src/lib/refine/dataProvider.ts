@@ -1,9 +1,9 @@
 import type { DataProvider } from "@refinedev/core"
 import { adminFetch, getApiRoot } from "@/lib/admin-api"
+import { createApiError, readJsonResponse } from "@/lib/api-error"
 
 const parseJson = async (res: Response) => {
-  const text = await res.text().catch(() => "")
-  const json = text ? JSON.parse(text) : null
+  const json = await readJsonResponse<any>(res)
   if (res.ok) return json
 
   const message =
@@ -11,20 +11,13 @@ const parseJson = async (res: Response) => {
     res.statusText ||
     "Request failed"
 
-  const err: any = new Error(String(message))
-  err.statusCode = res.status
-  err.status = res.status
-  err.message = String(message)
-  throw err
+  throw createApiError(json || { error: message, statusCode: res.status }, "Request failed", res.status)
 }
 
 const unwrap = (json: any) => {
   if (json && typeof json === "object" && "success" in json) {
     if (json.success) return json.data
-    const err: any = new Error(String(json.error || json.message || "Request failed"))
-    err.statusCode = 400
-    err.status = 400
-    throw err
+    throw createApiError(json, "Request failed", 400)
   }
   return json
 }

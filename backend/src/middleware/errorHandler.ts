@@ -7,7 +7,8 @@ export class AppError extends Error {
   constructor(
     public statusCode: number,
     message: string,
-    public isOperational = true
+    public isOperational = true,
+    public details?: unknown
   ) {
     super(message);
     this.name = 'AppError';
@@ -20,6 +21,8 @@ export const notFoundHandler = (req: Request, res: Response) => {
   res.status(404).json({
     success: false,
     error: `路由 ${req.originalUrl} 不存在`,
+    code: 'NOT_FOUND',
+    statusCode: 404,
     requestId: (req as any).id,
   });
 };
@@ -32,16 +35,20 @@ export const globalErrorHandler = (
   next: NextFunction
 ) => {
   const isDev = process.env.NODE_ENV === 'development';
+  const statusFromError = typeof (err as any)?.statusCode === 'number' ? (err as any).statusCode : undefined;
+  const codeFromError = typeof (err as any)?.code === 'string' ? (err as any).code : undefined;
   
   // 默認錯誤響應
   let statusCode = 500;
   let message = '服務器內部錯誤';
+  let code = 'INTERNAL_SERVER_ERROR';
   let details: unknown = undefined;
   
   // Zod 驗證錯誤
   if (err instanceof ZodError) {
     statusCode = 400;
     message = '輸入驗證失敗';
+    code = 'VALIDATION_ERROR';
     details = err.errors.map(e => ({
       field: e.path.join('.'),
       message: e.message,
@@ -51,11 +58,22 @@ export const globalErrorHandler = (
   else if (err instanceof AppError) {
     statusCode = err.statusCode;
     message = err.message;
+    code = err.message;
+    details = err.details;
   }
   // SyntaxError (JSON 解析錯誤)
   else if (err instanceof SyntaxError && 'body' in err) {
     statusCode = 400;
     message = '無效的 JSON 格式';
+    code = 'INVALID_JSON';
+  }
+  else if (typeof statusFromError === 'number') {
+    statusCode = statusFromError;
+    if (codeFromError) code = codeFromError;
+  }
+
+  if (typeof codeFromError === 'string' && code === 'INTERNAL_SERVER_ERROR') {
+    code = codeFromError;
   }
   
   // 記錄錯誤
@@ -73,6 +91,8 @@ export const globalErrorHandler = (
   res.status(statusCode).json({
     success: false,
     error: message,
+    code,
+    statusCode,
     requestId: (req as any).id,
     ...(details ? { details } : {}),
     ...(isDev && { 
