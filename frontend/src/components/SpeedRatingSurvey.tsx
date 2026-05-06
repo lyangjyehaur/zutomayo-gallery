@@ -11,7 +11,11 @@ export function useActiveTimer(thresholdSeconds = 60, onTrigger: () => void) {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (localStorage.getItem('speed_rating_shown')) return;
+    try {
+      if (localStorage.getItem('speed_rating_shown')) return;
+    } catch {
+      return;
+    }
 
     const handleActivity = () => {
       lastActiveTimeRef.current = Date.now();
@@ -20,19 +24,24 @@ export function useActiveTimer(thresholdSeconds = 60, onTrigger: () => void) {
     const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
     events.forEach(e => window.addEventListener(e, handleActivity, { passive: true }));
 
-    timerRef.current = setInterval(() => {
-      const now = Date.now();
-      if (now - lastActiveTimeRef.current < 5000) {
-        activeTimeRef.current += 1;
-        const isPaused = now - lastActiveTimeRef.current > 2000;
-        if (activeTimeRef.current >= thresholdSeconds && isPaused) {
-          onTrigger();
-          localStorage.setItem('speed_rating_shown', 'true');
-          if (timerRef.current) clearInterval(timerRef.current);
-          events.forEach(e => window.removeEventListener(e, handleActivity));
+    const startTimer = () => {
+      timerRef.current = setInterval(() => {
+        if (document.hidden) return;
+        const now = Date.now();
+        if (now - lastActiveTimeRef.current < 5000) {
+          activeTimeRef.current += 1;
+          const isPaused = now - lastActiveTimeRef.current > 2000;
+          if (activeTimeRef.current >= thresholdSeconds && isPaused) {
+            onTrigger();
+            try { localStorage.setItem('speed_rating_shown', 'true'); } catch {}
+            if (timerRef.current) clearInterval(timerRef.current);
+            events.forEach(e => window.removeEventListener(e, handleActivity));
+          }
         }
-      }
-    }, 1000);
+      }, 1000);
+    };
+
+    startTimer();
 
     return () => {
       events.forEach(e => window.removeEventListener(e, handleActivity));

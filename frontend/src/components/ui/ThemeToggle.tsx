@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "./button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 type Theme = "light" | "dark";
 
@@ -14,8 +15,12 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ isIconOnly = false }) => {
   const [theme, setTheme] = useState<Theme>(() => {
     // 從localStorage或系統偏好獲取主題
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("theme") as Theme;
-      if (saved === "light" || saved === "dark") return saved;
+      try {
+        const saved = localStorage.getItem("theme") as Theme;
+        if (saved === "light" || saved === "dark") return saved;
+      } catch {
+        // 讀取失敗時使用默認主題
+      }
     }
     return "dark"; // 默認dark模式
   });
@@ -33,7 +38,11 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ isIconOnly = false }) => {
     root.setAttribute("data-theme", theme);
     
     // 保存到localStorage
-    localStorage.setItem("theme", theme);
+    try {
+      localStorage.setItem("theme", theme);
+    } catch {
+      toast.error(t("app.theme_save_failed", "主題設定保存失敗，可能是瀏覽器隱私模式或存儲空間不足"));
+    }
   }, [theme]);
 
   const toggleTheme = () => {

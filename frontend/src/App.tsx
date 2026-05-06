@@ -345,7 +345,11 @@ function App({
   const { type: networkType, saveData: networkSaveData, isIosMobileSafari } = useNetworkStatus();
   const [isTransitioningOut, setIsTransitioningOut] = useState(false);
   const [networkAlertAcknowledged, setNetworkAlertAcknowledged] = useState(() => {
-    return sessionStorage.getItem('ztmy_network_alerted') === 'true';
+    try {
+      return sessionStorage.getItem('ztmy_network_alerted') === 'true';
+    } catch {
+      return false;
+    }
   });
 
   const runPWARecovery = useCallback(async () => {
@@ -988,8 +992,14 @@ function App({
         // 取得跨 Session 的使用者偏好設定
         const uiLanguage = i18n.language || browserLanguage;
         const isAdmin = isAdminAuthenticated;
-        const isChinaNetwork = localStorage.getItem('is_china') === 'true';
-        const enableIpGeo = localStorage.getItem('enable_ip_geo') !== 'false';
+        let isChinaNetwork = false;
+        let enableIpGeo = true;
+        try {
+          isChinaNetwork = localStorage.getItem('is_china') === 'true';
+          enableIpGeo = localStorage.getItem('enable_ip_geo') !== 'false';
+        } catch {
+          // 讀取失敗時使用默認值
+        }
 
         window.umami.identify({
           // 核心互動指標
@@ -1111,7 +1121,11 @@ function App({
   }, [isLoading, error, networkAlertAcknowledged, networkType, networkSaveData, isIosMobileSafari, mvData.length]);
 
   const handleWarningConfirm = () => {
-    sessionStorage.setItem('ztmy_network_alerted', 'true');
+    try {
+      sessionStorage.setItem('ztmy_network_alerted', 'true');
+    } catch {
+      // 存儲失敗時靜默處理
+    }
     
     // 傳送追蹤事件給 umami
     if (window.umami && typeof window.umami.track === 'function') {
@@ -3013,13 +3027,13 @@ export default function RootApp() {
   }, []);
 
   const error = swrError ? swrError.message : null;
-  const commonProps: AppCommonProps = {
+  const commonProps = useMemo<AppCommonProps>(() => ({
     mvData: mvData || [],
     isLoading,
     error,
     metadata: normalizedMetadata,
     systemStatus,
-  };
+  }), [mvData, isLoading, error, normalizedMetadata, systemStatus]);
 
   if (systemStatus?.maintenance && !isAdminRoute) {
     return <React.Suspense fallback={pageFallback}><MaintenancePage type={systemStatus.type || 'ui'} eta={systemStatus.eta} /></React.Suspense>;
