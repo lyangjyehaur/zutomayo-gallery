@@ -72,7 +72,13 @@
 
 - 在引入新實作前，先 reuse 現有 project patterns。
 - 未經用戶明確要求，不要 push。
+- 主專案 version 的 single source 是根目錄 `package.json`。
+- 不要手改 `frontend/package.json`、`backend/package.json`、各自 lockfile、README version badge；它們都屬於 derived metadata。
 - 若用戶明確要求 push，預設只升 patch version；除非明確要求 major / minor bump。
+- 版本更新時，從 repo root 執行 `npm run release:patch`、`npm run release:minor`、`npm run release:major`，或 `npm version <exact-version> --no-git-tag-version`；`version` lifecycle 會自動同步衍生檔案。
+- 可用 `npm run version:check` 檢查 version drift；若失配再執行 `npm run version:sync`。
+- `frontend/public/version.json` 是 build/runtime artifact，frontend build 時會重新產生；不作為手動改版入口。
+- `image-hosting/package.json` 目前維持獨立版本，不在主專案自動同步範圍內。
 - 若 requested push 包含 version bump，要在相關 memory file 記錄版本，方便之後整理 changelog。
 - 對 layout、styling、animation、interaction 類改動，應在 browser 中測試；必要時向用戶索取 edge-case test scenarios。
 
