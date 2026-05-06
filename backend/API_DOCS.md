@@ -111,6 +111,11 @@
 - `date_asc`：按 group 的 `post_date` 升序（最舊優先）
 - `likes`：按 group 的 `like_count` 降序（最多讚優先）
 
+**分頁與 MV 關聯查詢優化：**
+- MV 關聯資料使用 `separate: true` 在獨立查詢中載入，避免 BelongsToMany JOIN 導致主查詢行數膨脹（一個 Media 關聯多個 MV 時，JOIN 會產生多行，使 LIMIT 作用於合併後的行數而非唯一 Media 數量）
+- MV ID 篩選使用 `WHERE id IN (SELECT media_id FROM mv_media WHERE mv_id IN (...))` 子查詢，而非 `include.where + required: true` 的 JOIN 方式，確保主查詢的 LIMIT/OFFSET 正確作用於唯一 Media 記錄
+- `count()` 查詢不包含 MV include，因為 MV 篩選條件已通過 WHERE 子句實現
+
 **Response:**
 ```json
 {

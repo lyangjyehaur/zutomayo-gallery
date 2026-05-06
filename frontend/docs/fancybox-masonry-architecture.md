@@ -94,13 +94,27 @@ FancyboxViewer 支援從外部伺服器分頁載入資料，主要用於 FanArt 
 
 **外部載入流程：**
 1. 當 `processedImages` 全部顯示完畢（`!hasMore`）但 `externalHasMore` 為 true 時，點擊「載入更多」會呼叫 `onExternalLoadMore()`
-2. 呼叫後檢查 `processedImages.length` 是否已增加（React 可能在 await 期間完成狀態更新）
-3. 若已增加，直接從新資料中載入下一批圖片並更新 `hasMore`
-4. 若尚未增加，透過 `externalDataReadyRef` 註冊一個 Promise resolve，等待 `processedImages.length` 變化時由 `useEffect` 觸發 resolve（最長等待 3 秒超時）
+2. 呼叫後透過 `displayedCountRef` 檢查已顯示數量是否小於 `processedImagesRef.current.length`
+3. 若已顯示數量 ≥ 當前 processedImages 長度（新資料尚未到達），透過 `externalDataReadyRef` 註冊一個 Promise resolve，等待 `processedImages.length` 變化時由 `useEffect` 觸發 resolve（最長等待 5 秒超時）
+4. 等待完成後，使用 `getPhotosFromRangeRef.current` 從新資料中載入下一批圖片並更新 `hasMore`
 5. 所有載入操作都有去重保險（以 `originalUrl` 或 `full` 為 key），避免重複顯示
 
 **為什麼需要 `externalDataReadyRef`：**
 `onExternalLoadMore()` 是非同步的，呼叫後 `processedImages` 不會立即更新。如果直接嘗試讀取新圖片，會拿到舊資料導致顯示空白。透過 ref + `useEffect` 監聽 `processedImages.length` 變化的機制，確保新資料到達後才進行渲染。相比舊的 `pendingExternalLoadRef` 輪詢方案，新方案使用事件驅動的方式，更可靠且不會因 React 批處理時序問題而遺漏更新。
+
+**閉包穩定性設計（v2 修復）：**
+`loadMore` 函數使用 `loadingMoreRef` 和 `hasMoreRef` 進行守衛檢查，而非直接讀取 `loadingMore` / `hasMore` state。這是因為：
+- `loadMore` 在執行過程中會呼叫 `setLoadingMore(true)`，如果 `loadingMore` 在依賴數組中，會導致函數立即重建，可能使用過時的閉包值
+- `hasMore` 在外部載入路徑中會被更新，如果作為依賴項，也會導致不必要的函數重建和 IntersectionObserver 重啟
+- 改用 ref 追蹤最新值，state 僅用於 UI 渲染（按鈕狀態、載入指示器），確保邏輯控制不受 React 重渲染影響
+- 依賴數組從 `[externalHasMore, getPhotosFromRange, hasMore, itemsPerPage, loadingMore, onExternalLoadMore, processedImages.length]` 精簡為 `[externalHasMore, getPhotosFromRange, itemsPerPage, onExternalLoadMore, processedImages.length]`
+
+**使用場景與影響範圍：**
+FancyboxViewer 在以下場景中使用，修改均向後相容：
+- **FanArtPage**：使用 `externalHasMore` + `onExternalLoadMore`，走外部載入路徑（本次修復的核心場景）
+- **MVDetailsModal**：僅使用內部載入路徑（`autoLoadMore` 由 Admin 控制），不受外部載入邏輯影響
+- **IllustratorDetailsModal**：僅使用內部載入路徑（`autoLoadMore=false`），不受影響
+- **DebugFancyboxMasonry**：僅使用內部載入路徑，不受影響
 
 ---
 *備註：如果你在維護時發現排版又被撐開了，請優先檢查是否有新的外掛或組件（例如 Waline 評論）在最外層使用了 `flex` 且沒有加上 `min-w-0` 的束縛。*
