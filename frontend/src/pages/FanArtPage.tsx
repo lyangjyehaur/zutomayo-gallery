@@ -484,8 +484,8 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
 
       {/* 排序選擇 */}
       {fancyboxImages.length > 0 && (
-        <div className="max-w-[1600px] mx-auto px-4 md:px-8 mb-4 flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-black uppercase tracking-widest opacity-50 mr-1">{t('fanart.sort_by', '排序')}</span>
+        <div className="max-w-[1600px] mx-auto px-4 md:px-8 mb-6 flex items-center gap-2 md:gap-3 flex-wrap">
+          <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.15em] opacity-40 mr-0.5">{t('fanart.sort_by', '排序')}</span>
           {([
             { key: 'random' as const, label: t('fanart.sort_random', '隨機'), icon: 'hn-shuffle' },
             { key: 'date_desc' as const, label: t('fanart.sort_newest', '最新'), icon: 'hn-arrow-down' },
@@ -495,10 +495,10 @@ export function FanArtPage({ mvData }: FanArtPageProps) {
             <button
               key={opt.key}
               onClick={() => setSortBy(opt.key)}
-              className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider border-2 transition-all flex items-center gap-1.5 ${
+              className={`px-2.5 md:px-3 py-1 md:py-1.5 text-[10px] md:text-xs font-black uppercase tracking-wider border-2 transition-all flex items-center gap-1 md:gap-1.5 ${
                 sortBy === opt.key
-                  ? 'bg-black text-white border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'
-                  : 'bg-white border-black/20 hover:border-black hover:bg-black/5'
+                  ? 'bg-foreground text-main border-foreground shadow-[3px_3px_0px_0px_var(--color-border)]'
+                  : 'bg-card text-foreground border-border/20 hover:border-foreground hover:shadow-[2px_2px_0px_0px_var(--color-border)] hover:-translate-y-[1px]'
               }`}
             >
               <i className={`hn ${opt.icon} text-[10px]`}></i>

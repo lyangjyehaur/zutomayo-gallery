@@ -171,7 +171,7 @@ export const getFanartGallery = async (req: Request, res: Response) => {
 
   const orderMap: Record<string, any[]> = {
     random: seed
-      ? [sequelize.literal(`md5("media"."group_id"::text || '${seed}')`), ['group_id', 'ASC'], ['id', 'ASC']]
+      ? [sequelize.literal('sort_key ASC'), ['group_id', 'ASC'], ['id', 'ASC']]
       : [[{ model: MediaGroupModel, as: 'group' }, 'post_date', 'DESC'], ['group_id', 'ASC'], ['id', 'ASC']],
     date_desc: [[{ model: MediaGroupModel, as: 'group' }, 'post_date', 'DESC'], ['group_id', 'ASC'], ['id', 'ASC']],
     date_asc: [[{ model: MediaGroupModel, as: 'group' }, 'post_date', 'ASC'], ['group_id', 'ASC'], ['id', 'ASC']],
@@ -187,6 +187,14 @@ export const getFanartGallery = async (req: Request, res: Response) => {
     ],
     order: orderMap[sort] || orderMap.random
   };
+
+  if (sort === 'random' && seed) {
+    findOptions.attributes = {
+      include: [
+        [sequelize.literal(`md5(${sequelize.escape(seed)} || "Media"."group_id"::text)`), 'sort_key']
+      ]
+    };
+  }
 
   if (!all) {
     findOptions.subQuery = false;

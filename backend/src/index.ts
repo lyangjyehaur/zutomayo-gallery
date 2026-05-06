@@ -23,7 +23,7 @@ import adminSubmissionRoutes from './routes/admin-submissions.routes.js';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { sequelize, AuthPasskey, AuthSetting } from './services/pg.service.js';
 import { initGeoService } from './services/geo.service.js';
-import { initRedis, redisClient } from './services/redis.service.js';
+import { initRedis, redisClient, deleteKeysByPattern } from './services/redis.service.js';
 import { initMeiliSearch, syncDataToMeili } from './services/meili.service.js';
 import { initQueues, bullBoardAdapter } from './services/queue.service.js';
 import { getSessionCookieOptions, getSessionMaxAgeMs, sessionCookieName } from './config/session.js';
@@ -110,6 +110,11 @@ app.get('/health', (req, res) => res.json({
 }));
 
 await initRedis();
+
+if (redisClient.isOpen) {
+  const cleared = await deleteKeysByPattern('api-cache:*');
+  if (cleared > 0) logger.info({ cleared }, '[Redis] API cache cleared on startup');
+}
 
 useRedisSessionStore = redisClient.isOpen && (isProduction || process.env.SESSION_STORE === 'redis');
 useDbSessionStore = !useRedisSessionStore && (isProduction || process.env.SESSION_STORE === 'sequelize');
