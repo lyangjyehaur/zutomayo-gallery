@@ -8,6 +8,7 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 const router = Router();
 
 router.get('/gallery', cacheMiddleware(300), asyncHandler(getFanartGallery));
+router.get('/gallery/debug', asyncHandler(getFanartGallery));
 router.get('/gallery/summary', cacheMiddleware(300), asyncHandler(getFanartGallerySummary));
 router.get('/unorganized', requirePermission(ADMIN_PERMISSIONS.FANARTS), asyncHandler(getUnorganizedFanarts));
 router.get('/deleted', requirePermission(ADMIN_PERMISSIONS.FANARTS), asyncHandler(getDeletedFanarts));

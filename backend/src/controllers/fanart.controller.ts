@@ -118,6 +118,7 @@ export const getLegacyFanarts = async (req: Request, res: Response) => {
 };
 
 export const getFanartGallery = async (req: Request, res: Response) => {
+  try {
   const parsed = getFanartGalleryQuerySchema.safeParse(req.query);
   const q = parsed.success ? parsed.data : req.query;
 
@@ -291,6 +292,16 @@ export const getFanartGallery = async (req: Request, res: Response) => {
       hasMore
     }
   });
+  } catch (err: any) {
+    const isDev = process.env.NODE_ENV === 'development';
+    res.status(500).json({
+      success: false,
+      error: err?.message || 'Unknown error',
+      code: err?.name || 'GALLERY_QUERY_ERROR',
+      sql: err?.original?.message || undefined,
+      stack: isDev ? err?.stack : undefined,
+    });
+  }
 };
 
 export const getFanartGallerySummary = async (req: Request, res: Response) => {
