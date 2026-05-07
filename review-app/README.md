@@ -4,7 +4,7 @@
 
 目前它不再只是首頁殼層，而是直接承接以下工作流：
 
-- `HomePage`：審核總覽、同步進度、快捷入口、近期工作區
+- `HomePage`：審核總覽、同步進度、工作區摘要與行動端精簡入口
 - `StagingPage`：crawler 暫存清單、批次 approve / reject / restore、crawler trigger、詳情檢視
 - `SubmissionsPage`：投稿審核、搜尋、詳情、approve、退回原因填寫
 - `FanartPage`：未整理 / 已丟棄 / 舊資料 / 已組織 / 手動解析視圖，含 assign / sync / discard / restore / parse-save
@@ -80,6 +80,7 @@ review-app/
 │   │   ├── AppNavbar.tsx
 │   │   ├── Button.tsx
 │   │   ├── MvSheet.tsx
+│   │   ├── ReviewSummaryPanel.tsx
 │   │   ├── ReviewStateBlock.tsx
 │   │   └── Segmented.tsx
 │   ├── contexts/
@@ -91,6 +92,7 @@ review-app/
 │   │   └── useWorkspace.ts
 │   ├── lib/
 │   │   ├── api.ts
+│   │   ├── media.ts
 │   │   ├── moderation-boundaries.ts
 │   │   └── workspaces.ts
 │   ├── pages/
@@ -113,6 +115,7 @@ review-app/
 - `Card`、`List`、`ListItem`、`Searchbar`：承載行動端高頻審核清單與篩選
 - `Popup`、`Sheet`：承接詳情、退回原因、MV / Tag 關聯、crawler 參數、merge / edit / reparse 等需要完整上下文的操作
 - `Toast`、頁內 `ReviewStateBlock`：分別處理即時操作回饋與可見的載入 / 空狀態 / 錯誤狀態
+- `ReviewSummaryPanel`：壓縮各工作區頁面頂部狀態卡，減少行動端首屏占位
 - `src/lib/moderation-boundaries.ts`：集中維護 review-app 與桌面 admin 的能力邊界，設定頁與跨專案文件都以此為基準同步描述
 
 ## UI / 狀態約定
@@ -121,8 +124,12 @@ review-app/
 - 導覽列、卡片、列表、Sheet、Popup 採統一的 `review-*` class 命名
 - 空狀態、錯誤狀態、載入狀態統一用 `src/components/ReviewStateBlock.tsx`
 - `src/components/Button.tsx` 與 `src/components/Segmented.tsx` 是平台樣式包裝層：iOS 預設 round，MD / Android 維持普通樣式
+- `src/lib/media.ts` 會優先選用 `twimg` 原始媒體網址，避免列表與詳情混用縮圖 / R2 造成來源不一致
 - 多選清單優先使用 Framework7 官方 `ListItem checkbox`，避免把 checkbox 手工塞進 media slot
 - 需要同列兼容勾選與查看詳情時，詳情入口統一放在右側 `詳情` 按鈕，不再依賴整列點擊
+- `MvSheet` 以全屏 `Popup` 呈現；若從詳情頁進入，取消時應回到原本詳情，而不是直接退回列表
+- 詳情 Popup 的右上角使用 icon-only 關閉按鈕；狀態、MV 數量、媒體數量等資訊移到內容區作為標籤，而不是放在 navbar 右側
+- `FanartPage` 主列表的 title / subtitle / chips / footer 有固定資訊層級：名字與 handle 同列、時間用小字短格式、MV 以 chips 顯示、長 URL 必須可斷行
 - 登入頁、loading、tabbar、sheet header 盡量對齊 Framework7 v9 官方寫法，例如 `LoginScreen`、`dialog.preloader(...)`、`ToolbarPane`
 - 各頁仍可保留 toast 作為即時回饋，但首次載入失敗或無資料時要顯示可見的頁面內狀態區塊
 - 工作區切換與各頁篩選條件由 `WorkspaceProvider` 寫入 localStorage，鍵值為 `ztmr-review-workspace`
@@ -131,6 +138,7 @@ review-app/
 ## 互動驗證重點
 
 - `Popup`、`Sheet`、`dialog.preloader(...)` 這類會改變遮罩與頁面狀態的互動，不能只看 build，需在瀏覽器實際點開再關閉一次
+- `MvSheet` 相關鏈路至少要驗證 `詳情 -> 關聯 / 更新關聯 -> 取消`，確認不白屏、不卡住，且會回到正確的詳情層
 - `StagingPage`、`RepairPage` 的勾選清單要同時驗證 checkbox 可點、右側 `詳情` 可開、swipeout 操作不互相搶事件
 - `SubmissionsPage`、`FanartPage` 等詳情型列表，需確認右側 `詳情` 按鈕不會污染 router / hash 狀態
 - 若要在本機用 `localhost` 驗證登入流程，開發環境可配合 `VITE_API_ROOT=/api` 使用 `vite.config.ts` 內的 proxy 設定

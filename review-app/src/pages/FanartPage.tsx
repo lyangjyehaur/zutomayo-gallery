@@ -3,15 +3,12 @@ import {
   Badge,
   Block,
   BlockTitle,
-  Card,
-  CardContent,
-  CardHeader,
+  Chip,
   Link,
   List,
   ListInput,
   ListItem,
   Navbar,
-  NavLeft,
   NavRight,
   NavTitle,
   Page,
@@ -26,9 +23,11 @@ import AppNavbar from '../components/AppNavbar'
 import Button from '../components/Button'
 import MvSheet from '../components/MvSheet'
 import ReviewStateBlock from '../components/ReviewStateBlock'
+import ReviewSummaryPanel from '../components/ReviewSummaryPanel'
 import Segmented from '../components/Segmented'
 import ReviewToolbarCard from '../components/ReviewToolbarCard'
 import { useWorkspace } from '../hooks/useWorkspace'
+import { preferTwimgUrl } from '../lib/media'
 import {
   assignFanartMedia,
   fetchDeletedFanarts,
@@ -92,14 +91,28 @@ const formatDateTime = (value?: string | null) => {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
 }
 
+const formatCompactDateTime = (value?: string | null) => {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString([], {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+}
+
 const formatTagLabel = (tag: string) => TAG_LABELS[tag] || tag.replace(/^tag:/, '')
 
 const getMediaPreview = (media?: FanartMedia | null) => {
   if (!media) return ''
   if (media.media_type === 'video') {
-    return media.thumbnail_url || media.url || media.original_url || ''
+    return preferTwimgUrl(media.thumbnail_url, media.original_url, media.url)
   }
-  return media.url || media.thumbnail_url || media.original_url || ''
+  return preferTwimgUrl(media.original_url, media.url, media.thumbnail_url)
 }
 
 const buildMediaSearchText = (media: FanartMedia) => {
@@ -195,6 +208,7 @@ export default function FanartPage() {
   const [busyKeys, setBusyKeys] = useState<Set<string>>(new Set())
   const [mvSheetMode, setMvSheetMode] = useState<'assign' | 'update' | 'parse' | null>(null)
   const [mvSheetTarget, setMvSheetTarget] = useState<FanartMedia | null>(null)
+  const [mvSheetReturnMedia, setMvSheetReturnMedia] = useState<FanartMedia | null>(null)
   const [mvSheetBusy, setMvSheetBusy] = useState(false)
   const [focusSheetOpen, setFocusSheetOpen] = useState(false)
   const [focusSearch, setFocusSearch] = useState('')
@@ -349,25 +363,29 @@ export default function FanartPage() {
     ? mvSheetTarget.mvs.map((mv) => mv.id)
     : []
   const mvSheetInitialTags = mvSheetMode === 'update' ? (mvSheetTarget?.tags || []) : []
-  const mvSheetKey = `${mvSheetMode || 'closed'}-${mvSheetTarget?.id || 'none'}-${mvSheetInitialMvIds.join('|')}-${mvSheetInitialTags.join('|')}`
-
   const closeMvSheet = () => {
     if (mvSheetBusy) return
     setMvSheetMode(null)
     setMvSheetTarget(null)
+    setMvSheetReturnMedia(null)
   }
 
   const openAssignSheet = (media: FanartMedia) => {
+    setMvSheetReturnMedia(media)
+    setDetailMedia(null)
     setMvSheetTarget(media)
     setMvSheetMode('assign')
   }
 
   const openUpdateSheet = (media: FanartMedia) => {
+    setMvSheetReturnMedia(media)
+    setDetailMedia(null)
     setMvSheetTarget(media)
     setMvSheetMode('update')
   }
 
   const openParseSheet = () => {
+    setMvSheetReturnMedia(null)
     setMvSheetTarget(null)
     setMvSheetMode('parse')
   }
@@ -625,15 +643,13 @@ export default function FanartPage() {
 
     return (
       <>
-        <List mediaList>
+        <List mediaList inset strong dividers style={{ marginTop: 12, marginBottom: 12 }}>
           {items.map((item) => {
             const preview = getMediaPreview(item)
             const isVideo = item.media_type === 'video' || preview.includes('.mp4')
-            const subtitle = [
-              item.group?.author_name || item.group?.author_handle,
-              item.group?.post_date ? formatDateTime(item.group.post_date) : '',
-              (item.mvs || []).map((mv) => mv.title).join(' / '),
-            ].filter(Boolean).join(' · ')
+            const displayName = item.group?.author_name || item.group?.author_handle || item.id
+            const handleLabel = item.group?.author_handle ? `@${item.group.author_handle}` : ''
+            const subtitle = formatCompactDateTime(item.group?.post_date)
             const footer = [
               item.group?.source_url,
               (item.tags || []).map((tag) => formatTagLabel(tag)).join(' / '),
@@ -642,11 +658,24 @@ export default function FanartPage() {
             return (
               <ListItem
                 key={item.id}
-                title={item.group?.author_name || item.group?.author_handle || item.id}
-                subtitle={subtitle || item.id}
-                text={item.group?.source_text || '（無內文）'}
-                footer={footer || item.id}
               >
+                <div
+                  slot="title"
+                  style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}
+                >
+                  <span>{displayName}</span>
+                  {handleLabel && (
+                    <span style={{ fontSize: 13, opacity: 0.6, fontWeight: 500 }}>
+                      {handleLabel}
+                    </span>
+                  )}
+                </div>
+                <div
+                  slot="subtitle"
+                  style={{ fontSize: 12, opacity: 0.65 }}
+                >
+                  {subtitle || item.id}
+                </div>
                 {preview && (
                   isVideo ? (
                     <video
@@ -665,6 +694,9 @@ export default function FanartPage() {
                     />
                   )
                 )}
+                <div slot="text">
+                  <div>{item.group?.source_text || '（無內文）'}</div>
+                </div>
                 {item.mvs && item.mvs.length > 0 && <Badge slot="after-start" color="green">{item.mvs.length}</Badge>}
                 <Button
                   slot="after"
@@ -678,6 +710,19 @@ export default function FanartPage() {
                 >
                   詳情
                 </Button>
+                <div
+                  slot="footer"
+                  style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
+                >
+                  {item.mvs && item.mvs.length > 0 && (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                      {item.mvs.map((mv) => (
+                        <Chip key={mv.id} text={mv.title} color="green" />
+                      ))}
+                    </div>
+                  )}
+                  <div>{footer || item.id}</div>
+                </div>
               </ListItem>
             )
           })}
@@ -719,7 +764,7 @@ export default function FanartPage() {
 
     return (
       <>
-        <List mediaList>
+        <List mediaList inset strong dividers style={{ marginTop: 12, marginBottom: 12 }}>
           {filteredDeletedGroups.map((group) => {
             const cover = Array.isArray(group.media) ? group.media[0] : undefined
             const preview = getMediaPreview(cover)
@@ -730,7 +775,6 @@ export default function FanartPage() {
                 title={group.author_name || group.author_handle || group.id}
                 subtitle={formatDateTime(group.post_date)}
                 text={group.source_text || '（無推文內容）'}
-                footer={group.source_url || group.id}
               >
                 {preview && (
                   isVideo ? (
@@ -764,14 +808,20 @@ export default function FanartPage() {
                 >
                   詳情
                 </Button>
+                <div
+                  slot="footer"
+                  style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
+                >
+                  {group.source_url || group.id}
+                </div>
               </ListItem>
             )
           })}
         </List>
         {!loadingList && filteredDeletedGroups.length > 0 && (
-          <Block strong inset>
+          <div style={{ margin: '8px 16px 12px', opacity: 0.75, fontSize: 13 }}>
             已顯示 {filteredDeletedGroups.length} 個已丟棄 group，可點進詳情直接還原。
-          </Block>
+          </div>
         )}
         {!loadingList && filteredDeletedGroups.length === 0 && (
           <ReviewStateBlock
@@ -789,36 +839,36 @@ export default function FanartPage() {
     <Page ptr onPtrRefresh={handleRefresh} onPageBeforeIn={handlePageBeforeIn}>
       <AppNavbar title="FanArt 整理" subtitle="搜尋 / 詳情 / assign / update / restore / parse" />
 
-      <Block>
-        <Card>
-          <CardHeader>未整理</CardHeader>
-          <CardContent>
-            <div style={{ fontSize: 26, fontWeight: 700 }}>{loadingOverview ? '...' : overview.unorganizedGroups}</div>
-            <div style={{ opacity: 0.75 }}>group / {loadingOverview ? '...' : overview.unorganizedMedia} 筆 media</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>已丟棄</CardHeader>
-          <CardContent>
-            <div style={{ fontSize: 26, fontWeight: 700 }}>{loadingOverview ? '...' : overview.deletedGroups}</div>
-            <div style={{ opacity: 0.75 }}>可從詳情直接還原</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>舊資料</CardHeader>
-          <CardContent>
-            <div style={{ fontSize: 26, fontWeight: 700 }}>{loadingOverview ? '...' : overview.legacyMedia}</div>
-            <div style={{ opacity: 0.75 }}>缺 group 或缺來源的歷史 media</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>特殊標籤</CardHeader>
-          <CardContent>
-            <div style={{ fontSize: 26, fontWeight: 700 }}>{loadingOverview ? '...' : overview.tagBuckets}</div>
-            <div style={{ opacity: 0.75 }}>可切入 organized 視圖更新關聯</div>
-          </CardContent>
-        </Card>
-      </Block>
+      <ReviewSummaryPanel
+        title="FanArt 工作概況"
+        description={loadingOverview ? '正在同步概況資料...' : '整理、還原、補舊資料與標籤聚焦都從這裡切入。'}
+        metrics={[
+          {
+            label: '未整理',
+            value: loadingOverview ? '...' : overview.unorganizedGroups,
+            color: 'orange',
+            detail: `media ${loadingOverview ? '...' : overview.unorganizedMedia}`,
+          },
+          {
+            label: '已丟棄',
+            value: loadingOverview ? '...' : overview.deletedGroups,
+            color: 'red',
+            detail: '可從詳情直接還原',
+          },
+          {
+            label: '舊資料',
+            value: loadingOverview ? '...' : overview.legacyMedia,
+            color: 'blue',
+            detail: '缺 group 或缺來源',
+          },
+          {
+            label: '特殊標籤',
+            value: loadingOverview ? '...' : overview.tagBuckets,
+            color: 'green',
+            detail: '可切入 organized 視圖',
+          },
+        ]}
+      />
 
       <Block>
         <Segmented strong>
@@ -948,7 +998,7 @@ export default function FanartPage() {
           </Block>
 
           <BlockTitle>解析預覽</BlockTitle>
-          <List mediaList>
+          <List mediaList inset strong dividers style={{ marginTop: 12, marginBottom: 12 }}>
             {parsedItems.map((item) => {
               const preview = item.thumbnail || item.url
               const isVideo = item.type === 'video' || item.url.includes('.mp4')
@@ -958,7 +1008,6 @@ export default function FanartPage() {
                   title={item.tweetAuthor || item.tweetHandle || '未命名來源'}
                   subtitle={formatDateTime(item.tweetDate)}
                   text={item.tweetText || '（無推文內容）'}
-                  footer={item.tweetUrl}
                 >
                   {preview && (
                     isVideo ? (
@@ -984,6 +1033,12 @@ export default function FanartPage() {
                   >
                     移除
                   </Link>
+                  <div
+                    slot="footer"
+                    style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
+                  >
+                    {item.tweetUrl}
+                  </div>
                 </ListItem>
               )
             })}
@@ -1002,28 +1057,30 @@ export default function FanartPage() {
         {detailMedia && (
           <Page>
               <Navbar>
-                <NavLeft>
-                  <Link onClick={() => setDetailMedia(null)}>關閉</Link>
-                </NavLeft>
                 <NavTitle>FanArt 詳情</NavTitle>
                 <NavRight>
-                  {detailMedia.mvs && detailMedia.mvs.length > 0 && <Badge color="green">{detailMedia.mvs.length} MV</Badge>}
+                  <Link iconOnly iconF7="xmark" aria-label="關閉" onClick={() => setDetailMedia(null)} />
                 </NavRight>
               </Navbar>
 
               <Block strong inset>
+                {detailMedia.mvs && detailMedia.mvs.length > 0 && (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                    <Badge color="green">{detailMedia.mvs.length} MV</Badge>
+                  </div>
+                )}
                 <div>
                   {detailMedia.media_type === 'video' ? (
                     <video
-                      src={detailMedia.url || detailMedia.original_url || undefined}
-                      poster={detailMedia.thumbnail_url || undefined}
+                      src={preferTwimgUrl(detailMedia.original_url, detailMedia.url) || undefined}
+                      poster={preferTwimgUrl(detailMedia.thumbnail_url, detailMedia.original_url, detailMedia.url) || undefined}
                       controls
                       playsInline
                       style={{ width: '100%', display: 'block', maxHeight: '56vh' }}
                     />
                   ) : (
                     <img
-                      src={detailMedia.url || detailMedia.original_url || undefined}
+                      src={preferTwimgUrl(detailMedia.original_url, detailMedia.url) || undefined}
                       alt={detailMedia.group?.author_name || detailMedia.id}
                       style={{ width: '100%', display: 'block', maxHeight: '56vh', objectFit: 'contain' }}
                     />
@@ -1084,29 +1141,29 @@ export default function FanartPage() {
         {detailGroup && (
           <Page>
               <Navbar>
-                <NavLeft>
-                  <Link onClick={() => setDetailGroup(null)}>關閉</Link>
-                </NavLeft>
                 <NavTitle>已丟棄群組</NavTitle>
                 <NavRight>
-                  <Badge color="red">{Array.isArray(detailGroup.media) ? detailGroup.media.length : 0} 媒體</Badge>
+                  <Link iconOnly iconF7="xmark" aria-label="關閉" onClick={() => setDetailGroup(null)} />
                 </NavRight>
               </Navbar>
 
               <Block strong inset>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: detailGroup.media?.[0] ? 12 : 0 }}>
+                  <Badge color="red">{Array.isArray(detailGroup.media) ? detailGroup.media.length : 0} 媒體</Badge>
+                </div>
                 {detailGroup.media?.[0] && (
                   <div>
                     {detailGroup.media[0].media_type === 'video' ? (
                       <video
-                        src={detailGroup.media[0].url || detailGroup.media[0].original_url || undefined}
-                        poster={detailGroup.media[0].thumbnail_url || undefined}
+                        src={preferTwimgUrl(detailGroup.media[0].original_url, detailGroup.media[0].url) || undefined}
+                        poster={preferTwimgUrl(detailGroup.media[0].thumbnail_url, detailGroup.media[0].original_url, detailGroup.media[0].url) || undefined}
                         controls
                         playsInline
                         style={{ width: '100%', display: 'block', maxHeight: '56vh' }}
                       />
                     ) : (
                       <img
-                        src={detailGroup.media[0].url || detailGroup.media[0].original_url || undefined}
+                        src={preferTwimgUrl(detailGroup.media[0].original_url, detailGroup.media[0].url) || undefined}
                         alt={detailGroup.author_name || detailGroup.id}
                         style={{ width: '100%', display: 'block', maxHeight: '56vh', objectFit: 'contain' }}
                       />
@@ -1133,7 +1190,6 @@ export default function FanartPage() {
       </Popup>
 
       <MvSheet
-        key={mvSheetKey}
         opened={Boolean(mvSheetMode)}
         busy={mvSheetBusy}
         mvs={mvs}
@@ -1148,6 +1204,11 @@ export default function FanartPage() {
           ? '手動解析保存時至少需要選擇一個 MV；Tag 會一起附加到保存的 FanArt。'
           : '選擇後會立即更新對應 FanArt 的關聯。'}
         confirmText={mvSheetMode === 'parse' ? '保存解析結果' : mvSheetMode === 'update' ? '更新關聯' : '保存關聯'}
+        onCancel={() => {
+          if (mvSheetReturnMedia) {
+            setDetailMedia(mvSheetReturnMedia)
+          }
+        }}
         onClose={closeMvSheet}
         onConfirm={handleMvSheetConfirm}
       />
@@ -1167,7 +1228,7 @@ export default function FanartPage() {
             onInput={(event) => setFocusSearch((event.target as HTMLInputElement).value || '')}
           />
         </Block>
-        <List mediaList>
+        <List mediaList inset strong dividers style={{ marginTop: 12, marginBottom: 12 }}>
           {filteredMvFocusOptions.map((mv) => (
             <ListItem
               key={mv.id}

@@ -1,5 +1,6 @@
+import type { ChangeEvent } from 'react'
 import { useMemo, useState } from 'react'
-import { Sheet, PageContent, Toolbar, ToolbarPane, List, ListItem, BlockTitle, Block, Searchbar, Link, Chip } from 'framework7-react'
+import { Popup, Page, Navbar, NavTitle, NavRight, List, ListItem, Block, Searchbar, Link, Chip, Badge } from 'framework7-react'
 import Button from './Button'
 import ReviewStateBlock from './ReviewStateBlock'
 
@@ -11,9 +12,12 @@ const TAG_OPTIONS = [
   { id: 'tag:other', label: '其他' },
 ]
 
+const EMPTY_SELECTION: string[] = []
+
 interface MvSheetProps {
   opened: boolean
   onClose: () => void
+  onCancel?: () => void
   onConfirm: (mvIds: string[], tags: string[]) => void
   mvs: Array<{ id: string; title: string }>
   title?: string
@@ -27,18 +31,20 @@ interface MvSheetProps {
 export default function MvSheet({
   opened,
   onClose,
+  onCancel,
   onConfirm,
   mvs,
   title = '選擇 MV / 標籤',
   confirmText = '確認',
   description,
-  initialMvIds = [],
-  initialTags = [],
+  initialMvIds = EMPTY_SELECTION,
+  initialTags = EMPTY_SELECTION,
   busy = false,
 }: MvSheetProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMvIds, setSelectedMvIds] = useState<string[]>(() => initialMvIds)
   const [selectedTags, setSelectedTags] = useState<string[]>(() => initialTags)
+  const [cancelled, setCancelled] = useState(false)
   const totalSelected = selectedMvIds.length + selectedTags.length
 
   const filteredMvs = useMemo(() => {
@@ -74,115 +80,158 @@ export default function MvSheet({
   const handleConfirm = () => {
     if (totalSelected === 0 || busy) return
     onConfirm(selectedMvIds, selectedTags)
+  }
+
+  const resetState = () => {
     setSelectedMvIds([])
     setSelectedTags([])
     setSearchQuery('')
   }
 
-  const handleClose = () => {
-    setSelectedMvIds([])
-    setSelectedTags([])
-    setSearchQuery('')
+  const handleClosed = () => {
+    const shouldReturn = cancelled
+    setCancelled(false)
+    resetState()
+    if (shouldReturn) {
+      onCancel?.()
+    }
     onClose()
   }
 
-  return (
-    <Sheet opened={opened} onSheetClosed={handleClose} backdrop swipeToClose style={{ height: '75vh' }}>
-      <Toolbar>
-        <ToolbarPane>
-          <div />
-          <Link sheetClose onClick={handleClose}>取消</Link>
-        </ToolbarPane>
-      </Toolbar>
-      <PageContent>
-        <Block strong inset style={{ marginBottom: 12 }}>
-          <div style={{ fontWeight: 700 }}>{title}</div>
-          {description && (
-            <div style={{ opacity: 0.7, marginTop: 6, fontSize: 13 }}>{description}</div>
-          )}
-          <div style={{ marginTop: 10, opacity: 0.75, fontSize: 13 }}>
-            先選擇要關聯的 MV / 標籤，再點底部按鈕保存。
-          </div>
-        </Block>
+  const handleOpen = () => {
+    setSelectedMvIds([...initialMvIds])
+    setSelectedTags([...initialTags])
+    setSearchQuery('')
+    setCancelled(false)
+  }
 
-        <Block strong inset>
-          <div>
+  return (
+    <Popup opened={opened} onPopupOpen={handleOpen} onPopupClosed={handleClosed}>
+      <Page pageContent={false} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <Navbar>
+          <NavTitle>{title}</NavTitle>
+          <NavRight>
+            <Link popupClose onClick={() => setCancelled(true)}>取消</Link>
+          </NavRight>
+        </Navbar>
+
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            padding: 'calc(var(--f7-navbar-height) + 8px) 0 12px',
+          }}
+        >
+          <div style={{ margin: '0 16px 8px' }}>
+            {description && (
+              <div style={{ opacity: 0.75, fontSize: 13, lineHeight: 1.5 }}>{description}</div>
+            )}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: description ? 10 : 0 }}>
+              <Badge color="blue">MV {selectedMvIds.length}</Badge>
+              <Badge color="purple">標籤 {selectedTags.length}</Badge>
+              <Badge color={totalSelected > 0 ? 'green' : 'gray'}>已選 {totalSelected}</Badge>
+            </div>
+          </div>
+
+          <div style={{ margin: '0 16px 8px' }}>
             <Searchbar
               customSearch
               value={searchQuery}
-              onInput={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value || '')}
+              onInput={(event: ChangeEvent<HTMLInputElement>) => setSearchQuery(event.target.value || '')}
               placeholder="搜尋 MV..."
               disableButtonText="清除"
             />
           </div>
-          <div style={{ marginTop: 10 }}>
-            已選 MV {selectedMvIds.length} 項、標籤 {selectedTags.length} 項。
+
+          <Block strong inset style={{ marginTop: 0, marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontWeight: 700 }}>已選內容</div>
+                <div style={{ marginTop: 4, opacity: 0.75, fontSize: 13 }}>
+                  先完成選擇，再用底部主按鈕一次保存。
+                </div>
+              </div>
+              {totalSelected > 0 && (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <Button small outline onClick={() => setSelectedMvIds([])}>
+                    清空 MV
+                  </Button>
+                  <Button small outline onClick={() => setSelectedTags([])}>
+                    清空標籤
+                  </Button>
+                </div>
+              )}
+            </div>
+            {totalSelected > 0 && (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+                {selectedMvTitles.map((title) => (
+                  <Chip key={title} text={title} />
+                ))}
+                {selectedTagLabels.map((label) => (
+                  <Chip key={label} text={`標籤: ${label}`} />
+                ))}
+              </div>
+            )}
+            {totalSelected === 0 && (
+              <div style={{ marginTop: 10, opacity: 0.7, fontSize: 13 }}>
+                尚未選擇任何 MV 或標籤。
+              </div>
+            )}
+          </Block>
+
+          <div style={{ margin: '0 16px 8px' }}>
+            <div style={{ fontWeight: 700 }}>音樂影片</div>
+            <div style={{ marginTop: 4, opacity: 0.7, fontSize: 13 }}>
+              可搜尋後勾選；找不到也可以只保存標籤。
+            </div>
           </div>
-          {totalSelected > 0 && (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-              {selectedMvTitles.map((title) => (
-                <Chip key={title} text={title} />
-              ))}
-              {selectedTagLabels.map((label) => (
-                <Chip key={label} text={`標籤: ${label}`} />
-              ))}
-            </div>
-          )}
-          {totalSelected === 0 && (
-            <div style={{ marginTop: 10, opacity: 0.7, fontSize: 13 }}>
-              尚未選擇任何 MV 或標籤。
-            </div>
-          )}
-          {totalSelected > 0 && (
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <Button small outline onClick={() => setSelectedMvIds([])}>
-                清空 MV
-              </Button>
-              <Button small outline onClick={() => setSelectedTags([])}>
-                清空標籤
-              </Button>
-            </div>
-          )}
-        </Block>
+          <List inset strong dividers style={{ marginTop: 0, marginBottom: 12 }}>
+            {filteredMvs.map(mv => (
+              <ListItem key={mv.id} title={mv.title} checkbox checked={selectedMvIds.includes(mv.id)} onChange={() => toggleMv(mv.id)} />
+            ))}
+            {filteredMvs.length === 0 && (
+              <ReviewStateBlock
+                title="找不到符合條件的 MV"
+                description="可先清空搜尋字詞，或只選擇特殊標籤再送出。"
+                tone="warning"
+                compact
+              />
+            )}
+          </List>
 
-        <Block strong inset style={{ marginTop: 12, marginBottom: 12 }}>
-          <div style={{ fontWeight: 700 }}>步驟 1：選擇要關聯的內容</div>
-          <div style={{ marginTop: 6, opacity: 0.7, fontSize: 13 }}>
-            可只選 MV、只選標籤，或兩者一起保存。
+          <div style={{ margin: '0 16px 8px' }}>
+            <div style={{ fontWeight: 700 }}>特殊標籤</div>
+            <div style={{ marginTop: 4, opacity: 0.7, fontSize: 13 }}>
+              標籤會和 MV 一起保存，也可單獨使用。
+            </div>
           </div>
-        </Block>
+          <List inset strong dividers style={{ marginTop: 0, marginBottom: 0 }}>
+            {TAG_OPTIONS.map(tag => (
+              <ListItem key={tag.id} title={tag.label} checkbox checked={selectedTags.includes(tag.id)} onChange={() => toggleTag(tag.id)} />
+            ))}
+          </List>
+        </div>
 
-        <BlockTitle>音樂影片</BlockTitle>
-        <List style={{ maxHeight: '35vh', overflowY: 'auto' }}>
-          {filteredMvs.map(mv => (
-            <ListItem key={mv.id} title={mv.title} checkbox checked={selectedMvIds.includes(mv.id)} onChange={() => toggleMv(mv.id)} />
-          ))}
-          {filteredMvs.length === 0 && (
-            <ReviewStateBlock
-              title="找不到符合條件的 MV"
-              description="可先清空搜尋字詞，或只選擇特殊標籤再送出。"
-              tone="warning"
-              compact
-            />
-          )}
-        </List>
-
-        <BlockTitle>標籤</BlockTitle>
-        <List>
-          {TAG_OPTIONS.map(tag => (
-            <ListItem key={tag.id} title={tag.label} checkbox checked={selectedTags.includes(tag.id)} onChange={() => toggleTag(tag.id)} />
-          ))}
-        </List>
-
-        <Block>
+        <div
+          style={{
+            flexShrink: 0,
+            position: 'relative',
+            zIndex: 30,
+            padding: '12px 16px calc(12px + env(safe-area-inset-bottom, 0px))',
+            background: 'var(--f7-page-bg-color)',
+            borderTop: '1px solid rgba(127, 127, 127, 0.16)',
+            boxShadow: '0 -8px 24px rgba(0, 0, 0, 0.08)',
+          }}
+        >
           <Button fill large onClick={handleConfirm} loading={busy} disabled={busy || totalSelected === 0}>
             {totalSelected === 0 ? '請先選擇 MV / 標籤' : `${confirmText}（已選 ${totalSelected} 項）`}
           </Button>
           <div style={{ textAlign: 'center', marginTop: 8, opacity: 0.7, fontSize: 13 }}>
-            步驟 2：確認本次選擇後，再保存關聯。
+            {totalSelected === 0 ? '至少選擇一個 MV 或標籤後才可保存。' : '確認本次選擇後再保存關聯。'}
           </div>
-        </Block>
-      </PageContent>
-    </Sheet>
+        </div>
+      </Page>
+    </Popup>
   )
 }

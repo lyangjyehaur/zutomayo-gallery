@@ -1,15 +1,9 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useState } from 'react'
 import {
   Badge,
   Block,
   BlockTitle,
-  Card,
-  CardContent,
-  CardHeader,
-  Gauge,
   Link,
-  List,
-  ListItem,
   Page,
   Progressbar,
   f7,
@@ -61,10 +55,8 @@ const EMPTY_STATE: DashboardState = {
 export default function HomePage() {
   const { user } = useAuth()
   const {
-    recentWorkspaces,
     visitWorkspace,
     setFanartFilter,
-    setRepairFilter,
     setStagingFilter,
     setSubmissionFilter,
   } = useWorkspace()
@@ -115,48 +107,6 @@ export default function HomePage() {
   const pendingRatio = totalStaging > 0 ? state.stagingPending / totalStaging : 0
   const syncProgress = state.syncTotal > 0 ? (state.syncProcessed / state.syncTotal) * 100 : 0
 
-  const quickActions = useMemo(() => ([
-    {
-      title: '處理待審暫存',
-      description: `目前 ${state.stagingPending} 筆待處理`,
-      workspace: 'staging' as WorkspaceKey,
-      onBeforeOpen: () => setStagingFilter({ status: 'pending' }),
-    },
-    {
-      title: '查看投稿待辦',
-      description: `目前 ${state.pendingSubmissions} 筆待處理`,
-      workspace: 'submissions' as WorkspaceKey,
-      onBeforeOpen: () => setSubmissionFilter({ status: 'pending' }),
-    },
-    {
-      title: '整理未歸檔 FanArt',
-      description: `${state.fanartUnorganizedGroups} 個 group / ${state.fanartUnorganizedMedia} 筆 media`,
-      workspace: 'fanart' as WorkspaceKey,
-      onBeforeOpen: () => setFanartFilter({ view: 'unorganized' }),
-    },
-    {
-      title: '盤點待修復 group',
-      description: `${state.repairTotal} 筆待修復，${state.repairInferable} 筆可先推斷來源`,
-      workspace: 'repair' as WorkspaceKey,
-      onBeforeOpen: () => setRepairFilter({ onlyInferable: false }),
-    },
-  ]), [
-    setFanartFilter,
-    setRepairFilter,
-    setStagingFilter,
-    setSubmissionFilter,
-    state.fanartUnorganizedGroups,
-    state.fanartUnorganizedMedia,
-    state.pendingSubmissions,
-    state.repairInferable,
-    state.repairTotal,
-    state.stagingPending,
-  ])
-
-  const recentWorkspaceItems = recentWorkspaces
-    .map((key) => WORKSPACE_MAP[key])
-    .filter((workspace) => workspace.key !== 'home')
-
   const handleOpenWorkspace = (workspace: WorkspaceKey, beforeOpen?: () => void) => {
     beforeOpen?.()
     visitWorkspace(workspace)
@@ -176,21 +126,21 @@ export default function HomePage() {
     >
       <AppNavbar title="審核總覽" subtitle={user ? `Hi, ${user.username}` : '工作台首頁'} />
 
-      <Block strong inset>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div>
-            <div>Daily Overview</div>
-            <div>今天的審核工作台</div>
-            <div style={{ marginTop: 8 }}>
+      <Block strong inset style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 700 }}>Daily Overview</div>
+            <div style={{ marginTop: 2, opacity: 0.75, fontSize: 13 }}>今天的審核工作台</div>
+            <div style={{ marginTop: 6, opacity: 0.7, fontSize: 13 }}>
               {loading ? '正在同步總覽資料...' : `最後更新：${state.refreshedAt ? new Date(state.refreshedAt).toLocaleString() : '剛剛'}`}
             </div>
           </div>
-          <Button fill tonal onClick={() => void loadDashboard()} loading={loading}>刷新總覽</Button>
+          <Button small fill tonal onClick={() => void loadDashboard()} loading={loading}>刷新總覽</Button>
         </div>
-        <div style={{ marginTop: 14 }}>
-          <div>pending {state.stagingPending}</div>
-          <div>submissions {state.pendingSubmissions}</div>
-          <div>repair {state.repairTotal}</div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+          <Badge color="orange">pending {state.stagingPending}</Badge>
+          <Badge color="blue">submissions {state.pendingSubmissions}</Badge>
+          <Badge color="red">repair {state.repairTotal}</Badge>
         </div>
       </Block>
 
@@ -205,116 +155,121 @@ export default function HomePage() {
       )}
 
       <BlockTitle>同步與待辦</BlockTitle>
-      <Block strong inset>
-        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', alignItems: 'center' }}>
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <Gauge
-              type="circle"
-              value={pendingRatio}
-              size={152}
-              borderBgColor="#dfe4ea"
-              borderColor="var(--f7-theme-color)"
-              valueText={loading ? '...' : `${Math.round(pendingRatio * 100)}%`}
-              valueTextColor="var(--f7-theme-color)"
-              labelText="暫存待審比例"
-            />
-          </div>
-          <div>
-            <div style={{ fontWeight: 700, marginBottom: 8 }}>同步狀態：{state.syncStatus || 'idle'}</div>
-            <Progressbar progress={syncProgress} />
-            <div style={{ marginTop: 8, opacity: 0.75 }}>
+      <Block strong inset style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 700 }}>同步狀態：{state.syncStatus || 'idle'}</div>
+            <div style={{ marginTop: 4, opacity: 0.75, fontSize: 13 }}>
               {loading ? '載入中...' : `目前進度 ${state.syncProcessed} / ${state.syncTotal || '?'}，累計抓取 ${state.totalCrawled}`}
             </div>
           </div>
+          <Badge color={pendingRatio > 0.5 ? 'orange' : 'green'}>
+            待審比 {loading ? '...' : `${Math.round(pendingRatio * 100)}%`}
+          </Badge>
+        </div>
+        <div style={{ marginTop: 10 }}>
+          <Progressbar progress={syncProgress} />
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+          <Badge color="blue">本輪 {state.syncProcessed} / {state.syncTotal || '?'}</Badge>
+          <Badge color="gray">累計抓取 {state.totalCrawled}</Badge>
         </div>
       </Block>
 
       <BlockTitle>工作區總覽</BlockTitle>
-      <Block>
-        <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
-          <div>
-            <Card>
-              <CardHeader>暫存區</CardHeader>
-              <CardContent>
-                <div style={{ fontSize: 30, fontWeight: 700 }}>{loading ? '...' : state.stagingPending}</div>
-                <div style={{ opacity: 0.75, marginBottom: 12 }}>待審 / 已通過 {state.stagingApproved} / 已拒絕 {state.stagingRejected}</div>
-                <Button small fill onClick={() => handleOpenWorkspace('staging', () => setStagingFilter({ status: 'pending' }))}>前往暫存區</Button>
-              </CardContent>
-            </Card>
+      <Block strong inset>
+        <div style={{ display: 'grid', gap: 10 }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 12,
+              padding: '12px 14px',
+              borderRadius: 14,
+              background: 'rgba(127, 127, 127, 0.08)',
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 700 }}>暫存區</div>
+              <div style={{ marginTop: 2, opacity: 0.75, fontSize: 13 }}>
+                待審 / 已通過 {state.stagingApproved} / 已拒絕 {state.stagingRejected}
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              <Badge color="orange">{loading ? '...' : state.stagingPending}</Badge>
+              <Button small fill onClick={() => handleOpenWorkspace('staging', () => setStagingFilter({ status: 'pending' }))}>前往</Button>
+            </div>
           </div>
 
-          <div>
-            <Card>
-              <CardHeader>投稿審核</CardHeader>
-              <CardContent>
-                <div style={{ fontSize: 30, fontWeight: 700 }}>{loading ? '...' : state.pendingSubmissions}</div>
-                <div style={{ opacity: 0.75, marginBottom: 12 }}>待審投稿數量</div>
-                <Button small fill onClick={() => handleOpenWorkspace('submissions', () => setSubmissionFilter({ status: 'pending' }))}>前往投稿</Button>
-              </CardContent>
-            </Card>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 12,
+              padding: '12px 14px',
+              borderRadius: 14,
+              background: 'rgba(127, 127, 127, 0.08)',
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 700 }}>投稿審核</div>
+              <div style={{ marginTop: 2, opacity: 0.75, fontSize: 13 }}>待審投稿數量</div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              <Badge color="orange">{loading ? '...' : state.pendingSubmissions}</Badge>
+              <Button small fill onClick={() => handleOpenWorkspace('submissions', () => setSubmissionFilter({ status: 'pending' }))}>前往</Button>
+            </div>
           </div>
 
-          <div>
-            <Card>
-              <CardHeader>FanArt 整理</CardHeader>
-              <CardContent>
-                <div style={{ fontSize: 24, fontWeight: 700 }}>{loading ? '...' : `${state.fanartUnorganizedGroups} / ${state.fanartUnorganizedMedia}`}</div>
-                <div style={{ opacity: 0.75, marginBottom: 12 }}>未整理 group / media，另有 {state.fanartLegacyMedia} 筆舊資料</div>
-                <Button small fill onClick={() => handleOpenWorkspace('fanart', () => setFanartFilter({ view: 'unorganized' }))}>前往整理</Button>
-              </CardContent>
-            </Card>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 12,
+              padding: '12px 14px',
+              borderRadius: 14,
+              background: 'rgba(127, 127, 127, 0.08)',
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 700 }}>FanArt 整理</div>
+              <div style={{ marginTop: 2, opacity: 0.75, fontSize: 13 }}>
+                未整理 {state.fanartUnorganizedGroups} / {state.fanartUnorganizedMedia}，舊資料 {state.fanartLegacyMedia}
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              <Badge color="blue">{loading ? '...' : state.fanartUnorganizedGroups}</Badge>
+              <Button small fill onClick={() => handleOpenWorkspace('fanart', () => setFanartFilter({ view: 'unorganized' }))}>前往</Button>
+            </div>
           </div>
 
-          <div>
-            <Card>
-              <CardHeader>Group 修復</CardHeader>
-              <CardContent>
-                <div style={{ fontSize: 30, fontWeight: 700 }}>{loading ? '...' : state.repairTotal}</div>
-                <div style={{ opacity: 0.75, marginBottom: 12 }}>待修復 group，最近 20 筆中 {state.repairInferable} 筆可推斷來源</div>
-                <Button small fill onClick={() => handleOpenWorkspace('repair')}>前往修復</Button>
-              </CardContent>
-            </Card>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 12,
+              padding: '12px 14px',
+              borderRadius: 14,
+              background: 'rgba(127, 127, 127, 0.08)',
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 700 }}>Group 修復</div>
+              <div style={{ marginTop: 2, opacity: 0.75, fontSize: 13 }}>
+                待修復 group，最近 20 筆中 {state.repairInferable} 筆可推斷來源
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              <Badge color="red">{loading ? '...' : state.repairTotal}</Badge>
+              <Button small fill onClick={() => handleOpenWorkspace('repair')}>前往</Button>
+            </div>
           </div>
         </div>
       </Block>
-
-      <BlockTitle>快捷入口</BlockTitle>
-      <List inset strong>
-        {quickActions.map((item) => (
-          <ListItem
-            key={item.title}
-            title={item.title}
-            text={item.description}
-            after="前往"
-            link
-            onClick={() => handleOpenWorkspace(item.workspace, item.onBeforeOpen)}
-          />
-        ))}
-      </List>
-
-      <BlockTitle>最近工作區</BlockTitle>
-      {recentWorkspaceItems.length > 0 ? (
-        <List inset strong>
-          {recentWorkspaceItems.map((workspace) => (
-            <ListItem
-              key={workspace.key}
-              title={workspace.title}
-              text={workspace.description}
-              link
-              onClick={() => handleOpenWorkspace(workspace.key)}
-            >
-              <Badge slot="after" color="blue">最近</Badge>
-            </ListItem>
-          ))}
-        </List>
-      ) : (
-        <ReviewStateBlock
-          title="尚未累積近期工作區"
-          description="先從快捷入口或底部 tab 開始，系統會自動記住最近切換的工作區。"
-          tone="neutral"
-          compact
-        />
-      )}
 
       <BlockTitle>接管邊界摘要</BlockTitle>
       <Block strong inset>

@@ -9,10 +9,12 @@ import { useWorkspace } from './hooks/useWorkspace'
 import { WORKSPACES } from './lib/workspaces'
 import LoginPage from './pages/LoginPage'
 
+type PreloaderDialogInstance = ReturnType<Framework7['dialog']['preloader']>
+
 function AppShell() {
   const { user, loading } = useAuth()
   const { visitWorkspace } = useWorkspace()
-  const preloaderDialogRef = useRef<Framework7['dialog']['preloader'] extends (...args: any[]) => infer R ? R | null : null>(null)
+  const preloaderDialogRef = useRef<PreloaderDialogInstance | null>(null)
 
   useEffect(() => {
     let cancelled = false

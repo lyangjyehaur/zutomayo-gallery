@@ -16,16 +16,31 @@ export default function ReviewToolbarCard({
   footer,
   className = '',
 }: ReviewToolbarCardProps) {
+  const hasPanelContent = Boolean(summary || actions || footer)
+
   return (
-    <Block strong inset className={className || undefined}>
-      {search && <div>{search}</div>}
-      {(summary || actions) && (
-        <div style={{ display: 'grid', gap: 12 }}>
-          {summary && <div>{summary}</div>}
-          {actions && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>{actions}</div>}
+    <>
+      {search && (
+        <div style={{ margin: '0 16px 8px' }}>
+          {search}
         </div>
       )}
-      {footer && <div style={{ marginTop: 12 }}>{footer}</div>}
-    </Block>
+      {hasPanelContent && (
+        <Block
+          strong
+          inset
+          className={className || undefined}
+          style={search ? { marginTop: 0 } : undefined}
+        >
+          {(summary || actions) && (
+            <div style={{ display: 'grid', gap: 12 }}>
+              {summary && <div>{summary}</div>}
+              {actions && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>{actions}</div>}
+            </div>
+          )}
+          {footer && <div style={{ marginTop: 12 }}>{footer}</div>}
+        </Block>
+      )}
+    </>
   )
 }

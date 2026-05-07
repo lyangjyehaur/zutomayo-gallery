@@ -3,9 +3,6 @@ import {
   Badge,
   Block,
   BlockTitle,
-  Card,
-  CardContent,
-  CardHeader,
   Checkbox,
   Link,
   List,
@@ -27,8 +24,10 @@ import {
 import AppNavbar from '../components/AppNavbar'
 import Button from '../components/Button'
 import ReviewStateBlock from '../components/ReviewStateBlock'
+import ReviewSummaryPanel from '../components/ReviewSummaryPanel'
 import ReviewToolbarCard from '../components/ReviewToolbarCard'
 import { useWorkspace } from '../hooks/useWorkspace'
+import { preferTwimgUrl } from '../lib/media'
 import {
   applyRepairReparse,
   fetchMediaGroups,
@@ -56,7 +55,7 @@ const formatDateTime = (value?: string | null) => {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
 }
 
-const getPreviewUrl = (item: RepairGroup) => item.preview_url || item.sample_original_url || item.sample_url || ''
+const getPreviewUrl = (item: RepairGroup) => preferTwimgUrl(item.sample_original_url, item.sample_url, item.preview_url)
 
 const isTwitterUrl = (url?: string | null) => typeof url === 'string' && /(?:twitter\.com|x\.com)/i.test(url)
 
@@ -465,29 +464,25 @@ export default function RepairPage() {
         footer="搜尋會保留在工作區狀態中，切回其他頁後再回來仍可延續同一批修復條件。"
       />
 
-      <Block>
-        <Card>
-          <CardHeader>待修復總量</CardHeader>
-          <CardContent>
-            <div style={{ fontSize: 26, fontWeight: 700 }}>{loading ? '...' : total}</div>
-            <div style={{ opacity: 0.75 }}>目前 offset {offset}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>目前頁面</CardHeader>
-          <CardContent>
-            <div style={{ fontSize: 26, fontWeight: 700 }}>{loading ? '...' : visibleItems.length}</div>
-            <div style={{ opacity: 0.75 }}>高/中/無推斷：{inferStats.high}/{inferStats.medium}/{inferStats.none}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>已勾選</CardHeader>
-          <CardContent>
-            <div style={{ fontSize: 26, fontWeight: 700 }}>{selectedCount}</div>
-            <div style={{ opacity: 0.75 }}>可直接批次預覽 reparse</div>
-          </CardContent>
-        </Card>
-      </Block>
+      <ReviewSummaryPanel
+        title="Group 修復概況"
+        description={loading ? '正在整理待修復 group...' : `目前 offset ${offset}`}
+        metrics={[
+          { label: '待修復總量', value: loading ? '...' : total, color: 'orange' },
+          {
+            label: '目前頁面',
+            value: loading ? '...' : visibleItems.length,
+            color: 'blue',
+            detail: `高/中/無推斷：${inferStats.high}/${inferStats.medium}/${inferStats.none}`,
+          },
+          {
+            label: '已勾選',
+            value: selectedCount,
+            color: 'green',
+            detail: '可直接批次預覽 reparse',
+          },
+        ]}
+      />
 
       <ReviewToolbarCard
        
@@ -535,7 +530,7 @@ export default function RepairPage() {
           loading
         />
       ) : (
-      <List mediaList>
+      <List mediaList inset strong dividers style={{ marginTop: 12, marginBottom: 12 }}>
         {visibleItems.map(({ row, inferred }) => {
           const preview = getPreviewUrl(row)
           const isVideo = preview.includes('.mp4')
@@ -757,7 +752,7 @@ export default function RepairPage() {
               />
             </List>
             {mergeTargetId && <div style={{ opacity: 0.75 }}>目前 target_group_id：{mergeTargetId}</div>}
-            <List mediaList>
+            <List mediaList inset strong dividers style={{ marginTop: 12, marginBottom: 12 }}>
               {mergeCandidates.map((row) => (
                 <ListItem
                   key={row.id}
@@ -806,7 +801,7 @@ export default function RepairPage() {
             </Block>
 
             <BlockTitle>預覽結果</BlockTitle>
-            <List mediaList>
+            <List mediaList inset strong dividers style={{ marginTop: 12, marginBottom: 12 }}>
               {reparsePreview?.results.map((result) => (
                 <ListItem
                   key={result.group_id}

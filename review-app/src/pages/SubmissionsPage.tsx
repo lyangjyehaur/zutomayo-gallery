@@ -3,9 +3,6 @@ import {
   Badge,
   Block,
   BlockTitle,
-  Card,
-  CardContent,
-  CardHeader,
   Link,
   List,
   ListInput,
@@ -30,9 +27,11 @@ import {
 import AppNavbar from '../components/AppNavbar'
 import Button from '../components/Button'
 import ReviewStateBlock from '../components/ReviewStateBlock'
+import ReviewSummaryPanel from '../components/ReviewSummaryPanel'
 import Segmented from '../components/Segmented'
 import ReviewToolbarCard from '../components/ReviewToolbarCard'
 import { useWorkspace } from '../hooks/useWorkspace'
+import { preferTwimgUrl } from '../lib/media'
 import { approveSubmission, fetchSubmissions, rejectSubmission, type Submission } from '../lib/api'
 import type { SubmissionStatus } from '../contexts/WorkspaceContext'
 
@@ -54,9 +53,9 @@ const getMediaPreview = (item: Submission) => {
   const firstMedia = item.media[0]
   if (!firstMedia) return null
   if (firstMedia.media_type === 'image') {
-    return firstMedia.r2_url || firstMedia.original_url
+    return preferTwimgUrl(firstMedia.original_url, firstMedia.r2_url)
   }
-  return firstMedia.thumbnail_url || firstMedia.r2_url || firstMedia.original_url
+  return preferTwimgUrl(firstMedia.thumbnail_url, firstMedia.original_url, firstMedia.r2_url)
 }
 
 const buildSearchText = (item: Submission) => {
@@ -281,7 +280,7 @@ export default function SubmissionsPage() {
             loading
           />
         ) : (
-        <List mediaList>
+        <List mediaList inset strong dividers style={{ marginTop: 12, marginBottom: 12 }}>
           {filteredItems.map((item) => {
             const previewUrl = getMediaPreview(item)
             const mediaCount = item.media.length
@@ -365,7 +364,9 @@ export default function SubmissionsPage() {
         )}
 
         {!hasMore && filteredItems.length > 0 && (
-          <Block strong inset>已載入到底，可切換狀態或調整搜尋條件繼續查看。</Block>
+          <div style={{ margin: '8px 16px 12px', opacity: 0.75, fontSize: 13 }}>
+            已載入到底，可切換狀態或調整搜尋條件繼續查看。
+          </div>
         )}
 
         {!loading && items.length === 0 && (
@@ -383,6 +384,7 @@ export default function SubmissionsPage() {
     <Page
       ptr
       infinite
+      infinitePreloader={false}
       infiniteDistance={50}
       onPtrRefresh={handleRefresh}
       onInfinite={handleInfinite}
@@ -390,39 +392,21 @@ export default function SubmissionsPage() {
     >
       <AppNavbar title="投稿審核" subtitle="pending / approved / rejected" />
 
-      <Block>
-        <Card>
-          <CardHeader>投稿狀態總覽</CardHeader>
-          <CardContent>
-            <div style={{ display: 'grid', gap: 10 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>待審</span>
-                <Badge color="orange">{counts.pending}</Badge>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>已通過</span>
-                <Badge color="green">{counts.approved}</Badge>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>已退回</span>
-                <Badge color="red">{counts.rejected}</Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>目前視圖</CardHeader>
-          <CardContent>
-            <div style={{ fontSize: 20, fontWeight: 700 }}>{status}</div>
-            <div style={{ opacity: 0.75, marginTop: 8 }}>已載入 {items.length} 筆，搜尋後顯示 {filteredItems.length} 筆。</div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-              <Button small fill tonal onClick={() => void Promise.all([reloadCurrentStatus(), loadCounts(true)])}>刷新</Button>
-              <Button small outline onClick={() => setDetailItem(filteredItems[0] || null)} disabled={filteredItems.length === 0}>看第一筆詳情</Button>
-            </div>
-          </CardContent>
-        </Card>
-      </Block>
+      <ReviewSummaryPanel
+        title={`目前視圖 ${status}`}
+        description={`已載入 ${items.length} 筆，搜尋後顯示 ${filteredItems.length} 筆。`}
+        actions={(
+          <>
+            <Button small fill tonal onClick={() => void Promise.all([reloadCurrentStatus(), loadCounts(true)])}>刷新</Button>
+            <Button small outline onClick={() => setDetailItem(filteredItems[0] || null)} disabled={filteredItems.length === 0}>看第一筆詳情</Button>
+          </>
+        )}
+        metrics={[
+          { label: '待審', value: counts.pending, color: 'orange' },
+          { label: '已通過', value: counts.approved, color: 'green' },
+          { label: '已退回', value: counts.rejected, color: 'red' },
+        ]}
+      />
 
       <Block>
         <Segmented strong>
@@ -495,7 +479,9 @@ export default function SubmissionsPage() {
               <Block strong inset>
                 <div style={{ display: 'grid', gap: 12 }}>
                   {detailItem.media.map((media) => {
-                    const previewUrl = media.thumbnail_url || media.r2_url || media.original_url
+                    const previewUrl = media.media_type === 'video'
+                      ? preferTwimgUrl(media.thumbnail_url, media.original_url, media.r2_url)
+                      : preferTwimgUrl(media.original_url, media.r2_url, media.thumbnail_url)
                     return (
                       <div key={media.id}>
                         {media.media_type === 'video' ? (

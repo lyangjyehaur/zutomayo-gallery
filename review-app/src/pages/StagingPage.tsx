@@ -3,16 +3,12 @@ import {
   Badge,
   Block,
   BlockTitle,
-  Card,
-  CardContent,
-  CardHeader,
   Checkbox,
   Link,
   List,
   ListInput,
   ListItem,
   Navbar,
-  NavLeft,
   NavRight,
   NavTitle,
   Page,
@@ -30,6 +26,7 @@ import AppNavbar from '../components/AppNavbar'
 import Button from '../components/Button'
 import MvSheet from '../components/MvSheet'
 import ReviewStateBlock from '../components/ReviewStateBlock'
+import ReviewSummaryPanel from '../components/ReviewSummaryPanel'
 import Segmented from '../components/Segmented'
 import ReviewToolbarCard from '../components/ReviewToolbarCard'
 import { useWorkspace } from '../hooks/useWorkspace'
@@ -46,6 +43,7 @@ import {
   type StagingFanart,
   type StagingProgressData,
 } from '../lib/api'
+import { preferTwimgUrl } from '../lib/media'
 import type { StagingStatus } from '../contexts/WorkspaceContext'
 
 const PAGE_SIZE = 20
@@ -124,6 +122,7 @@ export default function StagingPage() {
   const [mvSheetOpened, setMvSheetOpened] = useState(false)
   const [mvSheetBusy, setMvSheetBusy] = useState(false)
   const [mvSheetTargets, setMvSheetTargets] = useState<string[]>([])
+  const [mvSheetReturnItem, setMvSheetReturnItem] = useState<StagingFanart | null>(null)
   const [crawlerSheetOpened, setCrawlerSheetOpened] = useState(false)
   const [triggeringCrawler, setTriggeringCrawler] = useState(false)
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set())
@@ -342,6 +341,8 @@ export default function StagingPage() {
     if (mvs.length === 0) {
       void loadMvs()
     }
+    setMvSheetReturnItem(ids.length === 1 && detailItem?.id === ids[0] ? detailItem : null)
+    setDetailItem(null)
     setMvSheetTargets(ids)
     setMvSheetOpened(true)
   }
@@ -376,6 +377,7 @@ export default function StagingPage() {
       setBusyForIds(mvSheetTargets, false)
       setMvSheetBusy(false)
       setMvSheetTargets([])
+      setMvSheetReturnItem(null)
       setMvSheetOpened(false)
     }
 
@@ -513,6 +515,7 @@ export default function StagingPage() {
     <Page
       ptr
       infinite
+      infinitePreloader={false}
       infiniteDistance={50}
       onPtrRefresh={handleRefresh}
       onInfinite={handleInfinite}
@@ -520,50 +523,29 @@ export default function StagingPage() {
     >
       <AppNavbar title="暫存審核" subtitle="crawler / sync / 批次操作" />
 
-      <Block>
-        <Card>
-          <CardHeader>同步狀態</CardHeader>
-          <CardContent>
-            <div style={{ fontSize: 20, fontWeight: 700 }}>{getProgressLabel(syncProgress)}</div>
-            <div style={{ opacity: 0.75, marginTop: 8 }}>
-              {syncProgress
-                ? `本輪 ${syncProgress.current_run_processed || 0} / ${syncProgress.current_run_total || 0}，累計抓取 ${syncProgress.total_crawled || 0}`
-                : '尚未取得同步資訊'}
-            </div>
-            <div style={{ marginTop: 12 }}>
-              <div
-               
-                style={{ width: `${syncProgressPercent}%` }}
-              />
-            </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-              <Button small fill tonal onClick={() => void loadProgress()} loading={refreshingProgress}>更新進度</Button>
-              <Button small outline onClick={() => setCrawlerSheetOpened(true)}>啟動 crawler</Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>佇列統計</CardHeader>
-          <CardContent>
-            <div style={{ display: 'grid', gap: 10 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>待審</span>
-                <Badge color="orange">{progress?.statusCounts.pending || 0}</Badge>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>已通過</span>
-                <Badge color="green">{progress?.statusCounts.approved || 0}</Badge>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>已拒絕</span>
-                <Badge color="red">{progress?.statusCounts.rejected || 0}</Badge>
-              </div>
-            </div>
-            <div style={{ opacity: 0.75, marginTop: 12 }}>目前篩選 {filteredItems.length} 筆，已勾選 {selectedCount} 筆。</div>
-          </CardContent>
-        </Card>
-      </Block>
+      <ReviewSummaryPanel
+        title={getProgressLabel(syncProgress)}
+        description={syncProgress
+          ? `本輪 ${syncProgress.current_run_processed || 0} / ${syncProgress.current_run_total || 0}，累計抓取 ${syncProgress.total_crawled || 0}`
+          : '尚未取得同步資訊'}
+        progress={(
+          <div>
+            <div style={{ width: `${syncProgressPercent}%` }} />
+          </div>
+        )}
+        actions={(
+          <>
+            <Button small fill tonal onClick={() => void loadProgress()} loading={refreshingProgress}>更新進度</Button>
+            <Button small outline onClick={() => setCrawlerSheetOpened(true)}>啟動 crawler</Button>
+          </>
+        )}
+        metrics={[
+          { label: '待審', value: progress?.statusCounts.pending || 0, color: 'orange' },
+          { label: '已通過', value: progress?.statusCounts.approved || 0, color: 'green' },
+          { label: '已拒絕', value: progress?.statusCounts.rejected || 0, color: 'red' },
+        ]}
+        footer={`目前篩選 ${filteredItems.length} 筆，已勾選 ${selectedCount} 筆。`}
+      />
 
       <Block>
         <Segmented strong>
@@ -653,9 +635,11 @@ export default function StagingPage() {
             loading
           />
         ) : (
-      <List mediaList>
+      <List mediaList inset strong dividers style={{ marginTop: 12, marginBottom: 12 }}>
         {filteredItems.map((item) => {
-          const imgSrc = item.media_type === 'image' ? item.media_url : (item.thumbnail_url || item.media_url)
+          const imgSrc = item.media_type === 'image'
+            ? preferTwimgUrl(item.media_url, item.r2_url)
+            : preferTwimgUrl(item.thumbnail_url, item.media_url, item.r2_url)
           const subtitle = `@${item.author_handle} · ❤️ ${formatCount(item.like_count)} · 🔁 ${formatCount(item.retweet_count)} · 👁 ${formatCount(item.view_count)}`
           const footer = [
             item.media_type === 'video' ? 'Video' : 'Image',
@@ -738,7 +722,9 @@ export default function StagingPage() {
         )}
 
         {!hasMore && filteredItems.length > 0 && (
-          <Block strong inset>已載入到底，若要查看其他資料可切換狀態或重新同步。</Block>
+          <div style={{ margin: '8px 16px 12px', opacity: 0.75, fontSize: 13 }}>
+            已載入到底，若要查看其他資料可切換狀態或重新同步。
+          </div>
         )}
 
         {!loading && items.length === 0 && (
@@ -751,15 +737,20 @@ export default function StagingPage() {
       </div>
 
       <MvSheet
-        key={mvSheetTargets.join('|') || 'empty'}
         opened={mvSheetOpened}
         busy={mvSheetBusy}
         title={mvSheetTargets.length > 1 ? `為 ${mvSheetTargets.length} 筆暫存選擇關聯 MV` : '選擇關聯 MV / 標籤'}
         description={mvSheetTargets.length > 1 ? '先選好要關聯的 MV / 標籤，再保存並批次通過。' : '先選好要關聯的 MV / 標籤，再保存本次關聯並通過。'}
         confirmText={mvSheetTargets.length > 1 ? '保存關聯並批次通過' : '保存關聯並通過'}
+        onCancel={() => {
+          if (mvSheetReturnItem) {
+            setDetailItem(mvSheetReturnItem)
+          }
+        }}
         onClose={() => {
           setMvSheetOpened(false)
           setMvSheetTargets([])
+          setMvSheetReturnItem(null)
         }}
         onConfirm={handleMvConfirm}
         mvs={mvs}
@@ -823,12 +814,9 @@ export default function StagingPage() {
         {detailItem && (
           <Page>
               <Navbar>
-                <NavLeft>
-                  <Link onClick={() => setDetailItem(null)}>關閉</Link>
-                </NavLeft>
                 <NavTitle>暫存詳情</NavTitle>
                 <NavRight>
-                  <Badge color={getStatusBadgeColor(detailItem.status)}>{detailItem.status}</Badge>
+                  <Link iconOnly iconF7="xmark" aria-label="關閉" onClick={() => setDetailItem(null)} />
                 </NavRight>
               </Navbar>
 
@@ -837,6 +825,9 @@ export default function StagingPage() {
                   <div>
                     <div style={{ fontSize: 20, fontWeight: 700 }}>{detailItem.author_name || detailItem.author_handle}</div>
                     <div style={{ opacity: 0.75, marginTop: 6 }}>@{detailItem.author_handle} · {formatDateTime(detailItem.post_date)}</div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+                      <Badge color={getStatusBadgeColor(detailItem.status)}>{detailItem.status}</Badge>
+                    </div>
                   </div>
                   <div style={{ textAlign: 'right', opacity: 0.75 }}>
                     <div>❤️ {formatCount(detailItem.like_count)}</div>
@@ -850,15 +841,15 @@ export default function StagingPage() {
                 <div>
                   {detailItem.media_type === 'video' ? (
                     <video
-                      src={detailItem.r2_url || detailItem.media_url}
-                      poster={detailItem.thumbnail_url || undefined}
+                      src={preferTwimgUrl(detailItem.media_url, detailItem.r2_url) || undefined}
+                      poster={preferTwimgUrl(detailItem.thumbnail_url, detailItem.media_url) || undefined}
                       controls
                       playsInline
                       style={{ width: '100%', display: 'block', maxHeight: '56vh' }}
                     />
                   ) : (
                     <img
-                      src={detailItem.r2_url || detailItem.media_url}
+                      src={preferTwimgUrl(detailItem.media_url, detailItem.r2_url) || undefined}
                       alt={detailItem.author_name}
                       style={{ width: '100%', display: 'block', maxHeight: '56vh', objectFit: 'contain' }}
                     />
