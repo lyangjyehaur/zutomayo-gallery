@@ -2,6 +2,13 @@ import fetch from 'node-fetch';
 import { errorEventEmitter } from './error-events.service.js';
 import { logger } from '../utils/logger.js';
 
+const NOTIFICATION_TYPE_TO_PREF: Record<string, string> = {
+  'new-fanart': 'staging',
+  'crawler-complete': 'crawler',
+  'new-submission': 'submission',
+  'error-threshold': 'error',
+};
+
 export const NotificationService = {
   sendBarkNotification: async ({
     title,
@@ -85,10 +92,17 @@ export const NotificationService = {
     try {
       const { PushSubscriptionModel } = await import('../models/push-subscription.model.js');
       const { PushService } = await import('./push.service.js');
+      const { AdminUserModel } = await import('../models/index.js');
       const subscriptions = await PushSubscriptionModel.findAll();
+      const prefKey = NOTIFICATION_TYPE_TO_PREF[type];
       const payload = { type, title, body, url };
+
+      const filteredSubs = prefKey
+        ? await filterSubsByPref(subscriptions, prefKey, AdminUserModel)
+        : subscriptions;
+
       await Promise.allSettled(
-        subscriptions.map(sub =>
+        filteredSubs.map(sub =>
           PushService.sendNotification(
             { endpoint: (sub as any).endpoint, keys: { p256dh: (sub as any).p256dh, auth: (sub as any).auth } },
             payload,
@@ -109,3 +123,24 @@ export const NotificationService = {
     return barkResult;
   },
 };
+
+async function filterSubsByPref(
+  subscriptions: any[],
+  prefKey: string,
+  AdminUserModel: any,
+): Promise<any[]> {
+  const userIds = [...new Set(subscriptions.map(s => (s as any).user_id))];
+  if (userIds.length === 0) return subscriptions;
+
+  const users = await AdminUserModel.findAll({ where: { id: userIds } });
+  const userPrefMap = new Map<string, any>();
+  for (const u of users) {
+    userPrefMap.set((u as any).id, (u.toJSON() as any).notification_preferences);
+  }
+
+  return subscriptions.filter(sub => {
+    const prefs = userPrefMap.get((sub as any).user_id);
+    if (!prefs) return true;
+    return prefs[prefKey] !== false;
+  });
+}

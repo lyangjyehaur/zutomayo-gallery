@@ -94,7 +94,6 @@ export default function SubmissionsPage() {
       <List mediaList>
         {items.map((item) => {
           const previewUrl = getMediaPreview(item)
-          const isVideo = item.media[0]?.media_type === 'video'
           const mediaCount = item.media.length
           const displayName = item.submitter?.display_name || '未知'
           const dateStr = new Date(item.submitted_at).toLocaleDateString()

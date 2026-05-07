@@ -19,7 +19,12 @@
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-intersection-observer": "^10.0.3",
-    "react-swipeable": "^7.0.2"
+    "react-swipeable": "^7.0.2",
+    "workbox-cacheable-response": "^7.4.1",
+    "workbox-expiration": "^7.4.1",
+    "workbox-precaching": "^7.4.1",
+    "workbox-routing": "^7.4.1",
+    "workbox-strategies": "^7.4.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

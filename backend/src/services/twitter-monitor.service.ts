@@ -14,7 +14,6 @@ export const TwitterMonitorService = {
   checkRss: async () => {
     // 讀取環境變數
     const TWITTER_RSS_URL = process.env.TWITTER_RSS_URL;
-    const BARK_URL = process.env.BARK_URL;
 
     if (!TWITTER_RSS_URL) {
       console.log('[Twitter Monitor] TWITTER_RSS_URL is not set. Skipping.');
@@ -138,15 +137,12 @@ export const TwitterMonitorService = {
 
             console.log(`[Twitter Monitor] Saved new fanart: ${sourceTweetLink}`);
 
-            // 發送 Bark 推送通知
-            if (BARK_URL) {
-              await NotificationService.send({
-                type: 'new-fanart',
-                title: 'FanArt 監聽通知',
-                body: `發現新推文！來自 ${tweetAuthor}\n包含 ${mediaList.length} 個媒體\n${tweetText}`,
-                url: sourceTweetLink,
-              });
-            }
+            await NotificationService.send({
+              type: 'new-fanart',
+              title: 'FanArt 監聽通知',
+              body: `發現新推文！來自 ${tweetAuthor}\n包含 ${mediaList.length} 個媒體\n${tweetText}`,
+              url: sourceTweetLink,
+            });
           }
         }
       return { success: true, processedCount: newTweetsCount, timestamp: new Date().toISOString() };

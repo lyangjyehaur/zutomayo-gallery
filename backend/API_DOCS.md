@@ -72,6 +72,7 @@
 | **GET** | `/passkeys` | 管理員 | 列出所有已綁定的 Passkey 裝置清單與資訊。 |
 | **DELETE** | `/passkeys/:id` | 管理員 | 刪除指定的 Passkey 裝置。 |
 | **POST** | `/change-password` | 管理員 | 更改備用的傳統登入密碼。 |
+| **PUT** | `/me/notification-preferences` | 管理員 | 更新目前管理員的通知偏好設定。<br>Body: `{ "staging"?: boolean, "submission"?: boolean, "error"?: boolean, "crawler"?: boolean }`<br>僅更新提供的欄位，未提供的欄位保持不變。 |
 
 ---
 

@@ -182,3 +182,56 @@ export const checkAuth = async () => {
 export const logout = async () => {
   await adminFetch(`${getApiBase()}/auth/logout`, { method: 'POST' })
 }
+
+export const getPushPublicKey = async (): Promise<string | null> => {
+  const base = getApiBase()
+  const res = await adminFetch(`${base}/push/public-key`)
+  if (!res.ok) return null
+  const data = await res.json()
+  return data.success ? data.publicKey : null
+}
+
+export const subscribePush = async (subscription: PushSubscriptionJSON) => {
+  const base = getApiBase()
+  const res = await adminFetch(`${base}/push/subscribe`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(subscription),
+  })
+  return res.json()
+}
+
+export const unsubscribePush = async (endpoint: string) => {
+  const base = getApiBase()
+  const res = await adminFetch(`${base}/push/unsubscribe`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ endpoint }),
+  })
+  return res.json()
+}
+
+export interface PushSubscriptionJSON {
+  endpoint: string
+  keys: {
+    p256dh: string
+    auth: string
+  }
+}
+
+export interface NotificationPreferences {
+  staging: boolean
+  submission: boolean
+  error: boolean
+  crawler: boolean
+}
+
+export const updateNotificationPreferences = async (prefs: Partial<NotificationPreferences>) => {
+  const base = getApiBase()
+  const res = await adminFetch(`${base}/auth/me/notification-preferences`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(prefs),
+  })
+  return res.json()
+}

@@ -118,7 +118,6 @@ export default function StagingPage() {
       <List mediaList>
         {items.map((item) => {
           const imgSrc = item.media_type === 'image' ? item.media_url : (item.thumbnail_url || item.media_url)
-          const isVideo = item.media_type === 'video'
           const subtitle = `@${item.author_handle} · ❤️ ${formatCount(item.like_count)} 🔁 ${formatCount(item.retweet_count)} 👁 ${formatCount(item.view_count)}`
 
           if (status === 'rejected') {

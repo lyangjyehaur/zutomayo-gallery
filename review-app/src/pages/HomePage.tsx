@@ -1,13 +1,31 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Page, Navbar, NavRight, Toolbar, ToolbarPane, Link, Tabs, Tab, Block, Button, Card, CardHeader, CardContent, f7 } from 'framework7-react'
+import { Page, Navbar, NavRight, Toolbar, ToolbarPane, Link, Tabs, Tab, Block, Button, Card, CardHeader, CardContent, List, ListItem, Toggle, f7 } from 'framework7-react'
 import { useAuth } from '../hooks/useAuth'
-import { fetchStagingProgress, fetchSubmissions } from '../lib/api'
+import { usePushSubscription } from '../hooks/usePushSubscription'
+import { fetchStagingProgress, fetchSubmissions, updateNotificationPreferences, type NotificationPreferences } from '../lib/api'
+
+const DEFAULT_PREFS: NotificationPreferences = {
+  staging: true,
+  submission: true,
+  error: true,
+  crawler: true,
+}
 
 export default function HomePage() {
-  const { user, logout } = useAuth()
+  const { user, logout, setUser } = useAuth()
+  const push = usePushSubscription()
   const [pendingStaging, setPendingStaging] = useState(0)
   const [pendingSubmissions, setPendingSubmissions] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [prefs, setPrefs] = useState<NotificationPreferences>(
+    user?.notification_preferences || DEFAULT_PREFS
+  )
+
+  useEffect(() => {
+    if (user?.notification_preferences) {
+      setPrefs(user.notification_preferences)
+    }
+  }, [user?.notification_preferences])
 
   const loadData = useCallback(async () => {
     try {
@@ -18,7 +36,6 @@ export default function HomePage() {
       setPendingStaging(stagingData.pending || 0)
       setPendingSubmissions(submissionsData.total || 0)
     } catch {
-      // silently fail
     } finally {
       setLoading(false)
     }
@@ -31,6 +48,17 @@ export default function HomePage() {
   const handleLogout = async () => {
     await logout()
     f7.views.main.router.navigate('/login/', { reloadAll: true })
+  }
+
+  const handleTogglePref = async (key: keyof NotificationPreferences, value: boolean) => {
+    const next = { ...prefs, [key]: value }
+    setPrefs(next)
+    try {
+      const result = await updateNotificationPreferences({ [key]: value })
+      if (result.success && result.data) {
+        setUser(result.data)
+      }
+    } catch {}
   }
 
   return (
@@ -62,6 +90,48 @@ export default function HomePage() {
                 {loading ? '...' : pendingSubmissions}
               </CardContent>
             </Card>
+            <Card>
+              <CardHeader>推播通知</CardHeader>
+              <CardContent>
+                {push.isUnsupported ? (
+                  <p style={{ margin: 0, opacity: 0.5 }}>此瀏覽器不支援推播</p>
+                ) : push.isDenied ? (
+                  <p style={{ margin: 0, color: 'var(--f7-theme-color)' }}>通知權限已被拒絕，請在瀏覽器設定中啟用</p>
+                ) : push.isSubscribed ? (
+                  <Button fill color="red" onClick={push.unsubscribe}>
+                    取消推播訂閱
+                  </Button>
+                ) : (
+                  <Button fill onClick={push.subscribe} loading={push.isSubscribing}>
+                    啟用推播通知
+                  </Button>
+                )}
+                {push.error && (
+                  <p style={{ margin: '8px 0 0', fontSize: '12px', color: 'var(--f7-theme-color)' }}>{push.error}</p>
+                )}
+              </CardContent>
+            </Card>
+            {push.isSubscribed && (
+              <Card>
+                <CardHeader>通知類型</CardHeader>
+                <CardContent style={{ padding: 0 }}>
+                  <List style={{ margin: 0 }}>
+                    <ListItem title="暫存區新項目">
+                      <Toggle slot="after" checked={prefs.staging} onToggleChange={(e: any) => handleTogglePref('staging', e)} />
+                    </ListItem>
+                    <ListItem title="投稿送審">
+                      <Toggle slot="after" checked={prefs.submission} onToggleChange={(e: any) => handleTogglePref('submission', e)} />
+                    </ListItem>
+                    <ListItem title="系統異常">
+                      <Toggle slot="after" checked={prefs.error} onToggleChange={(e: any) => handleTogglePref('error', e)} />
+                    </ListItem>
+                    <ListItem title="爬蟲完成">
+                      <Toggle slot="after" checked={prefs.crawler} onToggleChange={(e: any) => handleTogglePref('crawler', e)} />
+                    </ListItem>
+                  </List>
+                </CardContent>
+              </Card>
+            )}
           </Block>
         </Tab>
         <Tab id="tab-staging" className="page-content">

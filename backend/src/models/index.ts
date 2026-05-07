@@ -418,6 +418,10 @@ export const AdminUserModel = sequelize.define('AdminUser', {
   avatar_url: { type: DataTypes.TEXT, allowNull: true },
   password_hash: { type: DataTypes.TEXT, allowNull: false },
   is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
+  notification_preferences: {
+    type: DataTypes.JSONB,
+    defaultValue: { staging: true, submission: true, error: true, crawler: true },
+  },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {

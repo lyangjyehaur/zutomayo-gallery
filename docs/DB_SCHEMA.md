@@ -233,3 +233,32 @@
 **索引：**
 - `user_id` — 按訂閱者查詢
 - `endpoint` (unique) — 確保同一 endpoint 不重複訂閱
+
+### 4.8. `admin_users` (管理員帳號表)
+儲存後台管理員的帳號資訊與通知偏好設定。
+| 欄位名稱 | 型別 | 約束 | 說明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `VARCHAR(36)` | `PRIMARY KEY` | 管理員唯一識別碼 |
+| `username` | `VARCHAR(255)` | `UNIQUE`, `NOT NULL` | 登入帳號 |
+| `email` | `VARCHAR(255)` | `NULL` | 電子郵件 |
+| `display_name` | `VARCHAR(255)` | `NULL` | 顯示名稱 |
+| `avatar_url` | `TEXT` | `NULL` | 頭像網址 |
+| `password_hash` | `TEXT` | `NOT NULL` | 密碼雜湊 |
+| `is_active` | `BOOLEAN` | `DEFAULT true` | 是否啟用 |
+| `notification_preferences` | `JSONB` | `DEFAULT {"staging": true, "submission": true, "error": true, "crawler": true}` | 通知偏好設定，控制各類型通知的開關 |
+| `created_at` | `TIMESTAMP` | | 建立時間 |
+| `updated_at` | `TIMESTAMP` | | 更新時間 |
+
+**`notification_preferences` 結構：**
+```json
+{
+  "staging": true,
+  "submission": true,
+  "error": true,
+  "crawler": true
+}
+```
+- `staging`：新二創圖暫存通知（對應 notification type `new-fanart`）
+- `submission`：新投稿通知（對應 notification type `new-submission`）
+- `error`：錯誤閾值通知（對應 notification type `error-threshold`）
+- `crawler`：爬蟲完成通知（對應 notification type `crawler-complete`）

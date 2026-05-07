@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-import { checkAuth, logout as apiLogout } from '../lib/api'
+import { checkAuth, logout as apiLogout, type NotificationPreferences } from '../lib/api'
 
 interface User {
   id: string | number
   username: string
   role: string
+  notification_preferences?: NotificationPreferences
 }
 
 export function useAuth() {
@@ -26,5 +27,5 @@ export function useAuth() {
     setUser(null)
   }, [])
 
-  return { user, loading, isLoggedIn: !!user, logout }
+  return { user, loading, isLoggedIn: !!user, logout, setUser }
 }
