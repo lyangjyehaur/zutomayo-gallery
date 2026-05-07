@@ -52,7 +52,7 @@
 | **POST** | `/dicts` | 管理員 | 更新系統設定字典檔。 |
 | **POST** | `/r2-sync` | 管理員/Token | 觸發將推特圖片同步至 Cloudflare R2 儲存桶的背景任務。可接受 `x-r2-sync-token` 作為自動化腳本的驗證。 |
 | **POST** | `/r2-rebuild` | 管理員/Token | 重建 Cloudflare R2 圖片緩存庫。 |
-| **POST** | `/survey` | 公開 | 提交訪問質量調查問卷。<br>Body: `{ "rating": 4.5, "comment": "...", "url": "...", "userAgent": "..." }` |
+| **POST** | `/survey` | 公開 | 提交訪問質量調查問卷（多維度評分 + 自動效能數據）。<br>Body: `{ "ratingSpeed": 4.5, "ratingExperience": 5, "ratingImageQuality": 4, "ratingUi": 5, "ratingSearch": 4.5, "comment": "...", "url": "...", "userAgent": "...", "connectionType": "4g", "downlink": 10, "rtt": 50, "saveData": false, "lcp": 1200, "fid": 15, "cls": 0.05, "fcp": 800, "ttfb": 200, "imageLoadAvg": 350, "imageLoadCount": 12 }` |
 | **GET** | `/errors/stream` | 管理員 | **SSE 即時推送**：後端異常事件串流。管理員連接後可即時接收後端運行時產生的錯誤事件，包含歷史錯誤與即時錯誤。 |
 | **GET** | `/errors` | 管理員 | 查詢後端錯誤日誌（分頁）。支援多種篩選條件。 |
 | **PATCH** | `/errors/:id/resolve` | 管理員 | 標記或取消標記指定錯誤為已解決。Body: `{ "resolved": true/false }` |

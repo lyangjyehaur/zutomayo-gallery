@@ -508,18 +508,39 @@ export const batchResolveErrorLogs = async (req: Request, res: Response, next: N
 export const createSpeedSurvey = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const parsed = createSpeedSurveySchema.parse(req.body);
-    const { rating, comment, url, userAgent } = parsed;
+    const {
+      ratingSpeed, ratingExperience, ratingImageQuality, ratingUi, ratingSearch,
+      comment, url, userAgent,
+      connectionType, downlink, rtt, saveData,
+      lcp, fid, cls, fcp, ttfb,
+      imageLoadAvg, imageLoadCount,
+    } = parsed;
 
     const ip = (req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.ip || '') as string;
     const firstIp = ip.includes(',') ? ip.split(',')[0].trim() : ip;
     const clientIp = firstIp.startsWith('::ffff:') ? firstIp.replace('::ffff:', '') : firstIp;
 
     const record = await SpeedSurveyModel.create({
-      rating,
+      rating_speed: ratingSpeed ?? null,
+      rating_experience: ratingExperience ?? null,
+      rating_image_quality: ratingImageQuality ?? null,
+      rating_ui: ratingUi ?? null,
+      rating_search: ratingSearch ?? null,
       comment: comment || null,
       url: url || null,
       user_agent: userAgent || null,
       ip: clientIp || null,
+      connection_type: connectionType || null,
+      downlink: downlink ?? null,
+      rtt: rtt ?? null,
+      save_data: saveData ?? null,
+      lcp: lcp ?? null,
+      fid: fid ?? null,
+      cls: cls ?? null,
+      fcp: fcp ?? null,
+      ttfb: ttfb ?? null,
+      image_load_avg: imageLoadAvg ?? null,
+      image_load_count: imageLoadCount ?? null,
     });
 
     res.status(201).json({ success: true, data: record });

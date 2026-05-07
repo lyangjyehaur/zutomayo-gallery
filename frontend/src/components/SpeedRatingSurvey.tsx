@@ -75,22 +75,158 @@ export function useActiveTimer(thresholdSeconds = 60, onTrigger: () => void) {
   }, [thresholdSeconds, onTrigger]);
 }
 
-const StarRating = ({ onRate, disabled }: { onRate: (rating: number) => void; disabled?: boolean }) => {
-  const [rating, setRating] = useState(0);
+// ============ Web Vitals & Performance Data Collection ============
+
+interface PerfMetrics {
+  lcp?: number;
+  fid?: number;
+  cls?: number;
+  fcp?: number;
+  ttfb?: number;
+  imageLoadAvg?: number;
+  imageLoadCount?: number;
+}
+
+interface NetworkInfo {
+  connectionType?: string;
+  downlink?: number;
+  rtt?: number;
+  saveData?: boolean;
+}
+
+const perfMetricsRef: PerfMetrics = {};
+const imageLoadTimes: number[] = [];
+
+function initPerfObservers() {
+  if (typeof window === 'undefined') return;
+
+  // LCP
+  try {
+    const lcpObserver = new PerformanceObserver((list) => {
+      const entries = list.getEntries();
+      const last = entries[entries.length - 1] as PerformanceEntry & { startTime?: number };
+      if (last && 'startTime' in last) {
+        perfMetricsRef.lcp = Math.round(last.startTime * 100) / 100;
+      }
+    });
+    lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] as any });
+  } catch { /* ignore */ }
+
+  // FID
+  try {
+    const fidObserver = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        const e = entry as PerformanceEntry & { processingStart?: number; startTime?: number };
+        if (e.processingStart && e.startTime) {
+          perfMetricsRef.fid = Math.round((e.processingStart - e.startTime) * 100) / 100;
+        }
+      }
+    });
+    fidObserver.observe({ entryTypes: ['first-input'] as any });
+  } catch { /* ignore */ }
+
+  // CLS
+  try {
+    const clsObserver = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        const e = entry as PerformanceEntry & { value?: number; hadRecentInput?: boolean };
+        if (!e.hadRecentInput && e.value) {
+          perfMetricsRef.cls = (perfMetricsRef.cls || 0) + e.value;
+        }
+      }
+    });
+    clsObserver.observe({ entryTypes: ['layout-shift'] as any });
+  } catch { /* ignore */ }
+
+  // FCP & TTFB from navigation
+  try {
+    const navEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+    const nav = navEntries[0];
+    if (nav) {
+      if (nav.responseStart > 0) {
+        perfMetricsRef.ttfb = Math.round(nav.responseStart * 100) / 100;
+      }
+    }
+    const paintEntries = performance.getEntriesByType('paint');
+    for (const entry of paintEntries) {
+      if (entry.name === 'first-contentful-paint') {
+        perfMetricsRef.fcp = Math.round(entry.startTime * 100) / 100;
+      }
+    }
+  } catch { /* ignore */ }
+
+  // Image load tracking
+  try {
+    const imgObserver = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        const e = entry as PerformanceResourceTiming;
+        if (e.initiatorType === 'img' && e.responseEnd > e.startTime) {
+          const duration = e.responseEnd - e.startTime;
+          if (duration > 0 && duration < 60000) {
+            imageLoadTimes.push(duration);
+          }
+        }
+      }
+    });
+    imgObserver.observe({ entryTypes: ['resource'] as any });
+  } catch { /* ignore */ }
+}
+
+function getNetworkInfo(): NetworkInfo {
+  if (typeof navigator === 'undefined') return {};
+  const conn = (navigator as any).connection;
+  if (!conn) return {};
+  return {
+    connectionType: conn.effectiveType,
+    downlink: conn.downlink,
+    rtt: conn.rtt,
+    saveData: conn.saveData,
+  };
+}
+
+function getPerfMetrics(): PerfMetrics {
+  const result = { ...perfMetricsRef };
+  if (imageLoadTimes.length > 0) {
+    const avg = imageLoadTimes.reduce((a, b) => a + b, 0) / imageLoadTimes.length;
+    result.imageLoadAvg = Math.round(avg * 100) / 100;
+    result.imageLoadCount = imageLoadTimes.length;
+  }
+  return result;
+}
+
+// Initialize on module load
+if (typeof window !== 'undefined') {
+  initPerfObservers();
+}
+
+// ============ Star Rating Component ============
+
+const StarRating = ({
+  value,
+  onRate,
+  disabled,
+  size = 'md',
+}: {
+  value: number;
+  onRate: (rating: number) => void;
+  disabled?: boolean;
+  size?: 'sm' | 'md';
+}) => {
   const [hoverRating, setHoverRating] = useState(0);
 
   const handleMouseMove = (e: React.MouseEvent, index: number) => {
     if (disabled) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const percent = (e.clientX - rect.left) / rect.width;
-    const value = percent < 0.5 ? index - 0.5 : index;
-    setHoverRating(value);
+    const val = percent < 0.5 ? index - 0.5 : index;
+    setHoverRating(val);
   };
 
-  const displayRating = hoverRating || rating;
+  const displayRating = hoverRating || value;
+  const starSize = size === 'sm' ? 'w-7 h-7' : 'w-8 h-8';
 
   return (
-    <div className="flex space-x-2" onMouseLeave={() => setHoverRating(0)}>
+    <div className="flex space-x-1" onMouseLeave={() => setHoverRating(0)}>
       {[1, 2, 3, 4, 5].map((index) => {
         const isFull = displayRating >= index;
         const isHalf = displayRating === index - 0.5;
@@ -100,17 +236,14 @@ const StarRating = ({ onRate, disabled }: { onRate: (rating: number) => void; di
             key={index}
             role="button"
             aria-label={`Rate ${index} stars`}
-            className={`relative w-10 h-10 transition-transform ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-110 active:scale-95'}`}
+            className={`relative ${starSize} transition-transform ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-110 active:scale-95'}`}
             onMouseMove={(e) => handleMouseMove(e, index)}
             onClick={() => {
               if (disabled) return;
-              setRating(hoverRating);
               onRate(hoverRating);
             }}
-            data-umami-event="Z_Submit_Speed_Rating"
-            data-umami-event-rating={hoverRating || index}
           >
-            <svg viewBox="0 0 24 24" className="w-10 h-10 text-foreground fill-current stroke-current opacity-20" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg viewBox="0 0 24 24" className={`${starSize} text-foreground fill-current stroke-current opacity-20`} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
             </svg>
 
@@ -119,7 +252,7 @@ const StarRating = ({ onRate, disabled }: { onRate: (rating: number) => void; di
                 className="absolute top-0 left-0 overflow-hidden text-main"
                 style={{ width: isHalf ? '50%' : '100%' }}
               >
-                <svg viewBox="0 0 24 24" className="w-10 h-10 fill-current stroke-current" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg viewBox="0 0 24 24" className={`${starSize} fill-current stroke-current`} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                 </svg>
               </div>
@@ -131,11 +264,36 @@ const StarRating = ({ onRate, disabled }: { onRate: (rating: number) => void; di
   );
 };
 
+// ============ Survey Dimensions ============
+
+type DimensionKey = 'speed' | 'experience' | 'imageQuality' | 'ui' | 'search';
+
+interface Dimension {
+  key: DimensionKey;
+  icon: string;
+}
+
+const DIMENSIONS: Dimension[] = [
+  { key: 'speed', icon: 'hn-clock' },
+  { key: 'experience', icon: 'hn-sparkles' },
+  { key: 'imageQuality', icon: 'hn-image' },
+  { key: 'ui', icon: 'hn-layout' },
+  { key: 'search', icon: 'hn-search' },
+];
+
+// ============ Main Component ============
+
 export function SpeedRatingSurvey({ forceOpen = false, onCloseForce }: { forceOpen?: boolean; onCloseForce?: () => void }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [rating, setRating] = useState(0);
+  const [ratings, setRatings] = useState<Record<DimensionKey, number>>({
+    speed: 0,
+    experience: 0,
+    imageQuality: 0,
+    ui: 0,
+    search: 0,
+  });
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -164,7 +322,9 @@ export function SpeedRatingSurvey({ forceOpen = false, onCloseForce }: { forceOp
     }
   }, [submitted, isSubmitting, onCloseForce]);
 
-  const submitToBackend = async (payload: { rating: number; comment?: string; url: string; userAgent: string }) => {
+  const hasAnyRating = Object.values(ratings).some((r) => r > 0);
+
+  const submitToBackend = async (payload: Record<string, unknown>) => {
     const res = await fetch(`${getSystemApiBase()}/survey`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -177,29 +337,40 @@ export function SpeedRatingSurvey({ forceOpen = false, onCloseForce }: { forceOp
     return res.json();
   };
 
-  const handleRate = async (value: number) => {
-    setRating(value);
+  const handleSubmit = async () => {
+    if (!hasAnyRating) return;
     setIsSubmitting(true);
 
-    const payload = {
-      rating: value,
+    const network = getNetworkInfo();
+    const perf = getPerfMetrics();
+
+    const payload: Record<string, unknown> = {
+      ratingSpeed: ratings.speed > 0 ? ratings.speed : undefined,
+      ratingExperience: ratings.experience > 0 ? ratings.experience : undefined,
+      ratingImageQuality: ratings.imageQuality > 0 ? ratings.imageQuality : undefined,
+      ratingUi: ratings.ui > 0 ? ratings.ui : undefined,
+      ratingSearch: ratings.search > 0 ? ratings.search : undefined,
       comment: comment.trim() || undefined,
       url: window.location.href,
       userAgent: navigator.userAgent,
+      ...network,
+      ...perf,
     };
 
     try {
       await submitToBackend(payload);
       setSurveyRecord({ shown: true, submittedAt: new Date().toISOString() });
-      toast.success(t('survey.toast_success', '感謝您的 {{rating}} 星評價！', { rating: value }), {
-        description: t('survey.toast_desc', '您的反饋已記錄，這將幫助我們優化加載速度。'),
+
+      const ratedCount = Object.values(ratings).filter((r) => r > 0).length;
+      toast.success(t('survey.toast_success', '感謝您的評價！', { count: ratedCount }), {
+        description: t('survey.toast_desc', '您的反饋已記錄，這將幫助我們優化體驗。'),
       });
       setSubmitted(true);
       setTimeout(() => {
         handleOpenChange(false);
         setTimeout(() => {
           setSubmitted(false);
-          setRating(0);
+          setRatings({ speed: 0, experience: 0, imageQuality: 0, ui: 0, search: 0 });
           setComment('');
         }, 300);
       }, 1500);
@@ -210,19 +381,23 @@ export function SpeedRatingSurvey({ forceOpen = false, onCloseForce }: { forceOp
     }
   };
 
+  const handleRate = (key: DimensionKey, value: number) => {
+    setRatings((prev) => ({ ...prev, [key]: value }));
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[425px] crt-lines border-4 border-foreground bg-card shadow-neo p-0">
+      <DialogContent className="sm:max-w-[480px] crt-lines border-4 border-foreground bg-card shadow-neo p-0 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-black uppercase flex items-center gap-2">
-            <i className="hn hn-clock text-2xl"></i>
-            {t('survey.title', '加載速度調查')}
+            <i className="hn hn-star text-2xl"></i>
+            {t('survey.title', '訪問體驗調查')}
           </DialogTitle>
           <DialogDescription className="font-mono text-[10px] opacity-70 absolute right-6 top-8">
-            LOAD_SPEED_SURVEY
+            EXPERIENCE_SURVEY
           </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col items-center justify-center py-8 px-4 gap-6">
+        <div className="flex flex-col items-center justify-center py-6 px-4 gap-5">
           {submitted ? (
             <div className="flex flex-col items-center text-center animate-in fade-in zoom-in duration-300 py-4">
               <i className="hn hn-check text-4xl text-main mb-2"></i>
@@ -231,15 +406,32 @@ export function SpeedRatingSurvey({ forceOpen = false, onCloseForce }: { forceOp
             </div>
           ) : (
             <>
-              <div className="text-center space-y-2">
-                <p className="text-sm font-bold">{t('survey.question', '您覺得目前的網頁加載速度如何？')}</p>
+              <div className="text-center space-y-1">
+                <p className="text-sm font-bold">{t('survey.question', '您覺得以下各方面的體驗如何？')}</p>
                 <p className="text-xs opacity-60 font-bold bg-foreground/5 inline-block px-2 py-1">
-                  {t('survey.hint', '支援半星評分，滑動預覽')}
+                  {t('survey.hint', '支援半星評分，選填即可提交')}
                 </p>
               </div>
-              <div className="py-2">
-                <StarRating onRate={handleRate} disabled={isSubmitting} />
+
+              <div className="w-full space-y-3">
+                {DIMENSIONS.map((dim) => (
+                  <div key={dim.key} className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <i className={`hn ${dim.icon} text-main text-sm`}></i>
+                      <span className="text-xs font-bold whitespace-nowrap">
+                        {t(`survey.dim_${dim.key}`, dim.key)}
+                      </span>
+                    </div>
+                    <StarRating
+                      value={ratings[dim.key]}
+                      onRate={(v) => handleRate(dim.key, v)}
+                      disabled={isSubmitting}
+                      size="sm"
+                    />
+                  </div>
+                ))}
               </div>
+
               <div className="w-full space-y-2">
                 <Textarea
                   placeholder={t('survey.comment_placeholder', '還有其他建議嗎？（選填）')}
@@ -260,8 +452,8 @@ export function SpeedRatingSurvey({ forceOpen = false, onCloseForce }: { forceOp
                 </Button>
                 <Button
                   className="flex-1 rounded-none bg-main text-black hover:bg-main/90 font-black tracking-widest border-2 border-transparent"
-                  onClick={() => rating > 0 && handleRate(rating)}
-                  disabled={rating <= 0 || isSubmitting}
+                  onClick={handleSubmit}
+                  disabled={!hasAnyRating || isSubmitting}
                 >
                   {isSubmitting ? t('common.loading', '提交中...') : t('common.confirm', '確認')}
                 </Button>

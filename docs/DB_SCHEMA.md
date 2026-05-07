@@ -22,19 +22,35 @@
 | `updated_at` | `TIMESTAMP` | | 更新時間 |
 
 ### 4.7. `speed_surveys` (訪問質量調查問卷表)
-儲存前台用戶提交的加載速度評價與建議。
+儲存前台用戶提交的多維度體驗評價、建議，以及自動收集的網路環境與效能數據。
 | 欄位名稱 | 型別 | 約束 | 說明 |
 | :--- | :--- | :--- | :--- |
 | `id` | `VARCHAR(36)` | `PRIMARY KEY` | 調查記錄唯一識別碼 (使用 NanoID) |
-| `rating` | `DECIMAL(2,1)` | `NOT NULL` | 評分 (0.5 - 5.0，支援半星) |
+| `rating_speed` | `DECIMAL(2,1)` | `NULL` | 加載速度評分 (0.5 - 5.0，支援半星) |
+| `rating_experience` | `DECIMAL(2,1)` | `NULL` | 整體體驗評分 (0.5 - 5.0) |
+| `rating_image_quality` | `DECIMAL(2,1)` | `NULL` | 圖片品質評分 (0.5 - 5.0) |
+| `rating_ui` | `DECIMAL(2,1)` | `NULL` | 介面易用性評分 (0.5 - 5.0) |
+| `rating_search` | `DECIMAL(2,1)` | `NULL` | 搜尋功能評分 (0.5 - 5.0) |
 | `comment` | `TEXT` | `NULL` | 使用者留言與建議 |
 | `url` | `TEXT` | `NULL` | 提交時頁面網址 |
 | `user_agent` | `TEXT` | `NULL` | 使用者瀏覽器 Agent |
 | `ip` | `VARCHAR(255)` | `NULL` | 客戶端 IP |
+| `connection_type` | `VARCHAR(20)` | `NULL` | 網路類型 (4g/3g/wifi/...) |
+| `downlink` | `DECIMAL(6,2)` | `NULL` | 估計下載速度 (Mbps) |
+| `rtt` | `INTEGER` | `NULL` | 往返延遲 (ms) |
+| `save_data` | `BOOLEAN` | `NULL` | 是否開啟省數據模式 |
+| `lcp` | `DECIMAL(8,3)` | `NULL` | Largest Contentful Paint (ms) |
+| `fid` | `DECIMAL(8,3)` | `NULL` | First Input Delay (ms) |
+| `cls` | `DECIMAL(8,6)` | `NULL` | Cumulative Layout Shift |
+| `fcp` | `DECIMAL(8,3)` | `NULL` | First Contentful Paint (ms) |
+| `ttfb` | `DECIMAL(8,3)` | `NULL` | Time to First Byte (ms) |
+| `image_load_avg` | `DECIMAL(8,3)` | `NULL` | 圖片平均載入時間 (ms) |
+| `image_load_count` | `INTEGER` | `NULL` | 已載入圖片數量 |
 | `created_at` | `TIMESTAMP` | | 提交時間 |
 
 **索引：**
-- `rating` — 按評分分佈統計
+- `rating_speed` — 按速度評分分佈統計
+- `rating_experience` — 按體驗評分分佈統計
 - `created_at` — 按時間排序與範圍查詢
 
 ### 4.6. `backend_error_logs` (後端錯誤日誌表)

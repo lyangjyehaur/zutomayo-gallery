@@ -489,11 +489,28 @@ export const BackendErrorLogModel = sequelize.define('BackendErrorLog', {
 
 export const SpeedSurveyModel = sequelize.define('SpeedSurvey', {
   id: { type: DataTypes.STRING(36), primaryKey: true, defaultValue: generateShortId, comment: '調查記錄唯一識別碼' },
-  rating: { type: DataTypes.DECIMAL(2, 1), allowNull: false, comment: '評分 (0.5 - 5.0)' },
+  // 多維度評分
+  rating_speed: { type: DataTypes.DECIMAL(2, 1), allowNull: true, comment: '加載速度評分 (0.5 - 5.0)' },
+  rating_experience: { type: DataTypes.DECIMAL(2, 1), allowNull: true, comment: '整體體驗評分 (0.5 - 5.0)' },
+  rating_image_quality: { type: DataTypes.DECIMAL(2, 1), allowNull: true, comment: '圖片品質評分 (0.5 - 5.0)' },
+  rating_ui: { type: DataTypes.DECIMAL(2, 1), allowNull: true, comment: '介面易用性評分 (0.5 - 5.0)' },
+  rating_search: { type: DataTypes.DECIMAL(2, 1), allowNull: true, comment: '搜尋功能評分 (0.5 - 5.0)' },
   comment: { type: DataTypes.TEXT, allowNull: true, comment: '使用者留言' },
   url: { type: DataTypes.TEXT, allowNull: true, comment: '提交時頁面網址' },
   user_agent: { type: DataTypes.TEXT, allowNull: true, comment: '使用者 Agent' },
   ip: { type: DataTypes.STRING, allowNull: true, comment: '客戶端 IP' },
+  // 自動化網路/效能數據
+  connection_type: { type: DataTypes.STRING(20), allowNull: true, comment: '網路類型 (4g/3g/wifi/...)' },
+  downlink: { type: DataTypes.DECIMAL(6, 2), allowNull: true, comment: '估計下載速度 (Mbps)' },
+  rtt: { type: DataTypes.INTEGER, allowNull: true, comment: '往返延遲 (ms)' },
+  save_data: { type: DataTypes.BOOLEAN, allowNull: true, comment: '是否開啟省數據模式' },
+  lcp: { type: DataTypes.DECIMAL(8, 3), allowNull: true, comment: 'Largest Contentful Paint (ms)' },
+  fid: { type: DataTypes.DECIMAL(8, 3), allowNull: true, comment: 'First Input Delay (ms)' },
+  cls: { type: DataTypes.DECIMAL(8, 6), allowNull: true, comment: 'Cumulative Layout Shift' },
+  fcp: { type: DataTypes.DECIMAL(8, 3), allowNull: true, comment: 'First Contentful Paint (ms)' },
+  ttfb: { type: DataTypes.DECIMAL(8, 3), allowNull: true, comment: 'Time to First Byte (ms)' },
+  image_load_avg: { type: DataTypes.DECIMAL(8, 3), allowNull: true, comment: '圖片平均載入時間 (ms)' },
+  image_load_count: { type: DataTypes.INTEGER, allowNull: true, comment: '已載入圖片數量' },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '提交時間' },
 }, {
   tableName: 'speed_surveys',
@@ -501,7 +518,8 @@ export const SpeedSurveyModel = sequelize.define('SpeedSurvey', {
   createdAt: 'created_at',
   updatedAt: false,
   indexes: [
-    { fields: ['rating'] },
+    { fields: ['rating_speed'] },
+    { fields: ['rating_experience'] },
     { fields: ['created_at'] },
   ],
 });
