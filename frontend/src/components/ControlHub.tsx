@@ -504,7 +504,7 @@ export function ControlHub({
               className="z-[35] w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-[0px_0px_0px_0px_var(--border)] hover:bg-main hover:text-black"
               data-umami-event="Z_Click_Speed_Survey"
             >
-              <i className="hn hn-clock text-xl md:text-2xl"></i>
+              <i className="hn hn-face-thinking text-xl md:text-2xl"></i>
             </Button>
           </TooltipTrigger>
           <TooltipContent side="left" align="center" sideOffset={10}>

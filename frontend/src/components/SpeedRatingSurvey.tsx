@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { getSystemApiBase } from '@/lib/admin-api';
+import { MODAL_THEME } from '@/lib/theme';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const SURVEY_SHOWN_KEY = 'speed_rating_shown_v2';
 const SURVEY_COOLDOWN_DAYS = 30;
@@ -223,10 +225,10 @@ const StarRating = ({
   };
 
   const displayRating = hoverRating || value;
-  const starSize = size === 'sm' ? 'w-7 h-7' : 'w-8 h-8';
+  const iconSize = size === 'sm' ? 'text-lg' : 'text-xl';
 
   return (
-    <div className="flex space-x-1" onMouseLeave={() => setHoverRating(0)}>
+    <div className="flex space-x-0.5" onMouseLeave={() => setHoverRating(0)}>
       {[1, 2, 3, 4, 5].map((index) => {
         const isFull = displayRating >= index;
         const isHalf = displayRating === index - 0.5;
@@ -236,25 +238,21 @@ const StarRating = ({
             key={index}
             role="button"
             aria-label={`Rate ${index} stars`}
-            className={`relative ${starSize} transition-transform ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-110 active:scale-95'}`}
+            className={`relative ${iconSize} transition-transform leading-none ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-110 active:scale-95'}`}
             onMouseMove={(e) => handleMouseMove(e, index)}
             onClick={() => {
               if (disabled) return;
               onRate(hoverRating);
             }}
           >
-            <svg viewBox="0 0 24 24" className={`${starSize} text-foreground fill-current stroke-current opacity-20`} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-            </svg>
+            <i className={`hn hn-star ${iconSize} opacity-20`}></i>
 
             {(isFull || isHalf) && (
               <div
                 className="absolute top-0 left-0 overflow-hidden text-main"
                 style={{ width: isHalf ? '50%' : '100%' }}
               >
-                <svg viewBox="0 0 24 24" className={`${starSize} fill-current stroke-current`} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                </svg>
+                <i className={`hn hn-star-solid ${iconSize}`}></i>
               </div>
             )}
           </div>
@@ -277,7 +275,7 @@ const DIMENSIONS: Dimension[] = [
   { key: 'speed', icon: 'hn-clock' },
   { key: 'experience', icon: 'hn-sparkles' },
   { key: 'imageQuality', icon: 'hn-image' },
-  { key: 'ui', icon: 'hn-layout' },
+  { key: 'ui', icon: 'hn-thumbsup' },
   { key: 'search', icon: 'hn-search' },
 ];
 
@@ -296,12 +294,6 @@ export function SpeedRatingSurvey({ forceOpen = false, onCloseForce }: { forceOp
   });
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useActiveTimer(60, () => {
-    if (shouldShowSurvey()) {
-      setOpen(true);
-    }
-  });
 
   useEffect(() => {
     if (forceOpen) {
@@ -387,17 +379,26 @@ export function SpeedRatingSurvey({ forceOpen = false, onCloseForce }: { forceOp
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[480px] crt-lines border-4 border-foreground bg-card shadow-neo p-0 max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-black uppercase flex items-center gap-2">
-            <i className="hn hn-star text-2xl"></i>
-            {t('survey.title', '訪問體驗調查')}
-          </DialogTitle>
-          <DialogDescription className="font-mono text-[10px] opacity-70 absolute right-6 top-8">
-            EXPERIENCE_SURVEY
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex flex-col items-center justify-center py-6 px-4 gap-5">
+      <DialogContent
+        overlayClassName={MODAL_THEME.overlay.dialog}
+        className={`w-screen h-[100dvh] max-w-none md:max-w-2xl md:w-full md:h-auto md:max-h-[85vh] overflow-hidden flex flex-col p-0 border-0 md:border-4 border-black ${MODAL_THEME.content.dialog} sm:rounded-none rounded-none shadow-none md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] fixed top-0 left-0 md:top-[50%] md:left-[50%] !translate-x-0 !translate-y-0 md:!translate-x-[-50%] md:!translate-y-[-50%] z-[100]`}
+      >
+        <div className={MODAL_THEME.crt}></div>
+
+        <div className="p-4 md:p-8 relative flex-1 flex flex-col overflow-hidden min-h-0 z-10">
+          <DialogHeader className="relative z-10 mb-4 md:mb-6 shrink-0">
+            <DialogTitle className="text-2xl md:text-4xl font-black uppercase tracking-tighter flex items-center gap-2 md:gap-3">
+              <i className="hn hn-face-thinking text-main"></i>
+              <span>{t('survey.title', '訪問體驗調查')}</span>
+            </DialogTitle>
+            <DialogDescription className="text-sm md:text-lg font-bold opacity-70 mt-2">
+              {t('survey.question', '您覺得以下各方面的體驗如何？')}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="relative z-10 flex-1 flex flex-col overflow-hidden min-h-0">
+            <ScrollArea className="flex-1 min-h-0 w-full">
+              <div className="pl-3 md:pl-4 py-1 space-y-4 pr-4">
           {submitted ? (
             <div className="flex flex-col items-center text-center animate-in fade-in zoom-in duration-300 py-4">
               <i className="hn hn-check text-4xl text-main mb-2"></i>
@@ -406,12 +407,9 @@ export function SpeedRatingSurvey({ forceOpen = false, onCloseForce }: { forceOp
             </div>
           ) : (
             <>
-              <div className="text-center space-y-1">
-                <p className="text-sm font-bold">{t('survey.question', '您覺得以下各方面的體驗如何？')}</p>
-                <p className="text-xs opacity-60 font-bold bg-foreground/5 inline-block px-2 py-1">
-                  {t('survey.hint', '支援半星評分，選填即可提交')}
-                </p>
-              </div>
+              <p className="text-xs opacity-60 font-bold bg-foreground/5 inline-block px-2 py-1">
+                {t('survey.hint', '支援半星評分，選填即可提交')}
+              </p>
 
               <div className="w-full space-y-3">
                 {DIMENSIONS.map((dim) => (
@@ -438,28 +436,34 @@ export function SpeedRatingSurvey({ forceOpen = false, onCloseForce }: { forceOp
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   disabled={isSubmitting}
-                  className="min-h-[80px] rounded-none border-2 border-foreground bg-background text-sm resize-none"
+                  className="min-h-[80px] rounded-none border-2 border-black bg-background text-sm resize-none"
                 />
-              </div>
-              <div className="flex gap-2 w-full">
-                <Button
-                  variant="neutral"
-                  className="flex-1 rounded-none border-2 border-foreground font-black tracking-widest"
-                  onClick={() => handleOpenChange(false)}
-                  disabled={isSubmitting}
-                >
-                  {t('common.cancel', '取消')}
-                </Button>
-                <Button
-                  className="flex-1 rounded-none bg-main text-black hover:bg-main/90 font-black tracking-widest border-2 border-transparent"
-                  onClick={handleSubmit}
-                  disabled={!hasAnyRating || isSubmitting}
-                >
-                  {isSubmitting ? t('common.loading', '提交中...') : t('common.confirm', '確認')}
-                </Button>
               </div>
             </>
           )}
+              </div>
+            </ScrollArea>
+
+            {!submitted && (
+            <div className="flex gap-2 mt-4 md:mt-6 shrink-0 pb-2 px-1">
+              <Button
+                variant="neutral"
+                className="flex-1 rounded-none border-2 border-black font-black tracking-widest"
+                onClick={() => handleOpenChange(false)}
+                disabled={isSubmitting}
+              >
+                {t('common.cancel', '取消')}
+              </Button>
+              <Button
+                className="flex-1 rounded-none bg-main text-black hover:bg-main/90 font-black tracking-widest border-2 border-black"
+                onClick={handleSubmit}
+                disabled={!hasAnyRating || isSubmitting}
+              >
+                {isSubmitting ? t('common.loading', '提交中...') : t('common.confirm', '確認')}
+              </Button>
+            </div>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

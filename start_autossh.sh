@@ -9,7 +9,7 @@ set -euo pipefail
 # 可覆寫參數：
 #   SSH_TARGET=server3 LOCAL_PORT=15432 REMOTE_PORT=5432 ./start_autossh.sh start
 # 進階參數：
-#   MONITOR_PORT=20000  autossh 監控端口（設為 0 則停用 loopback 監控）
+#   MONITOR_PORT=20000  autossh loopback 監控端口
 
 SSH_TARGET="${SSH_TARGET:-server3}"
 LOCAL_PORT="${LOCAL_PORT:-15432}"
@@ -50,19 +50,12 @@ kill_port_processes() {
     fi
 }
 
-kill_monitor_processes() {
-    if [ "$MONITOR_PORT" -eq 0 ]; then
-        return
-    fi
-    local pids
-    pids="$(lsof -t -i :"$MONITOR_PORT" 2>/dev/null || true)"
-    if [ -n "$pids" ]; then
-        echo "$pids" | xargs kill 2>/dev/null || true
-    fi
-    pids="$(lsof -t -i :$((MONITOR_PORT + 1)) 2>/dev/null || true)"
-    if [ -n "$pids" ]; then
-        echo "$pids" | xargs kill 2>/dev/null || true
-    fi
+cleanup_remote_monitor() {
+    echo "清理遠端監控端口 ${MONITOR_PORT} 殘留進程..."
+    ssh "$SSH_TARGET" \
+        "pids=\$(ss -tlnp 2>/dev/null | grep ':${MONITOR_PORT}' | grep -oP 'pid=\\K[0-9]+' | sort -u); \
+         if [ -n \"\$pids\" ]; then echo \"\$pids\" | xargs kill 2>/dev/null || true; fi" \
+        2>/dev/null || true
 }
 
 check_local_port() {
@@ -73,23 +66,13 @@ check_local_port() {
     fi
 }
 
-check_monitor_port() {
-    if [ "$MONITOR_PORT" -eq 0 ]; then
-        return
-    fi
-    if lsof -t -i :"$MONITOR_PORT" >/dev/null 2>&1; then
-        echo "錯誤: 監控端口 $MONITOR_PORT 已被佔用。"
-        echo "建議：改用 MONITOR_PORT=<其他端口> 或先執行 $0 stop。"
-        exit 1
-    fi
-}
-
 start_tunnel() {
     ensure_autossh
     if is_tunnel_running; then
         echo "隧道已在運行中（PID: $(cat "$PID_FILE")）"
         echo "  路徑: 127.0.0.1:$LOCAL_PORT -> $REMOTE_HOST:$REMOTE_PORT ($SSH_TARGET)"
-        echo "  斷線自動重連: 每 10 秒心跳，3 次失敗後重連"
+        echo "  監控: loopback 端口 ${MONITOR_PORT}"
+        echo "  斷線自動重連: 每 10 秒心跳，3 次失敗後 autossh 重建連線"
         exit 0
     fi
 
@@ -100,15 +83,20 @@ start_tunnel() {
     fi
 
     check_local_port
-    check_monitor_port
+
+    cleanup_remote_monitor
 
     echo "啟動 autossh 隧道..."
     echo "  路徑: 127.0.0.1:$LOCAL_PORT -> $REMOTE_HOST:$REMOTE_PORT ($SSH_TARGET)"
     echo "  心跳: ServerAliveInterval=10s, ServerAliveCountMax=3"
     echo "  監控: -M ${MONITOR_PORT}（loopback 偵測連線健康）"
-    echo "  斷線自動重連: 啟用（autossh 會在連線中斷後自動重建）"
+    echo "  斷線自動重連: 啟用（autossh 偵測到隧道中斷後自動重建）"
     echo "  日誌: $LOG_FILE"
 
+    # -M 20000: loopback 監控，autossh 透過隧道往返偵測連線是否存活
+    # -N: 不執行遠端指令
+    # -T: 不分配 TTY
+    # nohup & disown: 背景執行，PID 用 $! 精確取得
     AUTOSSH_GATETIME=0 \
     AUTOSSH_POLL=60 \
     nohup autossh -M "$MONITOR_PORT" -N -T \
@@ -159,7 +147,7 @@ stop_tunnel() {
     fi
 
     kill_port_processes
-    kill_monitor_processes
+    cleanup_remote_monitor
 
     rm -f "$PID_FILE"
 
@@ -176,7 +164,7 @@ show_status() {
         pid="$(cat "$PID_FILE" 2>/dev/null || true)"
         echo "隧道運行中（PID: ${pid}）"
         echo "  路徑: 127.0.0.1:$LOCAL_PORT -> $REMOTE_HOST:$REMOTE_PORT ($SSH_TARGET)"
-        echo "  監控端口: $MONITOR_PORT"
+        echo "  監控端口: ${MONITOR_PORT}"
         echo "  斷線自動重連: 啟用"
         if lsof -t -i :"$LOCAL_PORT" >/dev/null 2>&1; then
             echo "  端口 $LOCAL_PORT: 已佔用（正常）"
