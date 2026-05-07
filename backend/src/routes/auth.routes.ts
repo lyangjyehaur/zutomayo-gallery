@@ -13,7 +13,7 @@ router.put('/me/profile', requireAuth, asyncHandler(updateMeProfile));
 router.put('/me/notification-preferences', requireAuth, asyncHandler(updateNotificationPreferences));
 
 // Passkey authentication (public)
-router.get('/generate-auth-options', asyncHandler(generateAuthOptions));
+router.post('/generate-auth-options', asyncHandler(generateAuthOptions));
 router.post('/verify-auth', asyncHandler(verifyAuth));
 
 // Passkey management (per-user)

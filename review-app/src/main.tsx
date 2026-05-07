@@ -5,6 +5,9 @@ import Framework7React from 'framework7-react'
 import App from './App'
 import './index.css'
 
+// Framework7.use() is a static initialization method, not a React Hook.
+// It registers the React plugin with Framework7 before any components render.
+// eslint-disable-next-line react-hooks/rules-of-hooks
 Framework7.use(Framework7React)
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

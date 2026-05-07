@@ -1,73 +1,134 @@
-# React + TypeScript + Vite
+# review-app
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+`review-app/` 是給手機與平板使用的獨立審核前端，採用 Framework7 React + React 19 + TypeScript + Vite，與主站共用後端 API 與 admin session。
 
-Currently, two official plugins are available:
+目前它不再只是首頁殼層，而是直接承接以下工作流：
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- `HomePage`：審核總覽、同步進度、快捷入口、近期工作區
+- `StagingPage`：crawler 暫存清單、批次 approve / reject / restore、crawler trigger、詳情檢視
+- `SubmissionsPage`：投稿審核、搜尋、詳情、approve、退回原因填寫
+- `FanartPage`：未整理 / 已丟棄 / 舊資料 / 已組織 / 手動解析視圖，含 assign / sync / discard / restore / parse-save
+- `RepairPage`：group repair 搜尋、推斷來源、edit / merge / unassign、reparse preview / apply
+- `SettingsPage`：推播訂閱、通知偏好、頁面/API 接管矩陣
 
-## React Compiler
+## 能力對照
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### `StagingPage` <-> `frontend/src/pages/AdminStagingFanartPage.tsx`
 
-## Expanding the ESLint configuration
+- 對應主前端頁面：`/admin/staging-fanarts`
+- 已接管能力：pending / approved / rejected 切換、搜尋、單筆 approve / reject / restore、批次 approve / reject / restore、MV / Tag 關聯、crawler trigger、同步進度、詳情 Popup
+- 未覆蓋項目：目前沒有明確缺少的核心 API 或審核步驟
+- 已知限制：列表優先最佳化手機卡片瀏覽與單欄操作；若需要大螢幕並排比對多筆詳情，桌面 admin 仍較適合
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### `SubmissionsPage` <-> `frontend/src/pages/AdminSubmissionsPage.tsx`
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- 對應主前端頁面：`/admin/submissions`
+- 已接管能力：pending / approved / rejected 切換、搜尋、詳情 Popup、媒體預覽、作者資訊、approve、帶原因 reject、統計卡片
+- 未覆蓋項目：目前沒有明確缺少的核心 API 或審核步驟
+- 已知限制：退回原因改為行動端 Sheet 流程，而非桌面版逐列 inline 編輯；若要長時間交叉比對多筆投稿，桌面 admin 的資訊密度仍較高
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### `FanartPage` <-> `frontend/src/pages/AdminFanArtPage.tsx`
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- 對應主前端頁面：`/admin/fanart`
+- 已接管能力：未整理、已丟棄、舊資料、已組織、手動解析五種主視圖；assign、sync、discard、restore、parse-save；依特殊 Tag / MV 切入已組織 FanArt
+- 未覆蓋項目：目前沒有明確缺少的核心整理 API；不再是只有入口與統計的半接管狀態
+- 已知限制：清單與詳情優先服務觸控單筆處理，不追求桌面版一次顯示大量縮圖的高密度盤點；大批量長時間整理時，桌面 admin 仍可作為備援
+
+### `RepairPage` <-> `frontend/src/pages/AdminMediaGroupRepairPage.tsx`
+
+- 對應主前端頁面：`/admin/system/group-repair`
+- 已接管能力：repair 清單搜尋、分頁、來源推斷、only inferable 過濾、補 source_url、edit、merge、unassign、單筆 / 批次 reparse preview / apply
+- 未覆蓋項目：目前沒有明確缺少的核心修復 API 或操作鏈路
+- 已知限制：merge / edit / reparse 以 Sheet / Popup 流程呈現，較適合手機逐步確認；大量結果交叉排查、鍵盤密集輸入或多視窗修復時，桌面 admin 仍較有效率
+
+## 開發指令
+
+```bash
+cd review-app
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+其他常用指令：
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run lint
+npm run build
+npm run preview
 ```
+
+## 環境變數
+
+`review-app` 目前主要使用以下 Vite 變數：
+
+- `VITE_API_ORIGIN`
+- `VITE_API_ROOT`
+- `VITE_API_URL`
+
+實際 API base 由 `src/lib/api.ts` 組合：
+
+- 開發環境預設走相對路徑 `/api`
+- production fallback 為 `https://api.ztmr.club`
+- 所有請求固定帶 `credentials: 'include'`，以共用 admin session
+
+## 結構摘要
+
+```text
+review-app/
+├── src/
+│   ├── components/
+│   │   ├── AppNavbar.tsx
+│   │   ├── MvSheet.tsx
+│   │   └── ReviewStateBlock.tsx
+│   ├── contexts/
+│   │   ├── AuthProvider.tsx
+│   │   └── WorkspaceContext.tsx
+│   ├── hooks/
+│   │   ├── useAuth.ts
+│   │   ├── usePushSubscription.ts
+│   │   └── useWorkspace.ts
+│   ├── lib/
+│   │   ├── api.ts
+│   │   ├── moderation-boundaries.ts
+│   │   └── workspaces.ts
+│   ├── pages/
+│   │   ├── HomePage.tsx
+│   │   ├── StagingPage.tsx
+│   │   ├── SubmissionsPage.tsx
+│   │   ├── FanartPage.tsx
+│   │   ├── RepairPage.tsx
+│   │   ├── SettingsPage.tsx
+│   │   └── LoginPage.tsx
+│   ├── App.tsx
+│   ├── index.css
+│   └── routes.ts
+└── README.md
+```
+
+## Framework7 元件映射
+
+- `Views`、`Toolbar/Tabbar`、`Panel`：提供手機與平板一致的工作區切換，不依賴主前端桌面 sidebar
+- `Card`、`List`、`ListItem`、`Searchbar`：承載行動端高頻審核清單與篩選
+- `Popup`、`Sheet`：承接詳情、退回原因、MV / Tag 關聯、crawler 參數、merge / edit / reparse 等需要完整上下文的操作
+- `Toast`、頁內 `ReviewStateBlock`：分別處理即時操作回饋與可見的載入 / 空狀態 / 錯誤狀態
+- `src/lib/moderation-boundaries.ts`：集中維護 review-app 與桌面 admin 的能力邊界，設定頁與跨專案文件都以此為基準同步描述
+
+## UI / 狀態約定
+
+- 全域樣式集中在 `src/index.css`
+- 導覽列、卡片、列表、Sheet、Popup 採統一的 `review-*` class 命名
+- 空狀態、錯誤狀態、載入狀態統一用 `src/components/ReviewStateBlock.tsx`
+- 各頁仍可保留 toast 作為即時回饋，但首次載入失敗或無資料時要顯示可見的頁面內狀態區塊
+- 工作區切換與各頁篩選條件由 `WorkspaceProvider` 寫入 localStorage，鍵值為 `ztmr-review-workspace`
+- `src/lib/moderation-boundaries.ts` 需要與 `CODE_WIKI.md`、`frontend-memory.md`、`docs-index.md`、`.trae/specs/companion-review-app/` 中的描述一起維護，避免接管邊界失真
+
+## 驗證要求
+
+對 `review-app` 的 UI / 互動改動，至少應執行：
+
+```bash
+npm run lint
+npm run build
+```
+
+若改動牽涉 layout、狀態切換、Sheet / Popup、列表滾動或行動端互動，建議再用瀏覽器做一次實際點擊驗證。

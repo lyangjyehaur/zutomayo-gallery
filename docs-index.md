@@ -55,6 +55,13 @@
   - 更新 `frontend-memory.md`
   - 若 broad frontend architecture 有變，更 `CODE_WIKI.md`
 
+- Changes in `review-app/src/App.tsx`、`review-app/src/pages/`、`review-app/src/components/`、行動審核視覺/互動/狀態：
+  - 更新 `review-app/README.md`
+  - 更新 `frontend-memory.md`
+  - 若接管邊界或跨模組導覽有變，更 `CODE_WIKI.md`
+  - 若閱讀入口或文件導流有變，更 `docs-index.md`
+  - 若能力矩陣、未覆蓋項目或驗證基準有變，更 `.trae/specs/companion-review-app/spec.md`、`tasks.md`、`checklist.md`
+
 - Changes in `frontend/src/components/`、gallery UX、lightbox、masonry、image rendering behavior：
   - 若 architecture / behavior 有變，更新 `frontend/docs/fancybox-masonry-architecture.md`
   - 若 stable frontend constraints / decisions 有變，更 `frontend-memory.md`
@@ -158,8 +165,13 @@
 - Review app work：
   - `AGENTS.md`
   - `memory.md`
+  - `frontend-memory.md`
   - relevant files in `review-app/`
+  - `review-app/README.md`
   - `CODE_WIKI.md` (review-app section)
+  - `.trae/specs/companion-review-app/spec.md`
+  - `.trae/specs/companion-review-app/tasks.md`
+  - `.trae/specs/companion-review-app/checklist.md`
 
 - Notification system (Web Push / Telegram / Bark)：
   - `AGENTS.md`

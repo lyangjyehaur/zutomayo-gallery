@@ -30,49 +30,58 @@ function subscriptionToJSON(sub: PushSubscription): PushSubscriptionJSON {
   }
 }
 
+function getInitialPushStatus(): PushStatus {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    return 'unsupported'
+  }
+  if (Notification.permission === 'denied') {
+    return 'denied'
+  }
+  return 'idle'
+}
+
 export function usePushSubscription() {
-  const [status, setStatus] = useState<PushStatus>('idle')
+  const [status, setStatus] = useState<PushStatus>(getInitialPushStatus)
   const [error, setError] = useState<string | null>(null)
 
+  // Check for existing subscription on mount via lazy initialization
   useEffect(() => {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      setStatus('unsupported')
-      return
-    }
+    let cancelled = false
 
-    if (Notification.permission === 'denied') {
-      setStatus('denied')
-      return
-    }
-
-    checkExistingSubscription()
-  }, [])
-
-  const checkExistingSubscription = async () => {
-    try {
-      const reg = await navigator.serviceWorker.ready
-      const existing = await reg.pushManager.getSubscription()
-      if (existing) {
-        setStatus('subscribed')
+    async function checkExisting() {
+      try {
+        const reg = await navigator.serviceWorker.ready
+        const existing = await reg.pushManager.getSubscription()
+        if (!cancelled && existing) {
+          setStatus('subscribed')
+        }
+      } catch {
+        // SW not ready yet, keep idle
       }
-    } catch {
-      // SW not ready yet, keep idle
     }
-  }
 
-  const subscribe = useCallback(async () => {
+    if (status === 'idle') {
+      void checkExisting()
+    }
+
+    return () => {
+      cancelled = true
+    }
+  }, [status])
+
+  const subscribe = useCallback(async (): Promise<boolean> => {
     setError(null)
 
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       setError('此瀏覽器不支援推播通知')
       setStatus('unsupported')
-      return
+      return false
     }
 
     if (Notification.permission === 'denied') {
       setError('通知權限已被拒絕，請在瀏覽器設定中重新啟用')
       setStatus('denied')
-      return
+      return false
     }
 
     try {
@@ -82,14 +91,14 @@ export function usePushSubscription() {
       if (permission !== 'granted') {
         setError('通知權限未授予')
         setStatus(permission === 'denied' ? 'denied' : 'idle')
-        return
+        return false
       }
 
       const publicKey = await getPushPublicKey()
       if (!publicKey) {
         setError('推播服務尚未配置，請聯繫管理員設定 VAPID 金鑰')
         setStatus('error')
-        return
+        return false
       }
 
       const reg = await navigator.serviceWorker.ready
@@ -106,18 +115,21 @@ export function usePushSubscription() {
 
       if (result.success) {
         setStatus('subscribed')
+        return true
       } else {
         setError(result.message || '訂閱推播失敗')
         setStatus('error')
+        return false
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : '訂閱推播時發生錯誤'
       setError(msg)
       setStatus('error')
+      return false
     }
   }, [])
 
-  const unsubscribe = useCallback(async () => {
+  const unsubscribe = useCallback(async (): Promise<boolean> => {
     setError(null)
 
     try {
@@ -131,10 +143,12 @@ export function usePushSubscription() {
       }
 
       setStatus('idle')
+      return true
     } catch (err) {
       const msg = err instanceof Error ? err.message : '取消訂閱時發生錯誤'
       setError(msg)
       setStatus('error')
+      return false
     }
   }, [])
 

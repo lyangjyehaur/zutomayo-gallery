@@ -27,7 +27,7 @@ Tailwind CSS
 
 ## 簡介
 
-本專案是一個展示 ZUTOMAYO MV 設定圖的線上畫廊，同時提供管理後台用於資料維護。前端使用 React + TypeScript 構建；後端採用 Express + TypeScript，主資料庫使用 PostgreSQL（Sequelize + Umzug migrations）。燈箱正式功能目前使用 Fancybox；LightGallery 僅保留在 debug/除錯頁面。
+本專案是一個展示 ZUTOMAYO MV 設定圖的線上畫廊，同時提供管理後台與行動審核前端用於資料維護。主前端使用 React + TypeScript 構建；後端採用 Express + TypeScript，主資料庫使用 PostgreSQL（Sequelize + Umzug migrations）；另有一個 `review-app/` 子應用使用 Framework7 React，負責手機上的暫存 / 投稿 / FanArt / Group repair 工作流。燈箱正式功能目前使用 Fancybox；LightGallery 僅保留在 debug/除錯頁面。
 
 ---
 
@@ -64,6 +64,7 @@ Tailwind CSS
 | [Umami](https://umami.is/)                                  | -     | 網站數據分析           |
 | [React Router](https://reactrouter.com/)                    | 6.22  | 路由管理             |
 | [SWR](https://swr.vercel.app/)                              | 2.4   | 資料獲取             |
+| [Framework7 React](https://framework7.io/react/)            | 9.0   | `review-app` 行動審核 UI |
 
 
 ### 後端
@@ -124,6 +125,10 @@ zutomayo-gallery/
 │
 ├── image-hosting/               # (可選) 獨立 Next.js 圖床/上傳服務
 │   └── package.json
+├── review-app/                  # 行動審核前端 (Framework7 React)
+│   ├── src/pages/               # 總覽 / 暫存 / 投稿 / FanArt / Repair / 設定
+│   ├── src/components/          # AppNavbar、MvSheet、ReviewStateBlock
+│   └── README.md
 │
 ├── package.json                 # 根目錄 workspace 配置
 ├── deploy.sh                    # 伺服器自動化部署腳本
@@ -185,6 +190,9 @@ npm --prefix backend install
 
 # 可選：安裝獨立圖床服務依賴
 npm run install:optional
+
+# 可選：安裝 review-app 依賴
+npm --prefix review-app install
 ```
 
 ### 開發模式
@@ -200,6 +208,9 @@ npm run start:frontend
 
 # 啟動後端
 npm run start:backend
+
+# 啟動 review-app
+npm --prefix review-app run dev
 
 # 建置 + 測試
 npm run verify
