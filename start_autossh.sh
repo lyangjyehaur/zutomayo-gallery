@@ -8,11 +8,14 @@ set -euo pipefail
 #   ./start_autossh.sh status
 # 可覆寫參數：
 #   SSH_TARGET=server3 LOCAL_PORT=15432 REMOTE_PORT=5432 ./start_autossh.sh start
+# 進階參數：
+#   MONITOR_PORT=20000  autossh 監控端口（設為 0 則停用 loopback 監控）
 
 SSH_TARGET="${SSH_TARGET:-server3}"
 LOCAL_PORT="${LOCAL_PORT:-15432}"
 REMOTE_HOST="${REMOTE_HOST:-127.0.0.1}"
 REMOTE_PORT="${REMOTE_PORT:-5432}"
+MONITOR_PORT="${MONITOR_PORT:-20000}"
 PID_FILE="${PID_FILE:-.autossh-tunnel.pid}"
 LOG_FILE="${LOG_FILE:-.autossh-tunnel.log}"
 
@@ -36,10 +39,47 @@ is_tunnel_running() {
     return 1
 }
 
+kill_port_processes() {
+    local pids
+    pids="$(lsof -t -i :"$LOCAL_PORT" 2>/dev/null || true)"
+    if [ -n "$pids" ]; then
+        echo "清理佔用本地端口 $LOCAL_PORT 的進程: $pids"
+        echo "$pids" | xargs kill 2>/dev/null || true
+        sleep 1
+        echo "$pids" | xargs kill -9 2>/dev/null || true
+    fi
+}
+
+kill_monitor_processes() {
+    if [ "$MONITOR_PORT" -eq 0 ]; then
+        return
+    fi
+    local pids
+    pids="$(lsof -t -i :"$MONITOR_PORT" 2>/dev/null || true)"
+    if [ -n "$pids" ]; then
+        echo "$pids" | xargs kill 2>/dev/null || true
+    fi
+    pids="$(lsof -t -i :$((MONITOR_PORT + 1)) 2>/dev/null || true)"
+    if [ -n "$pids" ]; then
+        echo "$pids" | xargs kill 2>/dev/null || true
+    fi
+}
+
 check_local_port() {
     if lsof -t -i :"$LOCAL_PORT" >/dev/null 2>&1; then
         echo "錯誤: 本地端口 $LOCAL_PORT 已被佔用。"
-        echo "建議：改用 LOCAL_PORT=15432（預設）或先釋放該端口。"
+        echo "建議：改用其他 LOCAL_PORT 或先執行 $0 stop 釋放該端口。"
+        exit 1
+    fi
+}
+
+check_monitor_port() {
+    if [ "$MONITOR_PORT" -eq 0 ]; then
+        return
+    fi
+    if lsof -t -i :"$MONITOR_PORT" >/dev/null 2>&1; then
+        echo "錯誤: 監控端口 $MONITOR_PORT 已被佔用。"
+        echo "建議：改用 MONITOR_PORT=<其他端口> 或先執行 $0 stop。"
         exit 1
     fi
 }
@@ -48,64 +88,109 @@ start_tunnel() {
     ensure_autossh
     if is_tunnel_running; then
         echo "隧道已在運行中（PID: $(cat "$PID_FILE")）"
-        echo "本地: 127.0.0.1:$LOCAL_PORT -> 遠端: $REMOTE_HOST:$REMOTE_PORT ($SSH_TARGET)"
+        echo "  路徑: 127.0.0.1:$LOCAL_PORT -> $REMOTE_HOST:$REMOTE_PORT ($SSH_TARGET)"
+        echo "  斷線自動重連: 每 10 秒心跳，3 次失敗後重連"
         exit 0
+    fi
+
+    if lsof -t -i :"$LOCAL_PORT" >/dev/null 2>&1; then
+        echo "警告: 本地端口 $LOCAL_PORT 被殘留進程佔用，嘗試清理..."
+        kill_port_processes
+        sleep 1
     fi
 
     check_local_port
-    echo "啟動 autossh 隧道..."
-    echo "本地: 127.0.0.1:$LOCAL_PORT -> 遠端: $REMOTE_HOST:$REMOTE_PORT ($SSH_TARGET)"
+    check_monitor_port
 
-    # -M 0: 關閉 autossh 自己的 loopback 監控，改用 OpenSSH 的 ServerAlive
-    # -fNT: 背景執行，不分配 TTY，不執行遠端指令
-    # ExitOnForwardFailure: 若端口轉發失敗，立刻退出（避免假啟動）
-    AUTOSSH_GATETIME=0 autossh -M 0 -f -N -T \
+    echo "啟動 autossh 隧道..."
+    echo "  路徑: 127.0.0.1:$LOCAL_PORT -> $REMOTE_HOST:$REMOTE_PORT ($SSH_TARGET)"
+    echo "  心跳: ServerAliveInterval=10s, ServerAliveCountMax=3"
+    echo "  監控: -M ${MONITOR_PORT}（loopback 偵測連線健康）"
+    echo "  斷線自動重連: 啟用（autossh 會在連線中斷後自動重建）"
+    echo "  日誌: $LOG_FILE"
+
+    AUTOSSH_GATETIME=0 \
+    AUTOSSH_POLL=60 \
+    nohup autossh -M "$MONITOR_PORT" -N -T \
         -o "ExitOnForwardFailure yes" \
         -o "ServerAliveInterval 10" \
         -o "ServerAliveCountMax 3" \
+        -o "TCPKeepAlive yes" \
+        -o "ConnectTimeout 30" \
         -o "StrictHostKeyChecking accept-new" \
         -L "${LOCAL_PORT}:${REMOTE_HOST}:${REMOTE_PORT}" \
-        "$SSH_TARGET" >>"$LOG_FILE" 2>&1
+        "$SSH_TARGET" >>"$LOG_FILE" 2>&1 &
 
-    # 透過特徵字串抓到剛啟動的 autossh 進程 PID
-    local pid=""
-    pid="$(pgrep -f "autossh .* -L ${LOCAL_PORT}:${REMOTE_HOST}:${REMOTE_PORT} .*${SSH_TARGET}" 2>/dev/null | head -n 1 || true)"
-    if [ -z "${pid:-}" ]; then
-        echo "錯誤: 隧道啟動失敗，請檢查 $LOG_FILE"
+    local pid="$!"
+    disown "$pid" 2>/dev/null || true
+
+    sleep 2
+
+    if ! kill -0 "$pid" 2>/dev/null; then
+        echo "錯誤: 隧道啟動失敗，autossh 進程已退出，請檢查 $LOG_FILE"
         exit 1
     fi
+
+    if ! lsof -t -i :"$LOCAL_PORT" >/dev/null 2>&1; then
+        echo "錯誤: 隧道啟動失敗，本地端口 $LOCAL_PORT 未被佔用，請檢查 $LOG_FILE"
+        kill "$pid" 2>/dev/null || true
+        exit 1
+    fi
+
     echo "$pid" >"$PID_FILE"
     echo "✅ 隧道已啟動（PID: ${pid}）"
+    echo "   斷線後 autossh 會自動重連，無需手動重啟"
 }
 
 stop_tunnel() {
-    if ! is_tunnel_running; then
-        echo "隧道未在運行。"
-        rm -f "$PID_FILE"
-        exit 0
+    local had_pid=false
+
+    if is_tunnel_running; then
+        had_pid=true
+        local pid=""
+        pid="$(cat "$PID_FILE" 2>/dev/null || true)"
+        if [ -n "${pid:-}" ]; then
+            kill "$pid" 2>/dev/null || true
+            sleep 1
+            if kill -0 "$pid" 2>/dev/null; then
+                kill -9 "$pid" 2>/dev/null || true
+            fi
+        fi
     fi
 
-    local pid=""
-    pid="$(cat "$PID_FILE" 2>/dev/null || true)"
-    if [ -z "${pid:-}" ]; then
-        echo "警告: PID 檔不存在或內容為空，改用埠口檢查。"
-        rm -f "$PID_FILE"
-        exit 0
-    fi
-    kill "$pid" 2>/dev/null || true
-    sleep 1
-    if kill -0 "$pid" 2>/dev/null; then
-        kill -9 "$pid" 2>/dev/null || true
-    fi
+    kill_port_processes
+    kill_monitor_processes
+
     rm -f "$PID_FILE"
-    echo "✅ 隧道已停止。"
+
+    if $had_pid; then
+        echo "✅ 隧道已停止。"
+    else
+        echo "隧道未在運行（已清理殘留進程）。"
+    fi
 }
 
 show_status() {
     if is_tunnel_running; then
-        echo "隧道運行中（PID: $(cat "$PID_FILE")）"
+        local pid
+        pid="$(cat "$PID_FILE" 2>/dev/null || true)"
+        echo "隧道運行中（PID: ${pid}）"
+        echo "  路徑: 127.0.0.1:$LOCAL_PORT -> $REMOTE_HOST:$REMOTE_PORT ($SSH_TARGET)"
+        echo "  監控端口: $MONITOR_PORT"
+        echo "  斷線自動重連: 啟用"
+        if lsof -t -i :"$LOCAL_PORT" >/dev/null 2>&1; then
+            echo "  端口 $LOCAL_PORT: 已佔用（正常）"
+        else
+            echo "  端口 $LOCAL_PORT: 未佔用（⚠️ 隧道可能異常）"
+        fi
     else
         echo "隧道未運行。"
+        if [ -f "$PID_FILE" ]; then
+            echo "  （PID 檔存在但進程已死，可能是異常退出）"
+        fi
+        if lsof -t -i :"$LOCAL_PORT" >/dev/null 2>&1; then
+            echo "  ⚠️ 端口 $LOCAL_PORT 仍有進程佔用，建議執行 $0 stop 清理"
+        fi
     fi
     echo "配置: 127.0.0.1:$LOCAL_PORT -> $REMOTE_HOST:$REMOTE_PORT ($SSH_TARGET)"
 }
