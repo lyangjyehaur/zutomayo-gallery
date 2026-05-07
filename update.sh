@@ -16,13 +16,13 @@ echo "=> [1/5] Pulling latest code from git..."
 git pull origin main
 
 echo "=> [2/5] Installing dependencies..."
-# 這裡使用 npm 安裝依賴 (也可依需求改為 pnpm)
 npm install
 cd backend && npm install && cd ..
 cd frontend && npm install && cd ..
+cd review-app && npm install && cd ..
 
-echo "=> [3/5] Building frontend and backend..."
-npm run build
+echo "=> [3/5] Building frontend, review-app and backend..."
+npm run build:all
 
 echo "=> [4/5] Running database migrations..."
 cd backend

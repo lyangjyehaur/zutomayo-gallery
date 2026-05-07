@@ -4,12 +4,12 @@
 
 [繁體中文](README.md) | [简体中文](README.zh-Hans.md) | [English](README.en.md) | [日本語](README.ja.md)
 
-Version
-React
-TypeScript
-Tailwind CSS
+![Version](https://img.shields.io/badge/version-3.6.9-blue)
+![React](https://img.shields.io/badge/React-18.3-61dafb)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.3-3178c6)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-38b2ac)
 
-修訂日期：2026-05-05
+修訂日期：2026-05-08
 
 ---
 
@@ -27,7 +27,7 @@ Tailwind CSS
 
 ## 簡介
 
-本專案是一個展示 ZUTOMAYO MV 設定圖的線上畫廊，同時提供管理後台用於資料維護。前端使用 React + TypeScript 構建；後端採用 Express + TypeScript，主資料庫使用 PostgreSQL（Sequelize + Umzug migrations）。燈箱正式功能目前使用 Fancybox；LightGallery 僅保留在 debug/除錯頁面。
+本專案是一個展示 ZUTOMAYO MV 設定圖的線上畫廊，同時提供管理後台與行動審核前端用於資料維護。主前端使用 React + TypeScript 構建；後端採用 Express + TypeScript，主資料庫使用 PostgreSQL（Sequelize + Umzug migrations）；另有一個 `review-app/` 子應用使用 Framework7 React，負責手機上的暫存 / 投稿 / FanArt / Group repair 工作流。燈箱正式功能目前使用 Fancybox；LightGallery 僅保留在 debug/除錯頁面。
 
 ---
 
@@ -37,6 +37,7 @@ Tailwind CSS
 - 🧱 **瀑布流佈局**：採用高效能的 Masonry 瀑布流設計，自動適應不同尺寸的 MV 設定圖。
 - 🔐 **現代化安全登入**：支援 WebAuthn (通行密鑰 / Passkeys) 與生物辨識登入管理後台，無須記憶密碼。
 - 🧑‍💻 **管理與權限**：管理後台支援資料維護，並提供角色/權限（RBAC）與多種管理 API。
+- 📱 **行動審核工作流**：`review-app/` 已承接首頁摘要、暫存、投稿、FanArt、Repair 與設定等手機 / 平板審核流程。
 - 📊 **資料可視化與編輯**：內建 Monaco Editor 支援直接編輯/檢視資料，並提供完善的管理介面。
 - 💬 **互動留言系統**：整合 Waline 留言板，支援自定義 Emoji、Reaction 表態與 Pageview 瀏覽量統計。
 - ⚡ **極致效能優化**：嚴格的 React.memo 渲染控制、組件懶加載與 Vite Chunk 拆分，確保頁面載入如絲般順滑。
@@ -64,6 +65,7 @@ Tailwind CSS
 | [Umami](https://umami.is/)                                  | -     | 網站數據分析           |
 | [React Router](https://reactrouter.com/)                    | 6.22  | 路由管理             |
 | [SWR](https://swr.vercel.app/)                              | 2.4   | 資料獲取             |
+| [Framework7 React](https://framework7.io/react/)            | 9.0   | `review-app` 行動審核 UI |
 
 
 ### 後端
@@ -124,6 +126,10 @@ zutomayo-gallery/
 │
 ├── image-hosting/               # (可選) 獨立 Next.js 圖床/上傳服務
 │   └── package.json
+├── review-app/                  # 行動審核前端 (Framework7 React)
+│   ├── src/pages/               # 總覽 / 暫存 / 投稿 / FanArt / Repair / 設定
+│   ├── src/components/          # AppNavbar、MvSheet、ReviewStateBlock
+│   └── README.md
 │
 ├── package.json                 # 根目錄 workspace 配置
 ├── deploy.sh                    # 伺服器自動化部署腳本
@@ -148,8 +154,11 @@ zutomayo-gallery/
 
 **命令列用戶**：
 
-- 運行 `npm run dev` 啟動前後端
-- 運行 `npm run start:frontend` 只啟動前端
+- 運行 `npm run dev` 啟動主前端與後端
+- 運行 `npm run dev:review` 啟動 `review-app` 與後端
+- 運行 `npm run dev:all` 同時啟動主前端、`review-app` 與後端
+- 運行 `npm run start:frontend` 只啟動主前端
+- 運行 `npm run start:review-app` 只啟動 `review-app`
 - 運行 `npm run start:backend` 只啟動後端
 
 ### 前置需求
@@ -167,7 +176,7 @@ zutomayo-gallery/
 git clone https://github.com/lyangjyehaur/zutomayo-gallery.git
 cd zutomayo-gallery
 
-# 2. 方法一：一鍵安裝主站依賴（推薦：root + frontend + backend）
+# 2. 方法一：一鍵安裝主站依賴（推薦：root + frontend + backend + review-app）
 npm run install:all
 
 # CI / 乾淨環境可使用 lockfile 安裝
@@ -183,6 +192,9 @@ npm --prefix frontend install --legacy-peer-deps
 # 安裝後端依賴
 npm --prefix backend install
 
+# 安裝 review-app 依賴
+npm --prefix review-app install
+
 # 可選：安裝獨立圖床服務依賴
 npm run install:optional
 ```
@@ -190,13 +202,24 @@ npm run install:optional
 ### 開發模式
 
 ```bash
-# 方法一：一鍵啟動（推薦）
+# 方法一：一鍵啟動主站（推薦）
 npm run dev
-# 這個命令會同時啟動前端（localhost:5173）和後端（localhost:5010）
+# 這個命令會同時啟動主前端（localhost:5173）和後端（localhost:5010）
+
+# 啟動 review-app + 後端
+npm run dev:review
+# review-app: http://localhost:5183
+# backend:    http://localhost:5010
+
+# 同時啟動主前端 + review-app + 後端
+npm run dev:all
 
 # 方法二：分別啟動
-# 啟動前端
+# 啟動主前端
 npm run start:frontend
+
+# 啟動 review-app
+npm run start:review-app
 
 # 啟動後端
 npm run start:backend
@@ -211,8 +234,16 @@ npm run verify
 # 前端構建
 cd frontend && npm run build
 
+# review-app 構建
+cd ../review-app && npm run build
+
 # 後端構建
-cd backend && npm run build
+cd ../backend && npm run build
+
+# 或使用 workspace 指令
+cd ..
+npm run build:review-app
+npm run build:all
 ```
 
 ---
@@ -224,6 +255,7 @@ cd backend && npm run build
 ```bash
 cp frontend/.env.example frontend/.env
 cp backend/.env.example backend/.env
+cp review-app/.env.example review-app/.env
 ```
 
 前端環境檔已經切成兩份：
@@ -247,6 +279,14 @@ Vite 在 `vite build` 時會以 production mode 載入 `frontend/.env.production
 | `VITE_TWITTER_VIDEO_SOURCE_HOST`   | Twitter 影片來源主機                             | `https://video.twimg.com`                 |
 | `VITE_TWITTER_PROXY_PATH`          | Twitter 圖片反代路徑                             | `/ti`                                     |
 | `VITE_TWITTER_VIDEO_PROXY_PATH`    | Twitter 影片反代路徑                             | `/tv`                                     |
+
+### 行動審核前端環境變數 (`review-app/.env`)
+
+| 變數名稱 | 說明 | 預設值 |
+|---|---|---|
+| `VITE_API_ORIGIN` | 可選 API Origin；未設定時由 `review-app/src/lib/api.ts` 自動推導 | 無 |
+| `VITE_API_ROOT` | 開發環境常用 API root，本機通常設為 `/api` 搭配 Vite proxy | `/api` |
+| `VITE_API_URL` | 完整 API base URL；需要覆蓋預設推導時使用 | 無 |
 | `VITE_YOUTUBE_SOURCE_HOSTS`        | YouTube 圖片來源主機列表（逗號分隔）                     | `i.ytimg.com,img.youtube.com,youtube.com` |
 | `VITE_YOUTUBE_PROXY_PATH`          | YouTube 圖片反代路徑                             | `/yi`                                     |
 | `VITE_R2_DOMAIN`                   | (選填) Cloudflare R2 自訂網域                    | `https://r2.dan.tw`                       |

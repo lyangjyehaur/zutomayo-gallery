@@ -73,6 +73,7 @@
 | **GET** | `/passkeys` | 管理員 | 列出所有已綁定的 Passkey 裝置清單與資訊。 |
 | **DELETE** | `/passkeys/:id` | 管理員 | 刪除指定的 Passkey 裝置。 |
 | **POST** | `/change-password` | 管理員 | 更改備用的傳統登入密碼。 |
+| **PUT** | `/me/notification-preferences` | 管理員 | 更新目前管理員的通知偏好設定。<br>Body: `{ "staging"?: boolean, "submission"?: boolean, "error"?: boolean, "crawler"?: boolean }`<br>僅更新提供的欄位，未提供的欄位保持不變。 |
 
 ---
 
@@ -112,6 +113,17 @@
 | **GET** | `/api/fanarts/unorganized` | 管理員 | 取得爬蟲抓取但尚未被分類或整理的 Twitter 二創圖片 (Fanart) 列表。 |
 | **POST** | `/api/fanarts/:id/status` | 管理員 | 更新指定二創圖片的狀態 (例如標記為 `organized` 或 `rejected`)。<br>Body: `{ "status": "organized" }` |
 | **POST** | `/api/webhook/waline` | 公開 | 接收 Waline 留言系統的 Webhook 推播，可用於觸發網站快取更新或社群通知。 |
+
+---
+
+## 5.5 Web Push 訂閱 (Push Subscriptions)
+*(路徑: `/api/push`)*
+
+| 請求方法 | 端點路徑 | 權限 | 功能說明 |
+| :--- | :--- | :--- | :--- |
+| **POST** | `/subscribe` | 管理員 | 註冊瀏覽器 Web Push 訂閱。<br>Body: `{ "endpoint": "https://...", "keys": { "p256dh": "...", "auth": "..." } }` |
+| **DELETE** | `/unsubscribe` | 管理員 | 移除 Web Push 訂閱。<br>Body: `{ "endpoint": "https://..." }` |
+| **GET** | `/public-key` | 公開 | 取得 VAPID 公鑰，前端用於註冊 Push 訂閱。回傳 `{ "publicKey": "..." }` |
 
 ### GET `/api/fanarts/gallery` - FanArt 畫廊查詢
 

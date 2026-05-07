@@ -41,7 +41,7 @@ zutomayo-gallery/
 │   │   ├── config/                # 前端設定
 │   │   ├── locales/               # i18n 語系檔
 │   │   ├── debug/                 # 除錯與實驗頁面
-│   │   ├── App.tsx                # 前端主路由與公開站主入口
+│   │   ├── App.tsx                # 前端主路由、輕量佈局容器（hooks + 子組件組合）
 │   │   └── main.tsx               # 啟動點
 │   ├── docs/                      # 前端專屬設計說明
 │   └── package.json
@@ -61,6 +61,7 @@ zutomayo-gallery/
 │
 ├── docs/                          # 跨模組設計文檔
 ├── image-hosting/                 # 可選獨立圖床服務
+├── review-app/                    # 獨立 Framework7 React 前端（行動裝置審核用）
 ├── AGENTS.md                      # AI 協作入口規則
 ├── memory.md                      # 跨端共享記憶
 ├── docs-index.md                  # 任務導向文檔索引
@@ -72,8 +73,9 @@ zutomayo-gallery/
 ### 前端
 
 - `frontend/src/App.tsx`
-  - 公開站主入口
-  - 整合路由、SWR 取數、系統狀態、公開頁面裝配與部分列表互動
+  - 公開站主入口，輕量佈局容器（~993 行）
+  - 組合 8 個 custom hooks（過濾、收藏、無限滾動、吸頂、PWA、載入轉場、滾動位置、動畫暫停）與 13 個抽取組件（AppHeader、FilterBar、GalleryGrid、ControlHub、FeedbackDrawer、AppFooter 等）
+  - 仍保留路由狀態派生、Modal 渲染、Analytics effects
   - 使用 `useSWR` 請求 MV 資料、metadata 與 system status
 - `frontend/src/pages/AdminPage.tsx`
   - 管理後台主頁之一
@@ -90,6 +92,12 @@ zutomayo-gallery/
 
 - `backend/src/controllers/mv.controller.ts`
   - 提供 MV 讀取、更新、探測圖片尺寸與 metadata 相關 API
+- `backend/src/services/notification.service.ts`
+  - `NotificationService` 統一通知入口，`send({ type, title, body, url })` 同時觸發 Bark + Web Push + Telegram
+- `backend/src/services/push.service.ts`
+  - `PushService` 管理 Web Push 訂閱與 VAPID 加密推播
+- `backend/src/services/telegram-bot.service.ts`
+  - `TelegramBotService` 發送 Telegram Bot 通知
 - `backend/src/services/mv.service.ts`
   - 管理 MV 讀取與更新流程
   - 使用運行時快取 `runtimeData`
@@ -113,6 +121,31 @@ zutomayo-gallery/
 - `backend/src/services/error-events.service.ts`
   - `ErrorEventEmitter` 單例，捕獲所有後端異常並持久化至 `backend_error_logs` 表
   - 透過 SSE 即時推送錯誤事件給已連接的管理員前端
+
+### Review App (`review-app/`)
+
+- 獨立的 Framework7 React 前端應用，專為行動裝置上的媒體審核場景設計
+- 使用 Framework7 React v9，支援 auto theme（iOS/MD 自動切換）與 auto dark mode
+- 連接同一後端 API，透過 session-based auth 與主站共享管理員認證
+- `src/index.css` 提供統一的 `review-*` 視覺語彙，涵蓋 navbar、card、list、panel、sheet、popup 與行動端深色主題
+- `src/components/ReviewStateBlock.tsx` 統一空狀態、錯誤狀態與載入狀態，避免各頁各自拼裝 inline UI
+- `src/lib/moderation-boundaries.ts` 集中維護 review-app 與桌面 admin 的接管邊界，會列出每個工作區對應主前端頁面、直接接管能力、桌面 fallback 情境與已知限制
+- 主要頁面：
+  - `LoginPage` — 管理員登入
+  - `HomePage` — 總覽、同步狀態、快捷入口與近期工作區
+  - `StagingPage` — 爬蟲暫存審核、批次操作、crawler trigger
+  - `SubmissionsPage` — 投稿審核、詳情、退回原因
+  - `FanartPage` — FanArt 整理、assign / sync / discard / restore / parse-save
+  - `RepairPage` — group repair、merge、unassign、reparse preview / apply
+  - `SettingsPage` — 推播、通知偏好、接管邊界入口
+  - `SettingsBoundariesPage` — 集中查看各工作區接管邊界、限制與 API
+- 接管現況：
+  - `StagingPage`、`SubmissionsPage`、`FanartPage`、`RepairPage` 都已可直接完成核心審核 / 整理 / 修復流程
+  - 桌面 admin 目前主要保留作為大螢幕高密度盤點、多視窗比對與鍵盤密集操作的備援入口，而不是功能必經路徑
+- 關鍵組件：
+  - `AppNavbar` — 手機導覽列與工作區切換入口
+  - `MvSheet` — MV/標籤選擇的左側 floating Panel
+  - `ReviewStateBlock` — 頁面內狀態區塊
 
 ## 4. 目前資料模型重點
 
@@ -141,6 +174,7 @@ zutomayo-gallery/
   - `public_users`
   - `auth_passkeys`
   - `backend_error_logs`
+  - `push_subscriptions`
 
 前端仍消費近似舊版的聚合 JSON 結構，因此後端透過 `v2_mapper.ts` 做雙向轉換，讓前端暫時不必直接承擔完整關聯式資料模型。
 
@@ -151,6 +185,10 @@ zutomayo-gallery/
 - `RootApp()` in `frontend/src/App.tsx`
   - 以 `useSWR` 同時讀取 MV 資料、metadata 與系統維護狀態
   - 根據路由與系統狀態決定是否顯示公開站、管理頁或維護頁
+- `App()` in `frontend/src/App.tsx`
+  - 輕量佈局容器，組合 hooks 與子組件
+  - Custom hooks：`useMVFilters`、`useFavorites`、`useInfiniteScroll`、`useStickyFilterBar`、`usePWA`、`useLoadingTransition`、`useScrollPosition`、`useAnimationPause`
+  - 抽取組件：`AppHeader`、`FilterBar`、`GalleryGrid`、`ControlHub`、`FeedbackDrawer`、`AppFooter`、`LoadingScreen`、`NetworkWarningScreen`、`ErrorScreen`、`PWAInstallDrawer`、`PWARecoverDrawer`、`AboutDialog`、`AnimatedMVCardItem`
 - `useLazyImage()` in `frontend/src/hooks/useLazyImage.ts`
   - 以 `IntersectionObserver` 處理延遲載入與進場時機
 - `CoverCarousel` in `frontend/src/components/MVCard.tsx`

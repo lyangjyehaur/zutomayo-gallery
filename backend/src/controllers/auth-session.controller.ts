@@ -51,6 +51,7 @@ const buildMePayload = async (username: string) => {
     email: data?.email ? String(data.email) : null,
     display_name: data?.display_name ? String(data.display_name) : null,
     avatar_url: data?.avatar_url ? String(data.avatar_url) : null,
+    notification_preferences: data?.notification_preferences || { staging: true, submission: true, error: true, crawler: true },
     roles,
     permissions: Array.from(normalizedPermissions),
     menus,
@@ -152,6 +153,47 @@ export const updateMeProfile = async (req: Request, res: Response) => {
   }
 
   await user.update(update as any);
+  const payload = await buildMePayload(username);
+  res.json({ success: true, data: payload });
+};
+
+export const updateNotificationPreferences = async (req: Request, res: Response) => {
+  const userId = req.session.userId;
+  const username = req.session.username;
+  if (typeof userId !== 'string' || typeof username !== 'string') {
+    res.status(401).json({ success: false, error: 'Unauthorized' });
+    return;
+  }
+
+  const prefs = req.body;
+  if (!prefs || typeof prefs !== 'object') {
+    res.status(400).json({ success: false, error: 'INVALID_PREFERENCES' });
+    return;
+  }
+
+  const allowedKeys = new Set(['staging', 'submission', 'error', 'crawler']);
+  const sanitized: Record<string, boolean> = {};
+  for (const [key, value] of Object.entries(prefs)) {
+    if (allowedKeys.has(key) && typeof value === 'boolean') {
+      sanitized[key] = value;
+    }
+  }
+
+  if (Object.keys(sanitized).length === 0) {
+    res.status(400).json({ success: false, error: 'NO_VALID_PREFERENCES' });
+    return;
+  }
+
+  const user = await AdminUserModel.findOne({ where: { id: userId, username } as any });
+  if (!user) {
+    res.status(401).json({ success: false, error: 'Unauthorized' });
+    return;
+  }
+
+  const current = (user.toJSON() as any).notification_preferences || {};
+  const merged = { ...current, ...sanitized };
+  await user.update({ notification_preferences: merged } as any);
+
   const payload = await buildMePayload(username);
   res.json({ success: true, data: payload });
 };

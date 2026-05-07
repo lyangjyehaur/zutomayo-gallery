@@ -56,7 +56,16 @@ export const triggerCrawler = async (req: Request, res: Response) => {
     throw new AppError(400, 'startDate and endDate are required');
   }
   
-  runCrawler(searchTerms, startDate, endDate, maxItems).catch(err => {
+  runCrawler(searchTerms, startDate, endDate, maxItems).then(async () => {
+    try {
+      const { NotificationService } = await import('../services/notification.service.js');
+      await NotificationService.send({
+        type: 'crawler-complete',
+        title: '爬蟲任務完成',
+        body: `搜尋: ${searchTerms}\n期間: ${startDate} ~ ${endDate}`,
+      });
+    } catch {}
+  }).catch(err => {
     logger.error({ err }, '[Crawler Error] Background crawler failed');
     errorEventEmitter.emitError({
       source: 'cron',

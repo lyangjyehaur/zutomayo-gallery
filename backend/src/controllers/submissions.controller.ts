@@ -297,6 +297,16 @@ export const submitForReview = async (req: Request, res: Response) => {
   }
 
   await submission.update({ status: 'pending', submitted_at: new Date() });
+
+  try {
+    const { NotificationService } = await import('../services/notification.service.js');
+    await NotificationService.send({
+      type: 'new-submission',
+      title: '新投稿待審核',
+      body: `投稿 ID: ${id}`,
+    });
+  } catch {}
+
   res.json({ success: true });
 };
 

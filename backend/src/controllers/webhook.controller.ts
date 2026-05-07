@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { errorEventEmitter } from '../services/error-events.service.js';
+import { NotificationService } from '../services/notification.service.js';
 import { logger } from '../utils/logger.js';
 
 /**
@@ -34,10 +35,10 @@ export const verifyWalineWebhook = (req: Request, res: Response, next: NextFunct
 
 export const handleWalineWebhook = async (req: Request, res: Response) => {
   try {
-    const { BARK_KEY } = process.env;
-    if (!BARK_KEY) {
-      logger.warn('Waline Webhook received, but BARK_KEY is not configured');
-      return res.status(200).json({ success: true, message: 'BARK_KEY not set' });
+    const barkConfigured = process.env.BARK_URL || process.env.BARK_KEY;
+    if (!barkConfigured) {
+      logger.warn('Waline Webhook received, but BARK_URL / BARK_KEY is not configured');
+      return res.status(200).json({ success: true, message: 'BARK not configured' });
     }
 
     const payload = req.body;
@@ -59,29 +60,16 @@ export const handleWalineWebhook = async (req: Request, res: Response) => {
     const url = commentData.url || '';
 
     // 組合 Bark 推送內容
-    const title = encodeURIComponent(`畫廊新留言: ${nick}`);
-    const body = encodeURIComponent(`${comment}\n\n頁面: ${url}`);
-    
-    // 如果 BARK_KEY 包含完整的 URL (例如 https://api.day.app/xxx)，就直接使用
-    // 如果只有 key，就拼上預設的 https://api.day.app
-    let barkUrl = '';
-    if (BARK_KEY.startsWith('http')) {
-       barkUrl = `${BARK_KEY}/${title}/${body}`;
-    } else {
-       barkUrl = `https://api.day.app/${BARK_KEY}/${title}/${body}`;
-    }
+    const sent = await NotificationService.sendBarkNotification({
+      title: `畫廊新留言: ${nick}`,
+      body: `${comment}\n\n頁面: ${url}`,
+      url: undefined,
+      extraParams: 'group=Waline&icon=https://gallery.ztmr.club/favicon.ico',
+    });
 
-    // 加上圖示和分組參數
-    barkUrl += '?group=Waline&icon=https://gallery.ztmr.club/favicon.ico';
-
-    logger.info({ barkUrl }, 'Sending to Bark');
-    const response = await fetch(barkUrl);
-    
-    if (response.ok) {
+    if (sent) {
       return res.status(200).json({ success: true, message: 'Bark notification sent' });
     } else {
-      const errText = await response.text();
-      logger.error({ status: response.status, body: errText }, 'Bark API Error');
       return res.status(500).json({ success: false, error: 'Failed to send Bark notification' });
     }
   } catch (error) {

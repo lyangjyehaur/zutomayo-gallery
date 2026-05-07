@@ -21,6 +21,7 @@ import adminSystemRoutes from './routes/admin-system.routes.js';
 import publicAuthRoutes from './routes/public-auth.routes.js';
 import submissionRoutes from './routes/submissions.routes.js';
 import adminSubmissionRoutes from './routes/admin-submissions.routes.js';
+import pushSubscriptionRoutes from './controllers/push-subscription.controller.js';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { errorEventEmitter } from './services/error-events.service.js';
 import { sequelize, AuthPasskey, AuthSetting } from './services/pg.service.js';
@@ -202,7 +203,7 @@ const writeLimiter = rateLimit({
 // 認證路由嚴格限流 - 防止暴力破解
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 分鐘
-  max: 20, // 每個 IP 20 次認證嘗試
+  max: isProduction ? 20 : 200,
   standardHeaders: true,
   legacyHeaders: false,
   ...(authRateLimitStore ? { store: authRateLimitStore } : {}),
@@ -212,26 +213,28 @@ const authLimiter = rateLimit({
   },
 });
 
-// 應用限流中間件
-app.use('/api/', apiLimiter);
+// 應用限流中間件（僅生產環境啟用）
+if (isProduction) {
+  app.use('/api/', apiLimiter);
 
-// 針對寫入路由套用 writeLimiter，但排除需要頻繁操作的 admin 路由
-app.use('/api/', (req, res, next) => {
-  // 放行驗證與探測相關的路由，避免卡住正常管理操作
-  if (req.path.includes('/probe') || req.path.includes('/twitter-resolve')) {
-    return next();
-  }
-  
-  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
-    writeLimiter(req, res, next);
-  } else {
-    next();
-  }
-});
+  // 針對寫入路由套用 writeLimiter，但排除需要頻繁操作的 admin 路由
+  app.use('/api/', (req, res, next) => {
+    // 放行驗證與探測相關的路由，避免卡住正常管理操作
+    if (req.path.includes('/probe') || req.path.includes('/twitter-resolve')) {
+      return next();
+    }
+
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+      writeLimiter(req, res, next);
+    } else {
+      next();
+    }
+  });
+}
 
 // API 路由註冊
-app.use('/api/auth', authLimiter, authRoutes);
-app.use('/api/public-auth', authLimiter, publicAuthRoutes);
+app.use('/api/auth', isProduction ? authLimiter : (req: any, res: any, next: any) => next(), authRoutes);
+app.use('/api/public-auth', isProduction ? authLimiter : (req: any, res: any, next: any) => next(), publicAuthRoutes);
 app.use('/api/mvs', mvRoutes);
 app.use('/api/album', albumRoutes);
 app.use('/api/artist', artistRoutes);
@@ -242,6 +245,7 @@ app.use('/api/submissions', submissionRoutes);
 app.use('/api/webhook', webhookRoutes);
 app.use('/api/admin/system', adminSystemRoutes);
 app.use('/api/admin/submissions', adminSubmissionRoutes);
+app.use('/api/push', pushSubscriptionRoutes);
 
 // 如果 bull-board 初始化成功，掛載可視化介面路由
 if (bullBoardAdapter) {
