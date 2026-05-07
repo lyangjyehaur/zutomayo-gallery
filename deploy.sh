@@ -43,6 +43,9 @@ FRONTEND_DEPLOY_PATH="/www/wwwroot/mv.ztmr.club"
 # 前端備份目錄 (每次更新前會將舊檔案備份到這裡)
 FRONTEND_BACKUP_PATH="/www/wwwroot/mv_backup"
 
+# Review App 部署目標路徑
+REVIEW_APP_DEPLOY_PATH="/www/wwwroot/review.ztmr.club"
+
 EOF
     echo -e "${RED}已建立預設 $CONFIG_FILE！${NC}"
     echo -e "${RED}請先編輯 $CONFIG_FILE 確認路徑是否正確，然後再次執行此腳本。${NC}"
@@ -57,25 +60,26 @@ source "$CONFIG_FILE"
 # ==========================================
 echo -e "${GREEN}歡迎使用 ZUTOMAYO Gallery 部署工具${NC}"
 echo "請選擇要執行的操作："
-echo "1) 部署全部 (前端 + 後端)"
+echo "1) 部署全部 (前端 + 後端 + Review App)"
 echo "2) 僅部署前端 (Frontend)"
 echo "3) 僅部署後端 (Backend)"
-echo "4) 檢查服務狀態 (Health Check & Logs)"
+echo "4) 僅部署 Review App"
+echo "5) 檢查服務狀態 (Health Check & Logs)"
 echo "0) 退出"
-read -p "請輸入選項 [1/2/3/4/0]: " choice
+read -p "請輸入選項 [1/2/3/4/5/0]: " choice
 
 if [ "$choice" == "0" ]; then
     echo "已退出部署。"
     exit 0
 fi
 
-if [[ "$choice" != "1" && "$choice" != "2" && "$choice" != "3" && "$choice" != "4" ]]; then
+if [[ "$choice" != "1" && "$choice" != "2" && "$choice" != "3" && "$choice" != "4" && "$choice" != "5" ]]; then
     echo -e "${RED}無效的選項！請重新執行腳本。${NC}"
     exit 1
 fi
 
 # 如果選擇檢查服務狀態，直接執行並退出
-if [ "$choice" == "4" ]; then
+if [ "$choice" == "5" ]; then
     echo -e "\n${YELLOW}=== 服務狀態檢查 ===${NC}"
     
     echo -e "\n[PM2 狀態]"
@@ -171,6 +175,10 @@ fi
 if [[ "$choice" == "1" || "$choice" == "3" ]]; then
     check_and_edit_env "backend/.env" "後端 (Backend)"
     validate_backend_env
+fi
+
+if [[ "$choice" == "1" || "$choice" == "4" ]]; then
+    check_and_edit_env "review-app/.env" "Review App"
 fi
 
 # ==========================================
@@ -314,11 +322,63 @@ deploy_backend() {
 }
 
 # ==========================================
+# 部署 Review App 函式
+# ==========================================
+deploy_review_app() {
+    echo -e "\n${YELLOW}[Review App] 開始處理 Review App...${NC}"
+    cd review-app
+    echo "安裝 Review App 依賴..."
+    $PKG_INSTALL
+    echo "編譯 Review App 靜態檔案..."
+    $PKG_BUILD
+    cd ..
+
+    echo -e "\n${YELLOW}[Review App] 準備備份與發佈 Review App 檔案...${NC}"
+    TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+    BACKUP_DIR="${FRONTEND_BACKUP_PATH}/review_app_${TIMESTAMP}"
+
+    if [ ! -d "$REVIEW_APP_DEPLOY_PATH" ]; then
+        echo -e "${YELLOW}建立部署目錄: $REVIEW_APP_DEPLOY_PATH${NC}"
+        mkdir -p "$REVIEW_APP_DEPLOY_PATH" || {
+            echo -e "${RED}錯誤: 無法建立部署目錄 $REVIEW_APP_DEPLOY_PATH，請檢查權限！${NC}"
+            exit 1
+        }
+    fi
+    if [ ! -w "$REVIEW_APP_DEPLOY_PATH" ]; then
+        echo -e "${RED}錯誤: 對部署目錄 $REVIEW_APP_DEPLOY_PATH 沒有寫入權限！請使用 sudo 執行或更改權限。${NC}"
+        exit 1
+    fi
+    mkdir -p "$BACKUP_DIR" || {
+        echo -e "${RED}錯誤: 無法建立備份目錄 $BACKUP_DIR，請檢查權限！${NC}"
+        exit 1
+    }
+
+    if [ "$(ls -A $REVIEW_APP_DEPLOY_PATH)" ]; then
+        echo "正在備份當前線上檔案至 $BACKUP_DIR ..."
+        cp -a "$REVIEW_APP_DEPLOY_PATH/." "$BACKUP_DIR/"
+
+        echo "清理舊版線上檔案..."
+        rm -rf "${REVIEW_APP_DEPLOY_PATH:?}/"*
+    else
+        echo "部署目錄為空，跳過備份步驟。"
+    fi
+
+    echo "正在將新編譯的檔案複製到部署目錄 $REVIEW_APP_DEPLOY_PATH ..."
+    cp -a review-app/dist/. "$REVIEW_APP_DEPLOY_PATH/"
+
+    find "$REVIEW_APP_DEPLOY_PATH" -type d -exec chmod 755 {} \;
+    find "$REVIEW_APP_DEPLOY_PATH" -type f -exec chmod 644 {} \;
+
+    echo -e "${GREEN}[Review App] Review App 部署與備份完成！${NC}"
+}
+
+# ==========================================
 # 執行選擇的任務
 # ==========================================
 case $choice in
     1)
         deploy_frontend
+        deploy_review_app
         deploy_backend
         ;;
     2)
@@ -326,6 +386,9 @@ case $choice in
         ;;
     3)
         deploy_backend
+        ;;
+    4)
+        deploy_review_app
         ;;
 esac
 

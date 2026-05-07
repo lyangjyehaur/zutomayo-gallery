@@ -50,6 +50,7 @@ echo Checking dependencies...
 if not exist "node_modules" goto :install_all
 if not exist "frontend\node_modules" goto :install_all
 if not exist "backend\node_modules" goto :install_all
+if not exist "review-app\node_modules" goto :install_all
 goto :deps_ok
 
 :install_all
@@ -67,6 +68,7 @@ echo.
 
 echo 正在啟動前後端服務...
 echo 前端：http://localhost:5173
+echo Review App：http://localhost:5174
 echo 後端：http://localhost:5010
 echo.
 echo 按 Ctrl+C 停止服務

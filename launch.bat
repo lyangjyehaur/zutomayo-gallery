@@ -52,6 +52,7 @@ echo Checking dependencies...
 if not exist "node_modules" goto :install_all
 if not exist "frontend\node_modules" goto :install_all
 if not exist "backend\node_modules" goto :install_all
+if not exist "review-app\node_modules" goto :install_all
 goto :deps_ok
 
 :install_all
@@ -69,6 +70,7 @@ echo.
 echo ========================================
 echo Starting services...
 echo Frontend will run at: http://localhost:5173
+echo Review App will run at: http://localhost:5174
 echo Backend will run at: http://localhost:5010
 echo ========================================
 echo.

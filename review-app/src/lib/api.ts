@@ -146,6 +146,32 @@ export const login = async (username: string, password: string) => {
   return res.json()
 }
 
+export const loginWithPasskey = async (username: string) => {
+  const base = getApiBase()
+
+  const optRes = await adminFetch(`${base}/auth/generate-auth-options`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username }),
+  })
+  if (!optRes.ok) {
+    const err = await optRes.json()
+    throw new Error(err.error || '無法生成 Passkey 認證選項')
+  }
+
+  const options = await optRes.json()
+
+  const { startAuthentication } = await import('@simplewebauthn/browser')
+  const asseResp = await startAuthentication({ optionsJSON: options })
+
+  const verifyRes = await adminFetch(`${base}/auth/verify-auth`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(asseResp),
+  })
+  return verifyRes.json()
+}
+
 export const checkAuth = async () => {
   const res = await adminFetch(`${getApiBase()}/auth/me`)
   if (!res.ok) return null

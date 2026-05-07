@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Page, Navbar, List, ListItem, SwipeoutActions, SwipeoutButton, Segmented, Button, Block, f7 } from 'framework7-react'
+import { Page, Navbar, List, ListItem, SwipeoutActions, SwipeoutButton, Segmented, Button, Block, BlockTitle, f7 } from 'framework7-react'
 import { fetchStagingFanarts, approveStagingFanart, rejectStagingFanart, restoreStagingFanart, fetchMvs } from '../lib/api'
 import type { StagingFanart, MV } from '../lib/api'
 import MvSheet from '../components/MvSheet'
@@ -34,7 +34,7 @@ export default function StagingPage() {
       setHasMore(newItems.length >= 20)
       allowInfinite.current = newItems.length >= 20
     } catch {
-      f7.toast.create({ text: 'Failed to load', closeTimeout: 2000 }).open()
+      f7.toast.create({ text: '載入失敗', closeTimeout: 2000 }).open()
     } finally {
       setLoading(false)
     }
@@ -61,9 +61,9 @@ export default function StagingPage() {
     try {
       await approveStagingFanart(approvingId, [...mvIds, ...tags])
       setItems(prev => prev.filter(i => i.id !== approvingId))
-      f7.toast.create({ text: 'Approved', closeTimeout: 1500 }).open()
+      f7.toast.create({ text: '已通過', closeTimeout: 1500 }).open()
     } catch {
-      f7.dialog.alert('Failed to approve')
+      f7.dialog.alert('通過失敗')
     } finally {
       setApprovingId(null)
       setMvSheetOpened(false)
@@ -74,9 +74,9 @@ export default function StagingPage() {
     try {
       await rejectStagingFanart(id)
       setItems(prev => prev.filter(i => i.id !== id))
-      f7.toast.create({ text: 'Rejected', closeTimeout: 1500 }).open()
+      f7.toast.create({ text: '已拒絕', closeTimeout: 1500 }).open()
     } catch {
-      f7.dialog.alert('Failed to reject')
+      f7.dialog.alert('拒絕失敗')
     }
   }
 
@@ -84,9 +84,9 @@ export default function StagingPage() {
     try {
       await restoreStagingFanart(id)
       setItems(prev => prev.filter(i => i.id !== id))
-      f7.toast.create({ text: 'Restored', closeTimeout: 1500 }).open()
+      f7.toast.create({ text: '已恢復', closeTimeout: 1500 }).open()
     } catch {
-      f7.dialog.alert('Failed to restore')
+      f7.dialog.alert('恢復失敗')
     }
   }
 
@@ -105,84 +105,54 @@ export default function StagingPage() {
 
   return (
     <Page ptr onPtrRefresh={handleRefresh} infinite infiniteDistance={50} onInfinite={handleInfinite}>
-      <Navbar title="Staging Review" backLink="Back" />
+      <Navbar title="暫存審核" backLink="返回" />
 
       <Block>
         <Segmented strong>
-          <Button active={status === 'pending'} onClick={() => setStatus('pending')}>Pending</Button>
-          <Button active={status === 'approved'} onClick={() => setStatus('approved')}>Approved</Button>
-          <Button active={status === 'rejected'} onClick={() => setStatus('rejected')}>Rejected</Button>
+          <Button active={status === 'pending'} onClick={() => setStatus('pending')}>待審</Button>
+          <Button active={status === 'approved'} onClick={() => setStatus('approved')}>已通過</Button>
+          <Button active={status === 'rejected'} onClick={() => setStatus('rejected')}>已拒絕</Button>
         </Segmented>
       </Block>
 
-      <List mediaList className="staging-list">
+      <List mediaList>
         {items.map((item) => {
           const imgSrc = item.media_type === 'image' ? item.media_url : (item.thumbnail_url || item.media_url)
           const isVideo = item.media_type === 'video'
+          const subtitle = `@${item.author_handle} · ❤️ ${formatCount(item.like_count)} 🔁 ${formatCount(item.retweet_count)} 👁 ${formatCount(item.view_count)}`
 
           if (status === 'rejected') {
             return (
-              <ListItem key={item.id} className="staging-card-item">
-                <div className="staging-card" slot="content-start">
-                  <div className="staging-card-media">
-                    <img src={imgSrc} alt="" className="media-preview" />
-                    {isVideo && <div className="video-overlay"><span className="play-icon">▶</span></div>}
-                  </div>
-                  <div className="staging-card-body">
-                    <div className="staging-card-author">
-                      <div className="author-avatar">{item.author_name.charAt(0)}</div>
-                      <div className="author-info">
-                        <span className="author-name">{item.author_name}</span>
-                        <span className="author-handle">@{item.author_handle}</span>
-                      </div>
-                    </div>
-                    <div className="staging-card-text">{item.source_text}</div>
-                    <div className="staging-card-stats">
-                      <span>❤️ {formatCount(item.like_count)}</span>
-                      <span>🔁 {formatCount(item.retweet_count)}</span>
-                      <span>👁 {formatCount(item.view_count)}</span>
-                      <span className="staging-card-date">{new Date(item.post_date).toLocaleDateString()}</span>
-                    </div>
-                    <div className="staging-card-actions">
-                      <Button fill small color="orange" onClick={() => handleRestore(item.id)}>Restore</Button>
-                    </div>
-                  </div>
-                </div>
+              <ListItem
+                key={item.id}
+                title={item.author_name}
+                subtitle={subtitle}
+                text={item.source_text}
+                after={new Date(item.post_date).toLocaleDateString()}
+              >
+                <img slot="media" src={imgSrc} style={{ borderRadius: '8px' }} width="80" />
+                <Button slot="after" fill small color="orange" onClick={() => handleRestore(item.id)}>恢復</Button>
               </ListItem>
             )
           }
 
           return (
-            <ListItem key={item.id} swipeout className="staging-card-item">
-              <div className="staging-card" slot="content-start">
-                <div className="staging-card-media">
-                  <img src={imgSrc} alt="" className="media-preview" />
-                  {isVideo && <div className="video-overlay"><span className="play-icon">▶</span></div>}
-                </div>
-                <div className="staging-card-body">
-                  <div className="staging-card-author">
-                    <div className="author-avatar">{item.author_name.charAt(0)}</div>
-                    <div className="author-info">
-                      <span className="author-name">{item.author_name}</span>
-                      <span className="author-handle">@{item.author_handle}</span>
-                    </div>
-                  </div>
-                  <div className="staging-card-text">{item.source_text}</div>
-                  <div className="staging-card-stats">
-                    <span>❤️ {formatCount(item.like_count)}</span>
-                    <span>🔁 {formatCount(item.retweet_count)}</span>
-                    <span>👁 {formatCount(item.view_count)}</span>
-                    <span className="staging-card-date">{new Date(item.post_date).toLocaleDateString()}</span>
-                  </div>
-                </div>
-              </div>
+            <ListItem
+              key={item.id}
+              swipeout
+              title={item.author_name}
+              subtitle={subtitle}
+              text={item.source_text}
+              after={new Date(item.post_date).toLocaleDateString()}
+            >
+              <img slot="media" src={imgSrc} style={{ borderRadius: '8px' }} width="80" />
               {status === 'pending' && (
                 <>
                   <SwipeoutActions left>
-                    <SwipeoutButton overswipe color="green" close onClick={() => openMvSheet(item.id)}>Approve</SwipeoutButton>
+                    <SwipeoutButton overswipe color="green" close onClick={() => openMvSheet(item.id)}>通過</SwipeoutButton>
                   </SwipeoutActions>
                   <SwipeoutActions right>
-                    <SwipeoutButton overswipe color="red" close onClick={() => handleReject(item.id)}>Reject</SwipeoutButton>
+                    <SwipeoutButton overswipe color="red" close onClick={() => handleReject(item.id)}>拒絕</SwipeoutButton>
                   </SwipeoutActions>
                 </>
               )}
@@ -192,21 +162,15 @@ export default function StagingPage() {
       </List>
 
       {loading && items.length > 0 && (
-        <Block className="text-align-center">
-          <span style={{ color: 'rgba(232,230,240,0.5)' }}>Loading...</span>
-        </Block>
+        <Block className="text-align-center">載入中...</Block>
       )}
 
       {!hasMore && items.length > 0 && (
-        <Block className="text-align-center">
-          <span style={{ color: 'rgba(232,230,240,0.3)' }}>— End of list —</span>
-        </Block>
+        <Block className="text-align-center">— 已到底部 —</Block>
       )}
 
       {!loading && items.length === 0 && (
-        <Block className="text-align-center">
-          <span style={{ color: 'rgba(232,230,240,0.4)' }}>No items found</span>
-        </Block>
+        <BlockTitle>暫無資料</BlockTitle>
       )}
 
       <MvSheet

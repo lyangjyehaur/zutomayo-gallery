@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Page, Navbar, List, ListItem, SwipeoutActions, SwipeoutButton, Segmented, Button, Block, Chip, f7 } from 'framework7-react'
+import { Page, Navbar, List, ListItem, SwipeoutActions, SwipeoutButton, Segmented, Button, Block, BlockTitle, Badge, f7 } from 'framework7-react'
 import { fetchSubmissions, approveSubmission, rejectSubmission } from '../lib/api'
 import type { Submission } from '../lib/api'
 
@@ -24,7 +24,7 @@ export default function SubmissionsPage() {
       setHasMore(newItems.length >= 20)
       allowInfinite.current = newItems.length >= 20
     } catch {
-      f7.toast.create({ text: 'Failed to load', closeTimeout: 2000 }).open()
+      f7.toast.create({ text: '載入失敗', closeTimeout: 2000 }).open()
     } finally {
       setLoading(false)
     }
@@ -45,20 +45,20 @@ export default function SubmissionsPage() {
     try {
       await approveSubmission(id)
       setItems(prev => prev.filter(i => i.id !== id))
-      f7.toast.create({ text: 'Approved', closeTimeout: 1500 }).open()
+      f7.toast.create({ text: '已通過', closeTimeout: 1500 }).open()
     } catch {
-      f7.dialog.alert('Failed to approve')
+      f7.dialog.alert('通過失敗')
     }
   }
 
   const handleReject = (id: string) => {
-    f7.dialog.prompt('Reason for rejection:', 'Reject Submission', async (reason) => {
+    f7.dialog.prompt('拒絕原因：', '拒絕投稿', async (reason) => {
       try {
         await rejectSubmission(id, reason)
         setItems(prev => prev.filter(i => i.id !== id))
-        f7.toast.create({ text: 'Rejected', closeTimeout: 1500 }).open()
+        f7.toast.create({ text: '已拒絕', closeTimeout: 1500 }).open()
       } catch {
-        f7.dialog.alert('Failed to reject')
+        f7.dialog.alert('拒絕失敗')
       }
     })
   }
@@ -81,130 +81,78 @@ export default function SubmissionsPage() {
 
   return (
     <Page ptr onPtrRefresh={handleRefresh} infinite infiniteDistance={50} onInfinite={handleInfinite}>
-      <Navbar title="Submissions" backLink="Back" />
+      <Navbar title="投稿審核" backLink="返回" />
 
       <Block>
         <Segmented strong>
-          <Button active={status === 'pending'} onClick={() => setStatus('pending')}>Pending</Button>
-          <Button active={status === 'approved'} onClick={() => setStatus('approved')}>Approved</Button>
-          <Button active={status === 'rejected'} onClick={() => setStatus('rejected')}>Rejected</Button>
+          <Button active={status === 'pending'} onClick={() => setStatus('pending')}>待審</Button>
+          <Button active={status === 'approved'} onClick={() => setStatus('approved')}>已通過</Button>
+          <Button active={status === 'rejected'} onClick={() => setStatus('rejected')}>已拒絕</Button>
         </Segmented>
       </Block>
 
-      <List mediaList className="submission-list">
+      <List mediaList>
         {items.map((item) => {
           const previewUrl = getMediaPreview(item)
           const isVideo = item.media[0]?.media_type === 'video'
           const mediaCount = item.media.length
+          const displayName = item.submitter?.display_name || '未知'
+          const dateStr = new Date(item.submitted_at).toLocaleDateString()
+          const mvText = item.mvs.map(mv => mv.title).join(', ')
+          const tagText = item.special_tags.map(t => t.replace('tag:', '')).join(', ')
+          const subtitle = [mvText, tagText].filter(Boolean).join(' · ') || dateStr
 
           if (status === 'rejected') {
             return (
-              <ListItem key={item.id} className="submission-card-item">
-                <div className="submission-card" slot="content-start">
-                  {previewUrl && (
-                    <div className="submission-card-media">
-                      <img src={previewUrl} alt="" className="media-preview" />
-                      {isVideo && <div className="video-overlay"><span className="play-icon">▶</span></div>}
-                      {mediaCount > 1 && <div className="media-count-badge">{mediaCount}</div>}
-                    </div>
-                  )}
-                  <div className="submission-card-body">
-                    <div className="submission-card-author">
-                      <div className="author-avatar">{(item.submitter?.display_name || '?').charAt(0)}</div>
-                      <div className="author-info">
-                        <span className="author-name">{item.submitter?.display_name || 'Unknown'}</span>
-                        <span className="author-handle">{new Date(item.submitted_at).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                    {item.note && <div className="submission-card-text">{item.note}</div>}
-                    <div className="submission-card-mvs">
-                      {item.mvs.map(mv => (
-                        <Chip key={mv.id} text={mv.title} style={{ '--f7-chip-bg-color': 'rgba(108,92,231,0.3)', '--f7-chip-text-color': '#00F5D4', '--f7-chip-height': '24px', '--f7-chip-font-size': '11px', margin: '2px' } as any} />
-                      ))}
-                      {item.special_tags.map(tag => (
-                        <Chip key={tag} text={tag.replace('tag:', '')} style={{ '--f7-chip-bg-color': 'rgba(0,245,212,0.15)', '--f7-chip-text-color': '#00F5D4', '--f7-chip-height': '24px', '--f7-chip-font-size': '11px', margin: '2px' } as any} />
-                      ))}
-                    </div>
-                    {item.review_reason && (
-                      <div className="submission-card-reason">
-                        <span style={{ color: '#ff6b6b', fontWeight: 600 }}>Reason: </span>
-                        {item.review_reason}
-                      </div>
-                    )}
+              <ListItem
+                key={item.id}
+                title={displayName}
+                subtitle={subtitle}
+                text={item.note || ''}
+                after={dateStr}
+              >
+                {previewUrl && <img slot="media" src={previewUrl} style={{ borderRadius: '8px' }} width="80" />}
+                {mediaCount > 1 && <Badge slot="after" color="gray">{mediaCount}</Badge>}
+                {item.review_reason && (
+                  <div slot="text" style={{ color: 'var(--f7-theme-color)' }}>
+                    原因：{item.review_reason}
                   </div>
-                </div>
+                )}
               </ListItem>
             )
           }
 
           if (status === 'approved') {
             return (
-              <ListItem key={item.id} className="submission-card-item">
-                <div className="submission-card" slot="content-start">
-                  {previewUrl && (
-                    <div className="submission-card-media">
-                      <img src={previewUrl} alt="" className="media-preview" />
-                      {isVideo && <div className="video-overlay"><span className="play-icon">▶</span></div>}
-                      {mediaCount > 1 && <div className="media-count-badge">{mediaCount}</div>}
-                    </div>
-                  )}
-                  <div className="submission-card-body">
-                    <div className="submission-card-author">
-                      <div className="author-avatar">{(item.submitter?.display_name || '?').charAt(0)}</div>
-                      <div className="author-info">
-                        <span className="author-name">{item.submitter?.display_name || 'Unknown'}</span>
-                        <span className="author-handle">{new Date(item.submitted_at).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                    {item.note && <div className="submission-card-text">{item.note}</div>}
-                    <div className="submission-card-mvs">
-                      {item.mvs.map(mv => (
-                        <Chip key={mv.id} text={mv.title} style={{ '--f7-chip-bg-color': 'rgba(108,92,231,0.3)', '--f7-chip-text-color': '#00F5D4', '--f7-chip-height': '24px', '--f7-chip-font-size': '11px', margin: '2px' } as any} />
-                      ))}
-                      {item.special_tags.map(tag => (
-                        <Chip key={tag} text={tag.replace('tag:', '')} style={{ '--f7-chip-bg-color': 'rgba(0,245,212,0.15)', '--f7-chip-text-color': '#00F5D4', '--f7-chip-height': '24px', '--f7-chip-font-size': '11px', margin: '2px' } as any} />
-                      ))}
-                    </div>
-                  </div>
-                </div>
+              <ListItem
+                key={item.id}
+                title={displayName}
+                subtitle={subtitle}
+                text={item.note || ''}
+                after={dateStr}
+              >
+                {previewUrl && <img slot="media" src={previewUrl} style={{ borderRadius: '8px' }} width="80" />}
+                {mediaCount > 1 && <Badge slot="after" color="gray">{mediaCount}</Badge>}
               </ListItem>
             )
           }
 
           return (
-            <ListItem key={item.id} swipeout className="submission-card-item">
-              <div className="submission-card" slot="content-start">
-                {previewUrl && (
-                  <div className="submission-card-media">
-                    <img src={previewUrl} alt="" className="media-preview" />
-                    {isVideo && <div className="video-overlay"><span className="play-icon">▶</span></div>}
-                    {mediaCount > 1 && <div className="media-count-badge">{mediaCount}</div>}
-                  </div>
-                )}
-                <div className="submission-card-body">
-                  <div className="submission-card-author">
-                    <div className="author-avatar">{(item.submitter?.display_name || '?').charAt(0)}</div>
-                    <div className="author-info">
-                      <span className="author-name">{item.submitter?.display_name || 'Unknown'}</span>
-                      <span className="author-handle">{new Date(item.submitted_at).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                  {item.note && <div className="submission-card-text">{item.note}</div>}
-                  <div className="submission-card-mvs">
-                    {item.mvs.map(mv => (
-                      <Chip key={mv.id} text={mv.title} style={{ '--f7-chip-bg-color': 'rgba(108,92,231,0.3)', '--f7-chip-text-color': '#00F5D4', '--f7-chip-height': '24px', '--f7-chip-font-size': '11px', margin: '2px' } as any} />
-                    ))}
-                    {item.special_tags.map(tag => (
-                      <Chip key={tag} text={tag.replace('tag:', '')} style={{ '--f7-chip-bg-color': 'rgba(0,245,212,0.15)', '--f7-chip-text-color': '#00F5D4', '--f7-chip-height': '24px', '--f7-chip-font-size': '11px', margin: '2px' } as any} />
-                    ))}
-                  </div>
-                </div>
-              </div>
+            <ListItem
+              key={item.id}
+              swipeout
+              title={displayName}
+              subtitle={subtitle}
+              text={item.note || ''}
+              after={dateStr}
+            >
+              {previewUrl && <img slot="media" src={previewUrl} style={{ borderRadius: '8px' }} width="80" />}
+              {mediaCount > 1 && <Badge slot="after" color="gray">{mediaCount}</Badge>}
               <SwipeoutActions left>
-                <SwipeoutButton overswipe color="green" close onClick={() => handleApprove(item.id)}>Approve</SwipeoutButton>
+                <SwipeoutButton overswipe color="green" close onClick={() => handleApprove(item.id)}>通過</SwipeoutButton>
               </SwipeoutActions>
               <SwipeoutActions right>
-                <SwipeoutButton overswipe color="red" close onClick={() => handleReject(item.id)}>Reject</SwipeoutButton>
+                <SwipeoutButton overswipe color="red" close onClick={() => handleReject(item.id)}>拒絕</SwipeoutButton>
               </SwipeoutActions>
             </ListItem>
           )
@@ -212,21 +160,15 @@ export default function SubmissionsPage() {
       </List>
 
       {loading && items.length > 0 && (
-        <Block className="text-align-center">
-          <span style={{ color: 'rgba(232,230,240,0.5)' }}>Loading...</span>
-        </Block>
+        <Block className="text-align-center">載入中...</Block>
       )}
 
       {!hasMore && items.length > 0 && (
-        <Block className="text-align-center">
-          <span style={{ color: 'rgba(232,230,240,0.3)' }}>— End of list —</span>
-        </Block>
+        <Block className="text-align-center">— 已到底部 —</Block>
       )}
 
       {!loading && items.length === 0 && (
-        <Block className="text-align-center">
-          <span style={{ color: 'rgba(232,230,240,0.4)' }}>No items found</span>
-        </Block>
+        <BlockTitle>暫無資料</BlockTitle>
       )}
     </Page>
   )

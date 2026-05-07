@@ -1,19 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Page, Navbar, NavRight, Toolbar, Link, Tabs, Tab, Block, Button, f7 } from 'framework7-react'
+import { Page, Navbar, NavRight, Toolbar, ToolbarPane, Link, Tabs, Tab, Block, Button, Card, CardHeader, CardContent, f7 } from 'framework7-react'
 import { useAuth } from '../hooks/useAuth'
 import { fetchStagingProgress, fetchSubmissions } from '../lib/api'
 
 export default function HomePage() {
-  const { user, loading: authLoading, isLoggedIn, logout } = useAuth()
+  const { user, logout } = useAuth()
   const [pendingStaging, setPendingStaging] = useState(0)
   const [pendingSubmissions, setPendingSubmissions] = useState(0)
   const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (!authLoading && !isLoggedIn) {
-      f7.views.main.router.navigate('/login/')
-    }
-  }, [authLoading, isLoggedIn])
 
   const loadData = useCallback(async () => {
     try {
@@ -31,66 +25,56 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => {
-    if (isLoggedIn) {
-      loadData()
-    }
-  }, [isLoggedIn, loadData])
-
-  const handleRefresh = (done: () => void) => {
-    loadData().then(() => done())
-  }
+    loadData()
+  }, [loadData])
 
   const handleLogout = async () => {
     await logout()
-    f7.views.main.router.navigate('/login/')
+    f7.views.main.router.navigate('/login/', { reloadAll: true })
   }
 
-  if (authLoading) return null
-
   return (
-    <Page ptr onPtrRefresh={handleRefresh}>
-      <Navbar title="ZTMR Review">
+    <Page pageContent={false}>
+      <Navbar title="ZTMR 審核">
         <NavRight>
           {user && <Link onClick={handleLogout}>{user.username}</Link>}
         </NavRight>
       </Navbar>
-      <Toolbar tabbar bottom>
-        <Link tabLink="#tab-home" tabLinkActive>Home</Link>
-        <Link tabLink="#tab-staging">Staging</Link>
-        <Link tabLink="#tab-submissions">Submissions</Link>
+      <Toolbar tabbar icons position="bottom">
+        <ToolbarPane>
+          <Link tabLink="#tab-home" tabLinkActive text="首頁" iconIos="f7:house_fill" iconMd="material:home" />
+          <Link tabLink="#tab-staging" text="暫存區" iconIos="f7:tray_full_fill" iconMd="material:inbox" />
+          <Link tabLink="#tab-submissions" text="投稿" iconIos="f7:paintbrush_fill" iconMd="material:palette" />
+        </ToolbarPane>
       </Toolbar>
       <Tabs>
-        <Tab id="tab-home" tabActive>
+        <Tab id="tab-home" className="page-content" tabActive>
           <Block>
-            <div className="row">
-              <div className="col">
-                <div className="stat-card">
-                  <div className="stat-number">{loading ? '...' : pendingStaging}</div>
-                  <div className="stat-label">Pending Staging</div>
-                </div>
-              </div>
-            </div>
-            <div className="row">
-              <div className="col">
-                <div className="stat-card">
-                  <div className="stat-number">{loading ? '...' : pendingSubmissions}</div>
-                  <div className="stat-label">Pending Submissions</div>
-                </div>
-              </div>
-            </div>
+            <Card>
+              <CardHeader>待審暫存</CardHeader>
+              <CardContent style={{ fontSize: '32px', fontWeight: 700 }}>
+                {loading ? '...' : pendingStaging}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>待審投稿</CardHeader>
+              <CardContent style={{ fontSize: '32px', fontWeight: 700 }}>
+                {loading ? '...' : pendingSubmissions}
+              </CardContent>
+            </Card>
           </Block>
         </Tab>
-        <Tab id="tab-staging">
+        <Tab id="tab-staging" className="page-content">
           <Block>
             <Button fill onClick={() => f7.views.main.router.navigate('/staging/')}>
-              Open Staging Review
+              開啟暫存審核
             </Button>
           </Block>
         </Tab>
-        <Tab id="tab-submissions">
+        <Tab id="tab-submissions" className="page-content">
           <Block>
             <Button fill onClick={() => f7.views.main.router.navigate('/submissions/')}>
-              Open Submissions Review
+              開啟投稿審核
             </Button>
           </Block>
         </Tab>

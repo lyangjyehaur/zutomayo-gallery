@@ -12,6 +12,8 @@ const versionTargets = [
   { file: 'frontend/package-lock.json', kind: 'lock' },
   { file: 'backend/package.json', kind: 'package' },
   { file: 'backend/package-lock.json', kind: 'lock' },
+  { file: 'review-app/package.json', kind: 'package' },
+  { file: 'review-app/package-lock.json', kind: 'lock' },
 ];
 
 const readmeTargets = [

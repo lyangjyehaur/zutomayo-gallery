@@ -5,16 +5,13 @@ const f7params = {
   name: 'ZTMR Review',
   theme: 'auto',
   darkMode: 'auto',
-  colors: {
-    primary: '#6C5CE7',
-  },
   routes,
 }
 
 export default function App() {
   return (
     <F7App {...f7params}>
-      <View main url="/" />
+      <View main url="/login/" />
     </F7App>
   )
 }

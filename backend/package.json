@@ -58,6 +58,7 @@
     "rss-parser": "^3.13.0",
     "sequelize": "^6.37.8",
     "umzug": "^3.8.0",
+    "web-push": "^3.6.7",
     "zod": "^3.22.4"
   },
   "devDependencies": {
