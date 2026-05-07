@@ -9,7 +9,7 @@ An online gallery for ZUTOMAYO MV illustration assets, with an admin panel for d
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.3-3178c6)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-38b2ac)
 
-Last updated: 2026-05-05
+Last updated: 2026-05-08
 
 ---
 
@@ -27,7 +27,7 @@ Last updated: 2026-05-05
 
 ## Overview
 
-This project is a gallery for viewing ZUTOMAYO MV illustration assets, with an admin backend for data maintenance. The frontend is built with React + TypeScript. The backend uses Express + TypeScript, and the primary database is PostgreSQL with Sequelize + Umzug migrations. The production lightbox currently uses Fancybox; LightGallery is only kept on debug pages.
+This project is a gallery for viewing ZUTOMAYO MV illustration assets, with both an admin backend and a mobile review frontend for data maintenance. The main frontend is built with React + TypeScript. The backend uses Express + TypeScript, and the primary database is PostgreSQL with Sequelize + Umzug migrations. A separate `review-app/` sub-application uses Framework7 React for staging, submissions, FanArt, and group-repair workflows on phones and tablets. The production lightbox currently uses Fancybox; LightGallery is only kept on debug pages.
 
 ---
 
@@ -37,6 +37,7 @@ This project is a gallery for viewing ZUTOMAYO MV illustration assets, with an a
 - Masonry layout: responsive and image-size friendly
 - Modern secure login: WebAuthn / Passkeys for admin access
 - Administration and permissions: RBAC and various admin APIs
+- Mobile review workflows: `review-app/` now covers dashboard summaries, staging, submissions, FanArt, repair, and settings on phones/tablets
 - Data viewing and editing: Monaco Editor-based admin tooling
 - Interactive comments: Waline with custom emoji, reactions, and pageview stats
 - Performance tuning: React memoization, lazy loading, and Vite chunk splitting
@@ -63,6 +64,7 @@ This project is a gallery for viewing ZUTOMAYO MV illustration assets, with an a
 | [Umami](https://umami.is/) | - | Analytics |
 | [React Router](https://reactrouter.com/) | 6.22 | Routing |
 | [SWR](https://swr.vercel.app/) | 2.4 | Data fetching |
+| [Framework7 React](https://framework7.io/react/) | 9.0 | Mobile review UI for `review-app` |
 
 ### Backend
 
@@ -121,6 +123,11 @@ zutomayo-gallery/
 ├── image-hosting/               # (optional) independent Next.js image hosting service
 │   └── package.json
 │
+├── review-app/                  # Mobile review frontend (Framework7 React)
+│   ├── src/pages/               # Dashboard / staging / submissions / FanArt / repair / settings
+│   ├── src/components/          # AppNavbar, MvSheet, ReviewStateBlock, etc.
+│   └── README.md
+│
 ├── package.json                 # Root workspace config
 ├── deploy.sh                    # Server automation deploy script
 └── README.md
@@ -141,8 +148,11 @@ zutomayo-gallery/
 - Or run `npm run dev`
 
 **Command-line**
-- `npm run dev` starts both frontend and backend
-- `npm run start:frontend` starts only the frontend
+- `npm run dev` starts the main frontend and backend
+- `npm run dev:review` starts `review-app` and backend
+- `npm run dev:all` starts the main frontend, `review-app`, and backend together
+- `npm run start:frontend` starts only the main frontend
+- `npm run start:review-app` starts only `review-app`
 - `npm run start:backend` starts only the backend
 
 ### Requirements
@@ -160,7 +170,7 @@ zutomayo-gallery/
 git clone https://github.com/lyangjyehaur/zutomayo-gallery.git
 cd zutomayo-gallery
 
-# 2. Option A: install the main site dependencies (recommended: root + frontend + backend)
+# 2. Option A: install the main site dependencies (recommended: root + frontend + backend + review-app)
 npm run install:all
 
 # CI / clean environments can use lockfile-based installs
@@ -176,6 +186,9 @@ npm --prefix frontend install --legacy-peer-deps
 # Backend dependencies
 npm --prefix backend install
 
+# review-app dependencies
+npm --prefix review-app install
+
 # Optional: install the independent image-hosting service dependencies
 npm run install:optional
 ```
@@ -185,11 +198,20 @@ npm run install:optional
 ```bash
 # Recommended
 npm run dev
-# Frontend: http://localhost:5173
-# Backend:  http://localhost:5010
+# Main frontend: http://localhost:5173
+# Backend:       http://localhost:5010
+
+# review-app + backend
+npm run dev:review
+# review-app: http://localhost:5183
+# backend:    http://localhost:5010
+
+# Main frontend + review-app + backend
+npm run dev:all
 
 # Start separately
 npm run start:frontend
+npm run start:review-app
 npm run start:backend
 
 # Build + test
@@ -202,8 +224,16 @@ npm run verify
 # Frontend build
 cd frontend && npm run build
 
+# review-app build
+cd ../review-app && npm run build
+
 # Backend build
-cd backend && npm run build
+cd ../backend && npm run build
+
+# Or use workspace scripts
+cd ..
+npm run build:review-app
+npm run build:all
 ```
 
 ---
@@ -215,6 +245,7 @@ Copy the example env files:
 ```bash
 cp frontend/.env.example frontend/.env
 cp backend/.env.example backend/.env
+cp review-app/.env.example review-app/.env
 ```
 
 ### Frontend (`frontend/.env`)
@@ -228,6 +259,14 @@ cp backend/.env.example backend/.env
 | `VITE_UMAMI_SECONDARY_WEBSITE_ID` | Optional commons Umami website ID | none |
 | `VITE_UMAMI_SECONDARY_HOST_URL` | Optional commons Umami host URL | `https://gallery.ztmr.club/commons` |
 | `VITE_UMAMI_SECONDARY_BASE_SCRIPT` | Optional commons Umami base script path | `/commons` |
+
+### Mobile Review Frontend (`review-app/.env`)
+
+| Name | Description | Default |
+|---|---|---|
+| `VITE_API_ORIGIN` | Optional API origin; inferred by `review-app/src/lib/api.ts` when omitted | none |
+| `VITE_API_ROOT` | Common API root for local development; usually `/api` with Vite proxy | `/api` |
+| `VITE_API_URL` | Full API base URL when you need to override the default inference | none |
 
 ### Backend (`backend/.env`)
 

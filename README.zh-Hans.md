@@ -9,7 +9,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.3-3178c6)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-38b2ac)
 
-修订日期：2026-05-05
+修订日期：2026-05-08
 
 ---
 
@@ -27,7 +27,7 @@
 
 ## 简介
 
-本项目是一个用于浏览 ZUTOMAYO MV 设定图的在线画廊，同时提供后台管理系统用于数据维护。前端使用 React + TypeScript 构建；后端采用 Express + TypeScript，主数据库为 PostgreSQL（Sequelize + Umzug migrations）。正式环境的灯箱目前使用 Fancybox；LightGallery 仅保留在调试页面中。
+本项目是一个用于浏览 ZUTOMAYO MV 设定图的在线画廊，同时提供后台管理系统与移动审核前端用于数据维护。主前端使用 React + TypeScript 构建；后端采用 Express + TypeScript，主数据库为 PostgreSQL（Sequelize + Umzug migrations）；另有一个 `review-app/` 子应用使用 Framework7 React，负责手机上的暂存 / 投稿 / FanArt / Group repair 工作流。正式环境的灯箱目前使用 Fancybox；LightGallery 仅保留在调试页面中。
 
 ---
 
@@ -37,6 +37,7 @@
 - 瀑布流布局：响应式、适合不同图片尺寸的展示方式
 - 现代化安全登录：支持 WebAuthn / Passkeys 的后台登录
 - 管理与权限：提供 RBAC 与多种后台 API
+- 移动审核工作流：`review-app/` 已承接首页摘要、暂存、投稿、FanArt、Repair 与设置等手机 / 平板审核流程
 - 数据查看与编辑：内置 Monaco Editor 管理工具
 - 互动留言系统：整合 Waline，支持自定义 Emoji、Reaction 与 Pageview 统计
 - 性能优化：React memo、懒加载与 Vite Chunk 拆分
@@ -63,6 +64,7 @@
 | [Umami](https://umami.is/) | - | 网站分析 |
 | [React Router](https://reactrouter.com/) | 6.22 | 路由 |
 | [SWR](https://swr.vercel.app/) | 2.4 | 数据获取 |
+| [Framework7 React](https://framework7.io/react/) | 9.0 | `review-app` 移动审核 UI |
 
 ### 后端
 
@@ -121,6 +123,11 @@ zutomayo-gallery/
 ├── image-hosting/               # (可选) 独立 Next.js 图床/上传服务
 │   └── package.json
 │
+├── review-app/                  # 移动审核前端 (Framework7 React)
+│   ├── src/pages/               # 总览 / 暂存 / 投稿 / FanArt / Repair / 设置
+│   ├── src/components/          # AppNavbar、MvSheet、ReviewStateBlock 等
+│   └── README.md
+│
 ├── package.json                 # 根目录 workspace 配置
 ├── deploy.sh                    # 服务器自动化部署脚本
 └── README.md
@@ -141,8 +148,11 @@ zutomayo-gallery/
 - 或运行 `npm run dev`
 
 **命令行用户**
-- `npm run dev` 同时启动前端与后端
-- `npm run start:frontend` 只启动前端
+- `npm run dev` 同时启动主前端与后端
+- `npm run dev:review` 同时启动 `review-app` 与后端
+- `npm run dev:all` 同时启动主前端、`review-app` 与后端
+- `npm run start:frontend` 只启动主前端
+- `npm run start:review-app` 只启动 `review-app`
 - `npm run start:backend` 只启动后端
 
 ### 前置需求
@@ -160,7 +170,7 @@ zutomayo-gallery/
 git clone https://github.com/lyangjyehaur/zutomayo-gallery.git
 cd zutomayo-gallery
 
-# 2. 方式一：一键安装主站依赖（推荐：root + frontend + backend）
+# 2. 方式一：一键安装主站依赖（推荐：root + frontend + backend + review-app）
 npm run install:all
 
 # CI / 纯净环境可使用 lockfile 安装
@@ -176,6 +186,9 @@ npm --prefix frontend install --legacy-peer-deps
 # 后端依赖
 npm --prefix backend install
 
+# review-app 依赖
+npm --prefix review-app install
+
 # 可选：安装独立图床服务依赖
 npm run install:optional
 ```
@@ -185,11 +198,20 @@ npm run install:optional
 ```bash
 # 推荐方式
 npm run dev
-# 前端：http://localhost:5173
-# 后端：http://localhost:5010
+# 主前端：http://localhost:5173
+# 后端：  http://localhost:5010
+
+# review-app + 后端
+npm run dev:review
+# review-app：http://localhost:5183
+# 后端：    http://localhost:5010
+
+# 同时启动主前端 + review-app + 后端
+npm run dev:all
 
 # 分别启动
 npm run start:frontend
+npm run start:review-app
 npm run start:backend
 
 # 构建 + 测试
@@ -202,8 +224,16 @@ npm run verify
 # 前端构建
 cd frontend && npm run build
 
+# review-app 构建
+cd ../review-app && npm run build
+
 # 后端构建
-cd backend && npm run build
+cd ../backend && npm run build
+
+# 或使用 workspace 命令
+cd ..
+npm run build:review-app
+npm run build:all
 ```
 
 ---
@@ -215,6 +245,7 @@ cd backend && npm run build
 ```bash
 cp frontend/.env.example frontend/.env
 cp backend/.env.example backend/.env
+cp review-app/.env.example review-app/.env
 ```
 
 ### 前端 (`frontend/.env`)
@@ -228,6 +259,14 @@ cp backend/.env.example backend/.env
 | `VITE_UMAMI_SECONDARY_WEBSITE_ID` | 可选 commons Umami 网站 ID | 无 |
 | `VITE_UMAMI_SECONDARY_HOST_URL` | 可选 commons Umami 主机地址 | `https://gallery.ztmr.club/commons` |
 | `VITE_UMAMI_SECONDARY_BASE_SCRIPT` | 可选 commons Umami 基础脚本路径 | `/commons` |
+
+### 移动审核前端 (`review-app/.env`)
+
+| 名称 | 说明 | 默认值 |
+|---|---|---|
+| `VITE_API_ORIGIN` | 可选 API Origin；未设置时由 `review-app/src/lib/api.ts` 自动推导 | 无 |
+| `VITE_API_ROOT` | 开发环境常用 API root；本机通常设为 `/api` 配合 Vite proxy | `/api` |
+| `VITE_API_URL` | 完整 API base URL；需要覆盖默认推导时使用 | 无 |
 
 ### 后端 (`backend/.env`)
 
