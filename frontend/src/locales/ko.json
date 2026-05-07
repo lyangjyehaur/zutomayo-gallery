@@ -218,7 +218,9 @@
     "received": "피드백 수신됨",
     "thanks": "개선에 도움을 주셔서 감사합니다!",
     "question": "현재 웹페이지 로딩 속도는 어떻다고 생각하시나요?",
-    "hint": "하프 스타 평가 지원, 스와이프하여 미리보기"
+    "hint": "하프 스타 평가 지원, 스와이프하여 미리보기",
+    "comment_placeholder": "다른 제안이 있으신가요? (선택사항)",
+    "submit_error": "제출에 실패했습니다. 잠시 후 다시 시도해 주세요."
   },
   "album_category_mini": "미니 앨범",
   "album_category_full": "정규 앨범",

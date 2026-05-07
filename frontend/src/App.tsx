@@ -2272,31 +2272,30 @@ function App({
             </TooltipContent>
           </Tooltip>
 
-        {isAdminAuthenticated && false && (
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <Button
-                onClick={() => setIsSurveyForceOpen(true)}
-                onTouchStart={(e) => e.stopPropagation()}
-                variant="neutral"
-                size="icon"
-                className="z-[35] w-10 h-10 md:w-12 md:h-12 rounded-none transition-colors hover:bg-main hover:text-black"
-              >
-                <i className="hn hn-clock text-xl md:text-2xl"></i>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="left" align="center" sideOffset={10}>
-              <div className="flex flex-col gap-0.5">
-                <p className="text-xs font-black tracking-widest">{t("app.speed_survey", "加載速度調查 (Demo)")}</p>
-                {shouldShowSecondaryLang(i18n.language) && (
-                <p className="text-[10px] font-mono opacity-60 normal-case">
-                  SPEED_SURVEY
-                </p>
-                )}
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        )}
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <Button
+              onClick={() => setIsSurveyForceOpen(true)}
+              onTouchStart={(e) => e.stopPropagation()}
+              variant="neutral"
+              size="icon"
+              className="z-[35] w-10 h-10 md:w-12 md:h-12 rounded-none transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-[0px_0px_0px_0px_var(--border)] hover:bg-main hover:text-black"
+              data-umami-event="Z_Click_Speed_Survey"
+            >
+              <i className="hn hn-clock text-xl md:text-2xl"></i>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left" align="center" sideOffset={10}>
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs font-black tracking-widest">{t("app.speed_survey", "加載速度調查")}</p>
+              {shouldShowSecondaryLang(i18n.language) && (
+              <p className="text-[10px] font-mono opacity-60 normal-case">
+                SPEED_SURVEY
+              </p>
+              )}
+            </div>
+          </TooltipContent>
+        </Tooltip>
 
         <div className="z-40 relative">
           <LanguageToggle isIconOnly={true} />
@@ -2746,9 +2745,7 @@ function App({
       </div>
       )}
 
-      {/* 暫時隱藏加載速度評價彈窗
       <SpeedRatingSurvey forceOpen={isSurveyForceOpen} onCloseForce={() => setIsSurveyForceOpen(false)} />
-      */}
 
       <MVDetailsModal
         mv={selectedMv}

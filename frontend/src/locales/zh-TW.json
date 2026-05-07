@@ -217,7 +217,9 @@
     "received": "反饋已接收",
     "thanks": "謝謝您協助我們變得更好！",
     "question": "您覺得目前的網頁加載速度如何？",
-    "hint": "支援半星評分，滑動預覽"
+    "hint": "支援半星評分，滑動預覽",
+    "comment_placeholder": "還有其他建議嗎？（選填）",
+    "submit_error": "提交失敗，請稍後再試"
   },
   "album_page_title": "Cover Art Timeline",
   "album_page_desc": "歷年專輯與單曲的高解析度原圖封面，以時間軸形式呈現",

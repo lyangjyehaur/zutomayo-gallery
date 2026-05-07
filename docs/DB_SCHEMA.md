@@ -21,6 +21,22 @@
 | `created_at` | `TIMESTAMP` | | 建立時間 |
 | `updated_at` | `TIMESTAMP` | | 更新時間 |
 
+### 4.7. `speed_surveys` (訪問質量調查問卷表)
+儲存前台用戶提交的加載速度評價與建議。
+| 欄位名稱 | 型別 | 約束 | 說明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `VARCHAR(36)` | `PRIMARY KEY` | 調查記錄唯一識別碼 (使用 NanoID) |
+| `rating` | `DECIMAL(2,1)` | `NOT NULL` | 評分 (0.5 - 5.0，支援半星) |
+| `comment` | `TEXT` | `NULL` | 使用者留言與建議 |
+| `url` | `TEXT` | `NULL` | 提交時頁面網址 |
+| `user_agent` | `TEXT` | `NULL` | 使用者瀏覽器 Agent |
+| `ip` | `VARCHAR(255)` | `NULL` | 客戶端 IP |
+| `created_at` | `TIMESTAMP` | | 提交時間 |
+
+**索引：**
+- `rating` — 按評分分佈統計
+- `created_at` — 按時間排序與範圍查詢
+
 ### 4.6. `backend_error_logs` (後端錯誤日誌表)
 記錄後端運行時產生的所有異常，包含請求錯誤、未捕獲異常、未處理的 Promise Rejection 等。支援即時 SSE 推送與後台查詢。
 | 欄位名稱 | 型別 | 約束 | 說明 |

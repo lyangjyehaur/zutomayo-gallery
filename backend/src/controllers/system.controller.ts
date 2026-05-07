@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { Op } from 'sequelize';
-import { GeoRawLogModel, SysConfigModel, SysDictionaryModel, sequelize } from '../models/index.js';
+import { GeoRawLogModel, SysConfigModel, SysDictionaryModel, SpeedSurveyModel, sequelize } from '../models/index.js';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
@@ -17,6 +17,7 @@ import {
   createDictionarySchema,
   patchDictionarySchema,
 } from '../validators/system.validator.js';
+import { createSpeedSurveySchema } from '../validators/survey.validator.js';
 const isProduction = process.env.NODE_ENV === 'production';
 
 // 取得編譯時間與版本號的變數 (只在伺服器啟動時讀取一次)
@@ -499,6 +500,29 @@ export const batchResolveErrorLogs = async (req: Request, res: Response, next: N
     );
 
     res.json({ success: true, data: { updated } });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const createSpeedSurvey = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const parsed = createSpeedSurveySchema.parse(req.body);
+    const { rating, comment, url, userAgent } = parsed;
+
+    const ip = (req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.ip || '') as string;
+    const firstIp = ip.includes(',') ? ip.split(',')[0].trim() : ip;
+    const clientIp = firstIp.startsWith('::ffff:') ? firstIp.replace('::ffff:', '') : firstIp;
+
+    const record = await SpeedSurveyModel.create({
+      rating,
+      comment: comment || null,
+      url: url || null,
+      user_agent: userAgent || null,
+      ip: clientIp || null,
+    });
+
+    res.status(201).json({ success: true, data: record });
   } catch (err) {
     next(err);
   }

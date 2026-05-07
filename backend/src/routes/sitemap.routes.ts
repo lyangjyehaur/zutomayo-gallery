@@ -34,12 +34,6 @@ router.get('/sitemap.xml', asyncHandler(async (req: Request, res: Response) => {
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>`);
-    urls.push(`
-  <url>
-    <loc>${BASE_URL}/${lang}/fanart</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>`);
   });
 
   // 2. MV 詳細頁 (包含圖片 Sitemap)
@@ -118,14 +112,12 @@ router.get('/sitemap.xml', asyncHandler(async (req: Request, res: Response) => {
       }
     });
     
-    if (fanartImages) {
-      urls.push(`
+    urls.push(`
   <url>
     <loc>${BASE_URL}/${lang}/fanart</loc>
     <changefreq>daily</changefreq>
-    <priority>0.8</priority>${fanartImages}
+    <priority>0.9</priority>${fanartImages}
   </url>`);
-    }
   });
 
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>

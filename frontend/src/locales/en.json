@@ -221,7 +221,9 @@
     "received": "Feedback Received",
     "thanks": "Thank you for helping us improve!",
     "question": "How do you feel about the current page loading speed?",
-    "hint": "Supports half-star ratings, swipe to preview"
+    "hint": "Supports half-star ratings, swipe to preview",
+    "comment_placeholder": "Any other suggestions? (Optional)",
+    "submit_error": "Submission failed, please try again later."
   },
   "album_page_title": "Cover Art Timeline",
   "album_page_desc": "High-res artwork gallery for all albums and singles, presented as a timeline.",

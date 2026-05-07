@@ -13,6 +13,7 @@ import {
   listErrorLogs,
   resolveErrorLog,
   batchResolveErrorLogs,
+  createSpeedSurvey,
 } from '../controllers/system.controller.js';
 import { assignOrphanMediaGroup, listOrphanMedia, unassignOrphanMediaGroup } from '../controllers/media-orphans.controller.js';
 import { getMediaGroup, listMediaGroups, listRepairMediaGroups, mergeMediaGroups, syncMediaRelations, unassignMediaGroup, updateMediaGroup, previewReparseTwitter, applyReparseTwitter } from '../controllers/media-groups.controller.js';
@@ -114,6 +115,9 @@ router.delete('/announcements/:id', requirePermission(ADMIN_PERMISSIONS.SYSTEM_A
 router.post('/r2-sync', requireR2SyncAuth(ADMIN_PERMISSIONS.SYSTEM_R2), asyncHandler(syncImagesToR2));
 
 router.post('/r2-rebuild', requireR2SyncAuth(ADMIN_PERMISSIONS.SYSTEM_R2), asyncHandler(rebuildR2));
+
+// Public: Submit speed survey
+router.post('/survey', asyncHandler(createSpeedSurvey));
 
 // Public: Get signed image proxy URL and redirect
 router.get('/image/proxy', (req, res) => {

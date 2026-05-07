@@ -487,6 +487,25 @@ export const BackendErrorLogModel = sequelize.define('BackendErrorLog', {
   ],
 });
 
+export const SpeedSurveyModel = sequelize.define('SpeedSurvey', {
+  id: { type: DataTypes.STRING(36), primaryKey: true, defaultValue: generateShortId, comment: '調查記錄唯一識別碼' },
+  rating: { type: DataTypes.DECIMAL(2, 1), allowNull: false, comment: '評分 (0.5 - 5.0)' },
+  comment: { type: DataTypes.TEXT, allowNull: true, comment: '使用者留言' },
+  url: { type: DataTypes.TEXT, allowNull: true, comment: '提交時頁面網址' },
+  user_agent: { type: DataTypes.TEXT, allowNull: true, comment: '使用者 Agent' },
+  ip: { type: DataTypes.STRING, allowNull: true, comment: '客戶端 IP' },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '提交時間' },
+}, {
+  tableName: 'speed_surveys',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: false,
+  indexes: [
+    { fields: ['rating'] },
+    { fields: ['created_at'] },
+  ],
+});
+
 export const syncModels = async (options: { alter?: boolean } = {}) => {
   await sequelize.sync(options);
 };

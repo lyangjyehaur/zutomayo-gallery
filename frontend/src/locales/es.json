@@ -220,7 +220,9 @@
     "received": "Comentarios recibidos",
     "thanks": "¡Gracias por ayudarnos a mejorar!",
     "question": "¿Qué opinas sobre la velocidad de carga actual de la página?",
-    "hint": "Admite calificaciones de media estrella"
+    "hint": "Admite calificaciones de media estrella",
+    "comment_placeholder": "¿Alguna otra sugerencia? (Opcional)",
+    "submit_error": "Error al enviar, por favor inténtalo de nuevo más tarde."
   },
   "album_category_mini": "Mini Álbum",
   "album_category_full": "Álbum Completo",
