@@ -28,7 +28,7 @@ export const MODERATION_BOUNDARIES: ModerationBoundary[] = [
     ownership: 'review-app 直接接管',
     directCoverage: [
       'pending / approved / rejected 視圖切換與搜尋',
-      '單筆 approve / reject / restore 與詳情 Popup',
+      '單筆 approve / reject / restore 與詳情 push view',
       '批次核准、批次拒絕、批次還原與 MV / Tag 關聯',
       'crawler trigger、同步進度與列表刷新',
     ],

@@ -39,16 +39,6 @@ export const WORKSPACES: WorkspaceDefinition[] = [
     description: '處理 crawler 暫存資料與初步審核',
   },
   {
-    key: 'submissions',
-    title: '投稿',
-    shortTitle: '投稿',
-    path: '/submissions/',
-    viewId: 'view-submissions',
-    iconIos: 'f7:square_stack_3d_up_fill',
-    iconMd: 'material:palette',
-    description: '處理使用者投稿、通過與退回',
-  },
-  {
     key: 'fanart',
     title: 'FanArt 整理',
     shortTitle: '整理',
@@ -57,6 +47,16 @@ export const WORKSPACES: WorkspaceDefinition[] = [
     iconIos: 'f7:photo_fill_on_rectangle_fill',
     iconMd: 'material:collections',
     description: '整理審核後資料與規劃接管邊界',
+  },
+  {
+    key: 'submissions',
+    title: '投稿',
+    shortTitle: '投稿',
+    path: '/submissions/',
+    viewId: 'view-submissions',
+    iconIos: 'f7:square_stack_3d_up_fill',
+    iconMd: 'material:palette',
+    description: '處理使用者投稿、通過與退回',
   },
   {
     key: 'repair',

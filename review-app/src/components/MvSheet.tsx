@@ -1,6 +1,6 @@
-import type { ChangeEvent } from 'react'
-import { useMemo, useState } from 'react'
-import { Popup, Page, Navbar, NavTitle, NavRight, List, ListItem, Block, Searchbar, Link, Chip, Badge } from 'framework7-react'
+import type { ChangeEvent, CSSProperties } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import { Panel, Page, Navbar, NavTitle, NavRight, List, ListItem, Block, Searchbar, Link, Chip, Badge } from 'framework7-react'
 import Button from './Button'
 import ReviewStateBlock from './ReviewStateBlock'
 
@@ -44,7 +44,7 @@ export default function MvSheet({
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMvIds, setSelectedMvIds] = useState<string[]>(() => initialMvIds)
   const [selectedTags, setSelectedTags] = useState<string[]>(() => initialTags)
-  const [cancelled, setCancelled] = useState(false)
+  const suppressReturnOnCloseRef = useRef(false)
   const totalSelected = selectedMvIds.length + selectedTags.length
 
   const filteredMvs = useMemo(() => {
@@ -79,6 +79,7 @@ export default function MvSheet({
 
   const handleConfirm = () => {
     if (totalSelected === 0 || busy) return
+    suppressReturnOnCloseRef.current = true
     onConfirm(selectedMvIds, selectedTags)
   }
 
@@ -89,8 +90,8 @@ export default function MvSheet({
   }
 
   const handleClosed = () => {
-    const shouldReturn = cancelled
-    setCancelled(false)
+    const shouldReturn = !suppressReturnOnCloseRef.current
+    suppressReturnOnCloseRef.current = false
     resetState()
     if (shouldReturn) {
       onCancel?.()
@@ -102,16 +103,34 @@ export default function MvSheet({
     setSelectedMvIds([...initialMvIds])
     setSelectedTags([...initialTags])
     setSearchQuery('')
-    setCancelled(false)
+    suppressReturnOnCloseRef.current = false
   }
 
   return (
-    <Popup opened={opened} onPopupOpen={handleOpen} onPopupClosed={handleClosed}>
-      <Page pageContent={false} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <Panel
+      left
+      floating
+      backdrop
+      closeByBackdropClick
+      opened={opened}
+      onPanelOpen={handleOpen}
+      onPanelClosed={handleClosed}
+      style={{
+        '--f7-panel-left-width': 'min(420px, calc(100vw - 24px - var(--f7-safe-area-left, 0px) - var(--f7-safe-area-right, 0px)))',
+      } as CSSProperties}
+    >
+      <Page
+        pageContent={false}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+        }}
+      >
         <Navbar>
           <NavTitle>{title}</NavTitle>
           <NavRight>
-            <Link popupClose onClick={() => setCancelled(true)}>取消</Link>
+            <Link panelClose>取消</Link>
           </NavRight>
         </Navbar>
 
@@ -181,6 +200,18 @@ export default function MvSheet({
           </Block>
 
           <div style={{ margin: '0 16px 8px' }}>
+            <div style={{ fontWeight: 700 }}>特殊標籤</div>
+            <div style={{ marginTop: 4, opacity: 0.7, fontSize: 13 }}>
+              標籤會和 MV 一起保存，也可單獨使用。
+            </div>
+          </div>
+          <List inset strong dividers style={{ marginTop: 0, marginBottom: 0 }}>
+            {TAG_OPTIONS.map(tag => (
+              <ListItem key={tag.id} title={tag.label} checkbox checked={selectedTags.includes(tag.id)} onChange={() => toggleTag(tag.id)} />
+            ))}
+          </List>
+
+          <div style={{ margin: '12px 16px 8px' }}>
             <div style={{ fontWeight: 700 }}>音樂影片</div>
             <div style={{ marginTop: 4, opacity: 0.7, fontSize: 13 }}>
               可搜尋後勾選；找不到也可以只保存標籤。
@@ -198,18 +229,6 @@ export default function MvSheet({
                 compact
               />
             )}
-          </List>
-
-          <div style={{ margin: '0 16px 8px' }}>
-            <div style={{ fontWeight: 700 }}>特殊標籤</div>
-            <div style={{ marginTop: 4, opacity: 0.7, fontSize: 13 }}>
-              標籤會和 MV 一起保存，也可單獨使用。
-            </div>
-          </div>
-          <List inset strong dividers style={{ marginTop: 0, marginBottom: 0 }}>
-            {TAG_OPTIONS.map(tag => (
-              <ListItem key={tag.id} title={tag.label} checkbox checked={selectedTags.includes(tag.id)} onChange={() => toggleTag(tag.id)} />
-            ))}
           </List>
         </div>
 
@@ -232,6 +251,6 @@ export default function MvSheet({
           </div>
         </div>
       </Page>
-    </Popup>
+    </Panel>
   )
 }

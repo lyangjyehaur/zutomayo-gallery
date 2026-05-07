@@ -5,20 +5,33 @@ interface ImportMetaEnv {
   DEV: boolean
 }
 
+const trimTrailingSlash = (value: string) => value.replace(/\/+$/, '')
+
+const isAbsoluteUrl = (value: string) => /^https?:\/\//i.test(value)
+
 const getApiOrigin = () => {
   const env = import.meta.env as unknown as ImportMetaEnv
   const fallback = env.DEV ? '' : 'https://api.ztmr.club'
-  return (env.VITE_API_ORIGIN || fallback).replace(/\/+$/, '')
+  return trimTrailingSlash(env.VITE_API_ORIGIN || fallback)
 }
 
 const getApiRoot = () => {
   const env = import.meta.env as unknown as ImportMetaEnv
-  const raw = (env.VITE_API_ROOT || env.VITE_API_URL || '/api') as string
-  const root = raw.replace(/\/+$/, '')
+  const raw = (env.VITE_API_ROOT || '/api') as string
+  const root = trimTrailingSlash(raw)
   return root.startsWith('/') ? root : `/${root}`
 }
 
-export const getApiBase = () => `${getApiOrigin()}${getApiRoot()}`
+export const getApiBase = () => {
+  const env = import.meta.env as unknown as ImportMetaEnv
+  const explicitUrl = env.VITE_API_URL?.trim()
+  if (explicitUrl) {
+    return isAbsoluteUrl(explicitUrl)
+      ? trimTrailingSlash(explicitUrl)
+      : (explicitUrl.startsWith('/') ? trimTrailingSlash(explicitUrl) : `/${trimTrailingSlash(explicitUrl)}`)
+  }
+  return `${getApiOrigin()}${getApiRoot()}`
+}
 
 export const adminFetch = (input: RequestInfo | URL, init: RequestInit = {}) => {
   return fetch(input, { ...init, credentials: 'include' })

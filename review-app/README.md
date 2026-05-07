@@ -5,18 +5,19 @@
 目前它不再只是首頁殼層，而是直接承接以下工作流：
 
 - `HomePage`：審核總覽、同步進度、工作區摘要與行動端精簡入口
-- `StagingPage`：crawler 暫存清單、批次 approve / reject / restore、crawler trigger、詳情檢視
+- `StagingPage`：crawler 暫存清單、批次 approve / reject / restore、crawler trigger、頁內 push 詳情檢視
 - `SubmissionsPage`：投稿審核、搜尋、詳情、approve、退回原因填寫
 - `FanartPage`：未整理 / 已丟棄 / 舊資料 / 已組織 / 手動解析視圖，含 assign / sync / discard / restore / parse-save
 - `RepairPage`：group repair 搜尋、推斷來源、edit / merge / unassign、reparse preview / apply
-- `SettingsPage`：推播訂閱、通知偏好、頁面/API 接管矩陣
+- `SettingsPage`：推播訂閱、通知偏好、接管邊界入口
+- `SettingsBoundariesPage`：集中查看各工作區接管範圍、限制與對應 API
 
 ## 能力對照
 
 ### `StagingPage` <-> `frontend/src/pages/AdminStagingFanartPage.tsx`
 
 - 對應主前端頁面：`/admin/staging-fanarts`
-- 已接管能力：pending / approved / rejected 切換、搜尋、單筆 approve / reject / restore、批次 approve / reject / restore、MV / Tag 關聯、crawler trigger、同步進度、詳情 Popup
+- 已接管能力：pending / approved / rejected 切換、搜尋、單筆 approve / reject / restore、批次 approve / reject / restore、MV / Tag 關聯、crawler trigger、同步進度、詳情 push view
 - 未覆蓋項目：目前沒有明確缺少的核心 API 或審核步驟
 - 已知限制：列表優先最佳化手機卡片瀏覽與單欄操作；若需要大螢幕並排比對多筆詳情，桌面 admin 仍較適合
 
@@ -67,8 +68,10 @@ npm run preview
 
 實際 API base 由 `src/lib/api.ts` 組合：
 
-- 開發環境預設走相對路徑 `/api`
-- production fallback 為 `https://api.ztmr.club`
+- 未設定 `VITE_API_URL` 時，會以 `VITE_API_ORIGIN + VITE_API_ROOT` 組合 API base
+- `VITE_API_URL` 若有設定，會直接視為完整 API base URL 使用
+- 開發環境未設定 `VITE_API_ORIGIN` 時，預設走相對路徑 `/api`
+- production fallback 為 `https://api.ztmr.club/api`
 - 所有請求固定帶 `credentials: 'include'`，以共用 admin session
 
 ## 結構摘要
@@ -98,10 +101,14 @@ review-app/
 │   ├── pages/
 │   │   ├── HomePage.tsx
 │   │   ├── StagingPage.tsx
+│   │   ├── StagingDetailPage.tsx
 │   │   ├── SubmissionsPage.tsx
 │   │   ├── FanartPage.tsx
+│   │   ├── FanartMediaDetailPage.tsx
+│   │   ├── FanartGroupDetailPage.tsx
 │   │   ├── RepairPage.tsx
 │   │   ├── SettingsPage.tsx
+│   │   ├── SettingsBoundariesPage.tsx
 │   │   └── LoginPage.tsx
 │   ├── App.tsx
 │   ├── index.css
@@ -113,7 +120,7 @@ review-app/
 
 - `Views`、`Toolbar/Tabbar`、`Panel`：提供手機與平板一致的工作區切換，不依賴主前端桌面 sidebar
 - `Card`、`List`、`ListItem`、`Searchbar`：承載行動端高頻審核清單與篩選
-- `Popup`、`Sheet`：承接詳情、退回原因、MV / Tag 關聯、crawler 參數、merge / edit / reparse 等需要完整上下文的操作
+- `Panel`、`Popup`、`Sheet`、頁內 route page：承接 MV / Tag 關聯、詳情、退回原因、crawler 參數、merge / edit / reparse 等需要完整上下文的操作
 - `Toast`、頁內 `ReviewStateBlock`：分別處理即時操作回饋與可見的載入 / 空狀態 / 錯誤狀態
 - `ReviewSummaryPanel`：壓縮各工作區頁面頂部狀態卡，減少行動端首屏占位
 - `src/lib/moderation-boundaries.ts`：集中維護 review-app 與桌面 admin 的能力邊界，設定頁與跨專案文件都以此為基準同步描述
@@ -121,14 +128,14 @@ review-app/
 ## UI / 狀態約定
 
 - 全域樣式集中在 `src/index.css`
-- 導覽列、卡片、列表、Sheet、Popup 採統一的 `review-*` class 命名
+- 導覽列、卡片、列表、Panel、Sheet、Popup 採統一的 `review-*` class 命名
 - 空狀態、錯誤狀態、載入狀態統一用 `src/components/ReviewStateBlock.tsx`
 - `src/components/Button.tsx` 與 `src/components/Segmented.tsx` 是平台樣式包裝層：iOS 預設 round，MD / Android 維持普通樣式
 - `src/lib/media.ts` 會優先選用 `twimg` 原始媒體網址，避免列表與詳情混用縮圖 / R2 造成來源不一致
 - 多選清單優先使用 Framework7 官方 `ListItem checkbox`，避免把 checkbox 手工塞進 media slot
 - 需要同列兼容勾選與查看詳情時，詳情入口統一放在右側 `詳情` 按鈕，不再依賴整列點擊
-- `MvSheet` 以全屏 `Popup` 呈現；若從詳情頁進入，取消時應回到原本詳情，而不是直接退回列表
-- 詳情 Popup 的右上角使用 icon-only 關閉按鈕；狀態、MV 數量、媒體數量等資訊移到內容區作為標籤，而不是放在 navbar 右側
+- `MvSheet` 以 Framework7 官方 iOS `left floating Panel` 呈現；取消時只關閉 panel，不改動原本列表或詳情頁的 router 狀態
+- `StagingPage`、`FanartPage` 的詳情優先採頁內 push view；需要短流程補充輸入時再使用 `Popup` 或 `Sheet`
 - `FanartPage` 主列表的 title / subtitle / chips / footer 有固定資訊層級：名字與 handle 同列、時間用小字短格式、MV 以 chips 顯示、長 URL 必須可斷行
 - 登入頁、loading、tabbar、sheet header 盡量對齊 Framework7 v9 官方寫法，例如 `LoginScreen`、`dialog.preloader(...)`、`ToolbarPane`
 - 各頁仍可保留 toast 作為即時回饋，但首次載入失敗或無資料時要顯示可見的頁面內狀態區塊
@@ -138,7 +145,8 @@ review-app/
 ## 互動驗證重點
 
 - `Popup`、`Sheet`、`dialog.preloader(...)` 這類會改變遮罩與頁面狀態的互動，不能只看 build，需在瀏覽器實際點開再關閉一次
-- `MvSheet` 相關鏈路至少要驗證 `詳情 -> 關聯 / 更新關聯 -> 取消`，確認不白屏、不卡住，且會回到正確的詳情層
+- `MvSheet` 相關鏈路至少要驗證 `列表或詳情 -> 關聯 / 更新關聯 -> 取消`，確認 panel 動畫、左側留白與返回狀態都正確
+- `StagingPage` 的 `詳情 -> 通過並關聯 MV/Tag` 需驗證可只選特殊標籤、不選 MV 仍能完成通過
 - `StagingPage`、`RepairPage` 的勾選清單要同時驗證 checkbox 可點、右側 `詳情` 可開、swipeout 操作不互相搶事件
 - `SubmissionsPage`、`FanartPage` 等詳情型列表，需確認右側 `詳情` 按鈕不會污染 router / hash 狀態
 - 若要在本機用 `localhost` 驗證登入流程，開發環境可配合 `VITE_API_ROOT=/api` 使用 `vite.config.ts` 內的 proxy 設定
@@ -152,4 +160,4 @@ npm run lint
 npm run build
 ```
 
-若改動牽涉 layout、狀態切換、Sheet / Popup、列表滾動或行動端互動，建議再用瀏覽器做一次實際點擊驗證。
+若改動牽涉 layout、狀態切換、Panel / Sheet / Popup / push view、列表滾動或行動端互動，建議再用瀏覽器做一次實際點擊驗證。

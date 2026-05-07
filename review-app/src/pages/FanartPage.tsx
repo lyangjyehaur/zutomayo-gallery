@@ -1,20 +1,19 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import {
   Badge,
   Block,
   BlockTitle,
+  Checkbox,
   Chip,
   Link,
   List,
   ListInput,
   ListItem,
-  Navbar,
-  NavRight,
-  NavTitle,
   Page,
-  Popup,
   Searchbar,
   Sheet,
+  SwipeoutActions,
+  SwipeoutButton,
   Toolbar,
   ToolbarPane,
   f7,
@@ -74,6 +73,15 @@ interface ParsedFanartItem {
   tweetDate: string
   hashtags: string[]
   type: string
+}
+
+interface FanartRouter {
+  navigate: (url: string, options?: { props?: Record<string, unknown> }) => void
+  back: () => void
+}
+
+interface FanartPageProps {
+  f7router?: FanartRouter
 }
 
 const EMPTY_STATE: FanartOverviewState = {
@@ -192,7 +200,7 @@ const transformResolvedMedia = (url: string, item: ResolvedTwitterMedia, index: 
   type: item.type || 'image',
 })
 
-export default function FanartPage() {
+export default function FanartPage({ f7router }: FanartPageProps) {
   const { filters, setFanartFilter, visitWorkspace } = useWorkspace()
   const [loadingOverview, setLoadingOverview] = useState(true)
   const [loadingList, setLoadingList] = useState(false)
@@ -203,12 +211,11 @@ export default function FanartPage() {
   const [deletedGroups, setDeletedGroups] = useState<FanartGroup[]>([])
   const [legacyMedia, setLegacyMedia] = useState<FanartMedia[]>([])
   const [organizedMedia, setOrganizedMedia] = useState<FanartMedia[]>([])
-  const [detailMedia, setDetailMedia] = useState<FanartMedia | null>(null)
-  const [detailGroup, setDetailGroup] = useState<FanartGroup | null>(null)
+  const [selection, setSelection] = useState<Set<string>>(new Set())
   const [busyKeys, setBusyKeys] = useState<Set<string>>(new Set())
-  const [mvSheetMode, setMvSheetMode] = useState<'assign' | 'update' | 'parse' | null>(null)
+  const [mvSheetMode, setMvSheetMode] = useState<'assign' | 'batch-assign' | 'update' | 'parse' | null>(null)
   const [mvSheetTarget, setMvSheetTarget] = useState<FanartMedia | null>(null)
-  const [mvSheetReturnMedia, setMvSheetReturnMedia] = useState<FanartMedia | null>(null)
+  const [mvSheetBatchTargets, setMvSheetBatchTargets] = useState<FanartMedia[]>([])
   const [mvSheetBusy, setMvSheetBusy] = useState(false)
   const [focusSheetOpen, setFocusSheetOpen] = useState(false)
   const [focusSearch, setFocusSearch] = useState('')
@@ -316,12 +323,13 @@ export default function FanartPage() {
     }
   }, [focus, mvs, setFanartFilter, tagOptions, view])
 
+  const unorganizedMedia = useMemo(() => flattenUnorganizedMedia(unorganizedGroups), [unorganizedGroups])
+
   const filteredUnorganizedMedia = useMemo(() => {
-    const items = flattenUnorganizedMedia(unorganizedGroups)
     const keyword = query.trim().toLowerCase()
-    if (!keyword) return items
-    return items.filter((item) => buildMediaSearchText(item).includes(keyword))
-  }, [query, unorganizedGroups])
+    if (!keyword) return unorganizedMedia
+    return unorganizedMedia.filter((item) => buildMediaSearchText(item).includes(keyword))
+  }, [query, unorganizedMedia])
 
   const filteredDeletedGroups = useMemo(() => {
     const keyword = query.trim().toLowerCase()
@@ -340,6 +348,22 @@ export default function FanartPage() {
     if (!keyword) return organizedMedia
     return organizedMedia.filter((media) => buildMediaSearchText(media).includes(keyword))
   }, [organizedMedia, query])
+
+  const selectedUnorganizedIds = useMemo(() => {
+    const validIds = new Set(unorganizedMedia.map((item) => item.id))
+    return new Set(Array.from(selection).filter((id) => validIds.has(id)))
+  }, [selection, unorganizedMedia])
+  const visibleUnorganizedIds = useMemo(() => filteredUnorganizedMedia.map((item) => item.id), [filteredUnorganizedMedia])
+  const selectedUnorganizedMedia = useMemo(
+    () => unorganizedMedia.filter((item) => selectedUnorganizedIds.has(item.id)),
+    [selectedUnorganizedIds, unorganizedMedia],
+  )
+  const selectedCount = selectedUnorganizedIds.size
+  const selectedVisibleCount = useMemo(
+    () => visibleUnorganizedIds.filter((id) => selectedUnorganizedIds.has(id)).length,
+    [selectedUnorganizedIds, visibleUnorganizedIds],
+  )
+  const allVisibleSelected = visibleUnorganizedIds.length > 0 && visibleUnorganizedIds.every((id) => selectedUnorganizedIds.has(id))
 
   const currentFocusLabel = useMemo(() => {
     if (!focus) return '未選擇'
@@ -367,28 +391,33 @@ export default function FanartPage() {
     if (mvSheetBusy) return
     setMvSheetMode(null)
     setMvSheetTarget(null)
-    setMvSheetReturnMedia(null)
+    setMvSheetBatchTargets([])
   }
 
-  const openAssignSheet = (media: FanartMedia) => {
-    setMvSheetReturnMedia(media)
-    setDetailMedia(null)
+  const openAssignSheet = useCallback((media: FanartMedia) => {
     setMvSheetTarget(media)
+    setMvSheetBatchTargets([])
     setMvSheetMode('assign')
-  }
+  }, [])
 
-  const openUpdateSheet = (media: FanartMedia) => {
-    setMvSheetReturnMedia(media)
-    setDetailMedia(null)
-    setMvSheetTarget(media)
-    setMvSheetMode('update')
-  }
-
-  const openParseSheet = () => {
-    setMvSheetReturnMedia(null)
+  const openBatchAssignSheet = useCallback((items: FanartMedia[]) => {
+    if (items.length === 0) return
     setMvSheetTarget(null)
+    setMvSheetBatchTargets(items)
+    setMvSheetMode('batch-assign')
+  }, [])
+
+  const openUpdateSheet = useCallback((media: FanartMedia) => {
+    setMvSheetTarget(media)
+    setMvSheetBatchTargets([])
+    setMvSheetMode('update')
+  }, [])
+
+  const openParseSheet = useCallback(() => {
+    setMvSheetTarget(null)
+    setMvSheetBatchTargets([])
     setMvSheetMode('parse')
-  }
+  }, [])
 
   const handleQueryInput = (value: string) => {
     setFanartFilter({ query: value })
@@ -396,6 +425,9 @@ export default function FanartPage() {
 
   const handleViewChange = (nextView: typeof view) => {
     if (view === nextView) return
+    if (view === 'unorganized') {
+      setSelection(new Set())
+    }
     if (nextView === 'organized' && !focus) {
       const firstTag = tagOptions.find(([, count]) => count > 0)?.[0]
       setFanartFilter({ view: nextView, focusKind: 'tag', focus: firstTag || '' })
@@ -408,7 +440,27 @@ export default function FanartPage() {
     refreshAll().finally(done)
   }
 
-  const requestDiscardGroup = (groupId: string) => {
+  const toggleSelection = useCallback((id: string, checked: boolean) => {
+    setSelection((prev) => {
+      const next = new Set(prev)
+      if (checked) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }, [])
+
+  const toggleSelectAllVisible = useCallback((checked: boolean) => {
+    setSelection((prev) => {
+      const next = new Set(prev)
+      visibleUnorganizedIds.forEach((id) => {
+        if (checked) next.add(id)
+        else next.delete(id)
+      })
+      return next
+    })
+  }, [visibleUnorganizedIds])
+
+  const requestDiscardGroup = useCallback((groupId: string, afterSuccess?: () => void) => {
     f7.dialog.confirm('確定要將此推文捨棄到已丟棄佇列嗎？', '捨棄 FanArt', () => {
       void (async () => {
         const key = `group:${groupId}`
@@ -416,9 +468,8 @@ export default function FanartPage() {
         try {
           const result = await updateFanartGroupStatus(groupId, 'deleted')
           if (!result.success) throw new Error('DISCARD_FAILED')
-          setDetailMedia(null)
-          setDetailGroup(null)
           await refreshAll()
+          afterSuccess?.()
           f7.toast.create({ text: '已移至已丟棄', closeTimeout: 1800 }).open()
         } catch {
           f7.toast.create({ text: '捨棄失敗', closeTimeout: 2200 }).open()
@@ -427,17 +478,16 @@ export default function FanartPage() {
         }
       })()
     })
-  }
+  }, [refreshAll, setBusyForKeys])
 
-  const handleRestoreGroup = useCallback(async (groupId: string) => {
+  const handleRestoreGroup = useCallback(async (groupId: string, afterSuccess?: () => void) => {
     const key = `group:${groupId}`
     setBusyForKeys([key], true)
     try {
       const result = await updateFanartGroupStatus(groupId, 'unorganized')
       if (!result.success) throw new Error('RESTORE_FAILED')
-      setDetailMedia(null)
-      setDetailGroup(null)
       await refreshAll()
+      afterSuccess?.()
       f7.toast.create({ text: '已還原回未整理', closeTimeout: 1800 }).open()
     } catch {
       f7.toast.create({ text: '還原失敗', closeTimeout: 2200 }).open()
@@ -445,6 +495,32 @@ export default function FanartPage() {
       setBusyForKeys([key], false)
     }
   }, [refreshAll, setBusyForKeys])
+
+  const buildMediaDetailRouteProps = useCallback((media: FanartMedia) => {
+    const currentRouter = f7router || (f7.views.get('#view-fanart')?.router as FanartRouter | undefined)
+    const mediaKey = `media:${media.id}`
+    const groupId = media.group?.id
+    const groupKey = `group:${groupId || media.group_id || ''}`
+    return {
+      media,
+      view,
+      onAssign: view === 'unorganized' ? () => openAssignSheet(media) : undefined,
+      onUpdate: view === 'organized' ? () => openUpdateSheet(media) : undefined,
+      onDiscard: groupId && currentRouter ? () => requestDiscardGroup(groupId, () => currentRouter.back()) : undefined,
+      mediaBusy: busyKeys.has(mediaKey),
+      groupBusy: busyKeys.has(groupKey),
+    }
+  }, [busyKeys, f7router, openAssignSheet, openUpdateSheet, requestDiscardGroup, view])
+
+  const buildGroupDetailRouteProps = useCallback((group: FanartGroup) => {
+    const currentRouter = f7router || (f7.views.get('#view-fanart')?.router as FanartRouter | undefined)
+    const groupKey = `group:${group.id}`
+    return {
+      group,
+      onRestore: currentRouter ? () => void handleRestoreGroup(group.id, () => currentRouter.back()) : undefined,
+      groupBusy: busyKeys.has(groupKey),
+    }
+  }, [busyKeys, f7router, handleRestoreGroup])
 
   const handleMvSheetConfirm = async (mvIds: string[], tags: string[]) => {
     const payload = [...mvIds, ...tags]
@@ -462,7 +538,6 @@ export default function FanartPage() {
         const result = await assignFanartMedia(mvSheetTarget.id, payload, mvSheetTarget.group.id)
         if (!result.success) throw new Error('ASSIGN_FAILED')
         closeMvSheet()
-        setDetailMedia(null)
         await refreshAll()
         f7.toast.create({ text: '已保存並完成關聯', closeTimeout: 1800 }).open()
       } catch {
@@ -470,6 +545,60 @@ export default function FanartPage() {
       } finally {
         setMvSheetBusy(false)
         setBusyForKeys([mediaKey], false)
+      }
+      return
+    }
+
+    if (mvSheetMode === 'batch-assign') {
+      if (mvSheetBatchTargets.length === 0) return
+      if (payload.length === 0) {
+        f7.dialog.alert('請至少選擇一個 MV 或標籤')
+        return
+      }
+
+      const mediaKeys = mvSheetBatchTargets.map((item) => `media:${item.id}`)
+      const successfulIds: string[] = []
+      let failCount = 0
+
+      setMvSheetBusy(true)
+      setBusyForKeys(mediaKeys, true)
+      try {
+        for (const item of mvSheetBatchTargets) {
+          if (!item.id || !item.group?.id) {
+            failCount += 1
+            continue
+          }
+          try {
+            const result = await assignFanartMedia(item.id, payload, item.group.id)
+            if (!result.success) throw new Error('ASSIGN_FAILED')
+            successfulIds.push(item.id)
+          } catch {
+            failCount += 1
+          }
+        }
+
+        closeMvSheet()
+        if (successfulIds.length > 0) {
+          setSelection((prev) => {
+            const next = new Set(prev)
+            successfulIds.forEach((id) => next.delete(id))
+            return next
+          })
+          await refreshAll()
+        }
+
+        if (failCount === 0) {
+          f7.toast.create({ text: `已批次通過 ${successfulIds.length} 筆`, closeTimeout: 1800 }).open()
+          return
+        }
+        if (successfulIds.length === 0) {
+          f7.toast.create({ text: '批次關聯失敗', closeTimeout: 2200 }).open()
+          return
+        }
+        f7.toast.create({ text: `完成 ${successfulIds.length} 筆，失敗 ${failCount} 筆`, closeTimeout: 2200 }).open()
+      } finally {
+        setMvSheetBusy(false)
+        setBusyForKeys(mediaKeys, false)
       }
       return
     }
@@ -487,7 +616,6 @@ export default function FanartPage() {
         const result = await syncFanartMedia(mvSheetTarget.id, payload, mvSheetTarget.group_id || mvSheetTarget.group?.id || undefined)
         if (!result.success) throw new Error('SYNC_FAILED')
         closeMvSheet()
-        setDetailMedia(null)
         await refreshAll()
         f7.toast.create({ text: '已更新關聯', closeTimeout: 1800 }).open()
       } catch {
@@ -617,7 +745,7 @@ export default function FanartPage() {
     }
   }
 
-  const renderMediaList = (items: FanartMedia[], emptyText: string, onOpen: (item: FanartMedia) => void) => {
+  const renderMediaList = (items: FanartMedia[], emptyText: string) => {
     if (listError && !loadingList && items.length === 0) {
       return (
         <ReviewStateBlock
@@ -650,6 +778,10 @@ export default function FanartPage() {
             const displayName = item.group?.author_name || item.group?.author_handle || item.id
             const handleLabel = item.group?.author_handle ? `@${item.group.author_handle}` : ''
             const subtitle = formatCompactDateTime(item.group?.post_date)
+            const mediaKey = `media:${item.id}`
+            const groupKey = `group:${item.group?.id || item.group_id || ''}`
+            const hasExistingLinks = (item.mvs?.length || 0) > 0 || (item.tags?.length || 0) > 0
+            const isSelected = selectedUnorganizedIds.has(item.id)
             const footer = [
               item.group?.source_url,
               (item.tags || []).map((tag) => formatTagLabel(tag)).join(' / '),
@@ -658,6 +790,12 @@ export default function FanartPage() {
             return (
               <ListItem
                 key={item.id}
+                checkbox={view === 'unorganized'}
+                checked={view === 'unorganized' ? isSelected : false}
+                onChange={view === 'unorganized'
+                  ? (event) => toggleSelection(item.id, event.target.checked)
+                  : undefined}
+                swipeout={view === 'unorganized'}
               >
                 <div
                   slot="title"
@@ -702,10 +840,11 @@ export default function FanartPage() {
                   slot="after"
                   small
                   tonal
+                  view="#view-fanart"
+                  href={`/fanart/media/${encodeURIComponent(item.id)}/`}
+                  routeProps={buildMediaDetailRouteProps(item)}
                   onClick={(event) => {
-                    event.preventDefault()
                     event.stopPropagation()
-                    onOpen(item)
                   }}
                 >
                   詳情
@@ -723,6 +862,40 @@ export default function FanartPage() {
                   )}
                   <div>{footer || item.id}</div>
                 </div>
+                {view === 'unorganized' && (
+                  <>
+                    <SwipeoutActions left>
+                      <SwipeoutButton
+                        overswipe
+                        color="green"
+                        close
+                        onClick={() => {
+                          if (busyKeys.has(mediaKey)) return
+                          if (hasExistingLinks) {
+                            openUpdateSheet(item)
+                            return
+                          }
+                          openAssignSheet(item)
+                        }}
+                      >
+                        {hasExistingLinks ? '更新關聯' : '關聯'}
+                      </SwipeoutButton>
+                    </SwipeoutActions>
+                    <SwipeoutActions right>
+                      <SwipeoutButton
+                        overswipe
+                        color="red"
+                        close
+                        onClick={() => {
+                          if (!item.group?.id || busyKeys.has(groupKey)) return
+                          requestDiscardGroup(item.group.id)
+                        }}
+                      >
+                        丟棄
+                      </SwipeoutButton>
+                    </SwipeoutActions>
+                  </>
+                )}
               </ListItem>
             )
           })}
@@ -769,9 +942,11 @@ export default function FanartPage() {
             const cover = Array.isArray(group.media) ? group.media[0] : undefined
             const preview = getMediaPreview(cover)
             const isVideo = cover?.media_type === 'video' || preview.includes('.mp4')
+            const groupKey = `group:${group.id}`
             return (
               <ListItem
                 key={group.id}
+                swipeout
                 title={group.author_name || group.author_handle || group.id}
                 subtitle={formatDateTime(group.post_date)}
                 text={group.source_text || '（無推文內容）'}
@@ -799,11 +974,11 @@ export default function FanartPage() {
                   slot="after"
                   small
                   tonal
+                  view="#view-fanart"
+                  href={`/fanart/group/${encodeURIComponent(group.id)}/`}
+                  routeProps={buildGroupDetailRouteProps(group)}
                   onClick={(event) => {
-                    event.preventDefault()
                     event.stopPropagation()
-                    setDetailMedia(null)
-                    setDetailGroup(group)
                   }}
                 >
                   詳情
@@ -814,6 +989,19 @@ export default function FanartPage() {
                 >
                   {group.source_url || group.id}
                 </div>
+                <SwipeoutActions left>
+                  <SwipeoutButton
+                    overswipe
+                    color="green"
+                    close
+                    onClick={() => {
+                      if (busyKeys.has(groupKey)) return
+                      void handleRestoreGroup(group.id)
+                    }}
+                  >
+                    還原
+                  </SwipeoutButton>
+                </SwipeoutActions>
               </ListItem>
             )
           })}
@@ -847,7 +1035,9 @@ export default function FanartPage() {
             label: '未整理',
             value: loadingOverview ? '...' : overview.unorganizedGroups,
             color: 'orange',
-            detail: `media ${loadingOverview ? '...' : overview.unorganizedMedia}`,
+            detail: view === 'unorganized'
+              ? `media ${loadingOverview ? '...' : overview.unorganizedMedia} / 已勾選 ${selectedCount}`
+              : `media ${loadingOverview ? '...' : overview.unorganizedMedia}`,
           },
           {
             label: '已丟棄',
@@ -906,6 +1096,36 @@ export default function FanartPage() {
         />
       )}
 
+      {view === 'unorganized' && (
+        <ReviewToolbarCard
+          summary={(
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}>
+              <Checkbox
+                checked={allVisibleSelected}
+                onChange={(event: ChangeEvent<HTMLInputElement>) => toggleSelectAllVisible(event.target.checked)}
+              />
+              全選目前篩選結果 ({selectedVisibleCount})
+            </label>
+          )}
+          actions={(
+            <>
+              <Button
+                small
+                fill
+                disabled={selectedCount === 0 || mvSheetBusy}
+                onClick={() => openBatchAssignSheet(selectedUnorganizedMedia)}
+              >
+                關聯後批次通過
+              </Button>
+              <Button small outline disabled={selectedCount === 0} onClick={() => setSelection(new Set())}>
+                清空勾選
+              </Button>
+            </>
+          )}
+          footer="批次工具只作用於未整理清單，會沿用目前的關聯 MV / 標籤流程。"
+        />
+      )}
+
       {view === 'organized' && (
         <ReviewToolbarCard
          
@@ -939,23 +1159,14 @@ export default function FanartPage() {
         />
       )}
 
-      {view === 'unorganized' && renderMediaList(filteredUnorganizedMedia, '沒有符合條件的未整理項目。', (item) => {
-        setDetailGroup(null)
-        setDetailMedia(item)
-      })}
+      {view === 'unorganized' && renderMediaList(filteredUnorganizedMedia, '沒有符合條件的未整理項目。')}
 
       {view === 'deleted' && renderDeletedGroups()}
 
-      {view === 'legacy' && renderMediaList(filteredLegacyMedia, '沒有符合條件的舊資料。', (item) => {
-        setDetailGroup(null)
-        setDetailMedia(item)
-      })}
+      {view === 'legacy' && renderMediaList(filteredLegacyMedia, '沒有符合條件的舊資料。')}
 
       {view === 'organized' && (
-        focus ? renderMediaList(filteredOrganizedMedia, '目前焦點下沒有符合條件的已組織 FanArt。', (item) => {
-          setDetailGroup(null)
-          setDetailMedia(item)
-        }) : (
+        focus ? renderMediaList(filteredOrganizedMedia, '目前焦點下沒有符合條件的已組織 FanArt。') : (
           <ReviewStateBlock
             title="尚未選擇焦點"
             description="先切到特殊標籤或 MV，再載入對應的已組織 FanArt 清單。"
@@ -1053,142 +1264,6 @@ export default function FanartPage() {
         </>
       )}
 
-      <Popup opened={Boolean(detailMedia)} onPopupClose={() => setDetailMedia(null)}>
-        {detailMedia && (
-          <Page>
-              <Navbar>
-                <NavTitle>FanArt 詳情</NavTitle>
-                <NavRight>
-                  <Link iconOnly iconF7="xmark" aria-label="關閉" onClick={() => setDetailMedia(null)} />
-                </NavRight>
-              </Navbar>
-
-              <Block strong inset>
-                {detailMedia.mvs && detailMedia.mvs.length > 0 && (
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-                    <Badge color="green">{detailMedia.mvs.length} MV</Badge>
-                  </div>
-                )}
-                <div>
-                  {detailMedia.media_type === 'video' ? (
-                    <video
-                      src={preferTwimgUrl(detailMedia.original_url, detailMedia.url) || undefined}
-                      poster={preferTwimgUrl(detailMedia.thumbnail_url, detailMedia.original_url, detailMedia.url) || undefined}
-                      controls
-                      playsInline
-                      style={{ width: '100%', display: 'block', maxHeight: '56vh' }}
-                    />
-                  ) : (
-                    <img
-                      src={preferTwimgUrl(detailMedia.original_url, detailMedia.url) || undefined}
-                      alt={detailMedia.group?.author_name || detailMedia.id}
-                      style={{ width: '100%', display: 'block', maxHeight: '56vh', objectFit: 'contain' }}
-                    />
-                  )}
-                </div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-                  {detailMedia.group?.source_url && (
-                    <a href={detailMedia.group.source_url} target="_blank" rel="noreferrer" style={{ color: 'var(--f7-theme-color)' }}>原始推文</a>
-                  )}
-                  {detailMedia.original_url && (
-                    <a href={detailMedia.original_url} target="_blank" rel="noreferrer" style={{ color: 'var(--f7-theme-color)' }}>原始媒體</a>
-                  )}
-                  {detailMedia.url && detailMedia.url !== detailMedia.original_url && (
-                    <a href={detailMedia.url} target="_blank" rel="noreferrer" style={{ color: 'var(--f7-theme-color)' }}>R2 / 當前檔案</a>
-                  )}
-                </div>
-              </Block>
-
-              <BlockTitle>來源資訊</BlockTitle>
-              <List inset strong>
-                <ListItem title="Media ID" after={detailMedia.id} />
-                <ListItem title="作者" text={detailMedia.group?.author_name || detailMedia.group?.author_handle || '未提供'} />
-                <ListItem title="發文時間" text={formatDateTime(detailMedia.group?.post_date)} />
-                <ListItem title="來源網址" text={detailMedia.group?.source_url || '未提供'} />
-                <ListItem title="標籤" text={(detailMedia.tags || []).length > 0 ? (detailMedia.tags || []).map((tag) => formatTagLabel(tag)).join(' / ') : '（無）'} />
-                <ListItem title="關聯 MV" text={detailMedia.mvs && detailMedia.mvs.length > 0 ? detailMedia.mvs.map((mv) => mv.title).join(' / ') : '（無）'} />
-              </List>
-
-              <BlockTitle>推文內容</BlockTitle>
-              <Block strong inset>
-                <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{detailMedia.group?.source_text || '（無推文文字）'}</div>
-              </Block>
-
-            <Block strong inset>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {view === 'unorganized' && (
-                  <>
-                    <Button fill onClick={() => openAssignSheet(detailMedia)} disabled={busyKeys.has(`media:${detailMedia.id}`)}>指派 MV / 標籤</Button>
-                    {detailMedia.group?.id && (
-                      <Button outline color="red" onClick={() => requestDiscardGroup(detailMedia.group!.id)} disabled={busyKeys.has(`group:${detailMedia.group.id}`)}>
-                        捨棄推文
-                      </Button>
-                    )}
-                  </>
-                )}
-                {view === 'organized' && (
-                  <Button fill tonal onClick={() => openUpdateSheet(detailMedia)} disabled={busyKeys.has(`media:${detailMedia.id}`)}>
-                    更新關聯
-                  </Button>
-                )}
-              </div>
-            </Block>
-          </Page>
-        )}
-      </Popup>
-
-      <Popup opened={Boolean(detailGroup)} onPopupClose={() => setDetailGroup(null)}>
-        {detailGroup && (
-          <Page>
-              <Navbar>
-                <NavTitle>已丟棄群組</NavTitle>
-                <NavRight>
-                  <Link iconOnly iconF7="xmark" aria-label="關閉" onClick={() => setDetailGroup(null)} />
-                </NavRight>
-              </Navbar>
-
-              <Block strong inset>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: detailGroup.media?.[0] ? 12 : 0 }}>
-                  <Badge color="red">{Array.isArray(detailGroup.media) ? detailGroup.media.length : 0} 媒體</Badge>
-                </div>
-                {detailGroup.media?.[0] && (
-                  <div>
-                    {detailGroup.media[0].media_type === 'video' ? (
-                      <video
-                        src={preferTwimgUrl(detailGroup.media[0].original_url, detailGroup.media[0].url) || undefined}
-                        poster={preferTwimgUrl(detailGroup.media[0].thumbnail_url, detailGroup.media[0].original_url, detailGroup.media[0].url) || undefined}
-                        controls
-                        playsInline
-                        style={{ width: '100%', display: 'block', maxHeight: '56vh' }}
-                      />
-                    ) : (
-                      <img
-                        src={preferTwimgUrl(detailGroup.media[0].original_url, detailGroup.media[0].url) || undefined}
-                        alt={detailGroup.author_name || detailGroup.id}
-                        style={{ width: '100%', display: 'block', maxHeight: '56vh', objectFit: 'contain' }}
-                      />
-                    )}
-                  </div>
-                )}
-              </Block>
-
-              <List inset strong>
-                <ListItem title="Group ID" after={detailGroup.id} />
-                <ListItem title="作者" text={detailGroup.author_name || detailGroup.author_handle || '未提供'} />
-                <ListItem title="發文時間" text={formatDateTime(detailGroup.post_date)} />
-                <ListItem title="來源網址" text={detailGroup.source_url || '未提供'} />
-                <ListItem title="推文內容" text={detailGroup.source_text || '（無）'} />
-              </List>
-
-            <Block strong inset>
-              <Button fill tonal color="orange" onClick={() => void handleRestoreGroup(detailGroup.id)} disabled={busyKeys.has(`group:${detailGroup.id}`)}>
-                還原回未整理
-              </Button>
-            </Block>
-          </Page>
-        )}
-      </Popup>
-
       <MvSheet
         opened={Boolean(mvSheetMode)}
         busy={mvSheetBusy}
@@ -1197,18 +1272,23 @@ export default function FanartPage() {
         initialTags={mvSheetInitialTags}
         title={mvSheetMode === 'assign'
           ? '指派 MV / 標籤'
+          : mvSheetMode === 'batch-assign'
+            ? `為 ${mvSheetBatchTargets.length} 筆 FanArt 選擇關聯`
           : mvSheetMode === 'update'
             ? '更新關聯 MV / 標籤'
             : '保存手動解析結果'}
         description={mvSheetMode === 'parse'
           ? '手動解析保存時至少需要選擇一個 MV；Tag 會一起附加到保存的 FanArt。'
+          : mvSheetMode === 'batch-assign'
+            ? '先選好要關聯的 MV / 標籤，再一次批次完成目前勾選的未整理 FanArt。'
           : '選擇後會立即更新對應 FanArt 的關聯。'}
-        confirmText={mvSheetMode === 'parse' ? '保存解析結果' : mvSheetMode === 'update' ? '更新關聯' : '保存關聯'}
-        onCancel={() => {
-          if (mvSheetReturnMedia) {
-            setDetailMedia(mvSheetReturnMedia)
-          }
-        }}
+        confirmText={mvSheetMode === 'parse'
+          ? '保存解析結果'
+          : mvSheetMode === 'update'
+            ? '更新關聯'
+            : mvSheetMode === 'batch-assign'
+              ? '保存關聯並批次通過'
+              : '保存關聯'}
         onClose={closeMvSheet}
         onConfirm={handleMvSheetConfirm}
       />

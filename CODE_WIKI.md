@@ -127,7 +127,7 @@ zutomayo-gallery/
 - 獨立的 Framework7 React 前端應用，專為行動裝置上的媒體審核場景設計
 - 使用 Framework7 React v9，支援 auto theme（iOS/MD 自動切換）與 auto dark mode
 - 連接同一後端 API，透過 session-based auth 與主站共享管理員認證
-- `src/index.css` 提供統一的 `review-*` 視覺語彙，涵蓋 navbar、card、list、sheet、popup 與行動端深色主題
+- `src/index.css` 提供統一的 `review-*` 視覺語彙，涵蓋 navbar、card、list、panel、sheet、popup 與行動端深色主題
 - `src/components/ReviewStateBlock.tsx` 統一空狀態、錯誤狀態與載入狀態，避免各頁各自拼裝 inline UI
 - `src/lib/moderation-boundaries.ts` 集中維護 review-app 與桌面 admin 的接管邊界，會列出每個工作區對應主前端頁面、直接接管能力、桌面 fallback 情境與已知限制
 - 主要頁面：
@@ -137,13 +137,14 @@ zutomayo-gallery/
   - `SubmissionsPage` — 投稿審核、詳情、退回原因
   - `FanartPage` — FanArt 整理、assign / sync / discard / restore / parse-save
   - `RepairPage` — group repair、merge、unassign、reparse preview / apply
-  - `SettingsPage` — 推播、通知偏好、接管邊界與對應 API
+  - `SettingsPage` — 推播、通知偏好、接管邊界入口
+  - `SettingsBoundariesPage` — 集中查看各工作區接管邊界、限制與 API
 - 接管現況：
   - `StagingPage`、`SubmissionsPage`、`FanartPage`、`RepairPage` 都已可直接完成核心審核 / 整理 / 修復流程
   - 桌面 admin 目前主要保留作為大螢幕高密度盤點、多視窗比對與鍵盤密集操作的備援入口，而不是功能必經路徑
 - 關鍵組件：
   - `AppNavbar` — 手機導覽列與工作區切換入口
-  - `MvSheet` — MV/標籤選擇的 Sheet Modal
+  - `MvSheet` — MV/標籤選擇的左側 floating Panel
   - `ReviewStateBlock` — 頁面內狀態區塊
 
 ## 4. 目前資料模型重點

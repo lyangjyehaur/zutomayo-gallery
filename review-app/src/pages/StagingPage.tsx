@@ -2,18 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Badge,
   Block,
-  BlockTitle,
   Checkbox,
   Link,
   List,
   ListInput,
   ListItem,
-  Navbar,
-  NavRight,
-  NavTitle,
   Page,
   PageContent,
-  Popup,
   Searchbar,
   Sheet,
   SwipeoutActions,
@@ -70,11 +65,6 @@ const formatDate = (value: string) => {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString()
 }
 
-const formatDateTime = (value: string) => {
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
-}
-
 const getStatusBadgeColor = (status: StagingStatus) => {
   if (status === 'approved') return 'green'
   if (status === 'rejected') return 'red'
@@ -106,7 +96,16 @@ const buildSearchText = (item: StagingFanart) => {
     .toLowerCase()
 }
 
-export default function StagingPage() {
+interface StagingRouter {
+  navigate: (url: string, options?: { props?: Record<string, unknown> }) => void
+  back: () => void
+}
+
+interface StagingPageProps {
+  f7router?: StagingRouter
+}
+
+export default function StagingPage({ f7router }: StagingPageProps) {
   const { filters, setStagingFilter, visitWorkspace } = useWorkspace()
   const [status, setStatus] = useState<StagingStatus>(filters.staging.status)
   const [query, setQuery] = useState(filters.staging.query)
@@ -118,11 +117,9 @@ export default function StagingPage() {
   const [mvs, setMvs] = useState<MV[]>([])
   const [progress, setProgress] = useState<StagingProgressData | null>(null)
   const [selection, setSelection] = useState<Set<string>>(new Set())
-  const [detailItem, setDetailItem] = useState<StagingFanart | null>(null)
   const [mvSheetOpened, setMvSheetOpened] = useState(false)
   const [mvSheetBusy, setMvSheetBusy] = useState(false)
   const [mvSheetTargets, setMvSheetTargets] = useState<string[]>([])
-  const [mvSheetReturnItem, setMvSheetReturnItem] = useState<StagingFanart | null>(null)
   const [crawlerSheetOpened, setCrawlerSheetOpened] = useState(false)
   const [triggeringCrawler, setTriggeringCrawler] = useState(false)
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set())
@@ -246,7 +243,6 @@ export default function StagingPage() {
   const finalizeMutations = useCallback(async (processedIds: string[], successCount: number, failCount: number, successMessage: string) => {
     if (successCount > 0) {
       pruneSelection(processedIds)
-      setDetailItem((prev) => (prev && processedIds.includes(prev.id) ? null : prev))
       await Promise.all([reloadCurrentStatus(), loadProgress(true)])
     }
 
@@ -271,7 +267,6 @@ export default function StagingPage() {
     if (nextStatus === status) return
     resetPagination()
     setSelection(new Set())
-    setDetailItem(null)
     setItems([])
     setStatus(nextStatus)
     setStagingFilter({ status: nextStatus })
@@ -336,21 +331,20 @@ export default function StagingPage() {
     })
   }
 
-  const openApproveSheet = (ids: string[]) => {
+  const openApproveSheet = useCallback((ids: string[]) => {
     if (ids.length === 0) return
     if (mvs.length === 0) {
       void loadMvs()
     }
-    setMvSheetReturnItem(ids.length === 1 && detailItem?.id === ids[0] ? detailItem : null)
-    setDetailItem(null)
     setMvSheetTargets(ids)
     setMvSheetOpened(true)
-  }
+  }, [loadMvs, mvs.length])
 
   const handleMvConfirm = async (mvIds: string[], tags: string[]) => {
     if (mvSheetTargets.length === 0) return
-    if (mvIds.length === 0) {
-      f7.dialog.alert('請先選擇至少一個 MV，再保存關聯')
+    const payload = [...mvIds, ...tags]
+    if (payload.length === 0) {
+      f7.dialog.alert('請至少選擇一個 MV 或標籤，再保存關聯')
       return
     }
 
@@ -360,7 +354,6 @@ export default function StagingPage() {
     let successCount = 0
     let failCount = 0
     const successfulIds: string[] = []
-    const payload = [...mvIds, ...tags]
 
     try {
       for (const id of mvSheetTargets) {
@@ -377,7 +370,6 @@ export default function StagingPage() {
       setBusyForIds(mvSheetTargets, false)
       setMvSheetBusy(false)
       setMvSheetTargets([])
-      setMvSheetReturnItem(null)
       setMvSheetOpened(false)
     }
 
@@ -389,7 +381,7 @@ export default function StagingPage() {
     )
   }
 
-  const runReject = useCallback(async (ids: string[]) => {
+  const runReject = useCallback(async (ids: string[], afterSuccess?: () => void) => {
     if (ids.length === 0) return
 
     setBusyForIds(ids, true)
@@ -413,20 +405,23 @@ export default function StagingPage() {
     }
 
     await finalizeMutations(successfulIds, successCount, failCount, ids.length === 1 ? '已拒絕' : `已批次拒絕 ${successCount} 筆`)
+    if (successCount > 0) {
+      afterSuccess?.()
+    }
   }, [finalizeMutations, setBusyForIds])
 
-  const requestReject = (ids: string[]) => {
+  const requestReject = useCallback((ids: string[], afterSuccess?: () => void) => {
     if (ids.length === 0) return
     f7.dialog.confirm(
       ids.length === 1 ? '確定要拒絕這筆暫存資料嗎？' : `確定要拒絕目前選取的 ${ids.length} 筆資料嗎？`,
       '拒絕暫存',
       () => {
-        void runReject(ids)
+        void runReject(ids, afterSuccess)
       },
     )
-  }
+  }, [runReject])
 
-  const runRestore = useCallback(async (ids: string[]) => {
+  const runRestore = useCallback(async (ids: string[], afterSuccess?: () => void) => {
     if (ids.length === 0) return
 
     setBusyForIds(ids, true)
@@ -456,18 +451,33 @@ export default function StagingPage() {
     }
 
     await finalizeMutations(successfulIds, successCount, failCount, ids.length === 1 ? '已恢復為待審' : `已批次恢復 ${successCount} 筆`)
+    if (successCount > 0) {
+      afterSuccess?.()
+    }
   }, [finalizeMutations, setBusyForIds])
 
-  const requestRestore = (ids: string[]) => {
+  const requestRestore = useCallback((ids: string[], afterSuccess?: () => void) => {
     if (ids.length === 0) return
     f7.dialog.confirm(
       ids.length === 1 ? '將這筆資料還原回待審佇列？' : `將選取的 ${ids.length} 筆資料還原回待審佇列？`,
       '恢復暫存',
       () => {
-        void runRestore(ids)
+        void runRestore(ids, afterSuccess)
       },
     )
-  }
+  }, [runRestore])
+
+  const buildDetailRouteProps = useCallback((item: StagingFanart) => {
+    const currentRouter = f7router || (f7.views.get('#view-staging')?.router as StagingRouter | undefined)
+    const isBusy = busyIds.has(item.id)
+    return {
+      item,
+      onApprove: item.status === 'pending' ? () => openApproveSheet([item.id]) : undefined,
+      onReject: item.status === 'pending' && currentRouter ? () => requestReject([item.id], () => currentRouter.back()) : undefined,
+      onRestore: item.status === 'rejected' && currentRouter ? () => requestRestore([item.id], () => currentRouter.back()) : undefined,
+      busy: isBusy,
+    }
+  }, [busyIds, f7router, openApproveSheet, requestReject, requestRestore])
 
   const handleTriggerCrawler = async () => {
     const searchTerms = crawlerForm.searchTerms.trim()
@@ -674,10 +684,11 @@ export default function StagingPage() {
                 slot="after"
                 small
                 tonal
+                view="#view-staging"
+                href={`/staging/item/${encodeURIComponent(item.id)}/`}
+                routeProps={buildDetailRouteProps(item)}
                 onClick={(event) => {
-                  event.preventDefault()
                   event.stopPropagation()
-                  setDetailItem(item)
                 }}
               >
                 詳情
@@ -742,15 +753,9 @@ export default function StagingPage() {
         title={mvSheetTargets.length > 1 ? `為 ${mvSheetTargets.length} 筆暫存選擇關聯 MV` : '選擇關聯 MV / 標籤'}
         description={mvSheetTargets.length > 1 ? '先選好要關聯的 MV / 標籤，再保存並批次通過。' : '先選好要關聯的 MV / 標籤，再保存本次關聯並通過。'}
         confirmText={mvSheetTargets.length > 1 ? '保存關聯並批次通過' : '保存關聯並通過'}
-        onCancel={() => {
-          if (mvSheetReturnItem) {
-            setDetailItem(mvSheetReturnItem)
-          }
-        }}
         onClose={() => {
           setMvSheetOpened(false)
           setMvSheetTargets([])
-          setMvSheetReturnItem(null)
         }}
         onConfirm={handleMvConfirm}
         mvs={mvs}
@@ -810,91 +815,6 @@ export default function StagingPage() {
         </PageContent>
       </Sheet>
 
-      <Popup opened={Boolean(detailItem)} onPopupClose={() => setDetailItem(null)}>
-        {detailItem && (
-          <Page>
-              <Navbar>
-                <NavTitle>暫存詳情</NavTitle>
-                <NavRight>
-                  <Link iconOnly iconF7="xmark" aria-label="關閉" onClick={() => setDetailItem(null)} />
-                </NavRight>
-              </Navbar>
-
-              <Block strong inset>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                  <div>
-                    <div style={{ fontSize: 20, fontWeight: 700 }}>{detailItem.author_name || detailItem.author_handle}</div>
-                    <div style={{ opacity: 0.75, marginTop: 6 }}>@{detailItem.author_handle} · {formatDateTime(detailItem.post_date)}</div>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
-                      <Badge color={getStatusBadgeColor(detailItem.status)}>{detailItem.status}</Badge>
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right', opacity: 0.75 }}>
-                    <div>❤️ {formatCount(detailItem.like_count)}</div>
-                    <div>🔁 {formatCount(detailItem.retweet_count)}</div>
-                    <div>👁 {formatCount(detailItem.view_count)}</div>
-                  </div>
-                </div>
-              </Block>
-
-              <Block strong inset>
-                <div>
-                  {detailItem.media_type === 'video' ? (
-                    <video
-                      src={preferTwimgUrl(detailItem.media_url, detailItem.r2_url) || undefined}
-                      poster={preferTwimgUrl(detailItem.thumbnail_url, detailItem.media_url) || undefined}
-                      controls
-                      playsInline
-                      style={{ width: '100%', display: 'block', maxHeight: '56vh' }}
-                    />
-                  ) : (
-                    <img
-                      src={preferTwimgUrl(detailItem.media_url, detailItem.r2_url) || undefined}
-                      alt={detailItem.author_name}
-                      style={{ width: '100%', display: 'block', maxHeight: '56vh', objectFit: 'contain' }}
-                    />
-                  )}
-                </div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-                  <a href={detailItem.original_url} target="_blank" rel="noreferrer" style={{ color: 'var(--f7-theme-color)' }}>原始推文</a>
-                  <a href={detailItem.media_url} target="_blank" rel="noreferrer" style={{ color: 'var(--f7-theme-color)' }}>媒體來源</a>
-                  {detailItem.r2_url && (
-                    <a href={detailItem.r2_url} target="_blank" rel="noreferrer" style={{ color: 'var(--f7-theme-color)' }}>R2 檔案</a>
-                  )}
-                </div>
-              </Block>
-
-              <BlockTitle>推文與標籤</BlockTitle>
-              <List inset strong>
-                <ListItem title="Tweet ID" after={detailItem.tweet_id} />
-                <ListItem title="Hashtags" text={detailItem.hashtags.length > 0 ? detailItem.hashtags.join(' ') : '（無）'} />
-                <ListItem title="媒體尺寸" text={detailItem.media_width && detailItem.media_height ? `${detailItem.media_width} x ${detailItem.media_height}` : '未知'} />
-                <ListItem title="抓取時間" text={formatDateTime(detailItem.crawled_at)} />
-              </List>
-
-              <BlockTitle>推文內容</BlockTitle>
-              <Block strong inset>
-                <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{detailItem.source_text || '（無推文文字）'}</div>
-              </Block>
-
-            <Block strong inset>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {detailItem.status === 'pending' && (
-                  <>
-                    <Button fill onClick={() => openApproveSheet([detailItem.id])} disabled={busyIds.has(detailItem.id)}>通過並關聯 MV</Button>
-                    <Button outline color="red" onClick={() => requestReject([detailItem.id])} disabled={busyIds.has(detailItem.id)}>拒絕</Button>
-                  </>
-                )}
-                {detailItem.status === 'rejected' && (
-                  <Button fill tonal color="orange" onClick={() => requestRestore([detailItem.id])} disabled={busyIds.has(detailItem.id)}>
-                    恢復為待審
-                  </Button>
-                )}
-              </div>
-            </Block>
-          </Page>
-        )}
-      </Popup>
     </Page>
   )
 }

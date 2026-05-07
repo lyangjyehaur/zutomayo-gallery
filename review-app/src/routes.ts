@@ -1,10 +1,14 @@
 import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
 import StagingPage from './pages/StagingPage'
+import StagingDetailPage from './pages/StagingDetailPage'
 import SubmissionsPage from './pages/SubmissionsPage'
 import FanartPage from './pages/FanartPage'
+import FanartMediaDetailPage from './pages/FanartMediaDetailPage'
+import FanartGroupDetailPage from './pages/FanartGroupDetailPage'
 import RepairPage from './pages/RepairPage'
 import SettingsPage from './pages/SettingsPage'
+import SettingsBoundariesPage from './pages/SettingsBoundariesPage'
 import { checkAuth } from './lib/api'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,6 +44,11 @@ const routes = [
     beforeEnter: authGuard,
   },
   {
+    path: '/staging/item/:itemId/',
+    component: StagingDetailPage,
+    beforeEnter: authGuard,
+  },
+  {
     path: '/submissions/',
     component: SubmissionsPage,
     beforeEnter: authGuard,
@@ -50,6 +59,16 @@ const routes = [
     beforeEnter: authGuard,
   },
   {
+    path: '/fanart/media/:mediaId/',
+    component: FanartMediaDetailPage,
+    beforeEnter: authGuard,
+  },
+  {
+    path: '/fanart/group/:groupId/',
+    component: FanartGroupDetailPage,
+    beforeEnter: authGuard,
+  },
+  {
     path: '/repair/',
     component: RepairPage,
     beforeEnter: authGuard,
@@ -57,6 +76,11 @@ const routes = [
   {
     path: '/settings/',
     component: SettingsPage,
+    beforeEnter: authGuard,
+  },
+  {
+    path: '/settings/boundaries/',
+    component: SettingsBoundariesPage,
     beforeEnter: authGuard,
   },
 ]

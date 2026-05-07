@@ -88,8 +88,8 @@ function AppShell() {
           </Toolbar>
           <View id="view-home" main tab tabActive url="/home/" />
           <View id="view-staging" tab url="/staging/" />
-          <View id="view-submissions" tab url="/submissions/" />
           <View id="view-fanart" tab url="/fanart/" />
+          <View id="view-submissions" tab url="/submissions/" />
           <View id="view-repair" tab url="/repair/" />
           <View id="view-settings" tab url="/settings/" />
         </Views>

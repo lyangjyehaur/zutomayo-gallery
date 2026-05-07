@@ -6,7 +6,6 @@ import ReviewStateBlock from '../components/ReviewStateBlock'
 import { useAuth } from '../hooks/useAuth'
 import { usePushSubscription } from '../hooks/usePushSubscription'
 import { useWorkspace } from '../hooks/useWorkspace'
-import { MODERATION_BOUNDARIES } from '../lib/moderation-boundaries'
 import { updateNotificationPreferences, type NotificationPreferences } from '../lib/api'
 
 const DEFAULT_PREFS: NotificationPreferences = {
@@ -18,7 +17,7 @@ const DEFAULT_PREFS: NotificationPreferences = {
 
 export default function SettingsPage() {
   const { user, logout, setUser } = useAuth()
-  const { recentWorkspaces, visitWorkspace } = useWorkspace()
+  const { visitWorkspace } = useWorkspace()
   const push = usePushSubscription()
   const prefs: NotificationPreferences = user?.notification_preferences || DEFAULT_PREFS
 
@@ -59,7 +58,7 @@ export default function SettingsPage() {
 
   return (
     <Page>
-      <AppNavbar title="設定" subtitle="通知偏好、近期工作區與接管邊界" />
+      <AppNavbar title="設定" subtitle="通知偏好與接管邊界" />
 
       <Block>
         <Card>
@@ -113,77 +112,15 @@ export default function SettingsPage() {
         </ListItem>
       </List>
 
-      <BlockTitle>最近工作區</BlockTitle>
-      {recentWorkspaces.length > 0 ? (
-        <List inset strong>
-          {recentWorkspaces.map((workspace) => (
-            <ListItem key={workspace} title={workspace} />
-          ))}
-        </List>
-      ) : (
-        <ReviewStateBlock
-          title="尚未記錄最近工作區"
-          description="開始切換不同頁面後，這裡會保留你最近開過的工作區。"
-          tone="neutral"
-          compact
-        />
-      )}
-
       <BlockTitle>接管邊界</BlockTitle>
-      <List inset strong mediaList>
-        {MODERATION_BOUNDARIES.map((item) => (
-          <ListItem
-            key={item.workspace}
-            title={item.sourcePage}
-            subtitle={`${item.sourceRoute} · ${item.ownership}`}
-            text={item.notes}
-          />
-        ))}
+      <List inset strong>
+        <ListItem
+          link="/settings/boundaries/"
+          title="查看接管邊界"
+          subtitle="集中查看各工作區的接管範圍、限制與對應 API"
+          view="#view-settings"
+        />
       </List>
-
-      <Block>
-        {MODERATION_BOUNDARIES.map((item) => (
-          <Card key={`${item.workspace}-details`}>
-            <CardHeader>{item.sourcePage}</CardHeader>
-            <CardContent>
-              <div style={{ fontWeight: 700, marginBottom: 6 }}>{item.ownership}</div>
-              <div style={{ opacity: 0.75, marginBottom: 12 }}>{item.sourceRoute}</div>
-
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>已接管能力</div>
-              <ul style={{ margin: '0 0 12px 18px', padding: 0 }}>
-                {item.directCoverage.map((entry) => (
-                  <li key={entry} style={{ marginBottom: 4 }}>{entry}</li>
-                ))}
-              </ul>
-
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>保留桌面 admin 情境</div>
-              {item.desktopFallbacks.length > 0 ? (
-                <ul style={{ margin: '0 0 12px 18px', padding: 0 }}>
-                  {item.desktopFallbacks.map((entry) => (
-                    <li key={entry} style={{ marginBottom: 4 }}>{entry}</li>
-                  ))}
-                </ul>
-              ) : (
-                <div style={{ opacity: 0.75, marginBottom: 12 }}>目前沒有明確未接管的核心功能；桌面 admin 主要保留作為大螢幕備援入口。</div>
-              )}
-
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>已知限制</div>
-              <ul style={{ margin: '0 0 12px 18px', padding: 0 }}>
-                {item.knownLimitations.map((entry) => (
-                  <li key={entry} style={{ marginBottom: 4 }}>{entry}</li>
-                ))}
-              </ul>
-
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>對應 API</div>
-              <ul style={{ margin: '0 0 0 18px', padding: 0 }}>
-                {item.apiScopes.map((scope) => (
-                  <li key={scope} style={{ marginBottom: 4, wordBreak: 'break-all' }}>{scope}</li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        ))}
-      </Block>
     </Page>
   )
 }

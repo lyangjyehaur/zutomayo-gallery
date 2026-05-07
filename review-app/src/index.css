@@ -1,3 +1,23 @@
 @import 'framework7/css/bundle';
 @import 'framework7-icons/css/framework7-icons.css';
 @import 'material-icons/iconfont/material-icons.css';
+
+@font-face {
+  font-family: 'LXGW XiHei CL';
+  src: url('./assets/fonts/LXGWXiHeiCL.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --f7-font-family: 'LXGW XiHei CL', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+}
+
+body,
+input,
+textarea,
+select,
+button {
+  font-family: var(--f7-font-family);
+}

@@ -214,12 +214,14 @@ export default function HomePage() {
             }}
           >
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 700 }}>投稿審核</div>
-              <div style={{ marginTop: 2, opacity: 0.75, fontSize: 13 }}>待審投稿數量</div>
+              <div style={{ fontWeight: 700 }}>FanArt 整理</div>
+              <div style={{ marginTop: 2, opacity: 0.75, fontSize: 13 }}>
+                未整理 {state.fanartUnorganizedGroups} / {state.fanartUnorganizedMedia}，舊資料 {state.fanartLegacyMedia}
+              </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-              <Badge color="orange">{loading ? '...' : state.pendingSubmissions}</Badge>
-              <Button small fill onClick={() => handleOpenWorkspace('submissions', () => setSubmissionFilter({ status: 'pending' }))}>前往</Button>
+              <Badge color="blue">{loading ? '...' : state.fanartUnorganizedGroups}</Badge>
+              <Button small fill onClick={() => handleOpenWorkspace('fanart', () => setFanartFilter({ view: 'unorganized' }))}>前往</Button>
             </div>
           </div>
 
@@ -235,14 +237,12 @@ export default function HomePage() {
             }}
           >
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 700 }}>FanArt 整理</div>
-              <div style={{ marginTop: 2, opacity: 0.75, fontSize: 13 }}>
-                未整理 {state.fanartUnorganizedGroups} / {state.fanartUnorganizedMedia}，舊資料 {state.fanartLegacyMedia}
-              </div>
+              <div style={{ fontWeight: 700 }}>投稿審核</div>
+              <div style={{ marginTop: 2, opacity: 0.75, fontSize: 13 }}>待審投稿數量</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-              <Badge color="blue">{loading ? '...' : state.fanartUnorganizedGroups}</Badge>
-              <Button small fill onClick={() => handleOpenWorkspace('fanart', () => setFanartFilter({ view: 'unorganized' }))}>前往</Button>
+              <Badge color="orange">{loading ? '...' : state.pendingSubmissions}</Badge>
+              <Button small fill onClick={() => handleOpenWorkspace('submissions', () => setSubmissionFilter({ status: 'pending' }))}>前往</Button>
             </div>
           </div>
 
