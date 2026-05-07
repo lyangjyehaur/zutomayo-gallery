@@ -3,7 +3,6 @@ import {
   Badge,
   Block,
   BlockTitle,
-  Button,
   Card,
   CardContent,
   CardHeader,
@@ -16,6 +15,7 @@ import {
   f7,
 } from 'framework7-react'
 import AppNavbar from '../components/AppNavbar'
+import Button from '../components/Button'
 import ReviewStateBlock from '../components/ReviewStateBlock'
 import { useAuth } from '../hooks/useAuth'
 import { useWorkspace } from '../hooks/useWorkspace'
@@ -176,24 +176,21 @@ export default function HomePage() {
     >
       <AppNavbar title="審核總覽" subtitle={user ? `Hi, ${user.username}` : '工作台首頁'} />
 
-      <Block strong inset className="review-surface review-hero review-fade-up">
+      <Block strong inset>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <div>
-            <div className="review-login-eyebrow">Daily Overview</div>
-            <div className="review-hero-title">今天的審核工作台</div>
-            <div className="review-hero-subtitle" style={{ marginTop: 8 }}>
+            <div>Daily Overview</div>
+            <div>今天的審核工作台</div>
+            <div style={{ marginTop: 8 }}>
               {loading ? '正在同步總覽資料...' : `最後更新：${state.refreshedAt ? new Date(state.refreshedAt).toLocaleString() : '剛剛'}`}
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Button fill tonal onClick={() => void loadDashboard()} loading={loading}>刷新總覽</Button>
-            <Button outline sheetOpen=".workspace-switcher-sheet">工作區捷徑</Button>
-          </div>
+          <Button fill tonal onClick={() => void loadDashboard()} loading={loading}>刷新總覽</Button>
         </div>
-        <div className="review-meta-row" style={{ marginTop: 14 }}>
-          <div className="review-chip">pending {state.stagingPending}</div>
-          <div className="review-chip review-chip-soft">submissions {state.pendingSubmissions}</div>
-          <div className="review-chip review-chip-soft">repair {state.repairTotal}</div>
+        <div style={{ marginTop: 14 }}>
+          <div>pending {state.stagingPending}</div>
+          <div>submissions {state.pendingSubmissions}</div>
+          <div>repair {state.repairTotal}</div>
         </div>
       </Block>
 
@@ -208,7 +205,7 @@ export default function HomePage() {
       )}
 
       <BlockTitle>同步與待辦</BlockTitle>
-      <Block strong inset className="review-surface review-fade-up review-fade-up-delay-1">
+      <Block strong inset>
         <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', alignItems: 'center' }}>
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <Gauge
@@ -233,53 +230,63 @@ export default function HomePage() {
       </Block>
 
       <BlockTitle>工作區總覽</BlockTitle>
-      <Block className="review-grid review-grid-cards review-fade-up review-fade-up-delay-1">
-        <Card className="review-card">
-          <CardHeader>暫存區</CardHeader>
-          <CardContent>
-            <div style={{ fontSize: 30, fontWeight: 700 }}>{loading ? '...' : state.stagingPending}</div>
-            <div style={{ opacity: 0.75, marginBottom: 12 }}>待審 / 已通過 {state.stagingApproved} / 已拒絕 {state.stagingRejected}</div>
-            <Button small fill onClick={() => handleOpenWorkspace('staging', () => setStagingFilter({ status: 'pending' }))}>前往暫存區</Button>
-          </CardContent>
-        </Card>
+      <Block>
+        <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+          <div>
+            <Card>
+              <CardHeader>暫存區</CardHeader>
+              <CardContent>
+                <div style={{ fontSize: 30, fontWeight: 700 }}>{loading ? '...' : state.stagingPending}</div>
+                <div style={{ opacity: 0.75, marginBottom: 12 }}>待審 / 已通過 {state.stagingApproved} / 已拒絕 {state.stagingRejected}</div>
+                <Button small fill onClick={() => handleOpenWorkspace('staging', () => setStagingFilter({ status: 'pending' }))}>前往暫存區</Button>
+              </CardContent>
+            </Card>
+          </div>
 
-        <Card className="review-card">
-          <CardHeader>投稿審核</CardHeader>
-          <CardContent>
-            <div style={{ fontSize: 30, fontWeight: 700 }}>{loading ? '...' : state.pendingSubmissions}</div>
-            <div style={{ opacity: 0.75, marginBottom: 12 }}>待審投稿數量</div>
-            <Button small fill onClick={() => handleOpenWorkspace('submissions', () => setSubmissionFilter({ status: 'pending' }))}>前往投稿</Button>
-          </CardContent>
-        </Card>
+          <div>
+            <Card>
+              <CardHeader>投稿審核</CardHeader>
+              <CardContent>
+                <div style={{ fontSize: 30, fontWeight: 700 }}>{loading ? '...' : state.pendingSubmissions}</div>
+                <div style={{ opacity: 0.75, marginBottom: 12 }}>待審投稿數量</div>
+                <Button small fill onClick={() => handleOpenWorkspace('submissions', () => setSubmissionFilter({ status: 'pending' }))}>前往投稿</Button>
+              </CardContent>
+            </Card>
+          </div>
 
-        <Card className="review-card">
-          <CardHeader>FanArt 整理</CardHeader>
-          <CardContent>
-            <div style={{ fontSize: 24, fontWeight: 700 }}>{loading ? '...' : `${state.fanartUnorganizedGroups} / ${state.fanartUnorganizedMedia}`}</div>
-            <div style={{ opacity: 0.75, marginBottom: 12 }}>未整理 group / media，另有 {state.fanartLegacyMedia} 筆舊資料</div>
-            <Button small fill onClick={() => handleOpenWorkspace('fanart', () => setFanartFilter({ view: 'unorganized' }))}>前往整理</Button>
-          </CardContent>
-        </Card>
+          <div>
+            <Card>
+              <CardHeader>FanArt 整理</CardHeader>
+              <CardContent>
+                <div style={{ fontSize: 24, fontWeight: 700 }}>{loading ? '...' : `${state.fanartUnorganizedGroups} / ${state.fanartUnorganizedMedia}`}</div>
+                <div style={{ opacity: 0.75, marginBottom: 12 }}>未整理 group / media，另有 {state.fanartLegacyMedia} 筆舊資料</div>
+                <Button small fill onClick={() => handleOpenWorkspace('fanart', () => setFanartFilter({ view: 'unorganized' }))}>前往整理</Button>
+              </CardContent>
+            </Card>
+          </div>
 
-        <Card className="review-card">
-          <CardHeader>Group 修復</CardHeader>
-          <CardContent>
-            <div style={{ fontSize: 30, fontWeight: 700 }}>{loading ? '...' : state.repairTotal}</div>
-            <div style={{ opacity: 0.75, marginBottom: 12 }}>待修復 group，最近 20 筆中 {state.repairInferable} 筆可推斷來源</div>
-            <Button small fill onClick={() => handleOpenWorkspace('repair')}>前往修復</Button>
-          </CardContent>
-        </Card>
+          <div>
+            <Card>
+              <CardHeader>Group 修復</CardHeader>
+              <CardContent>
+                <div style={{ fontSize: 30, fontWeight: 700 }}>{loading ? '...' : state.repairTotal}</div>
+                <div style={{ opacity: 0.75, marginBottom: 12 }}>待修復 group，最近 20 筆中 {state.repairInferable} 筆可推斷來源</div>
+                <Button small fill onClick={() => handleOpenWorkspace('repair')}>前往修復</Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </Block>
 
       <BlockTitle>快捷入口</BlockTitle>
-      <List inset strong className="review-list review-fade-up review-fade-up-delay-2">
+      <List inset strong>
         {quickActions.map((item) => (
           <ListItem
             key={item.title}
             title={item.title}
             text={item.description}
             after="前往"
-            link="#"
+            link
             onClick={() => handleOpenWorkspace(item.workspace, item.onBeforeOpen)}
           />
         ))}
@@ -287,13 +294,13 @@ export default function HomePage() {
 
       <BlockTitle>最近工作區</BlockTitle>
       {recentWorkspaceItems.length > 0 ? (
-        <List inset strong className="review-list review-fade-up review-fade-up-delay-3">
+        <List inset strong>
           {recentWorkspaceItems.map((workspace) => (
             <ListItem
               key={workspace.key}
               title={workspace.title}
               text={workspace.description}
-              link="#"
+              link
               onClick={() => handleOpenWorkspace(workspace.key)}
             >
               <Badge slot="after" color="blue">最近</Badge>
@@ -310,7 +317,7 @@ export default function HomePage() {
       )}
 
       <BlockTitle>接管邊界摘要</BlockTitle>
-      <Block strong inset className="review-surface review-fade-up review-fade-up-delay-3">
+      <Block strong inset>
         <p style={{ marginTop: 0 }}>
           `review-app` 現在提供一致的首頁摘要、暫存審核、投稿審核、FanArt 整理、Group 修復與設定入口，讓手機操作也能完整掌握工作流。
         </p>

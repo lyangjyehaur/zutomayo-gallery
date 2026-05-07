@@ -3,12 +3,12 @@ import {
   Badge,
   Block,
   BlockTitle,
-  Button,
   Card,
   CardContent,
   CardHeader,
   Link,
   List,
+  ListInput,
   ListItem,
   Navbar,
   NavLeft,
@@ -18,18 +18,19 @@ import {
   PageContent,
   Popup,
   Searchbar,
-  Segmented,
   Sheet,
   SwipeoutActions,
   SwipeoutButton,
   Tab,
   Tabs,
   Toolbar,
-  View,
+  ToolbarPane,
   f7,
 } from 'framework7-react'
 import AppNavbar from '../components/AppNavbar'
+import Button from '../components/Button'
 import ReviewStateBlock from '../components/ReviewStateBlock'
+import Segmented from '../components/Segmented'
 import ReviewToolbarCard from '../components/ReviewToolbarCard'
 import { useWorkspace } from '../hooks/useWorkspace'
 import { approveSubmission, fetchSubmissions, rejectSubmission, type Submission } from '../lib/api'
@@ -280,7 +281,7 @@ export default function SubmissionsPage() {
             loading
           />
         ) : (
-        <List mediaList className="review-list review-fade-up">
+        <List mediaList>
           {filteredItems.map((item) => {
             const previewUrl = getMediaPreview(item)
             const mediaCount = item.media.length
@@ -294,12 +295,10 @@ export default function SubmissionsPage() {
               <ListItem
                 key={item.id}
                 swipeout={currentStatus === 'pending'}
-                link="#"
                 title={displayName}
                 subtitle={subtitle}
                 text={item.note || '（無留言）'}
                 footer={`submitted: ${formatDate(item.submitted_at)}${item.reviewed_by ? ` · reviewer: ${item.reviewed_by}` : ''}`}
-                onClick={() => setDetailItem(item)}
               >
                 {previewUrl && (
                   <img
@@ -308,7 +307,19 @@ export default function SubmissionsPage() {
                     style={{ borderRadius: 8, width: 80, height: 80, objectFit: 'cover' }}
                   />
                 )}
-                {mediaCount > 1 && <Badge slot="after" color="gray">{mediaCount}</Badge>}
+                {mediaCount > 1 && <Badge slot="after-start" color="gray">{mediaCount}</Badge>}
+                <Button
+                  slot="after"
+                  small
+                  tonal
+                  onClick={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    setDetailItem(item)
+                  }}
+                >
+                  詳情
+                </Button>
                 {item.review_reason && currentStatus !== 'pending' && (
                   <div slot="text" style={{ color: 'var(--f7-theme-color)', whiteSpace: 'pre-wrap' }}>
                     退回原因：{item.review_reason}
@@ -354,7 +365,7 @@ export default function SubmissionsPage() {
         )}
 
         {!hasMore && filteredItems.length > 0 && (
-          <Block strong inset className="review-endcap">已載入到底，可切換狀態或調整搜尋條件繼續查看。</Block>
+          <Block strong inset>已載入到底，可切換狀態或調整搜尋條件繼續查看。</Block>
         )}
 
         {!loading && items.length === 0 && (
@@ -379,8 +390,8 @@ export default function SubmissionsPage() {
     >
       <AppNavbar title="投稿審核" subtitle="pending / approved / rejected" />
 
-      <Block className="review-grid review-grid-cards review-fade-up">
-        <Card className="review-card">
+      <Block>
+        <Card>
           <CardHeader>投稿狀態總覽</CardHeader>
           <CardContent>
             <div style={{ display: 'grid', gap: 10 }}>
@@ -400,7 +411,7 @@ export default function SubmissionsPage() {
           </CardContent>
         </Card>
 
-        <Card className="review-card">
+        <Card>
           <CardHeader>目前視圖</CardHeader>
           <CardContent>
             <div style={{ fontSize: 20, fontWeight: 700 }}>{status}</div>
@@ -413,7 +424,7 @@ export default function SubmissionsPage() {
         </Card>
       </Block>
 
-      <Block className="review-segment-wrap review-fade-up review-fade-up-delay-1">
+      <Block>
         <Segmented strong>
           <Button active={status === 'pending'} onClick={() => handleStatusChange('pending')}>待審 {counts.pending}</Button>
           <Button active={status === 'approved'} onClick={() => handleStatusChange('approved')}>已通過 {counts.approved}</Button>
@@ -422,7 +433,7 @@ export default function SubmissionsPage() {
       </Block>
 
       <ReviewToolbarCard
-        className="review-fade-up review-fade-up-delay-1"
+       
         search={(
           <Searchbar
             disableButton={!query}
@@ -434,10 +445,10 @@ export default function SubmissionsPage() {
         summary={(
           <>
             點進詳情可看完整媒體、作者資訊與審核結果；待審項目也支援 swipeout 快速處理。
-            <div className="review-inline-kpis" style={{ marginTop: 10 }}>
-              <div className="review-chip">目前視圖 {status}</div>
-              <div className="review-chip review-chip-soft">已載入 {items.length}</div>
-              <div className="review-chip review-chip-soft">搜尋後 {filteredItems.length}</div>
+            <div style={{ marginTop: 10 }}>
+              <div>目前視圖 {status}</div>
+              <div>已載入 {items.length}</div>
+              <div>搜尋後 {filteredItems.length}</div>
             </div>
           </>
         )}
@@ -456,13 +467,12 @@ export default function SubmissionsPage() {
         </Tab>
       </Tabs>
 
-      {detailItem && (
-        <Popup className="review-popup" opened onPopupClosed={() => setDetailItem(null)}>
-          <View>
-            <Page>
+      <Popup opened={Boolean(detailItem)} onPopupClose={() => setDetailItem(null)}>
+        {detailItem && (
+          <Page>
               <Navbar>
                 <NavLeft>
-                  <Link popupClose>關閉</Link>
+                  <Link onClick={() => setDetailItem(null)}>關閉</Link>
                 </NavLeft>
                 <NavTitle>投稿詳情</NavTitle>
                 <NavRight>
@@ -472,7 +482,7 @@ export default function SubmissionsPage() {
                 </NavRight>
               </Navbar>
 
-          <Block strong inset className="review-surface review-fade-up">
+          <Block strong inset>
                 <div style={{ fontSize: 20, fontWeight: 700 }}>{detailItem.submitter?.display_name || '匿名投稿者'}</div>
                 <div style={{ opacity: 0.75, marginTop: 6 }}>submission: {detailItem.id}</div>
                 <div style={{ opacity: 0.75, marginTop: 4 }}>submitted: {formatDate(detailItem.submitted_at || detailItem.created_at)}</div>
@@ -482,12 +492,12 @@ export default function SubmissionsPage() {
               </Block>
 
               <BlockTitle>媒體預覽</BlockTitle>
-              <Block strong inset className="review-surface">
+              <Block strong inset>
                 <div style={{ display: 'grid', gap: 12 }}>
                   {detailItem.media.map((media) => {
                     const previewUrl = media.thumbnail_url || media.r2_url || media.original_url
                     return (
-                      <div key={media.id} className="review-media-frame">
+                      <div key={media.id}>
                         {media.media_type === 'video' ? (
                           <video src={previewUrl || undefined} controls playsInline style={{ width: '100%', display: 'block', maxHeight: '52vh' }} />
                         ) : (
@@ -513,7 +523,7 @@ export default function SubmissionsPage() {
               </List>
 
               <BlockTitle>留言 / 審核結果</BlockTitle>
-              <Block strong inset className="review-surface">
+              <Block strong inset>
                 <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{detailItem.note || '（無留言）'}</div>
                 {detailItem.review_reason && (
                   <div style={{ marginTop: 12, padding: 12, borderRadius: 12, background: 'rgba(255, 59, 48, 0.1)', color: '#c62828' }}>
@@ -522,21 +532,20 @@ export default function SubmissionsPage() {
                 )}
               </Block>
 
-              {detailItem.status === 'pending' && (
-                <Block strong inset className="review-surface">
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <Button fill onClick={() => void handleApprove(detailItem.id)} disabled={busyIds.has(detailItem.id)}>通過</Button>
-                    <Button outline color="red" onClick={() => openRejectSheet(detailItem)} disabled={busyIds.has(detailItem.id)}>退回並填寫原因</Button>
-                  </div>
-                </Block>
-              )}
-            </Page>
-          </View>
-        </Popup>
-      )}
+            {detailItem.status === 'pending' && (
+              <Block strong inset>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <Button fill onClick={() => void handleApprove(detailItem.id)} disabled={busyIds.has(detailItem.id)}>通過</Button>
+                  <Button outline color="red" onClick={() => openRejectSheet(detailItem)} disabled={busyIds.has(detailItem.id)}>退回並填寫原因</Button>
+                </div>
+              </Block>
+            )}
+          </Page>
+        )}
+      </Popup>
 
       <Sheet
-        className="review-sheet"
+       
         opened={Boolean(rejectTarget)}
         onSheetClosed={() => {
           setRejectTarget(null)
@@ -547,24 +556,25 @@ export default function SubmissionsPage() {
         style={{ height: 'auto' }}
       >
         <Toolbar>
-          <div className="left" style={{ paddingLeft: 16, fontWeight: 700 }}>退回投稿</div>
-          <div className="right" style={{ paddingRight: 16 }}>
+          <ToolbarPane>
+            <div style={{ fontWeight: 700 }}>退回投稿</div>
             <Link sheetClose>關閉</Link>
-          </div>
+          </ToolbarPane>
         </Toolbar>
         <PageContent>
-          <Block strong inset className="review-surface review-fade-up">
+          <Block strong inset>
             <div style={{ fontWeight: 700 }}>{rejectTarget?.submitter?.display_name || '匿名投稿者'}</div>
             <div style={{ opacity: 0.75, marginTop: 6 }}>退回原因會寫入投稿紀錄，投稿者稍後可看到。</div>
-            <label className="review-form-label" style={{ marginTop: 14 }}>
-              <div className="review-form-label-title">退回原因</div>
-              <textarea
+            <List form inset style={{ marginTop: 14, marginBottom: 0 }}>
+              <ListInput
+                label="退回原因"
+                type="textarea"
+                resizable
                 value={rejectReason}
-                onChange={(event) => setRejectReason(event.target.value)}
+                onInput={(event) => setRejectReason((event.target as HTMLTextAreaElement).value)}
                 placeholder="請清楚說明需修改的內容，例如：請補上 MV、避免重複投稿、請重新上傳較高解析度圖片。"
-                style={{ width: '100%', minHeight: 140, padding: '12px 14px', borderRadius: 12, resize: 'vertical' }}
               />
-            </label>
+            </List>
             <div style={{ opacity: 0.75, marginTop: 8, fontSize: 13 }}>目前 {rejectReason.trim().length} / 500 字</div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
               <Button fill color="red" onClick={() => void handleRejectSubmit()} loading={rejectTarget ? busyIds.has(rejectTarget.id) : false}>

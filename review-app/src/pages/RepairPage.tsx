@@ -3,12 +3,13 @@ import {
   Badge,
   Block,
   BlockTitle,
-  Button,
   Card,
   CardContent,
   CardHeader,
+  Checkbox,
   Link,
   List,
+  ListInput,
   ListItem,
   Navbar,
   NavLeft,
@@ -20,10 +21,11 @@ import {
   Sheet,
   Toggle,
   Toolbar,
-  View,
+  ToolbarPane,
   f7,
 } from 'framework7-react'
 import AppNavbar from '../components/AppNavbar'
+import Button from '../components/Button'
 import ReviewStateBlock from '../components/ReviewStateBlock'
 import ReviewToolbarCard from '../components/ReviewToolbarCard'
 import { useWorkspace } from '../hooks/useWorkspace'
@@ -439,7 +441,7 @@ export default function RepairPage() {
       <AppNavbar title="Group 修復" subtitle="repair / reparse / edit / merge / unassign" />
 
       <ReviewToolbarCard
-        className="review-fade-up"
+       
         search={(
           <Searchbar
             disableButton={!queryDraft}
@@ -463,22 +465,22 @@ export default function RepairPage() {
         footer="搜尋會保留在工作區狀態中，切回其他頁後再回來仍可延續同一批修復條件。"
       />
 
-      <Block className="review-grid review-grid-compact review-fade-up review-fade-up-delay-1">
-        <Card className="review-card">
+      <Block>
+        <Card>
           <CardHeader>待修復總量</CardHeader>
           <CardContent>
             <div style={{ fontSize: 26, fontWeight: 700 }}>{loading ? '...' : total}</div>
             <div style={{ opacity: 0.75 }}>目前 offset {offset}</div>
           </CardContent>
         </Card>
-        <Card className="review-card">
+        <Card>
           <CardHeader>目前頁面</CardHeader>
           <CardContent>
             <div style={{ fontSize: 26, fontWeight: 700 }}>{loading ? '...' : visibleItems.length}</div>
             <div style={{ opacity: 0.75 }}>高/中/無推斷：{inferStats.high}/{inferStats.medium}/{inferStats.none}</div>
           </CardContent>
         </Card>
-        <Card className="review-card">
+        <Card>
           <CardHeader>已勾選</CardHeader>
           <CardContent>
             <div style={{ fontSize: 26, fontWeight: 700 }}>{selectedCount}</div>
@@ -488,11 +490,10 @@ export default function RepairPage() {
       </Block>
 
       <ReviewToolbarCard
-        className="review-fade-up review-fade-up-delay-2"
+       
         summary={(
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}>
-            <input
-              type="checkbox"
+            <Checkbox
               checked={visibleItems.length > 0 && visibleItems.every(({ row, inferred }) => !canReparse(row, inferred) || selectedIds.has(row.id))}
               onChange={(event) => {
                 const next = new Set(selectedIds)
@@ -534,7 +535,7 @@ export default function RepairPage() {
           loading
         />
       ) : (
-      <List mediaList className="review-list review-fade-up review-fade-up-delay-2">
+      <List mediaList>
         {visibleItems.map(({ row, inferred }) => {
           const preview = getPreviewUrl(row)
           const isVideo = preview.includes('.mp4')
@@ -542,33 +543,40 @@ export default function RepairPage() {
           return (
             <ListItem
               key={row.id}
-              link="#"
+              checkbox
+              checked={selectedIds.has(row.id)}
+              disabled={!canReparse(row, inferred)}
+              onChange={(event) => toggleSelection(row.id, event.target.checked)}
+              mediaItem
               title={row.author_name || row.author_handle || row.id}
               subtitle={`${row.id} · ${missing || '欄位齊全'} · media ${row.media_count || 0} / MV ${row.mv_count || 0}`}
               text={row.source_url || row.source_text || '（無來源資訊）'}
               footer={inferred.url ? `${inferred.confidence} · ${inferred.url}` : '無法推斷來源'}
-              onClick={() => setDetailItem(row)}
             >
-              <div slot="media" style={{ position: 'relative', width: 80, height: 80 }}>
-                <input
-                  type="checkbox"
-                  checked={selectedIds.has(row.id)}
-                  disabled={!canReparse(row, inferred)}
-                  onClick={(event) => event.stopPropagation()}
-                  onChange={(event) => toggleSelection(row.id, event.target.checked)}
-                  style={{ position: 'absolute', top: 6, left: 6, zIndex: 2 }}
-                />
+              <div slot="media" style={{ width: 72, height: 72, flexShrink: 0 }}>
                 {preview && (
                   isVideo ? (
-                    <video src={preview} muted playsInline style={{ borderRadius: 8, width: 80, height: 80, objectFit: 'cover' }} />
+                    <video src={preview} muted playsInline style={{ borderRadius: 8, width: 72, height: 72, objectFit: 'cover', display: 'block' }} />
                   ) : (
-                    <img src={preview} alt={row.id} style={{ borderRadius: 8, width: 80, height: 80, objectFit: 'cover' }} />
+                    <img src={preview} alt={row.id} style={{ borderRadius: 8, width: 72, height: 72, objectFit: 'cover', display: 'block' }} />
                   )
                 )}
               </div>
-              <Badge slot="after" color={inferred.confidence === 'high' ? 'green' : inferred.confidence === 'medium' ? 'orange' : 'gray'}>
+              <Badge slot="after-start" color={inferred.confidence === 'high' ? 'green' : inferred.confidence === 'medium' ? 'orange' : 'gray'}>
                 {inferred.confidence}
               </Badge>
+              <Button
+                slot="after"
+                small
+                tonal
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  setDetailItem(row)
+                }}
+              >
+                詳情
+              </Button>
             </ListItem>
           )
         })}
@@ -583,7 +591,7 @@ export default function RepairPage() {
         />
       )}
 
-      <Block strong inset className="review-surface review-fade-up review-fade-up-delay-3">
+      <Block strong inset>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ opacity: 0.75, fontSize: 13 }}>目前顯示 {visibleItems.length} 筆，總量 {total}。</div>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -593,17 +601,17 @@ export default function RepairPage() {
         </div>
       </Block>
 
-      {detailItem && (() => {
+      {(() => {
+        if (!detailItem) return null
         const inferred = inferSource(detailItem)
         const preview = getPreviewUrl(detailItem)
         const isVideo = preview.includes('.mp4')
         return (
-          <Popup className="review-popup" opened onPopupClosed={() => setDetailItem(null)}>
-            <View>
-              <Page>
+          <Popup opened={Boolean(detailItem)} onPopupClose={() => setDetailItem(null)}>
+            <Page>
                 <Navbar>
                   <NavLeft>
-                    <Link popupClose>關閉</Link>
+                    <Link onClick={() => setDetailItem(null)}>關閉</Link>
                   </NavLeft>
                   <NavTitle>Group 詳情</NavTitle>
                   <NavRight>
@@ -611,9 +619,9 @@ export default function RepairPage() {
                   </NavRight>
                 </Navbar>
 
-                <Block strong inset className="review-surface">
+                <Block strong inset>
                   {preview && (
-                    <div className="review-media-frame">
+                    <div>
                       {isVideo ? (
                         <video src={preview} controls playsInline style={{ width: '100%', display: 'block', maxHeight: '56vh' }} />
                       ) : (
@@ -635,143 +643,125 @@ export default function RepairPage() {
                 </List>
 
                 <BlockTitle>推文內容</BlockTitle>
-                <Block strong inset className="review-surface">
+                <Block strong inset>
                   <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{detailItem.source_text || '（無內容）'}</div>
                 </Block>
 
-                <Block strong inset className="review-surface">
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {canRepairSource(detailItem, inferred) && (
-                      <Button fill tonal onClick={() => void repairSourceUrl(detailItem, inferred)} disabled={busyKeys.has(`group:${detailItem.id}`)}>
-                        補上來源
-                      </Button>
-                    )}
-                    {canReparse(detailItem, inferred) && (
-                      <Button fill onClick={() => openSingleReparse(detailItem)} disabled={reparseLoading || busyKeys.has(`group:${detailItem.id}`)}>
-                        Reparse
-                      </Button>
-                    )}
-                    <Button outline onClick={() => setEditDraft({ ...detailItem })}>Edit</Button>
-                    <Button outline onClick={() => openMerge(detailItem)}>Merge</Button>
-                    <Button outline color="red" onClick={() => requestUnassign(detailItem)}>Unassign</Button>
-                  </div>
-                </Block>
-              </Page>
-            </View>
+              <Block strong inset>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {canRepairSource(detailItem, inferred) && (
+                    <Button fill tonal onClick={() => void repairSourceUrl(detailItem, inferred)} disabled={busyKeys.has(`group:${detailItem.id}`)}>
+                      補上來源
+                    </Button>
+                  )}
+                  {canReparse(detailItem, inferred) && (
+                    <Button fill onClick={() => openSingleReparse(detailItem)} disabled={reparseLoading || busyKeys.has(`group:${detailItem.id}`)}>
+                      Reparse
+                    </Button>
+                  )}
+                  <Button outline onClick={() => setEditDraft({ ...detailItem })}>Edit</Button>
+                  <Button outline onClick={() => openMerge(detailItem)}>Merge</Button>
+                  <Button outline color="red" onClick={() => requestUnassign(detailItem)}>Unassign</Button>
+                </div>
+              </Block>
+            </Page>
           </Popup>
         )
       })()}
 
-      <Sheet className="review-sheet" opened={Boolean(editDraft)} onSheetClosed={() => setEditDraft(null)} backdrop swipeToClose style={{ height: '85vh' }}>
+      <Sheet opened={Boolean(editDraft)} onSheetClosed={() => setEditDraft(null)} backdrop swipeToClose style={{ height: '85vh' }}>
         <Toolbar>
-          <div className="left" style={{ paddingLeft: 16, fontWeight: 700 }}>Edit Group</div>
-          <div className="right" style={{ paddingRight: 16 }}>
+          <ToolbarPane>
+            <div style={{ fontWeight: 700 }}>Edit Group</div>
             <Link sheetClose>關閉</Link>
-          </div>
+          </ToolbarPane>
         </Toolbar>
         {editDraft && (
-          <Block strong inset className="review-surface review-fade-up">
-            <div className="review-form-grid">
+          <Block strong inset>
+            <div>
               <div style={{ opacity: 0.75 }}>{editDraft.id}</div>
-              <label className="review-form-label">
-                <div className="review-form-label-title">source_url</div>
-                <input
+              <List form inset style={{ marginTop: 14 }}>
+                <ListInput
+                  label="source_url"
                   type="text"
                   value={editDraft.source_url || ''}
-                  onChange={(event) => setEditDraft((prev) => (prev ? { ...prev, source_url: event.target.value } : prev))}
-                  style={{ width: '100%', padding: '12px 14px', borderRadius: 12 }}
+                  onInput={(event) => setEditDraft((prev) => (prev ? { ...prev, source_url: (event.target as HTMLInputElement).value } : prev))}
                 />
-              </label>
-              <label className="review-form-label">
-                <div className="review-form-label-title">author_name</div>
-                <input
+                <ListInput
+                  label="author_name"
                   type="text"
                   value={editDraft.author_name || ''}
-                  onChange={(event) => setEditDraft((prev) => (prev ? { ...prev, author_name: event.target.value } : prev))}
-                  style={{ width: '100%', padding: '12px 14px', borderRadius: 12 }}
+                  onInput={(event) => setEditDraft((prev) => (prev ? { ...prev, author_name: (event.target as HTMLInputElement).value } : prev))}
                 />
-              </label>
-              <label className="review-form-label">
-                <div className="review-form-label-title">author_handle</div>
-                <input
+                <ListInput
+                  label="author_handle"
                   type="text"
                   value={editDraft.author_handle || ''}
-                  onChange={(event) => setEditDraft((prev) => (prev ? { ...prev, author_handle: event.target.value } : prev))}
-                  style={{ width: '100%', padding: '12px 14px', borderRadius: 12 }}
+                  onInput={(event) => setEditDraft((prev) => (prev ? { ...prev, author_handle: (event.target as HTMLInputElement).value } : prev))}
                 />
-              </label>
-              <label className="review-form-label">
-                <div className="review-form-label-title">status</div>
-                <select
+                <ListInput
+                  label="status"
+                  type="select"
                   value={editDraft.status || ''}
-                  onChange={(event) => setEditDraft((prev) => (prev ? { ...prev, status: event.target.value || null } : prev))}
-                  style={{ width: '100%', padding: '12px 14px', borderRadius: 12 }}
+                  onChange={(event) => setEditDraft((prev) => (prev ? { ...prev, status: (event.target as HTMLSelectElement).value || null } : prev))}
                 >
                   <option value="">未設定</option>
                   {STATUS_OPTIONS.map((status) => (
                     <option key={status} value={status}>{status}</option>
                   ))}
-                </select>
-              </label>
-              <label className="review-form-label">
-                <div className="review-form-label-title">post_date</div>
-                <input
+                </ListInput>
+                <ListInput
+                  label="post_date"
                   type="datetime-local"
                   value={editDraft.post_date ? new Date(editDraft.post_date).toISOString().slice(0, 16) : ''}
-                  onChange={(event) => setEditDraft((prev) => (prev ? { ...prev, post_date: event.target.value ? new Date(event.target.value).toISOString() : null } : prev))}
-                  style={{ width: '100%', padding: '12px 14px', borderRadius: 12 }}
+                  onInput={(event) => setEditDraft((prev) => (prev ? { ...prev, post_date: (event.target as HTMLInputElement).value ? new Date((event.target as HTMLInputElement).value).toISOString() : null } : prev))}
                 />
-              </label>
-              <label className="review-form-label">
-                <div className="review-form-label-title">source_text</div>
-                <textarea
+                <ListInput
+                  label="source_text"
+                  type="textarea"
+                  resizable
                   value={editDraft.source_text || ''}
-                  onChange={(event) => setEditDraft((prev) => (prev ? { ...prev, source_text: event.target.value } : prev))}
-                  style={{ width: '100%', minHeight: 140, padding: '12px 14px', borderRadius: 12, resize: 'vertical' }}
+                  onInput={(event) => setEditDraft((prev) => (prev ? { ...prev, source_text: (event.target as HTMLTextAreaElement).value } : prev))}
                 />
-              </label>
+              </List>
               <Button fill onClick={() => void saveEdit()} loading={editSaving}>保存</Button>
             </div>
           </Block>
         )}
       </Sheet>
 
-      <Sheet className="review-sheet" opened={mergeOpen} onSheetClosed={() => setMergeOpen(false)} backdrop swipeToClose style={{ height: '85vh' }}>
+      <Sheet opened={mergeOpen} onSheetClosed={() => setMergeOpen(false)} backdrop swipeToClose style={{ height: '85vh' }}>
         <Toolbar>
-          <div className="left" style={{ paddingLeft: 16, fontWeight: 700 }}>Merge Group</div>
-          <div className="right" style={{ paddingRight: 16 }}>
+          <ToolbarPane>
+            <div style={{ fontWeight: 700 }}>Merge Group</div>
             <Link sheetClose>關閉</Link>
-          </div>
+          </ToolbarPane>
         </Toolbar>
-        <Block strong inset className="review-surface review-fade-up">
-          <div className="review-form-grid">
+        <Block strong inset>
+          <div>
             <div style={{ opacity: 0.75 }}>來源 group：{mergeRow?.id}</div>
-            <label className="review-form-label">
-              <div className="review-form-label-title">target_source_url</div>
-              <input
+            <List form inset style={{ marginTop: 14 }}>
+              <ListInput
+                label="target_source_url"
                 type="text"
                 value={mergeTargetUrl}
-                onChange={(event) => setMergeTargetUrl(event.target.value)}
+                onInput={(event) => setMergeTargetUrl((event.target as HTMLInputElement).value)}
                 placeholder="推薦：直接輸入要併入的 source_url"
-                style={{ width: '100%', padding: '12px 14px', borderRadius: 12 }}
               />
-            </label>
-            <label className="review-form-label">
-              <div className="review-form-label-title">或選擇 target_group_id</div>
-              <input
+              <ListInput
+                label="target_group_id"
                 type="text"
                 value={mergeSearch}
-                onChange={(event) => setMergeSearch(event.target.value)}
+                onInput={(event) => setMergeSearch((event.target as HTMLInputElement).value)}
                 placeholder={loadingMergeOptions ? '載入中...' : '搜尋 group id / 作者 / source_url'}
-                style={{ width: '100%', padding: '12px 14px', borderRadius: 12 }}
               />
-            </label>
+            </List>
             {mergeTargetId && <div style={{ opacity: 0.75 }}>目前 target_group_id：{mergeTargetId}</div>}
             <List mediaList>
               {mergeCandidates.map((row) => (
                 <ListItem
                   key={row.id}
-                  link="#"
+                  link
                   title={row.author_name || row.author_handle || row.id}
                   subtitle={row.id}
                   text={row.source_url || '（無 source_url）'}
@@ -786,9 +776,8 @@ export default function RepairPage() {
         </Block>
       </Sheet>
 
-      <Popup className="review-popup" opened={reparseOpen} onPopupClosed={() => setReparseOpen(false)}>
-        <View>
-          <Page>
+      <Popup opened={reparseOpen} onPopupClosed={() => setReparseOpen(false)}>
+        <Page>
             <Navbar>
               <NavLeft>
                 <Link popupClose>關閉</Link>
@@ -799,7 +788,7 @@ export default function RepairPage() {
               </NavRight>
             </Navbar>
 
-            <Block strong inset className="review-surface review-fade-up">
+            <Block strong inset>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Toggle checked={reparseOverwrite} onToggleChange={(checked: boolean) => setReparseOverwrite(checked)} />
@@ -817,7 +806,7 @@ export default function RepairPage() {
             </Block>
 
             <BlockTitle>預覽結果</BlockTitle>
-            <List mediaList className="review-list review-fade-up review-fade-up-delay-1">
+            <List mediaList>
               {reparsePreview?.results.map((result) => (
                 <ListItem
                   key={result.group_id}
@@ -837,18 +826,17 @@ export default function RepairPage() {
               />
             )}
 
-            {reparsePreview?.errors && reparsePreview.errors.length > 0 && (
-              <>
-                <BlockTitle>錯誤</BlockTitle>
-                <List inset strong>
-                  {reparsePreview.errors.map((error) => (
-                    <ListItem key={`${error.group_id}-${error.error}`} title={error.group_id} text={error.error} />
-                  ))}
-                </List>
-              </>
-            )}
-          </Page>
-        </View>
+          {reparsePreview?.errors && reparsePreview.errors.length > 0 && (
+            <>
+              <BlockTitle>錯誤</BlockTitle>
+              <List inset strong>
+                {reparsePreview.errors.map((error) => (
+                  <ListItem key={`${error.group_id}-${error.error}`} title={error.group_id} text={error.error} />
+                ))}
+              </List>
+            </>
+          )}
+        </Page>
       </Popup>
     </Page>
   )

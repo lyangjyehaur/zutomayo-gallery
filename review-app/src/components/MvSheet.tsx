@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Sheet, PageContent, Toolbar, List, ListItem, BlockTitle, Block, Button, Searchbar, Link } from 'framework7-react'
+import { Sheet, PageContent, Toolbar, ToolbarPane, List, ListItem, BlockTitle, Block, Searchbar, Link, Chip } from 'framework7-react'
+import Button from './Button'
 import ReviewStateBlock from './ReviewStateBlock'
 
 const TAG_OPTIONS = [
@@ -38,12 +39,25 @@ export default function MvSheet({
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMvIds, setSelectedMvIds] = useState<string[]>(() => initialMvIds)
   const [selectedTags, setSelectedTags] = useState<string[]>(() => initialTags)
+  const totalSelected = selectedMvIds.length + selectedTags.length
 
   const filteredMvs = useMemo(() => {
     if (!searchQuery.trim()) return mvs
     const q = searchQuery.toLowerCase()
     return mvs.filter(mv => mv.title.toLowerCase().includes(q))
   }, [mvs, searchQuery])
+
+  const selectedMvTitles = useMemo(() => {
+    if (selectedMvIds.length === 0) return []
+    const selectedSet = new Set(selectedMvIds)
+    return mvs.filter((mv) => selectedSet.has(mv.id)).map((mv) => mv.title)
+  }, [mvs, selectedMvIds])
+
+  const selectedTagLabels = useMemo(() => {
+    if (selectedTags.length === 0) return []
+    const selectedSet = new Set(selectedTags)
+    return TAG_OPTIONS.filter((tag) => selectedSet.has(tag.id)).map((tag) => tag.label)
+  }, [selectedTags])
 
   const toggleMv = (id: string) => {
     setSelectedMvIds(prev =>
@@ -58,6 +72,7 @@ export default function MvSheet({
   }
 
   const handleConfirm = () => {
+    if (totalSelected === 0 || busy) return
     onConfirm(selectedMvIds, selectedTags)
     setSelectedMvIds([])
     setSelectedTags([])
@@ -72,23 +87,26 @@ export default function MvSheet({
   }
 
   return (
-    <Sheet className="review-sheet" opened={opened} onSheetClosed={handleClose} backdrop swipeToClose style={{ height: '75vh' }}>
+    <Sheet opened={opened} onSheetClosed={handleClose} backdrop swipeToClose style={{ height: '75vh' }}>
       <Toolbar>
-        <div className="left" />
-        <div className="right">
+        <ToolbarPane>
+          <div />
           <Link sheetClose onClick={handleClose}>取消</Link>
-        </div>
+        </ToolbarPane>
       </Toolbar>
       <PageContent>
-        <Block strong inset className="review-panel-block review-fade-up" style={{ marginBottom: 12 }}>
+        <Block strong inset style={{ marginBottom: 12 }}>
           <div style={{ fontWeight: 700 }}>{title}</div>
           {description && (
             <div style={{ opacity: 0.7, marginTop: 6, fontSize: 13 }}>{description}</div>
           )}
+          <div style={{ marginTop: 10, opacity: 0.75, fontSize: 13 }}>
+            先選擇要關聯的 MV / 標籤，再點底部按鈕保存。
+          </div>
         </Block>
 
-        <Block strong inset className="review-surface review-toolbar-card review-fade-up review-fade-up-delay-1">
-          <div className="review-toolbar-search">
+        <Block strong inset>
+          <div>
             <Searchbar
               customSearch
               value={searchQuery}
@@ -97,13 +115,45 @@ export default function MvSheet({
               disableButtonText="清除"
             />
           </div>
-          <div className="review-toolbar-summary">
-            已選 MV {selectedMvIds.length} 項、標籤 {selectedTags.length} 項；手機可直接捲動清單、平板則保留較高資訊密度。
+          <div style={{ marginTop: 10 }}>
+            已選 MV {selectedMvIds.length} 項、標籤 {selectedTags.length} 項。
+          </div>
+          {totalSelected > 0 && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+              {selectedMvTitles.map((title) => (
+                <Chip key={title} text={title} />
+              ))}
+              {selectedTagLabels.map((label) => (
+                <Chip key={label} text={`標籤: ${label}`} />
+              ))}
+            </div>
+          )}
+          {totalSelected === 0 && (
+            <div style={{ marginTop: 10, opacity: 0.7, fontSize: 13 }}>
+              尚未選擇任何 MV 或標籤。
+            </div>
+          )}
+          {totalSelected > 0 && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <Button small outline onClick={() => setSelectedMvIds([])}>
+                清空 MV
+              </Button>
+              <Button small outline onClick={() => setSelectedTags([])}>
+                清空標籤
+              </Button>
+            </div>
+          )}
+        </Block>
+
+        <Block strong inset style={{ marginTop: 12, marginBottom: 12 }}>
+          <div style={{ fontWeight: 700 }}>步驟 1：選擇要關聯的內容</div>
+          <div style={{ marginTop: 6, opacity: 0.7, fontSize: 13 }}>
+            可只選 MV、只選標籤，或兩者一起保存。
           </div>
         </Block>
 
         <BlockTitle>音樂影片</BlockTitle>
-        <List className="review-list review-fade-up review-fade-up-delay-2" style={{ maxHeight: '35vh', overflowY: 'auto' }}>
+        <List style={{ maxHeight: '35vh', overflowY: 'auto' }}>
           {filteredMvs.map(mv => (
             <ListItem key={mv.id} title={mv.title} checkbox checked={selectedMvIds.includes(mv.id)} onChange={() => toggleMv(mv.id)} />
           ))}
@@ -118,16 +168,19 @@ export default function MvSheet({
         </List>
 
         <BlockTitle>標籤</BlockTitle>
-        <List className="review-list review-fade-up review-fade-up-delay-3">
+        <List>
           {TAG_OPTIONS.map(tag => (
             <ListItem key={tag.id} title={tag.label} checkbox checked={selectedTags.includes(tag.id)} onChange={() => toggleTag(tag.id)} />
           ))}
         </List>
 
-        <Block className="review-fade-up review-fade-up-delay-3">
-          <Button fill large onClick={handleConfirm} loading={busy}>
-            {confirmText}（已選 {selectedMvIds.length + selectedTags.length} 項）
+        <Block>
+          <Button fill large onClick={handleConfirm} loading={busy} disabled={busy || totalSelected === 0}>
+            {totalSelected === 0 ? '請先選擇 MV / 標籤' : `${confirmText}（已選 ${totalSelected} 項）`}
           </Button>
+          <div style={{ textAlign: 'center', marginTop: 8, opacity: 0.7, fontSize: 13 }}>
+            步驟 2：確認本次選擇後，再保存關聯。
+          </div>
         </Block>
       </PageContent>
     </Sheet>

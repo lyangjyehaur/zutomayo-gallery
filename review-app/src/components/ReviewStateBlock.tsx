@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import { Block, Button, Preloader } from 'framework7-react'
+import { Block, Preloader } from 'framework7-react'
+import Button from './Button'
 
 type ReviewStateTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger'
 
@@ -33,19 +34,23 @@ export default function ReviewStateBlock({
   loading = false,
 }: ReviewStateBlockProps) {
   return (
-    <Block strong inset className={`review-state review-state-${tone}${compact ? ' review-state-compact' : ''}`}>
-      <div className="review-state-icon" aria-hidden="true">
-        {loading ? <Preloader size={28} /> : (icon || FALLBACK_ICONS[tone])}
+    <Block strong inset style={compact ? { marginTop: 0, marginBottom: 0 } : undefined}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div aria-hidden="true" style={{ minWidth: 36, textAlign: 'center', fontWeight: 700 }}>
+            {loading ? <Preloader size={24} /> : (icon || FALLBACK_ICONS[tone])}
+          </div>
+          <div>
+            <div style={{ fontWeight: 700 }}>{title}</div>
+            <div style={{ opacity: 0.75, marginTop: 4 }}>{description}</div>
+          </div>
+        </div>
+        {actionText && onAction && (
+          <Button small fill onClick={onAction}>
+            {actionText}
+          </Button>
+        )}
       </div>
-      <div className="review-state-copy">
-        <div className="review-state-title">{title}</div>
-        <div className="review-state-description">{description}</div>
-      </div>
-      {actionText && onAction && (
-        <Button small fill tonal className="review-state-action" onClick={onAction}>
-          {actionText}
-        </Button>
-      )}
     </Block>
   )
 }

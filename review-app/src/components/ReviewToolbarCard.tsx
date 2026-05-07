@@ -17,15 +17,15 @@ export default function ReviewToolbarCard({
   className = '',
 }: ReviewToolbarCardProps) {
   return (
-    <Block strong inset className={`review-surface review-toolbar-card review-fade-up ${className}`.trim()}>
-      {search && <div className="review-toolbar-search">{search}</div>}
+    <Block strong inset className={className || undefined}>
+      {search && <div>{search}</div>}
       {(summary || actions) && (
-        <div className="review-toolbar-row">
-          {summary && <div className="review-toolbar-summary">{summary}</div>}
-          {actions && <div className="review-toolbar-actions">{actions}</div>}
+        <div style={{ display: 'grid', gap: 12 }}>
+          {summary && <div>{summary}</div>}
+          {actions && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>{actions}</div>}
         </div>
       )}
-      {footer && <div className="review-toolbar-footer">{footer}</div>}
+      {footer && <div style={{ marginTop: 12 }}>{footer}</div>}
     </Block>
   )
 }

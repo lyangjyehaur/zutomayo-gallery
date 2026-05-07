@@ -78,8 +78,10 @@ review-app/
 ├── src/
 │   ├── components/
 │   │   ├── AppNavbar.tsx
+│   │   ├── Button.tsx
 │   │   ├── MvSheet.tsx
-│   │   └── ReviewStateBlock.tsx
+│   │   ├── ReviewStateBlock.tsx
+│   │   └── Segmented.tsx
 │   ├── contexts/
 │   │   ├── AuthProvider.tsx
 │   │   └── WorkspaceContext.tsx
@@ -118,9 +120,20 @@ review-app/
 - 全域樣式集中在 `src/index.css`
 - 導覽列、卡片、列表、Sheet、Popup 採統一的 `review-*` class 命名
 - 空狀態、錯誤狀態、載入狀態統一用 `src/components/ReviewStateBlock.tsx`
+- `src/components/Button.tsx` 與 `src/components/Segmented.tsx` 是平台樣式包裝層：iOS 預設 round，MD / Android 維持普通樣式
+- 多選清單優先使用 Framework7 官方 `ListItem checkbox`，避免把 checkbox 手工塞進 media slot
+- 需要同列兼容勾選與查看詳情時，詳情入口統一放在右側 `詳情` 按鈕，不再依賴整列點擊
+- 登入頁、loading、tabbar、sheet header 盡量對齊 Framework7 v9 官方寫法，例如 `LoginScreen`、`dialog.preloader(...)`、`ToolbarPane`
 - 各頁仍可保留 toast 作為即時回饋，但首次載入失敗或無資料時要顯示可見的頁面內狀態區塊
 - 工作區切換與各頁篩選條件由 `WorkspaceProvider` 寫入 localStorage，鍵值為 `ztmr-review-workspace`
 - `src/lib/moderation-boundaries.ts` 需要與 `CODE_WIKI.md`、`frontend-memory.md`、`docs-index.md`、`.trae/specs/companion-review-app/` 中的描述一起維護，避免接管邊界失真
+
+## 互動驗證重點
+
+- `Popup`、`Sheet`、`dialog.preloader(...)` 這類會改變遮罩與頁面狀態的互動，不能只看 build，需在瀏覽器實際點開再關閉一次
+- `StagingPage`、`RepairPage` 的勾選清單要同時驗證 checkbox 可點、右側 `詳情` 可開、swipeout 操作不互相搶事件
+- `SubmissionsPage`、`FanartPage` 等詳情型列表，需確認右側 `詳情` 按鈕不會污染 router / hash 狀態
+- 若要在本機用 `localhost` 驗證登入流程，開發環境可配合 `VITE_API_ROOT=/api` 使用 `vite.config.ts` 內的 proxy 設定
 
 ## 驗證要求
 

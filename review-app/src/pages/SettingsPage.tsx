@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
-import { Block, BlockTitle, Button, Card, CardContent, CardHeader, List, ListItem, Page, Toggle, f7 } from 'framework7-react'
+import { Block, BlockTitle, Card, CardContent, CardHeader, List, ListItem, Page, Toggle, f7 } from 'framework7-react'
 import AppNavbar from '../components/AppNavbar'
+import Button from '../components/Button'
 import ReviewStateBlock from '../components/ReviewStateBlock'
 import { useAuth } from '../hooks/useAuth'
 import { usePushSubscription } from '../hooks/usePushSubscription'
@@ -60,8 +61,8 @@ export default function SettingsPage() {
     <Page>
       <AppNavbar title="設定" subtitle="通知偏好、近期工作區與接管邊界" />
 
-      <Block className="review-grid review-grid-cards review-fade-up">
-        <Card className="review-card">
+      <Block>
+        <Card>
           <CardHeader>帳號</CardHeader>
           <CardContent>
             <div style={{ fontSize: 20, fontWeight: 700 }}>{user?.username || '未登入'}</div>
@@ -70,7 +71,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="review-card">
+        <Card>
           <CardHeader>推播</CardHeader>
           <CardContent>
             {push.isUnsupported ? (
@@ -97,7 +98,7 @@ export default function SettingsPage() {
       </Block>
 
       <BlockTitle>通知偏好</BlockTitle>
-      <List inset strong className="review-list review-fade-up review-fade-up-delay-1">
+      <List inset strong>
         <ListItem title="暫存區新項目">
           <Toggle slot="after" checked={prefs.staging} onToggleChange={(checked: boolean) => handleTogglePref('staging', checked)} />
         </ListItem>
@@ -114,7 +115,7 @@ export default function SettingsPage() {
 
       <BlockTitle>最近工作區</BlockTitle>
       {recentWorkspaces.length > 0 ? (
-        <List inset strong className="review-list review-fade-up review-fade-up-delay-2">
+        <List inset strong>
           {recentWorkspaces.map((workspace) => (
             <ListItem key={workspace} title={workspace} />
           ))}
@@ -129,7 +130,7 @@ export default function SettingsPage() {
       )}
 
       <BlockTitle>接管邊界</BlockTitle>
-      <List inset strong mediaList className="review-list review-fade-up review-fade-up-delay-2">
+      <List inset strong mediaList>
         {MODERATION_BOUNDARIES.map((item) => (
           <ListItem
             key={item.workspace}
@@ -140,9 +141,9 @@ export default function SettingsPage() {
         ))}
       </List>
 
-      <Block className="review-grid review-grid-cards review-fade-up review-fade-up-delay-3">
+      <Block>
         {MODERATION_BOUNDARIES.map((item) => (
-          <Card key={`${item.workspace}-details`} className="review-card">
+          <Card key={`${item.workspace}-details`}>
             <CardHeader>{item.sourcePage}</CardHeader>
             <CardContent>
               <div style={{ fontWeight: 700, marginBottom: 6 }}>{item.ownership}</div>

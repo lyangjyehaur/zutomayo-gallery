@@ -3,12 +3,12 @@ import {
   Badge,
   Block,
   BlockTitle,
-  Button,
   Card,
   CardContent,
   CardHeader,
   Link,
   List,
+  ListInput,
   ListItem,
   Navbar,
   NavLeft,
@@ -17,15 +17,16 @@ import {
   Page,
   Popup,
   Searchbar,
-  Segmented,
   Sheet,
   Toolbar,
-  View,
+  ToolbarPane,
   f7,
 } from 'framework7-react'
 import AppNavbar from '../components/AppNavbar'
+import Button from '../components/Button'
 import MvSheet from '../components/MvSheet'
 import ReviewStateBlock from '../components/ReviewStateBlock'
+import Segmented from '../components/Segmented'
 import ReviewToolbarCard from '../components/ReviewToolbarCard'
 import { useWorkspace } from '../hooks/useWorkspace'
 import {
@@ -624,7 +625,7 @@ export default function FanartPage() {
 
     return (
       <>
-        <List mediaList className="review-list review-fade-up">
+        <List mediaList>
           {items.map((item) => {
             const preview = getMediaPreview(item)
             const isVideo = item.media_type === 'video' || preview.includes('.mp4')
@@ -641,12 +642,10 @@ export default function FanartPage() {
             return (
               <ListItem
                 key={item.id}
-                link="#"
                 title={item.group?.author_name || item.group?.author_handle || item.id}
                 subtitle={subtitle || item.id}
                 text={item.group?.source_text || '（無內文）'}
                 footer={footer || item.id}
-                onClick={() => onOpen(item)}
               >
                 {preview && (
                   isVideo ? (
@@ -666,7 +665,19 @@ export default function FanartPage() {
                     />
                   )
                 )}
-                {item.mvs && item.mvs.length > 0 && <Badge slot="after" color="green">{item.mvs.length}</Badge>}
+                {item.mvs && item.mvs.length > 0 && <Badge slot="after-start" color="green">{item.mvs.length}</Badge>}
+                <Button
+                  slot="after"
+                  small
+                  tonal
+                  onClick={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    onOpen(item)
+                  }}
+                >
+                  詳情
+                </Button>
               </ListItem>
             )
           })}
@@ -708,7 +719,7 @@ export default function FanartPage() {
 
     return (
       <>
-        <List mediaList className="review-list review-fade-up">
+        <List mediaList>
           {filteredDeletedGroups.map((group) => {
             const cover = Array.isArray(group.media) ? group.media[0] : undefined
             const preview = getMediaPreview(cover)
@@ -716,15 +727,10 @@ export default function FanartPage() {
             return (
               <ListItem
                 key={group.id}
-                link="#"
                 title={group.author_name || group.author_handle || group.id}
                 subtitle={formatDateTime(group.post_date)}
                 text={group.source_text || '（無推文內容）'}
                 footer={group.source_url || group.id}
-                onClick={() => {
-                  setDetailMedia(null)
-                  setDetailGroup(group)
-                }}
               >
                 {preview && (
                   isVideo ? (
@@ -744,13 +750,26 @@ export default function FanartPage() {
                     />
                   )
                 )}
-                <Badge slot="after" color="red">{Array.isArray(group.media) ? group.media.length : 0}</Badge>
+                <Badge slot="after-start" color="red">{Array.isArray(group.media) ? group.media.length : 0}</Badge>
+                <Button
+                  slot="after"
+                  small
+                  tonal
+                  onClick={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    setDetailMedia(null)
+                    setDetailGroup(group)
+                  }}
+                >
+                  詳情
+                </Button>
               </ListItem>
             )
           })}
         </List>
         {!loadingList && filteredDeletedGroups.length > 0 && (
-          <Block strong inset className="review-list-foot">
+          <Block strong inset>
             已顯示 {filteredDeletedGroups.length} 個已丟棄 group，可點進詳情直接還原。
           </Block>
         )}
@@ -770,29 +789,29 @@ export default function FanartPage() {
     <Page ptr onPtrRefresh={handleRefresh} onPageBeforeIn={handlePageBeforeIn}>
       <AppNavbar title="FanArt 整理" subtitle="搜尋 / 詳情 / assign / update / restore / parse" />
 
-      <Block className="review-grid review-grid-compact review-fade-up">
-        <Card className="review-card">
+      <Block>
+        <Card>
           <CardHeader>未整理</CardHeader>
           <CardContent>
             <div style={{ fontSize: 26, fontWeight: 700 }}>{loadingOverview ? '...' : overview.unorganizedGroups}</div>
             <div style={{ opacity: 0.75 }}>group / {loadingOverview ? '...' : overview.unorganizedMedia} 筆 media</div>
           </CardContent>
         </Card>
-        <Card className="review-card">
+        <Card>
           <CardHeader>已丟棄</CardHeader>
           <CardContent>
             <div style={{ fontSize: 26, fontWeight: 700 }}>{loadingOverview ? '...' : overview.deletedGroups}</div>
             <div style={{ opacity: 0.75 }}>可從詳情直接還原</div>
           </CardContent>
         </Card>
-        <Card className="review-card">
+        <Card>
           <CardHeader>舊資料</CardHeader>
           <CardContent>
             <div style={{ fontSize: 26, fontWeight: 700 }}>{loadingOverview ? '...' : overview.legacyMedia}</div>
             <div style={{ opacity: 0.75 }}>缺 group 或缺來源的歷史 media</div>
           </CardContent>
         </Card>
-        <Card className="review-card">
+        <Card>
           <CardHeader>特殊標籤</CardHeader>
           <CardContent>
             <div style={{ fontSize: 26, fontWeight: 700 }}>{loadingOverview ? '...' : overview.tagBuckets}</div>
@@ -801,7 +820,7 @@ export default function FanartPage() {
         </Card>
       </Block>
 
-      <Block className="review-segment-wrap review-fade-up review-fade-up-delay-1">
+      <Block>
         <Segmented strong>
           <Button active={view === 'unorganized'} onClick={() => handleViewChange('unorganized')}>未整理</Button>
           <Button active={view === 'deleted'} onClick={() => handleViewChange('deleted')}>已丟棄</Button>
@@ -813,7 +832,7 @@ export default function FanartPage() {
 
       {view !== 'parse' && (
         <ReviewToolbarCard
-          className="review-fade-up review-fade-up-delay-1"
+         
           search={(
             <Searchbar
               disableButton={!query}
@@ -827,9 +846,9 @@ export default function FanartPage() {
               {view === 'organized'
                 ? `目前聚焦：${currentFocusLabel}`
                 : '搜尋為目前清單的即時前端篩選。'}
-              <div className="review-inline-kpis" style={{ marginTop: 10 }}>
-                <div className="review-chip">視圖 {view}</div>
-                {view === 'organized' && <div className="review-chip review-chip-soft">{focusKind === 'tag' ? '依標籤' : '依 MV'}</div>}
+              <div style={{ marginTop: 10 }}>
+                <div>視圖 {view}</div>
+                {view === 'organized' && <div>{focusKind === 'tag' ? '依標籤' : '依 MV'}</div>}
               </div>
             </>
           )}
@@ -839,7 +858,7 @@ export default function FanartPage() {
 
       {view === 'organized' && (
         <ReviewToolbarCard
-          className="review-fade-up review-fade-up-delay-2"
+         
           summary={(
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <Button small fill={focusKind === 'tag'} tonal={focusKind !== 'tag'} onClick={() => setFanartFilter({ focusKind: 'tag', focus: tagOptions[0]?.[0] || '' })}>特殊標籤</Button>
@@ -898,16 +917,17 @@ export default function FanartPage() {
 
       {view === 'parse' && (
         <>
-          <Block strong inset className="review-surface review-fade-up">
-            <label className="review-form-label">
-              <div className="review-form-label-title">Twitter / X 網址</div>
-              <textarea
-                value={parseInput}
-                onChange={(event) => setParseInput(event.target.value)}
-                placeholder="每行一個網址，支援多筆解析。"
-                style={{ width: '100%', minHeight: 140, padding: '12px 14px', borderRadius: 12, resize: 'vertical' }}
-              />
-            </label>
+          <List form inset>
+            <ListInput
+              label="Twitter / X 網址"
+              type="textarea"
+              resizable
+              value={parseInput}
+              onInput={(event) => setParseInput((event.target as HTMLTextAreaElement).value)}
+              placeholder="每行一個網址，支援多筆解析。"
+            />
+          </List>
+          <Block strong inset>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
               <Button fill onClick={() => void handleParseTweets()} loading={parsing}>開始解析</Button>
               <Button outline onClick={openParseSheet} disabled={parsedItems.length === 0}>保存解析結果</Button>
@@ -917,9 +937,9 @@ export default function FanartPage() {
               <div style={{ marginTop: 14 }}>
                 <div style={{ fontWeight: 700 }}>{parseProgress.current} / {parseProgress.total}</div>
                 <div style={{ opacity: 0.75, marginTop: 4 }}>失敗 {parseProgress.failedUrls.length} 筆</div>
-                <div className="review-progress-track" style={{ marginTop: 10 }}>
+                <div style={{ marginTop: 10 }}>
                   <div
-                    className="review-progress-fill"
+                   
                     style={{ width: `${parseProgress.total > 0 ? (parseProgress.current / parseProgress.total) * 100 : 0}%` }}
                   />
                 </div>
@@ -928,7 +948,7 @@ export default function FanartPage() {
           </Block>
 
           <BlockTitle>解析預覽</BlockTitle>
-          <List mediaList className="review-list review-fade-up review-fade-up-delay-1">
+          <List mediaList>
             {parsedItems.map((item) => {
               const preview = item.thumbnail || item.url
               const isVideo = item.type === 'video' || item.url.includes('.mp4')
@@ -978,13 +998,12 @@ export default function FanartPage() {
         </>
       )}
 
-      {detailMedia && (
-        <Popup className="review-popup" opened onPopupClosed={() => setDetailMedia(null)}>
-          <View>
-            <Page>
+      <Popup opened={Boolean(detailMedia)} onPopupClose={() => setDetailMedia(null)}>
+        {detailMedia && (
+          <Page>
               <Navbar>
                 <NavLeft>
-                  <Link popupClose>關閉</Link>
+                  <Link onClick={() => setDetailMedia(null)}>關閉</Link>
                 </NavLeft>
                 <NavTitle>FanArt 詳情</NavTitle>
                 <NavRight>
@@ -992,8 +1011,8 @@ export default function FanartPage() {
                 </NavRight>
               </Navbar>
 
-              <Block strong inset className="review-surface">
-                <div className="review-media-frame">
+              <Block strong inset>
+                <div>
                   {detailMedia.media_type === 'video' ? (
                     <video
                       src={detailMedia.url || detailMedia.original_url || undefined}
@@ -1034,41 +1053,39 @@ export default function FanartPage() {
               </List>
 
               <BlockTitle>推文內容</BlockTitle>
-              <Block strong inset className="review-surface">
+              <Block strong inset>
                 <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{detailMedia.group?.source_text || '（無推文文字）'}</div>
               </Block>
 
-              <Block strong inset className="review-surface">
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {view === 'unorganized' && (
-                    <>
-                      <Button fill onClick={() => openAssignSheet(detailMedia)} disabled={busyKeys.has(`media:${detailMedia.id}`)}>指派 MV / 標籤</Button>
-                      {detailMedia.group?.id && (
-                        <Button outline color="red" onClick={() => requestDiscardGroup(detailMedia.group!.id)} disabled={busyKeys.has(`group:${detailMedia.group.id}`)}>
-                          捨棄推文
-                        </Button>
-                      )}
-                    </>
-                  )}
-                  {view === 'organized' && (
-                    <Button fill tonal onClick={() => openUpdateSheet(detailMedia)} disabled={busyKeys.has(`media:${detailMedia.id}`)}>
-                      更新關聯
-                    </Button>
-                  )}
-                </div>
-              </Block>
-            </Page>
-          </View>
-        </Popup>
-      )}
+            <Block strong inset>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {view === 'unorganized' && (
+                  <>
+                    <Button fill onClick={() => openAssignSheet(detailMedia)} disabled={busyKeys.has(`media:${detailMedia.id}`)}>指派 MV / 標籤</Button>
+                    {detailMedia.group?.id && (
+                      <Button outline color="red" onClick={() => requestDiscardGroup(detailMedia.group!.id)} disabled={busyKeys.has(`group:${detailMedia.group.id}`)}>
+                        捨棄推文
+                      </Button>
+                    )}
+                  </>
+                )}
+                {view === 'organized' && (
+                  <Button fill tonal onClick={() => openUpdateSheet(detailMedia)} disabled={busyKeys.has(`media:${detailMedia.id}`)}>
+                    更新關聯
+                  </Button>
+                )}
+              </div>
+            </Block>
+          </Page>
+        )}
+      </Popup>
 
-      {detailGroup && (
-        <Popup className="review-popup" opened onPopupClosed={() => setDetailGroup(null)}>
-          <View>
-            <Page>
+      <Popup opened={Boolean(detailGroup)} onPopupClose={() => setDetailGroup(null)}>
+        {detailGroup && (
+          <Page>
               <Navbar>
                 <NavLeft>
-                  <Link popupClose>關閉</Link>
+                  <Link onClick={() => setDetailGroup(null)}>關閉</Link>
                 </NavLeft>
                 <NavTitle>已丟棄群組</NavTitle>
                 <NavRight>
@@ -1076,9 +1093,9 @@ export default function FanartPage() {
                 </NavRight>
               </Navbar>
 
-              <Block strong inset className="review-surface">
+              <Block strong inset>
                 {detailGroup.media?.[0] && (
-                  <div className="review-media-frame">
+                  <div>
                     {detailGroup.media[0].media_type === 'video' ? (
                       <video
                         src={detailGroup.media[0].url || detailGroup.media[0].original_url || undefined}
@@ -1106,15 +1123,14 @@ export default function FanartPage() {
                 <ListItem title="推文內容" text={detailGroup.source_text || '（無）'} />
               </List>
 
-              <Block strong inset className="review-surface">
-                <Button fill tonal color="orange" onClick={() => void handleRestoreGroup(detailGroup.id)} disabled={busyKeys.has(`group:${detailGroup.id}`)}>
-                  還原回未整理
-                </Button>
-              </Block>
-            </Page>
-          </View>
-        </Popup>
-      )}
+            <Block strong inset>
+              <Button fill tonal color="orange" onClick={() => void handleRestoreGroup(detailGroup.id)} disabled={busyKeys.has(`group:${detailGroup.id}`)}>
+                還原回未整理
+              </Button>
+            </Block>
+          </Page>
+        )}
+      </Popup>
 
       <MvSheet
         key={mvSheetKey}
@@ -1136,14 +1152,14 @@ export default function FanartPage() {
         onConfirm={handleMvSheetConfirm}
       />
 
-      <Sheet className="review-sheet" opened={focusSheetOpen} onSheetClosed={() => setFocusSheetOpen(false)} backdrop swipeToClose style={{ height: '70vh' }}>
+      <Sheet opened={focusSheetOpen} onSheetClosed={() => setFocusSheetOpen(false)} backdrop swipeToClose style={{ height: '70vh' }}>
         <Toolbar>
-          <div className="left" style={{ paddingLeft: 16, fontWeight: 700 }}>切換 MV 視圖</div>
-          <div className="right" style={{ paddingRight: 16 }}>
+          <ToolbarPane>
+            <div style={{ fontWeight: 700 }}>切換 MV 視圖</div>
             <Link sheetClose>關閉</Link>
-          </div>
+          </ToolbarPane>
         </Toolbar>
-        <Block strong inset className="review-surface review-fade-up">
+        <Block strong inset>
           <Searchbar
             disableButton={!focusSearch}
             placeholder="搜尋 MV 標題"
@@ -1155,7 +1171,7 @@ export default function FanartPage() {
           {filteredMvFocusOptions.map((mv) => (
             <ListItem
               key={mv.id}
-              link="#"
+              link
               title={mv.title}
               after={String(mv.fanartCount)}
               onClick={() => {

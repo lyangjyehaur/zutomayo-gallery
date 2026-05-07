@@ -3,12 +3,13 @@ import {
   Badge,
   Block,
   BlockTitle,
-  Button,
   Card,
   CardContent,
   CardHeader,
+  Checkbox,
   Link,
   List,
+  ListInput,
   ListItem,
   Navbar,
   NavLeft,
@@ -18,17 +19,18 @@ import {
   PageContent,
   Popup,
   Searchbar,
-  Segmented,
   Sheet,
   SwipeoutActions,
   SwipeoutButton,
   Toolbar,
-  View,
+  ToolbarPane,
   f7,
 } from 'framework7-react'
 import AppNavbar from '../components/AppNavbar'
+import Button from '../components/Button'
 import MvSheet from '../components/MvSheet'
 import ReviewStateBlock from '../components/ReviewStateBlock'
+import Segmented from '../components/Segmented'
 import ReviewToolbarCard from '../components/ReviewToolbarCard'
 import { useWorkspace } from '../hooks/useWorkspace'
 import {
@@ -346,6 +348,10 @@ export default function StagingPage() {
 
   const handleMvConfirm = async (mvIds: string[], tags: string[]) => {
     if (mvSheetTargets.length === 0) return
+    if (mvIds.length === 0) {
+      f7.dialog.alert('請先選擇至少一個 MV，再保存關聯')
+      return
+    }
 
     setMvSheetBusy(true)
     setBusyForIds(mvSheetTargets, true)
@@ -514,8 +520,8 @@ export default function StagingPage() {
     >
       <AppNavbar title="暫存審核" subtitle="crawler / sync / 批次操作" />
 
-      <Block className="review-grid review-grid-cards review-fade-up">
-        <Card className="review-card">
+      <Block>
+        <Card>
           <CardHeader>同步狀態</CardHeader>
           <CardContent>
             <div style={{ fontSize: 20, fontWeight: 700 }}>{getProgressLabel(syncProgress)}</div>
@@ -524,9 +530,9 @@ export default function StagingPage() {
                 ? `本輪 ${syncProgress.current_run_processed || 0} / ${syncProgress.current_run_total || 0}，累計抓取 ${syncProgress.total_crawled || 0}`
                 : '尚未取得同步資訊'}
             </div>
-            <div className="review-progress-track" style={{ marginTop: 12 }}>
+            <div style={{ marginTop: 12 }}>
               <div
-                className="review-progress-fill"
+               
                 style={{ width: `${syncProgressPercent}%` }}
               />
             </div>
@@ -537,7 +543,7 @@ export default function StagingPage() {
           </CardContent>
         </Card>
 
-        <Card className="review-card">
+        <Card>
           <CardHeader>佇列統計</CardHeader>
           <CardContent>
             <div style={{ display: 'grid', gap: 10 }}>
@@ -559,7 +565,7 @@ export default function StagingPage() {
         </Card>
       </Block>
 
-      <Block className="review-segment-wrap review-fade-up review-fade-up-delay-1">
+      <Block>
         <Segmented strong>
           <Button active={status === 'pending'} onClick={() => handleStatusChange('pending')}>
             待審 {progress?.statusCounts.pending || 0}
@@ -574,7 +580,7 @@ export default function StagingPage() {
       </Block>
 
       <ReviewToolbarCard
-        className="review-fade-up review-fade-up-delay-1"
+       
         search={(
           <Searchbar
             disableButton={!query}
@@ -586,10 +592,10 @@ export default function StagingPage() {
         summary={(
           <>
             搜尋只會篩目前已載入項目；下拉可刷新，往下滑可繼續載入更多資料。
-            <div className="review-inline-kpis" style={{ marginTop: 10 }}>
-              <div className="review-chip">目前狀態 {status}</div>
-              <div className="review-chip review-chip-soft">顯示 {filteredItems.length}</div>
-              <div className="review-chip review-chip-soft">已勾選 {selectedCount}</div>
+            <div style={{ marginTop: 10 }}>
+              <div>目前狀態 {status}</div>
+              <div>顯示 {filteredItems.length}</div>
+              <div>已勾選 {selectedCount}</div>
             </div>
           </>
         )}
@@ -597,11 +603,10 @@ export default function StagingPage() {
       />
 
       <ReviewToolbarCard
-        className="review-fade-up review-fade-up-delay-2"
+       
         summary={(
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}>
-            <input
-              type="checkbox"
+            <Checkbox
               checked={allVisibleSelected}
               onChange={(event) => toggleSelectAllVisible(event.target.checked)}
             />
@@ -613,7 +618,7 @@ export default function StagingPage() {
             {status === 'pending' && (
               <>
                 <Button small fill disabled={selectedCount === 0 || mvSheetBusy} onClick={() => openApproveSheet(Array.from(selection))}>
-                  批次通過
+                  關聯後批次通過
                 </Button>
                 <Button small outline color="red" disabled={selectedCount === 0} onClick={() => requestReject(Array.from(selection))}>
                   批次拒絕
@@ -631,7 +636,7 @@ export default function StagingPage() {
         footer="批量工具列會跟著當前狀態切換，保持與單筆 swipeout 行為一致。"
       />
 
-      <div className="review-list-frame">
+      <div>
         {loadError && !loading && items.length === 0 ? (
           <ReviewStateBlock
             title="暫存清單載入失敗"
@@ -648,7 +653,7 @@ export default function StagingPage() {
             loading
           />
         ) : (
-      <List mediaList className="review-list review-fade-up review-fade-up-delay-2">
+      <List mediaList>
         {filteredItems.map((item) => {
           const imgSrc = item.media_type === 'image' ? item.media_url : (item.thumbnail_url || item.media_url)
           const subtitle = `@${item.author_handle} · ❤️ ${formatCount(item.like_count)} · 🔁 ${formatCount(item.retweet_count)} · 👁 ${formatCount(item.view_count)}`
@@ -663,34 +668,41 @@ export default function StagingPage() {
           return (
             <ListItem
               key={item.id}
+              checkbox
+              checked={selection.has(item.id)}
+              onChange={(event) => toggleSelection(item.id, event.target.checked)}
+              mediaItem
               swipeout={status === 'pending'}
-              link="#"
               title={item.author_name || item.author_handle}
               subtitle={subtitle}
               text={item.source_text || '（無推文文字）'}
               footer={footer}
-              onClick={() => setDetailItem(item)}
             >
-              <div slot="media" style={{ position: 'relative', width: 80, height: 80 }}>
-                <input
-                  type="checkbox"
-                  checked={selection.has(item.id)}
-                  onClick={(event) => event.stopPropagation()}
-                  onChange={(event) => toggleSelection(item.id, event.target.checked)}
-                  style={{ position: 'absolute', top: 6, left: 6, zIndex: 2 }}
-                />
+              <div slot="media" style={{ width: 72, height: 72, flexShrink: 0 }}>
                 {item.media_type === 'video' ? (
-                  <video src={imgSrc} style={{ borderRadius: 8, width: 80, height: 80, objectFit: 'cover' }} muted playsInline />
+                  <video src={imgSrc} style={{ borderRadius: 8, width: 72, height: 72, objectFit: 'cover', display: 'block' }} muted playsInline />
                 ) : (
-                  <img src={imgSrc} style={{ borderRadius: 8, width: 80, height: 80, objectFit: 'cover' }} />
+                  <img src={imgSrc} style={{ borderRadius: 8, width: 72, height: 72, objectFit: 'cover', display: 'block' }} />
                 )}
               </div>
-              <Badge slot="after" color={getStatusBadgeColor(item.status)}>{item.status}</Badge>
+              <Badge slot="after-start" color={getStatusBadgeColor(item.status)}>{item.status}</Badge>
+              <Button
+                slot="after"
+                small
+                tonal
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  setDetailItem(item)
+                }}
+              >
+                詳情
+              </Button>
               {status === 'pending' && (
                 <>
                   <SwipeoutActions left>
                     <SwipeoutButton overswipe color="green" close onClick={() => { if (isBusy) return; openApproveSheet([item.id]) }}>
-                      通過
+                      關聯後通過
                     </SwipeoutButton>
                   </SwipeoutActions>
                   <SwipeoutActions right>
@@ -726,7 +738,7 @@ export default function StagingPage() {
         )}
 
         {!hasMore && filteredItems.length > 0 && (
-          <Block strong inset className="review-endcap">已載入到底，若要查看其他資料可切換狀態或重新同步。</Block>
+          <Block strong inset>已載入到底，若要查看其他資料可切換狀態或重新同步。</Block>
         )}
 
         {!loading && items.length === 0 && (
@@ -742,9 +754,9 @@ export default function StagingPage() {
         key={mvSheetTargets.join('|') || 'empty'}
         opened={mvSheetOpened}
         busy={mvSheetBusy}
-        title={mvSheetTargets.length > 1 ? `批次通過 ${mvSheetTargets.length} 筆暫存` : '通過並關聯 MV / Tag'}
-        description={mvSheetTargets.length > 1 ? '這次選擇會套用到所有選取項目。' : '可直接帶入 MV 與特殊標籤，保持與桌面版一致。'}
-        confirmText={mvSheetTargets.length > 1 ? '批次通過' : '通過'}
+        title={mvSheetTargets.length > 1 ? `為 ${mvSheetTargets.length} 筆暫存選擇關聯 MV` : '選擇關聯 MV / 標籤'}
+        description={mvSheetTargets.length > 1 ? '先選好要關聯的 MV / 標籤，再保存並批次通過。' : '先選好要關聯的 MV / 標籤，再保存本次關聯並通過。'}
+        confirmText={mvSheetTargets.length > 1 ? '保存關聯並批次通過' : '保存關聯並通過'}
         onClose={() => {
           setMvSheetOpened(false)
           setMvSheetTargets([])
@@ -754,7 +766,7 @@ export default function StagingPage() {
       />
 
       <Sheet
-        className="review-sheet"
+       
         opened={crawlerSheetOpened}
         onSheetClosed={() => setCrawlerSheetOpened(false)}
         backdrop
@@ -762,54 +774,40 @@ export default function StagingPage() {
         style={{ height: 'auto' }}
       >
         <Toolbar>
-          <div className="left" style={{ paddingLeft: 16, fontWeight: 700 }}>Crawler / Sync</div>
-          <div className="right" style={{ paddingRight: 16 }}>
+          <ToolbarPane>
+            <div style={{ fontWeight: 700 }}>Crawler / Sync</div>
             <Link sheetClose>關閉</Link>
-          </div>
+          </ToolbarPane>
         </Toolbar>
         <PageContent>
-          <Block strong inset className="review-surface review-fade-up">
-            <div className="review-form-grid">
-              <label className="review-form-label">
-                <div className="review-form-label-title">Search Terms</div>
-                <input
-                  type="text"
-                  value={crawlerForm.searchTerms}
-                  onChange={(event) => setCrawlerForm((prev) => ({ ...prev, searchTerms: event.target.value }))}
-                  style={{ width: '100%', padding: '12px 14px', borderRadius: 12 }}
-                />
-              </label>
-              <div className="review-form-split">
-                <label className="review-form-label">
-                  <div className="review-form-label-title">開始日期</div>
-                  <input
-                    type="date"
-                    value={crawlerForm.startDate}
-                    onChange={(event) => setCrawlerForm((prev) => ({ ...prev, startDate: event.target.value }))}
-                    style={{ width: '100%', padding: '12px 14px', borderRadius: 12 }}
-                  />
-                </label>
-                <label className="review-form-label">
-                  <div className="review-form-label-title">結束日期</div>
-                  <input
-                    type="date"
-                    value={crawlerForm.endDate}
-                    onChange={(event) => setCrawlerForm((prev) => ({ ...prev, endDate: event.target.value }))}
-                    style={{ width: '100%', padding: '12px 14px', borderRadius: 12 }}
-                  />
-                </label>
-                <label className="review-form-label">
-                  <div className="review-form-label-title">最大抓取數量</div>
-                  <input
-                    type="number"
-                    min="1"
-                    value={crawlerForm.maxItems}
-                    onChange={(event) => setCrawlerForm((prev) => ({ ...prev, maxItems: event.target.value }))}
-                    style={{ width: '100%', padding: '12px 14px', borderRadius: 12 }}
-                  />
-                </label>
-              </div>
-            </div>
+          <List form inset>
+            <ListInput
+              label="Search Terms"
+              type="text"
+              value={crawlerForm.searchTerms}
+              onInput={(event) => setCrawlerForm((prev) => ({ ...prev, searchTerms: (event.target as HTMLInputElement).value }))}
+            />
+            <ListInput
+              label="開始日期"
+              type="date"
+              value={crawlerForm.startDate}
+              onInput={(event) => setCrawlerForm((prev) => ({ ...prev, startDate: (event.target as HTMLInputElement).value }))}
+            />
+            <ListInput
+              label="結束日期"
+              type="date"
+              value={crawlerForm.endDate}
+              onInput={(event) => setCrawlerForm((prev) => ({ ...prev, endDate: (event.target as HTMLInputElement).value }))}
+            />
+            <ListInput
+              label="最大抓取數量"
+              type="number"
+              min={1}
+              value={crawlerForm.maxItems}
+              onInput={(event) => setCrawlerForm((prev) => ({ ...prev, maxItems: (event.target as HTMLInputElement).value }))}
+            />
+          </List>
+          <Block strong inset>
             <div style={{ marginTop: 14, opacity: 0.75, fontSize: 13 }}>
               目前狀態：{getProgressLabel(syncProgress)}
             </div>
@@ -821,13 +819,12 @@ export default function StagingPage() {
         </PageContent>
       </Sheet>
 
-      {detailItem && (
-        <Popup className="review-popup" opened onPopupClosed={() => setDetailItem(null)}>
-          <View>
-            <Page>
+      <Popup opened={Boolean(detailItem)} onPopupClose={() => setDetailItem(null)}>
+        {detailItem && (
+          <Page>
               <Navbar>
                 <NavLeft>
-                  <Link popupClose>關閉</Link>
+                  <Link onClick={() => setDetailItem(null)}>關閉</Link>
                 </NavLeft>
                 <NavTitle>暫存詳情</NavTitle>
                 <NavRight>
@@ -835,7 +832,7 @@ export default function StagingPage() {
                 </NavRight>
               </Navbar>
 
-              <Block strong inset className="review-surface">
+              <Block strong inset>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                   <div>
                     <div style={{ fontSize: 20, fontWeight: 700 }}>{detailItem.author_name || detailItem.author_handle}</div>
@@ -849,8 +846,8 @@ export default function StagingPage() {
                 </div>
               </Block>
 
-              <Block strong inset className="review-surface">
-                <div className="review-media-frame">
+              <Block strong inset>
+                <div>
                   {detailItem.media_type === 'video' ? (
                     <video
                       src={detailItem.r2_url || detailItem.media_url}
@@ -889,25 +886,24 @@ export default function StagingPage() {
                 <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{detailItem.source_text || '（無推文文字）'}</div>
               </Block>
 
-              <Block strong inset className="review-surface">
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {detailItem.status === 'pending' && (
-                    <>
-                      <Button fill onClick={() => openApproveSheet([detailItem.id])} disabled={busyIds.has(detailItem.id)}>通過並關聯 MV</Button>
-                      <Button outline color="red" onClick={() => requestReject([detailItem.id])} disabled={busyIds.has(detailItem.id)}>拒絕</Button>
-                    </>
-                  )}
-                  {detailItem.status === 'rejected' && (
-                    <Button fill tonal color="orange" onClick={() => requestRestore([detailItem.id])} disabled={busyIds.has(detailItem.id)}>
-                      恢復為待審
-                    </Button>
-                  )}
-                </div>
-              </Block>
-            </Page>
-          </View>
-        </Popup>
-      )}
+            <Block strong inset>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {detailItem.status === 'pending' && (
+                  <>
+                    <Button fill onClick={() => openApproveSheet([detailItem.id])} disabled={busyIds.has(detailItem.id)}>通過並關聯 MV</Button>
+                    <Button outline color="red" onClick={() => requestReject([detailItem.id])} disabled={busyIds.has(detailItem.id)}>拒絕</Button>
+                  </>
+                )}
+                {detailItem.status === 'rejected' && (
+                  <Button fill tonal color="orange" onClick={() => requestRestore([detailItem.id])} disabled={busyIds.has(detailItem.id)}>
+                    恢復為待審
+                  </Button>
+                )}
+              </div>
+            </Block>
+          </Page>
+        )}
+      </Popup>
     </Page>
   )
 }
