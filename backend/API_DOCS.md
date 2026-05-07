@@ -53,7 +53,6 @@
 | **POST** | `/r2-sync` | 管理員/Token | 觸發將推特圖片同步至 Cloudflare R2 儲存桶的背景任務。可接受 `x-r2-sync-token` 作為自動化腳本的驗證。 |
 | **POST** | `/r2-rebuild` | 管理員/Token | 重建 Cloudflare R2 圖片緩存庫。 |
 | **POST** | `/survey` | 公開 | 提交訪問質量調查問卷（多維度評分 + 自動效能數據）。<br>Body: `{ "ratingSpeed": 4.5, "ratingExperience": 5, "ratingImageQuality": 4, "ratingUi": 5, "ratingSearch": 4.5, "comment": "...", "url": "...", "userAgent": "...", "connectionType": "4g", "downlink": 10, "rtt": 50, "saveData": false, "lcp": 1200, "fid": 15, "cls": 0.05, "fcp": 800, "ttfb": 200, "imageLoadAvg": 350, "imageLoadCount": 12 }` |
-| **GET** | `/errors/stream` | 管理員 | **SSE 即時推送**：後端異常事件串流。管理員連接後可即時接收後端運行時產生的錯誤事件，包含歷史錯誤與即時錯誤。 |
 | **GET** | `/errors` | 管理員 | 查詢後端錯誤日誌（分頁）。支援多種篩選條件。 |
 | **PATCH** | `/errors/:id/resolve` | 管理員 | 標記或取消標記指定錯誤為已解決。Body: `{ "resolved": true/false }` |
 | **POST** | `/errors/batch-resolve` | 管理員 | 批次標記多筆錯誤為已解決。Body: `{ "ids": ["id1", "id2", ...] }` |
@@ -182,42 +181,9 @@
 ## 7. 後端錯誤日誌 (Backend Error Logs)
 *(路徑: `/api/system/errors`)*
 
-後端運行時產生的所有異常（包含請求錯誤、未捕獲異常、未處理的 Promise Rejection 等）都會自動記錄至 `backend_error_logs` 資料表，並透過 SSE 即時推送給已連接的管理員前端。
+後端運行時產生的所有異常（包含請求錯誤、未捕獲異常、未處理的 Promise Rejection 等）都會自動記錄至 `backend_error_logs` 資料表。當錯誤數量在時間窗口內超過閾值時，系統會透過 `NotificationService` 發送警告通知（Bark + Web Push + Telegram）。
 
-### 7.1. SSE 即時推送
-
-**GET `/api/system/errors/stream`**
-
-此端點使用 Server-Sent Events (SSE) 協議，管理員連接後可即時接收後端異常事件。
-
-**事件格式：**
-
-| 事件類型 | 說明 |
-| :--- | :--- |
-| `connected` | 連接成功，包含 `timestamp` |
-| `history` | 連接時推送的歷史錯誤（記憶體中最近 200 筆），包含 `events` 陣列 |
-| `error` | 即時錯誤事件，包含完整的 `event` 物件 |
-
-**錯誤事件欄位：**
-
-| 欄位 | 類型 | 說明 |
-| :--- | :--- | :--- |
-| `id` | string | 錯誤唯一識別碼 |
-| `timestamp` | string | ISO 8601 時間戳 |
-| `source` | string | 錯誤來源：`request` / `uncaught` / `unhandled_rejection` / `cron` / `queue` |
-| `message` | string | 錯誤訊息 |
-| `stack` | string? | 堆疊追蹤 |
-| `statusCode` | number? | HTTP 狀態碼 |
-| `code` | string? | 錯誤代碼 |
-| `method` | string? | HTTP 方法 |
-| `url` | string? | 請求 URL |
-| `requestId` | string? | 請求 ID |
-| `ip` | string? | 客戶端 IP |
-| `details` | any? | 額外詳情 |
-
-**連線保持：** 每 15 秒發送心跳 (`:heartbeat`)，防止連線超時。
-
-### 7.2. 查詢錯誤日誌
+### 7.1. 查詢錯誤日誌
 
 **GET `/api/system/errors`**
 
@@ -250,7 +216,7 @@
 }
 ```
 
-### 7.3. 標記錯誤解決
+### 7.2. 標記錯誤解決
 
 **PATCH `/api/system/errors/:id/resolve`**
 
@@ -262,7 +228,7 @@
 { "success": true, "data": { ...updated log } }
 ```
 
-### 7.4. 批次標記解決
+### 7.3. 批次標記解決
 
 **POST `/api/system/errors/batch-resolve`**
 

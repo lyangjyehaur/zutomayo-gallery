@@ -86,7 +86,7 @@ zutomayo-gallery/
   - 顯示 MV 詳情、媒體與外部影片播放入口
 - `frontend/src/lib/`
   - 放置 API 存取、管理端工具、共用型別與客戶端工具函數
-  - `useBackendErrorStream` hook 連接後端 SSE 端點，即時接收後端異常並顯示 toast
+  - `useBackendErrorStream` hook 已移除（SSE 即時推送已在 v3.6.9 移除）；管理員透過錯誤日誌頁面查詢與篩選
 
 ### 後端
 
@@ -120,7 +120,7 @@ zutomayo-gallery/
   - 管理投稿審核、媒體搬運與後續整理流程
 - `backend/src/services/error-events.service.ts`
   - `ErrorEventEmitter` 單例，捕獲所有後端異常並持久化至 `backend_error_logs` 表
-  - 透過 SSE 即時推送錯誤事件給已連接的管理員前端
+  - 閾值觸發通知：當錯誤數量在時間窗口內超過閾值時，透過 `NotificationService` 發送警告
 
 ### Review App (`review-app/`)
 
@@ -270,12 +270,11 @@ zutomayo-gallery/
 ### 5. 後端錯誤監控流程
 
 1. 後端任何異常（請求錯誤、未捕獲異常、未處理 Promise Rejection、BullMQ 任務失敗、背景任務失敗、啟動/遷移失敗）觸發 `ErrorEventEmitter.emitError()`。
-2. `ErrorEventEmitter` 將錯誤寫入 `backend_error_logs` 資料表，並透過 Node.js EventEmitter 廣播。
-3. SSE 端點 (`/api/system/errors/stream`) 監聽廣播，即時推送給已連接的管理員前端。
-4. 前端 `useBackendErrorStream` hook 接收 SSE 事件，彈出 toast 通知並更新 header 錯誤計數徽章。
-5. 管理員可至 `/admin/system/errors` 錯誤日誌頁面查詢、篩選、搜尋與標記解決。
-6. 前端預設以 `severity=server` 篩選，隱藏 4xx 客戶端錯誤，僅顯示 5xx+ 及非請求來源異常；管理員可切換至「全部」查看完整記錄。
-7. Sequelize 關聯使用 `constraints: false` 避免 `sync({ alter: true })` 因缺少 FK constraint 而報錯。
+2. `ErrorEventEmitter` 將錯誤寫入 `backend_error_logs` 資料表。
+3. 當錯誤數量在 `ERROR_NOTIFICATION_WINDOW_MS` 時間窗口內超過 `ERROR_NOTIFICATION_THRESHOLD` 閾值時，透過 `NotificationService.send()` 發送警告通知（Bark + Web Push + Telegram），並有 15 分鐘冷卻期避免重複通知。
+4. 管理員可至 `/admin/system/errors` 錯誤日誌頁面查詢、篩選、搜尋與標記解決。
+5. 前端預設以 `severity=server` 篩選，隱藏 4xx 客戶端錯誤，僅顯示 5xx+ 及非請求來源異常；管理員可切換至「全部」查看完整記錄。
+6. Sequelize 關聯使用 `constraints: false` 避免 `sync({ alter: true })` 因缺少 FK constraint 而報錯。
 
 ## 8. 與其他文檔的關係
 

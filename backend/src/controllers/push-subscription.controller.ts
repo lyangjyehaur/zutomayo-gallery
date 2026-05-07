@@ -9,13 +9,13 @@ router.post('/subscribe', async (req: Request, res: Response) => {
   try {
     const userId = (req.session as any)?.user?.id;
     if (!userId) {
-      res.status(401).json({ success: false, message: 'Not authenticated' });
+      res.status(401).json({ success: false, error: 'Not authenticated', code: 'UNAUTHORIZED', statusCode: 401 });
       return;
     }
 
     const { endpoint, keys } = req.body;
     if (!endpoint || !keys?.p256dh || !keys?.auth) {
-      res.status(400).json({ success: false, message: 'Missing required fields' });
+      res.status(400).json({ success: false, error: 'Missing required fields', code: 'VALIDATION_ERROR', statusCode: 400 });
       return;
     }
 
@@ -39,7 +39,7 @@ router.post('/subscribe', async (req: Request, res: Response) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Failed to subscribe' });
+    res.status(500).json({ success: false, error: 'Failed to subscribe', code: 'PUSH_SUBSCRIBE_ERROR', statusCode: 500 });
   }
 });
 
@@ -47,20 +47,20 @@ router.delete('/unsubscribe', async (req: Request, res: Response) => {
   try {
     const userId = (req.session as any)?.user?.id;
     if (!userId) {
-      res.status(401).json({ success: false, message: 'Not authenticated' });
+      res.status(401).json({ success: false, error: 'Not authenticated', code: 'UNAUTHORIZED', statusCode: 401 });
       return;
     }
 
     const { endpoint } = req.body;
     if (!endpoint) {
-      res.status(400).json({ success: false, message: 'Missing endpoint' });
+      res.status(400).json({ success: false, error: 'Missing endpoint', code: 'VALIDATION_ERROR', statusCode: 400 });
       return;
     }
 
     await PushSubscriptionModel.destroy({ where: { endpoint, user_id: userId } });
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Failed to unsubscribe' });
+    res.status(500).json({ success: false, error: 'Failed to unsubscribe', code: 'PUSH_UNSUBSCRIBE_ERROR', statusCode: 500 });
   }
 });
 
