@@ -927,7 +927,7 @@ export default function FancyboxViewer({
 
       const label = document.createElement('span');
       label.className = 'ztmy-annotation-label';
-      label.textContent = ann.label;
+      label.textContent = ann.label_i18n?.[i18n.language] || ann.label_i18n?.['zh-TW'] || ann.label;
       label.dataset.annotation = '';
 
       marker.appendChild(dot);
@@ -973,7 +973,7 @@ export default function FancyboxViewer({
     requestAnimationFrame(() => {
       renderPins(slide.panzoomRef, pins);
     });
-  }, [renderPins]);
+  }, [renderPins, i18n.language]);
 
   const handlePhotoClick = useCallback(
     (index: number) => {
@@ -1140,6 +1140,14 @@ export default function FancyboxViewer({
       NativeFancybox.close(true);
     };
   }, []);
+
+  useEffect(() => {
+    const activeFancybox = NativeFancybox.getInstance?.();
+    if (!activeFancybox) return;
+    const slide = activeFancybox.getSlide?.();
+    if (!slide) return;
+    setTimeout(() => injectAnnotationPins(activeFancybox, annotationsMap), 0);
+  }, [i18n.language]);
 
   // 移除額外的 loading 狀態，因為我們已經在每個 PhotoItem 內部處理了骨架與過渡
   // 我們只需要在 processedImages.length === 0 且仍在獲取資料時才需要顯示

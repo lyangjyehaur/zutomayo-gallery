@@ -124,6 +124,7 @@ export const MediaAnnotationModel = sequelize.define('MediaAnnotation', {
   id: { type: DataTypes.STRING(36), primaryKey: true, defaultValue: generateShortId, comment: '標註唯一識別碼' },
   media_id: { type: DataTypes.STRING(36), allowNull: false, comment: '關聯至 media.id' },
   label: { type: DataTypes.TEXT, allowNull: false, comment: '標註文字內容' },
+  label_i18n: { type: DataTypes.JSONB, allowNull: true, comment: '多語言標註文字 (JSONB: { "zh-TW": "...", "ja": "...", ... })' },
   x: { type: DataTypes.DECIMAL(6, 3), allowNull: false, comment: 'X 軸百分比位置 (0.000-100.000)' },
   y: { type: DataTypes.DECIMAL(6, 3), allowNull: false, comment: 'Y 軸百分比位置 (0.000-100.000)' },
   style: { type: DataTypes.STRING(50), defaultValue: 'default', comment: '標註樣式類型 (保留擴充)' },

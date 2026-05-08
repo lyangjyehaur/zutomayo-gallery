@@ -2,6 +2,7 @@ export interface MediaAnnotation {
   id: string;
   media_id: string;
   label: string;
+  label_i18n?: Record<string, string>;
   x: number;
   y: number;
   style?: string;

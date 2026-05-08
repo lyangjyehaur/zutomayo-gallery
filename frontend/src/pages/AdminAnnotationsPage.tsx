@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SUPPORTED_LANGS, type SupportedLang } from "@/i18n"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   Table,
@@ -42,6 +43,22 @@ const STYLE_OPTIONS = [
   { value: "subtle", label: "Subtle" },
   { value: "accent", label: "Accent" },
 ]
+
+const LANG_LABELS: Record<string, string> = {
+  "zh-TW": "繁中",
+  "zh-CN": "简中",
+  "zh-HK": "港繁",
+  "ja": "日",
+  "ko": "韓",
+  "en": "英",
+  "es": "西",
+}
+
+const getI18nStatus = (labelI18n?: Record<string, string>) => {
+  if (!labelI18n) return { done: 0, total: SUPPORTED_LANGS.length }
+  const done = SUPPORTED_LANGS.filter((lang) => labelI18n[lang]?.trim()).length
+  return { done, total: SUPPORTED_LANGS.length }
+}
 
 function CoordinatePicker({
   imageUrl,
@@ -118,6 +135,7 @@ function AnnotationForm({
   const [formMvId, setFormMvId] = useState(initialMvId || "")
   const [mediaId, setMediaId] = useState(annotation?.media_id || "")
   const [label, setLabel] = useState(annotation?.label || "")
+  const [labelI18n, setLabelI18n] = useState<Record<string, string>>(annotation?.label_i18n || {})
   const [x, setX] = useState(Number(annotation?.x) || 0)
   const [y, setY] = useState(Number(annotation?.y) || 0)
   const [style, setStyle] = useState(annotation?.style || "default")
@@ -184,6 +202,7 @@ function AnnotationForm({
     onSave({
       media_id: mediaId,
       label: label.trim(),
+      label_i18n: Object.keys(labelI18n).length > 0 ? labelI18n : undefined,
       x,
       y,
       style: style || "default",
@@ -305,7 +324,7 @@ function AnnotationForm({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="flex flex-col gap-1 md:col-span-2">
-          <div className="text-[10px] font-black uppercase opacity-70">Label</div>
+          <div className="text-[10px] font-black uppercase opacity-70">Label (繁中)</div>
           <Textarea
             value={label}
             onChange={(e) => setLabel(e.target.value)}
@@ -313,6 +332,32 @@ function AnnotationForm({
             placeholder="標註文字（支援換行）"
             rows={3}
           />
+        </div>
+
+        <div className="flex flex-col gap-2 md:col-span-2">
+          <div className="text-[10px] font-black uppercase opacity-70">多語言翻譯</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {SUPPORTED_LANGS.filter((l) => l !== "zh-TW").map((lang) => (
+              <div key={lang} className="flex flex-col gap-0.5">
+                <div className="text-[9px] font-mono opacity-50">{LANG_LABELS[lang]} ({lang})</div>
+                <Textarea
+                  value={labelI18n[lang] || ""}
+                  onChange={(e) => setLabelI18n((prev) => {
+                    const next = { ...prev }
+                    if (e.target.value.trim()) {
+                      next[lang] = e.target.value
+                    } else {
+                      delete next[lang]
+                    }
+                    return next
+                  })}
+                  className="border border-black/30 font-bold min-h-[50px] resize-y text-xs"
+                  placeholder={`${LANG_LABELS[lang]}翻譯`}
+                  rows={2}
+                />
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="flex flex-col gap-1">
@@ -609,6 +654,7 @@ export function AdminAnnotationsPage() {
                     <TableRow>
                       <TableHead className="w-[80px]">縮圖</TableHead>
                       <TableHead>標註文字</TableHead>
+                      <TableHead>翻譯</TableHead>
                       <TableHead>位置</TableHead>
                       <TableHead>樣式</TableHead>
                       <TableHead>排序</TableHead>
@@ -632,6 +678,13 @@ export function AdminAnnotationsPage() {
                           )}
                         </TableCell>
                         <TableCell className="font-bold">{a.label}</TableCell>
+                        <TableCell>
+                          {(() => {
+                            const { done, total } = getI18nStatus(a.label_i18n)
+                            const color = done === total ? "text-green-600" : done > 0 ? "text-yellow-600" : "text-red-500"
+                            return <span className={`text-xs font-mono ${color}`}>{done}/{total}</span>
+                          })()}
+                        </TableCell>
                         <TableCell className="font-mono text-xs">
                           {Number(a.x).toFixed(1)}%, {Number(a.y).toFixed(1)}%
                         </TableCell>
