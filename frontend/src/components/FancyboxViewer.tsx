@@ -3,13 +3,14 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { Fancybox as NativeFancybox } from '@fancyapps/ui';
 import '@fancyapps/ui/dist/fancybox/fancybox.css';
+import '@fancyapps/ui/dist/panzoom/panzoom.pins.css';
 
 // 將 NativeFancybox 暴露給全域，讓 analytics.ts 可以存取 API 以獲取下載檔名
 if (typeof window !== 'undefined') {
   (window as any).Fancybox = NativeFancybox;
 }
 
-import { MVMedia } from '@/lib/types';
+import { MVMedia, MediaAnnotation } from '@/lib/types';
 import { getProxyImgUrl, isMediaVideo } from '@/lib/image';
 import { GALLERY_BREAKPOINTS } from '@/components/galleryBreakpoints';
 export { GALLERY_BREAKPOINTS } from '@/components/galleryBreakpoints';
@@ -145,6 +146,7 @@ interface PhotoData {
   fallbackThumb?: string;
   originalUrl?: string;
   fallbackFull?: string;
+  annotations?: MediaAnnotation[];
   [key: string]: unknown;
 }
 
@@ -175,7 +177,7 @@ const getExtensionFromUrl = (urlStr: string): string => {
   }
 };
 
-const FancyboxCaptionOverlay = ({ api, photos }: { api: any; photos: PhotoData[] }) => {
+const FancyboxCaptionOverlay = ({ api, photos, annotationsMap }: { api: any; photos: PhotoData[]; annotationsMap: Map<number, MediaAnnotation[]> }) => {
   const { t } = useTranslation();
   const [activeIndex, setActiveIndex] = useState(api?.getCarousel?.()?.getPage()?.index || 0);
   const [isZooming, setIsZooming] = useState(false);
@@ -242,6 +244,7 @@ const FancyboxCaptionOverlay = ({ api, photos }: { api: any; photos: PhotoData[]
 
   const title = photos[activeIndex]?.caption ?? '';
   const richText = photos[activeIndex]?.richText ?? '';
+  const activeAnnotations = annotationsMap.get(activeIndex) || [];
 
   const isHidden = isZooming || isThumbsHidden;
 
@@ -661,8 +664,9 @@ export default function FancyboxViewer({
           tweetAuthor: img.group?.author_name,
           tweetHandle: img.group?.author_handle,
           tweetDate: img.group?.post_date,
-          originalUrl: img.url, // 加入原始網址供去重判斷
-          ...img // 保留其他可能的新增欄位
+          originalUrl: img.url,
+          annotations: img.annotations || [],
+          ...img
         };
       });
     },
@@ -837,6 +841,140 @@ export default function FancyboxViewer({
     displayedPhotosRef.current = displayedPhotos;
   }, [displayedPhotos]);
 
+  const annotationsMap = useMemo(() => {
+    const map = new Map<number, MediaAnnotation[]>();
+    displayedPhotos.forEach((photo, index) => {
+      if (photo.annotations && photo.annotations.length > 0) {
+        map.set(index, photo.annotations);
+      }
+    });
+    return map;
+  }, [displayedPhotos]);
+
+  const renderPins = useCallback((panzoom: any, pinEls: Array<{ x: string; y: string; el: HTMLElement }>) => {
+    if (!panzoom || !pinEls.length) return;
+    const { width, height } = panzoom.getFullDim();
+    const transform = panzoom.getTransform();
+    const wrapperRect = panzoom.getWrapper()?.getBoundingClientRect();
+    if (!wrapperRect) return;
+
+    const scale = transform.scale || 1;
+    const tx = transform.x || 0;
+    const ty = transform.y || 0;
+    const flipX = transform.flipX || 1;
+    const flipY = transform.flipY || 1;
+    const angle = transform.angle || 0;
+
+    const resolvePos = (val: string, contentDim: number, wrapperDim: number) => {
+      const str = String(val);
+      const num = parseFloat(str);
+      if (!Number.isFinite(num)) return 0;
+      return str.includes('%') ? wrapperDim * (num / 100) : (contentDim ? num / contentDim * wrapperDim : 0);
+    };
+
+    const matrix = new DOMMatrix([scale, 0, 0, scale, tx, ty])
+      .scale(flipX, 1)
+      .scale(1, flipY)
+      .rotate(angle);
+
+    for (const pin of pinEls) {
+      const px = resolvePos(pin.x, width, wrapperRect.width) - wrapperRect.width / 2;
+      const py = resolvePos(pin.y, height, wrapperRect.height) - wrapperRect.height / 2;
+      const point = new DOMPoint(px, py).matrixTransform(matrix);
+      pin.el.style.transform = `translate3d(${point.x}px, ${point.y}px, 0)`;
+    }
+  }, []);
+
+  const activePinDataRef = useRef<{ panzoom: any; pins: Array<{ x: string; y: string; el: HTMLElement }>; renderFn: () => void } | null>(null);
+
+  const injectAnnotationPins = useCallback((api: any, annMap: Map<number, MediaAnnotation[]>) => {
+    const slide = api.getSlide();
+    if (!slide?.panzoomRef) return;
+    if (slide.type === 'html5video') return;
+
+    const wrapper = slide.panzoomRef.getWrapper();
+    if (!wrapper) return;
+
+    if (activePinDataRef.current?.panzoom) {
+      try { activePinDataRef.current.panzoom.off('render', activePinDataRef.current.renderFn); } catch {}
+    }
+    activePinDataRef.current = null;
+
+    wrapper.querySelectorAll('.f-panzoom__pin').forEach((el: Element) => {
+      el.querySelectorAll('[data-annotation]').forEach((child: Element) => {
+        child.replaceWith(child.cloneNode(true));
+      });
+      el.remove();
+    });
+
+    const annotations = annMap.get(slide.index) || [];
+    if (annotations.length === 0) return;
+
+    const pins: Array<{ x: string; y: string; el: HTMLElement }> = [];
+
+    for (const ann of annotations) {
+      const pin = document.createElement('div');
+      pin.className = 'f-panzoom__pin ztmy-annotation-pin';
+      pin.dataset.x = `${ann.x}%`;
+      pin.dataset.y = `${ann.y}%`;
+
+      const marker = document.createElement('div');
+      marker.className = 'ztmy-annotation-marker';
+
+      const dot = document.createElement('span');
+      dot.className = 'ztmy-annotation-dot';
+      dot.dataset.annotation = '';
+
+      const label = document.createElement('span');
+      label.className = 'ztmy-annotation-label';
+      label.textContent = ann.label;
+      label.dataset.annotation = '';
+
+      marker.appendChild(dot);
+      marker.appendChild(label);
+
+      const toggleLabel = (hide: boolean) => {
+        if (hide) {
+          label.classList.add('ztmy-annotation-label--hidden');
+          dot.classList.add('ztmy-annotation-dot--pulse');
+        } else {
+          label.classList.remove('ztmy-annotation-label--hidden');
+          dot.classList.remove('ztmy-annotation-dot--pulse');
+        }
+      };
+
+      const handlePointerDown = (e: PointerEvent) => {
+        e.stopPropagation();
+      };
+
+      dot.addEventListener('pointerdown', handlePointerDown);
+      label.addEventListener('pointerdown', handlePointerDown);
+
+      dot.addEventListener('click', (e: MouseEvent) => {
+        e.stopPropagation();
+        const isHidden = label.classList.contains('ztmy-annotation-label--hidden');
+        toggleLabel(!isHidden);
+      });
+
+      label.addEventListener('click', (e: MouseEvent) => {
+        e.stopPropagation();
+        toggleLabel(true);
+      });
+
+      pin.appendChild(marker);
+      wrapper.appendChild(pin);
+      pins.push({ x: `${ann.x}%`, y: `${ann.y}%`, el: pin });
+    }
+
+    const renderFn = () => renderPins(slide.panzoomRef, pins);
+    slide.panzoomRef.on('render', renderFn);
+    activePinDataRef.current = { panzoom: slide.panzoomRef, pins, renderFn };
+
+    requestAnimationFrame(() => {
+      renderPins(slide.panzoomRef, pins);
+    });
+  }, [renderPins]);
+
   const handlePhotoClick = useCallback(
     (index: number) => {
       // Pre-query thumb elements to avoid querying inside the loop (O(N) -> O(1) inside loop)
@@ -856,17 +994,14 @@ export default function FancyboxViewer({
         
         return {
           src: photo.full,
-          thumb: photo.thumb, // 如果沒有特別傳入 thumb，就使用 src 作為 Fancybox 下方縮圖預覽
+          thumb: photo.thumb,
           triggerEl: thumbEl,
           thumbEl: thumbEl,
           $thumb: thumbEl,
           downloadSrc: photo.raw,
-          // 既然已經透過 imgproxy 注入 Content-Disposition，前端就不需要強制覆蓋檔名，避免產生跨域限制
-          // downloadFilename: photo.rawFilename || photo.caption,
-          // Do not pass caption to Fancybox API to completely prevent native caption rendering
-          alt: photo.caption,     // 讓 img 標籤加上 alt 屬性，修復 DOM 備用方案
-          type: photo.isVideo ? 'html5video' : 'image', // 告訴 Fancybox 這是影片
-          // 針對影片加入 HTML5 Video 的屬性，解決跨域與防盜鏈問題
+          alt: photo.caption,
+          type: photo.isVideo ? 'html5video' : 'image',
+          mediaId: photo.originalUrl,
           ...(photo.isVideo && {
             width: photo.width,
             height: photo.height,
@@ -915,12 +1050,35 @@ export default function FancyboxViewer({
             host.className = 'ztmy-fb-overlay-host';
             container.appendChild(host);
             const root = createRoot(host);
-            root.render(<FancyboxCaptionOverlay api={api} photos={currentPhotos} />);
+            root.render(<FancyboxCaptionOverlay api={api} photos={currentPhotos} annotationsMap={annotationsMap} />);
             overlayRef.current = { root, host };
             (api as any).__ztmyOverlay = { root, host };
+            setTimeout(() => injectAnnotationPins(api, annotationsMap), 100);
+          },
+          'Carousel.change': (fancybox: any) => {
+            setTimeout(() => injectAnnotationPins(fancybox, annotationsMap), 50);
+          },
+          close: (api) => {
+            if (activePinDataRef.current?.panzoom) {
+              try { activePinDataRef.current.panzoom.off('render', activePinDataRef.current.renderFn); } catch {}
+              activePinDataRef.current = null;
+            }
+            const container = api?.getContainer?.() as HTMLElement | undefined;
+            if (container) {
+              container.querySelectorAll('.f-panzoom__pin').forEach((el: Element) => el.remove());
+            }
           },
           destroy: (api) => {
-            // 觸發關閉事件追蹤 (包含點擊 X 按鈕、滑動關閉、按 ESC 鍵等所有關閉方式)
+            if (activePinDataRef.current?.panzoom) {
+              try { activePinDataRef.current.panzoom.off('render', activePinDataRef.current.renderFn); } catch {}
+              activePinDataRef.current = null;
+            }
+
+            const container = api?.getContainer?.() as HTMLElement | undefined;
+            if (container) {
+              container.querySelectorAll('.f-panzoom__pin').forEach((el: Element) => el.remove());
+            }
+
             if (typeof window !== 'undefined' && (window as any).umami && typeof (window as any).umami.track === 'function') {
               let targetImageInfo = 'unknown';
               const slide = api.getSlide();
@@ -969,7 +1127,7 @@ export default function FancyboxViewer({
         },
       });
     },
-    [handleAfterOpen, handleAfterClose],
+    [handleAfterOpen, handleAfterClose, annotationsMap, injectAnnotationPins],
   );
 
   useEffect(() => {
@@ -1277,6 +1435,93 @@ export default function FancyboxViewer({
             border-radius: 0;
             max-height: 40vh;
           }
+        }
+
+        .ztmy-annotation-pin {
+          z-index: 20;
+          width: auto !important;
+          height: auto !important;
+          pointer-events: none;
+        }
+
+        .ztmy-annotation-pin > .ztmy-annotation-marker {
+          width: auto !important;
+          height: auto !important;
+          transform: none !important;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          pointer-events: none;
+        }
+
+        .ztmy-annotation-dot {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          background: var(--main, #00ff88);
+          border: 2px solid #000;
+          box-shadow: 0 0 6px color-mix(in srgb, var(--main, #00ff88) 60%, transparent);
+          flex-shrink: 0;
+          cursor: help;
+          pointer-events: auto;
+          display: block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          position: relative;
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .ztmy-annotation-dot::before {
+          content: '';
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: 32px;
+          height: 32px;
+          transform: translate(-50%, -50%);
+          border-radius: 50%;
+        }
+
+        .ztmy-annotation-dot:hover {
+          transform: scale(1.3);
+          box-shadow: 0 0 10px color-mix(in srgb, var(--main, #00ff88) 80%, transparent);
+        }
+
+        @keyframes ztmy-annotation-pulse {
+          0%, 100% {
+            box-shadow: 0 0 4px color-mix(in srgb, var(--main, #00ff88) 40%, transparent);
+            transform: scale(1);
+          }
+          50% {
+            box-shadow: 0 0 14px color-mix(in srgb, var(--main, #00ff88) 90%, transparent), 0 0 28px color-mix(in srgb, var(--main, #00ff88) 40%, transparent);
+            transform: scale(1.25);
+          }
+        }
+
+        .ztmy-annotation-dot--pulse {
+          animation: ztmy-annotation-pulse 1.5s ease-in-out infinite;
+        }
+
+        .ztmy-annotation-label {
+          font-size: 12px;
+          font-weight: 700;
+          color: #fff;
+          background: rgba(0, 0, 0, 0.85);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          padding: 3px 8px;
+          white-space: pre-line;
+          letter-spacing: 0.03em;
+          cursor: help;
+          pointer-events: auto;
+          max-width: 300px;
+          transition: opacity 0.2s ease, clip-path 0.25s ease;
+          clip-path: inset(0 0 0 0);
+        }
+
+        .ztmy-annotation-label--hidden {
+          opacity: 0;
+          clip-path: inset(0 100% 0 0);
+          pointer-events: none;
         }
       `}</style>
 

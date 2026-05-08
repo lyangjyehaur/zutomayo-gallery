@@ -117,6 +117,7 @@ export default function AdminLayout() {
       ["/admin/mvs/settings", "全局設定"],
       ["/admin/system/announcements", "公告管理"],
       ["/admin/submissions", "投稿審核"],
+      ["/admin/annotations", "標註管理"],
       ["/admin/system/group-repair", "推文修復"],
       ["/admin/system/media-groups", "推文分組"],
       ["/admin/system/orphans", "未歸屬媒體"],
@@ -160,6 +161,7 @@ export default function AdminLayout() {
       { label: "推文修復", path: "/admin/system/group-repair", permission: ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS },
       { label: "推文分組", path: "/admin/system/media-groups", permission: ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS },
       { label: "未歸屬媒體", path: "/admin/system/orphans", permission: ADMIN_PERMISSIONS.SYSTEM_MEDIA_ORPHANS },
+      { label: "標註管理", path: "/admin/annotations", permission: ADMIN_PERMISSIONS.ANNOTATIONS },
     ].filter((item) => {
       if ("visible" in item) return item.visible
       return canAccessPermission(item.permission)

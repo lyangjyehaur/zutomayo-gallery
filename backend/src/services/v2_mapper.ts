@@ -5,6 +5,7 @@ import {
   AlbumModel,
   KeywordModel,
   MediaGroupModel,
+  MediaAnnotationModel,
   MVMediaModel,
   MVArtistModel,
   MVAlbumModel,
@@ -28,7 +29,10 @@ export async function getMVsFromDB(): Promise<MVItem[]> {
         model: MediaModel, 
         as: 'images',
         through: { attributes: ['usage', 'order_index'] },
-        include: [{ model: MediaGroupModel, as: 'group' }]
+        include: [
+          { model: MediaGroupModel, as: 'group' },
+          { model: MediaAnnotationModel, as: 'annotations', separate: true, order: [['sort_order', 'ASC'], ['created_at', 'ASC']] }
+        ]
       }
     ],
     order: [

@@ -67,6 +67,7 @@ const iconForPath = (path: string) => {
   if (p === "/admin/fanart") return Image
   if (p === "/admin/staging-fanarts") return Images
   if (p === "/admin/submissions") return Inbox
+  if (p === "/admin/annotations") return Image
   if (p === "/admin/system/announcements") return Megaphone
   if (p === "/admin/mvs/settings") return SlidersHorizontal
   if (p === "/admin/system/group-repair") return Wrench
@@ -179,6 +180,7 @@ export function AppSidebar({
       "/admin/fanart",
       "/admin/staging-fanarts",
       "/admin/submissions",
+      "/admin/annotations",
     ])
   }, [])
 

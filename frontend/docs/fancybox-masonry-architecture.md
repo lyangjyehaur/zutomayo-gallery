@@ -117,4 +117,123 @@ FancyboxViewer 在以下場景中使用，修改均向後相容：
 - **DebugFancyboxMasonry**：僅使用內部載入路徑，不受影響
 
 ---
+
+## 7. 圖片文本標注系統 (Image Annotation System)
+
+### A. 技術選型：手動 DOMMatrix 坐標變換
+
+Fancybox 的 `@fancyapps/ui` 套件內建 **Pins 插件**，但經實測發現 Fancybox 內部在建立 Panzoom 實例時，**不會將第三個 `plugins` 參數傳遞給 Panzoom 建構式**，因此 `Pins: true` 配置無法生效。
+
+**解決方案：** 採用手動實現 Pins 插件的核心算法——直接複製其 `DOMMatrix` + `DOMPoint` 坐標變換邏輯，監聽 Panzoom 的 `render` 事件來更新 pin 位置。
+
+**核心優勢：**
+- **零額外依賴**：僅使用瀏覽器原生 `DOMMatrix` / `DOMPoint` API
+- **精確坐標變換**：與 Pins 插件使用完全相同的算法，確保在任意縮放比例與平移偏移下，標注點都能精準定位
+- **完全可控**：不受 Fancybox 內部 Panzoom 初始化流程的限制
+
+### B. 整合方式
+
+**手動注入 Pin 元素 + 監聽 render 事件：**
+
+1. 在 Fancybox 的 `ready` 事件中，對初始 slide 執行 `injectAnnotationPins`
+2. 在 Carousel 的 `change` 事件中，對切換後的新 slide 執行 `injectAnnotationPins`
+3. `injectAnnotationPins` 內部會：
+   - 清理舊 pin 元素及其事件監聽器
+   - 為每個標注創建 `.f-panzoom__pin` DOM 元素並注入到 Panzoom wrapper
+   - 監聽 Panzoom 的 `render` 事件，在每次縮放/平移後重新計算 pin 位置
+4. 在 Fancybox 的 `close` 事件中提前移除所有 pin 元素，避免關閉動畫期間 pin 跟著縮放位移
+
+```tsx
+// render 事件回調中更新 pin 位置
+const renderFn = () => renderPins(slide.panzoomRef, pins);
+slide.panzoomRef.on('render', renderFn);
+```
+
+**清理策略：**
+- Slide 切換時：移除舊 pin 元素，用 `cloneNode` 替換帶事件監聽器的子元素以釋放閉包引用
+- Fancybox `close` 事件：提前移除所有 pin，避免關閉動畫中 pin 異常位移
+- Fancybox `destroy` 事件：保險性清理，確保無殘留
+
+### C. 坐標系統
+
+標注坐標使用 **百分比坐標系 (0%–100%)**，具有以下特性：
+
+- **左上角為原點 (0%, 0%)**，右下角為 (100%, 100%)
+- **與圖片解析度無關**：無論圖片原始尺寸或顯示尺寸如何變化，百分比坐標始終指向相同的相對位置
+- 這與 Pins 插件內部的坐標變換機制完全一致，`DOMMatrix` + `DOMPoint` 的計算基於元素的相對比例而非絕對像素
+
+### D. 標注 UI
+
+標注的視覺設計分為兩個部分：**標記點 (dot)** 與 **文本標籤 (label)**。
+
+**DOM 結構：**
+```
+.f-panzoom__pin.ztmy-annotation-pin (pointer-events: none)
+└── .ztmy-annotation-marker (pointer-events: none)
+    ├── .ztmy-annotation-dot (pointer-events: auto, cursor: help, data-annotation)
+    │   └── ::before (擴大點擊熱區至 32×32px)
+    └── .ztmy-annotation-label (pointer-events: auto, cursor: help, data-annotation)
+```
+
+**標記點 (dot)：**
+- 主題色圓點 + 霓虹光暈效果（`box-shadow` + `color-mix` 實現）
+- 使用 `::before` 偽元素擴大可點擊熱區（視覺 12px，熱區 32px）
+- label 隱藏時加入 `--pulse` class，觸發發光閃爍動畫提示用戶可點擊恢復
+
+**文本標籤 (label)：**
+- 黑底白字樣式，支援換行（`white-space: pre-line`）
+- 後台使用 Textarea 輸入，前台保留換行顯示
+- 使用 `clip-path: inset(0 100% 0 0)` 實現收起動畫（不影響佈局）
+
+**交互行為：**
+- 點擊 dot：切換 label 顯示/隱藏
+- 點擊 label：隱藏 label
+- label 隱藏後：dot 開始閃爍動畫，提示用戶可點擊恢復
+- label 隱藏後：label 和 marker 區域的 pointer-events 穿透到 panzoom 層，游標正確顯示為 Move
+
+**自定義游標整合：**
+- dot 和 label 設有 `data-annotation` 屬性
+- CustomCursor 組件中優先檢查 `[data-annotation]`，映射為 Help 游標
+- 此判斷優先級高於 Fancybox 的 Move 游標攔截
+
+**Cover 圖片過濾：**
+- 標注功能僅針對畫廊圖片（`usage !== 'cover'`）
+- 後台 AdminAnnotationsPage 的 `mediaItems` 和 `loadAnnotations` 均已過濾 cover 圖片
+- 前台 MVDetailsModal 的 `galleryImages` 已過濾 cover 圖片，標注不會出現在封面圖上
+
+### E. 數據流
+
+標注數據從後端到前端渲染的完整流動路徑：
+
+```
+後端 MV API (v2_mapper: MediaAnnotationModel include with separate: true)
+  → MVMedia.annotations
+    → PhotoData.annotations
+      → annotationsMap (Map<number, MediaAnnotation[]>)
+        → injectAnnotationPins(fancybox, annMap)
+```
+
+**`annotationsMap` 的設計：**
+- 類型為 `Map<number, MediaAnnotation[]>`
+- Key 為 slide index（對應 Fancybox Carousel 中的 slide 索引）
+- 在 Fancybox 開啟前由前端根據 `PhotoData.annotations` 建構完成
+- 切換 slide 時，以 O(1) 查詢當前 slide 的標注數據
+
+### F. 效能考量
+
+- **單張圖片標注數量預計不超過 10-20 個**，DOM 開銷極小
+- `renderPins` 使用 `DOMMatrix` + `DOMPoint` 原生 API 計算，效能優秀
+- 採用懶載入策略：僅載入當前可見 slide 的標注 pin 元素
+- 事件監聽器在 slide 切換時通過 `cloneNode` 替換方式清理，避免閉包引用導致的記憶體洩漏
+- `annotationsMap` 使用 `useMemo` 快取，僅在 `displayedPhotos` 變更時重建
+
+### G. 注意事項
+
+- **影片 slide 不渲染標注**：`injectAnnotationPins` 會跳過 `type === 'html5video'` 的 slide
+- **無標注數據時行為不變**：`annotationsMap.get(slideIndex)` 回傳空陣列時直接 return
+- **Pins: true 配置無效**：Fancybox 不傳遞 `plugins` 參數給 Panzoom 建構式，必須手動實現坐標變換
+- **PostgreSQL DECIMAL 返回字串**：後端 `x`/`y` 欄位為 DECIMAL 類型，Sequelize 返回字串，前端需用 `Number()` 轉換
+- **MVService 記憶體快取**：標注寫入時需同時清除 Redis 快取和 `mvService.clearCache()`，否則前台無法即時看到更新
+
+---
 *備註：如果你在維護時發現排版又被撐開了，請優先檢查是否有新的外掛或組件（例如 Waline 評論）在最外層使用了 `flex` 且沒有加上 `min-w-0` 的束縛。*

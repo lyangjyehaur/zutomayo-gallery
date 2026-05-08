@@ -21,6 +21,7 @@ import adminSystemRoutes from './routes/admin-system.routes.js';
 import publicAuthRoutes from './routes/public-auth.routes.js';
 import submissionRoutes from './routes/submissions.routes.js';
 import adminSubmissionRoutes from './routes/admin-submissions.routes.js';
+import annotationRoutes from './routes/annotation.routes.js';
 import pushSubscriptionRoutes from './controllers/push-subscription.controller.js';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { errorEventEmitter } from './services/error-events.service.js';
@@ -262,6 +263,7 @@ app.use('/api/submissions', submissionRoutes);
 app.use('/api/webhook', webhookRoutes);
 app.use('/api/admin/system', adminSystemRoutes);
 app.use('/api/admin/submissions', adminSubmissionRoutes);
+app.use('/api/annotations', annotationRoutes);
 app.use('/api/push', pushSubscriptionRoutes);
 
 // 如果 bull-board 初始化成功，掛載可視化介面路由

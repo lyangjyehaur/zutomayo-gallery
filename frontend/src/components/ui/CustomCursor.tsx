@@ -175,6 +175,8 @@ export default function CustomCursor() {
         return;
       }
 
+      const isAnnotationTarget = target.closest('[data-annotation]') !== null;
+
       // 優先處理 Move (抓取) 及 Resize
       if (actualCursor === 'nwse-resize' || actualCursor === 'nw-resize' || actualCursor === 'se-resize') {
         setTypeIfDifferent('Diagonal1');
@@ -184,6 +186,8 @@ export default function CustomCursor() {
         setTypeIfDifferent('Vertical');
       } else if (actualCursor === 'ew-resize' || actualCursor === 'col-resize' || actualCursor === 'e-resize' || actualCursor === 'w-resize') {
         setTypeIfDifferent('Horizontal');
+      } else if (isAnnotationTarget) {
+        setTypeIfDifferent('Help');
       } else if (isFancyboxGrab && !isFancyboxTarget && !isInteractiveElement) {
         setTypeIfDifferent('Move');
       } else if (actualCursor === 'move' || actualCursor === 'grab' || actualCursor === 'grabbing' || actualCursor === 'zoom-in' || actualCursor === 'zoom-out' || target.classList.contains('is-zoomable')) {

@@ -18,6 +18,7 @@ import { MVItem } from "@/lib/types";
 import { getAuthApiBase, getMvsApiBase, getSystemApiBase } from "@/lib/admin-api";
 import { initAnalytics } from "@/lib/analytics";
 import { printEgg } from "@/lib/egg";
+import { initRuntimeBridge } from "@/lib/runtime-bridge";
 import { initGeo, getGeoInfo } from "@/lib/geo";
 import { useGeoLabel } from "@/hooks/useGeoLabel";
 import { MVDetailsModal } from "@/components/MVDetailsModal";
@@ -79,6 +80,7 @@ import { usePWA } from "@/hooks/usePWA";
 import { useLoadingTransition } from "@/hooks/useLoadingTransition";
 import { useScrollPosition } from "@/hooks/useScrollPosition";
 import { useAnimationPause } from "@/hooks/useAnimationPause";
+import { useAmbientMode } from "@/hooks/useAmbientMode";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { isSupportedLang, normalizeLang } from "@/i18n";
 
@@ -101,6 +103,7 @@ const AdminErrorLogsPage = React.lazy(() => import("@/pages/AdminErrorLogsPage")
 const AdminMediaGroupsPage = React.lazy(() => import("@/pages/AdminMediaGroupsPage").then((m) => ({ default: m.AdminMediaGroupsPage })));
 const AdminMediaGroupRepairPage = React.lazy(() => import("@/pages/AdminMediaGroupRepairPage").then((m) => ({ default: m.AdminMediaGroupRepairPage })));
 const AdminAccountPage = React.lazy(() => import("@/pages/AdminAccountPage").then((m) => ({ default: m.AdminAccountPage })));
+const AdminAnnotationsPage = React.lazy(() => import("@/pages/AdminAnnotationsPage").then((m) => ({ default: m.AdminAnnotationsPage })));
 
 const adminFallback = <div className="p-6 font-mono text-sm">Loading...</div>;
 
@@ -281,6 +284,8 @@ function App({
   const isGlobalPaused = useAnimationPause({
     selectedMvId, selectedIllustratorId, isFeedbackOpen, isAboutOpen, isMobile, headerRef,
   });
+
+  const { isAmbient } = useAmbientMode();
 
   const geoInfo = useGeoLabel();
 
@@ -467,7 +472,7 @@ function App({
 
 
   if (showLoadingScreen) {
-    return <LoadingScreen isTransitioningOut={isTransitioningOut} />;
+    return <LoadingScreen isTransitioningOut={isTransitioningOut} isAmbient={isAmbient} />;
   }
 
   // 網路流量警告攔截畫面
@@ -499,6 +504,8 @@ function App({
     <div className={`min-h-screen bg-background text-foreground font-base font-normal selection:bg-main selection:text-main-foreground relative isolate flex flex-col`}>
       {/* 整個首頁的全局背景 CRT 濾鏡層 */}
       <div className="pointer-events-none fixed inset-0 z-[-1] crt-lines-global opacity-100" />
+      {isAmbient && <div className="ambient-midnight-stars-a" />}
+      {isAmbient && <div className="ambient-midnight-stars-b" />}
 
       <div className={`flex-1 relative flex flex-col transition-opacity duration-[1000ms] ease-out ${isContentFadingIn ? 'opacity-100' : 'opacity-0'}`}>
         {/* 跑馬燈 (置於最頂部) */}
@@ -515,6 +522,7 @@ function App({
           glitchStyleVars={glitchStyleVars}
           onVersionClick={(e) => { e.stopPropagation(); triggerPWARecovery(); }}
           onVersionTouchStart={(e) => { e.stopPropagation(); triggerPWARecovery(); }}
+          isAmbient={isAmbient}
         />
 
       {/* 頁首 */}
@@ -884,6 +892,7 @@ export default function RootApp() {
   useEffect(() => {
     initAnalytics();
     printEgg();
+    initRuntimeBridge();
     initGeo(true); // 強制清除快取並重新偵測
   }, []);
 
@@ -979,6 +988,7 @@ export default function RootApp() {
               <Route path="fanart" element={adminRoute("fanart", <AdminFanArtPage />)} />
               <Route path="staging-fanarts" element={adminRoute("stagingFanarts", <AdminStagingFanartPage />)} />
               <Route path="submissions" element={adminRoute("submissions", <AdminSubmissionsPage />)} />
+              <Route path="annotations" element={adminRoute("annotations", <AdminAnnotationsPage />)} />
               <Route path="system" element={<AdminSystemRedirect />} />
               <Route path="system/users" element={adminRoute("systemUsers", <AdminSystemUsersPage />)} />
               <Route path="system/roles" element={adminRoute("systemRoles", <AdminSystemRolesPage />)} />

@@ -120,6 +120,29 @@ export const MediaGroupModel = sequelize.define('MediaGroup', {
   hashtags: { type: DataTypes.JSONB, defaultValue: [], comment: '推文標籤' },
 }, { tableName: 'media_groups', timestamps: false, comment: '媒體分組資訊 (共用來源詮釋資料，如推文)' });
 
+export const MediaAnnotationModel = sequelize.define('MediaAnnotation', {
+  id: { type: DataTypes.STRING(36), primaryKey: true, defaultValue: generateShortId, comment: '標註唯一識別碼' },
+  media_id: { type: DataTypes.STRING(36), allowNull: false, comment: '關聯至 media.id' },
+  label: { type: DataTypes.TEXT, allowNull: false, comment: '標註文字內容' },
+  x: { type: DataTypes.DECIMAL(6, 3), allowNull: false, comment: 'X 軸百分比位置 (0.000-100.000)' },
+  y: { type: DataTypes.DECIMAL(6, 3), allowNull: false, comment: 'Y 軸百分比位置 (0.000-100.000)' },
+  style: { type: DataTypes.STRING(50), defaultValue: 'default', comment: '標註樣式類型 (保留擴充)' },
+  sort_order: { type: DataTypes.INTEGER, defaultValue: 0, comment: '排序權重' },
+  created_by: { type: DataTypes.STRING(36), allowNull: true, comment: '建立者 (admin_users.id)' },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '建立時間' },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '更新時間' },
+}, {
+  tableName: 'media_annotations',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+  comment: '媒體標註資訊，儲存圖片上的文字標記與位置',
+  indexes: [
+    { fields: ['media_id'] },
+    { fields: ['created_at'] },
+  ],
+});
+
 export const SysDictionaryModel = sequelize.define('SysDictionary', {
   id: { type: DataTypes.STRING(20), primaryKey: true, comment: '字典唯一識別碼 (簡短 ID，如 NanoID 或自訂代碼)' },
   category: { type: DataTypes.STRING, comment: '字典分類 (如 album_type, image_type)' },
@@ -393,6 +416,10 @@ KeywordModel.belongsToMany(MVModel, { through: MVKeywordModel, foreignKey: 'keyw
 // Media <-> MediaGroup
 MediaGroupModel.hasMany(MediaModel, { foreignKey: 'group_id', as: 'images', constraints: false });
 MediaModel.belongsTo(MediaGroupModel, { foreignKey: 'group_id', as: 'group', constraints: false });
+
+// Media <-> MediaAnnotation
+MediaModel.hasMany(MediaAnnotationModel, { foreignKey: 'media_id', as: 'annotations', constraints: false });
+MediaAnnotationModel.belongsTo(MediaModel, { foreignKey: 'media_id', as: 'media', constraints: false });
 
 // Album <-> AppleMusicAlbum
 AlbumModel.belongsTo(AppleMusicAlbumModel, { foreignKey: 'apple_music_album_id', as: 'appleMusicAlbum', constraints: false });

@@ -1,3 +1,13 @@
+export interface MediaAnnotation {
+  id: string;
+  media_id: string;
+  label: string;
+  x: number;
+  y: number;
+  style?: string;
+  sort_order?: number;
+}
+
 export interface MVMedia {
   id?: string;
   type: string;
@@ -21,6 +31,7 @@ export interface MVMedia {
   };
   usage?: string;
   order_index?: number;
+  annotations?: MediaAnnotation[];
   [key: string]: any;
 }
 

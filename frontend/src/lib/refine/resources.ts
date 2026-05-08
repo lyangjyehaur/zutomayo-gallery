@@ -10,6 +10,7 @@ export const adminResources: ResourceProps[] = [
   { name: "fanart", list: "/admin/fanart", edit: "/admin/fanart" },
   { name: "stagingFanarts", list: "/admin/staging-fanarts", edit: "/admin/staging-fanarts" },
   { name: "submissions", list: "/admin/submissions" },
+  { name: "annotations", list: "/admin/annotations", create: "/admin/annotations", edit: "/admin/annotations" },
   { name: "system", meta: { label: "系統管理" } },
   { name: "systemUsers", list: "/admin/system/users", create: "/admin/system/users", edit: "/admin/system/users", meta: { parent: "system" } },
   { name: "systemRoles", list: "/admin/system/roles", create: "/admin/system/roles", edit: "/admin/system/roles", meta: { parent: "system" } },

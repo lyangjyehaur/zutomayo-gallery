@@ -51,8 +51,81 @@ export const getSystemApiBase = () => joinApiPath("system")
 export const getFanartsApiBase = () => joinApiPath("fanarts")
 export const getStagingFanartsApiBase = () => joinApiPath("staging-fanarts")
 export const getSubmissionsApiBase = () => joinApiPath("submissions")
+export const getAnnotationsApiBase = () => joinApiPath("annotations")
 export const getR2Domain = () => normalizeApiRoot((import.meta as any).env?.VITE_R2_DOMAIN || "https://r2.dan.tw")
 
 export const adminFetch = (input: RequestInfo | URL, init: RequestInit = {}) => {
   return fetch(input, { ...init, credentials: "include" })
+}
+
+export const getAnnotations = async (mediaId: string) => {
+  const res = await adminFetch(`${getAnnotationsApiBase()}/media/${encodeURIComponent(mediaId)}`)
+  if (!res.ok) throw new Error("Failed to fetch annotations")
+  const json = await res.json()
+  return (json.data || []) as MediaAnnotationRow[]
+}
+
+export const getAnnotationsByMv = async (mvId: string) => {
+  const res = await adminFetch(`${getAnnotationsApiBase()}/mv/${encodeURIComponent(mvId)}`)
+  if (!res.ok) throw new Error("Failed to fetch annotations by MV")
+  const json = await res.json()
+  return (json.data || {}) as Record<string, MediaAnnotationRow[]>
+}
+
+export const createAnnotation = async (data: CreateAnnotationPayload) => {
+  const res = await adminFetch(getAnnotationsApiBase(), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const json = await res.json().catch(() => null)
+    throw new Error((json as any)?.error || "Failed to create annotation")
+  }
+  const json = await res.json()
+  return (json.data || json) as MediaAnnotationRow
+}
+
+export const updateAnnotation = async (id: string, data: Partial<CreateAnnotationPayload>) => {
+  const res = await adminFetch(`${getAnnotationsApiBase()}/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const json = await res.json().catch(() => null)
+    throw new Error((json as any)?.error || "Failed to update annotation")
+  }
+  const json = await res.json()
+  return (json.data || json) as MediaAnnotationRow
+}
+
+export const deleteAnnotation = async (id: string) => {
+  const res = await adminFetch(`${getAnnotationsApiBase()}/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  })
+  if (!res.ok) throw new Error("Failed to delete annotation")
+  return true
+}
+
+export type MediaAnnotationRow = {
+  id: string
+  media_id: string
+  label: string
+  x: number
+  y: number
+  style?: string
+  sort_order?: number
+  created_by?: string
+  created_at?: string
+  updated_at?: string
+}
+
+export type CreateAnnotationPayload = {
+  media_id: string
+  label: string
+  x: number
+  y: number
+  style?: string
+  sort_order?: number
 }

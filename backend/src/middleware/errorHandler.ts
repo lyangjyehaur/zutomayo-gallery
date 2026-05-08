@@ -43,6 +43,7 @@ const USER_MESSAGE_MAP: Record<string, string> = {
   'Internal server error': '系統暫時發生錯誤，請稍後再試',
   'Group not found': '找不到此媒體群組',
   'Media not found': '找不到此媒體',
+  'Annotation not found': '找不到此標註',
   TARGET_REQUIRED: '請指定合併目標',
   'source_url is required': '請提供來源網址',
   'Only tweet-source media can be assigned here': '僅推文來源的媒體可在此指派',

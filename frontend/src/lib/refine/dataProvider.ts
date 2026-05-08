@@ -36,6 +36,7 @@ const getResourceBaseUrl = (resource: string) => {
     systemRoles: `${apiRoot}/admin/system/roles`,
     systemMenus: `${apiRoot}/admin/system/menus`,
     systemPermissions: `${apiRoot}/admin/system/permissions`,
+    annotations: `${apiRoot}/annotations`,
   }
   return map[resource]
 }

@@ -40,6 +40,7 @@ export const seedAdminRBAC = async (): Promise<void> => {
     { label: 'FanArt 管理', path: '/admin/fanart', sort: 50, permission: ADMIN_PERMISSIONS.FANARTS },
     { label: 'Staging FanArt', path: '/admin/staging-fanarts', sort: 60, permission: ADMIN_PERMISSIONS.STAGING_FANARTS },
     { label: '投稿審核', path: '/admin/submissions', sort: 65, permission: ADMIN_PERMISSIONS.SUBMISSIONS },
+    { label: '標註管理', path: '/admin/annotations', sort: 66, permission: ADMIN_PERMISSIONS.ANNOTATIONS },
     { label: '字典管理', path: '/admin/dicts', sort: 70, permission: ADMIN_PERMISSIONS.SYSTEM_DICTS },
     { label: '系統：使用者', path: '/admin/system/users', sort: 100, permission: ADMIN_PERMISSIONS.SYSTEM_USERS },
     { label: '系統：角色', path: '/admin/system/roles', sort: 110, permission: ADMIN_PERMISSIONS.SYSTEM_ROLES },

@@ -138,6 +138,25 @@
 | `post_date` | `TIMESTAMP` | `NULL` | 來源發布時間 |
 | `status` | `VARCHAR(50)` | `DEFAULT 'pending'` | 審核狀態：`'pending'`, `'organized'`, `'rejected'` (參考字典表) |
 
+### 2.2. `media_annotations` (媒體標註表)
+儲存媒體上的文字標記與位置資訊，用於圖片標註功能。
+| 欄位名稱 | 型別 | 約束 | 說明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `VARCHAR(36)` | `PRIMARY KEY` | 標註唯一識別碼 (使用 NanoID) |
+| `media_id` | `VARCHAR(36)` | `FK`, `NOT NULL` | 關聯至 `media.id` |
+| `label` | `TEXT` | `NOT NULL` | 標註文字內容 |
+| `x` | `DECIMAL(6,3)` | `NOT NULL` | X 軸百分比位置 (0.000-100.000) |
+| `y` | `DECIMAL(6,3)` | `NOT NULL` | Y 軸百分比位置 (0.000-100.000) |
+| `style` | `VARCHAR(50)` | `DEFAULT 'default'` | 標註樣式類型 (保留擴充) |
+| `sort_order` | `INTEGER` | `DEFAULT 0` | 排序權重 |
+| `created_by` | `VARCHAR(36)` | `NULL` | 建立者 (admin_users.id) |
+| `created_at` | `TIMESTAMP` | | 建立時間 |
+| `updated_at` | `TIMESTAMP` | | 更新時間 |
+
+**索引：**
+- `media_id` — 按媒體查詢標註
+- `created_at` — 按時間排序與範圍查詢
+
 ---
 
 ## 3. 中繼關聯表 (Junction Tables)
