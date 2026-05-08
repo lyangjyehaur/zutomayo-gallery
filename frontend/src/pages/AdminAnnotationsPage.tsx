@@ -442,7 +442,7 @@ export function AdminAnnotationsPage() {
   const mediaItems = useMemo(() => {
     if (!selectedMvId) {
       return mvData.flatMap((mv) =>
-        (mv.images || []).filter((img) => img.usage !== 'cover').map((img) => ({
+        (mv.images || []).filter((img) => img.usage !== 'cover' && img.type !== 'fanart').map((img) => ({
           id: img.id || img.url,
           url: img.url,
           thumbnail_url: img.thumbnail_url,
@@ -454,7 +454,7 @@ export function AdminAnnotationsPage() {
     }
     const mv = mvData.find((m) => m.id === selectedMvId)
     if (!mv) return []
-    return (mv.images || []).filter((img) => img.usage !== 'cover').map((img) => ({
+    return (mv.images || []).filter((img) => img.usage !== 'cover' && img.type !== 'fanart').map((img) => ({
       id: img.id || img.url,
       url: img.url,
       thumbnail_url: img.thumbnail_url,
@@ -490,7 +490,7 @@ export function AdminAnnotationsPage() {
         const all: AnnotationWithMedia[] = []
         for (const [mediaId, items] of Object.entries(grouped)) {
           const media = mv?.images?.find((img) => (img.id || img.url) === mediaId)
-          if (media?.usage === 'cover') continue
+          if (media?.usage === 'cover' || media?.type === 'fanart') continue
           for (const a of items) {
             all.push({
               ...a,
@@ -515,7 +515,7 @@ export function AdminAnnotationsPage() {
               break
             }
           }
-          if (foundMedia?.usage === 'cover') continue
+          if (foundMedia?.usage === 'cover' || foundMedia?.type === 'fanart') continue
           for (const a of items) {
             all.push({
               ...a,

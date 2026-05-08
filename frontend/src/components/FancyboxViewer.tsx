@@ -1521,7 +1521,6 @@ export default function FancyboxViewer({
           letter-spacing: 0.03em;
           cursor: help;
           pointer-events: auto;
-          max-width: 300px;
           transition: opacity 0.2s ease, clip-path 0.25s ease;
           clip-path: inset(0 0 0 0);
         }
