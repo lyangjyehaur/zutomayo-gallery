@@ -32,19 +32,19 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
   const userId = req.session.userId;
   const username = req.session.username;
   if (typeof userId !== 'string' || typeof username !== 'string') {
-    res.status(401).json({ success: false, error: 'Unauthorized' });
+    res.status(401).json({ success: false, error: '請先登入後再操作', code: 'Unauthorized' });
     return;
   }
 
   const user = await AdminUserModel.findOne({ where: { id: userId, username } as any });
   if (!user) {
-    res.status(401).json({ success: false, error: 'Unauthorized' });
+    res.status(401).json({ success: false, error: '請先登入後再操作', code: 'Unauthorized' });
     return;
   }
 
   const data = user.toJSON() as any;
   if (!data.is_active) {
-    res.status(401).json({ success: false, error: 'Unauthorized' });
+    res.status(401).json({ success: false, error: '請先登入後再操作', code: 'Unauthorized' });
     return;
   }
 
@@ -60,19 +60,19 @@ const authenticateUser = async (req: Request, res: Response): Promise<AuthedUser
   const userId = req.session.userId;
   const username = req.session.username;
   if (typeof userId !== 'string' || typeof username !== 'string') {
-    res.status(401).json({ success: false, error: 'Unauthorized' });
+    res.status(401).json({ success: false, error: '請先登入後再操作', code: 'Unauthorized' });
     return null;
   }
 
   const user = await AdminUserModel.findOne({ where: { id: userId, username } as any });
   if (!user) {
-    res.status(401).json({ success: false, error: 'Unauthorized' });
+    res.status(401).json({ success: false, error: '請先登入後再操作', code: 'Unauthorized' });
     return null;
   }
 
   const data = user.toJSON() as any;
   if (!data.is_active) {
-    res.status(401).json({ success: false, error: 'Unauthorized' });
+    res.status(401).json({ success: false, error: '請先登入後再操作', code: 'Unauthorized' });
     return null;
   }
 
@@ -88,7 +88,7 @@ export const requireAdmin = async (req: Request, res: Response, next: NextFuncti
 
     const roles = await cachedGetRolesForUser(user.username);
     if (!roles.includes('role:super_admin')) {
-      res.status(403).json({ success: false, error: 'Forbidden' });
+      res.status(403).json({ success: false, error: '您沒有權限執行此操作', code: 'Forbidden' });
       return;
     }
     next();
@@ -112,7 +112,7 @@ export const requirePermission = (perms: string | string[]) => {
       for (const permission of required) {
         const ok = await canAccessPermission(user.username, permission);
         if (!ok) {
-          res.status(403).json({ success: false, error: 'Forbidden' });
+          res.status(403).json({ success: false, error: '您沒有權限執行此操作', code: 'Forbidden' });
           return;
         }
       }
@@ -142,7 +142,7 @@ export const requireAnyPermission = (perms: string | string[]) => {
           return;
         }
       }
-      res.status(403).json({ success: false, error: 'Forbidden' });
+      res.status(403).json({ success: false, error: '您沒有權限執行此操作', code: 'Forbidden' });
     } catch (err) {
       next(err);
     }

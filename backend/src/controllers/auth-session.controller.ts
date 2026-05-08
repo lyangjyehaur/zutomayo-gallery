@@ -63,25 +63,25 @@ export const login = async (req: Request, res: Response) => {
   const password = typeof req.body?.password === 'string' ? req.body.password : '';
 
   if (!username || !password) {
-    res.status(400).json({ success: false, error: 'USERNAME_PASSWORD_REQUIRED' });
+    res.status(400).json({ success: false, error: '請輸入帳號和密碼', code: 'USERNAME_PASSWORD_REQUIRED' });
     return;
   }
 
   const user = await AdminUserModel.findOne({ where: { username } as any });
   if (!user) {
-    res.status(401).json({ success: false, error: 'INVALID_CREDENTIALS' });
+    res.status(401).json({ success: false, error: '帳號或密碼錯誤，請重新輸入', code: 'INVALID_CREDENTIALS' });
     return;
   }
 
   const data = user.toJSON() as any;
   if (!data.is_active) {
-    res.status(401).json({ success: false, error: 'INVALID_CREDENTIALS' });
+    res.status(401).json({ success: false, error: '此帳號已被停用，請聯繫管理員', code: 'ACCOUNT_DISABLED' });
     return;
   }
 
   const ok = await bcrypt.compare(password, String(data.password_hash || ''));
   if (!ok) {
-    res.status(401).json({ success: false, error: 'INVALID_CREDENTIALS' });
+    res.status(401).json({ success: false, error: '帳號或密碼錯誤，請重新輸入', code: 'INVALID_CREDENTIALS' });
     return;
   }
 
@@ -110,7 +110,7 @@ export const logout = async (req: Request, res: Response) => {
 export const me = async (req: Request, res: Response) => {
   const username = req.session.username;
   if (typeof username !== 'string') {
-    res.status(401).json({ success: false, error: 'Unauthorized' });
+    res.status(401).json({ success: false, error: '請先登入後再操作', code: 'Unauthorized' });
     return;
   }
   const payload = await buildMePayload(username);
@@ -128,7 +128,7 @@ export const updateMeProfile = async (req: Request, res: Response) => {
   const userId = req.session.userId;
   const username = req.session.username;
   if (typeof userId !== 'string' || typeof username !== 'string') {
-    res.status(401).json({ success: false, error: 'Unauthorized' });
+    res.status(401).json({ success: false, error: '請先登入後再操作', code: 'Unauthorized' });
     return;
   }
 
@@ -142,13 +142,13 @@ export const updateMeProfile = async (req: Request, res: Response) => {
   if (req.body && 'avatar_url' in req.body) update.avatar_url = avatarUrl;
 
   if (Object.keys(update).length === 0) {
-    res.status(400).json({ success: false, error: 'NO_FIELDS_TO_UPDATE' });
+    res.status(400).json({ success: false, error: '沒有可更新的資料', code: 'NO_FIELDS_TO_UPDATE' });
     return;
   }
 
   const user = await AdminUserModel.findOne({ where: { id: userId, username } as any });
   if (!user) {
-    res.status(401).json({ success: false, error: 'Unauthorized' });
+    res.status(401).json({ success: false, error: '請先登入後再操作', code: 'Unauthorized' });
     return;
   }
 
@@ -161,13 +161,13 @@ export const updateNotificationPreferences = async (req: Request, res: Response)
   const userId = req.session.userId;
   const username = req.session.username;
   if (typeof userId !== 'string' || typeof username !== 'string') {
-    res.status(401).json({ success: false, error: 'Unauthorized' });
+    res.status(401).json({ success: false, error: '請先登入後再操作', code: 'Unauthorized' });
     return;
   }
 
   const prefs = req.body;
   if (!prefs || typeof prefs !== 'object') {
-    res.status(400).json({ success: false, error: 'INVALID_PREFERENCES' });
+    res.status(400).json({ success: false, error: '通知偏好設定格式不正確', code: 'INVALID_PREFERENCES' });
     return;
   }
 
@@ -180,13 +180,13 @@ export const updateNotificationPreferences = async (req: Request, res: Response)
   }
 
   if (Object.keys(sanitized).length === 0) {
-    res.status(400).json({ success: false, error: 'NO_VALID_PREFERENCES' });
+    res.status(400).json({ success: false, error: '沒有有效的通知偏好設定', code: 'NO_VALID_PREFERENCES' });
     return;
   }
 
   const user = await AdminUserModel.findOne({ where: { id: userId, username } as any });
   if (!user) {
-    res.status(401).json({ success: false, error: 'Unauthorized' });
+    res.status(401).json({ success: false, error: '請先登入後再操作', code: 'Unauthorized' });
     return;
   }
 

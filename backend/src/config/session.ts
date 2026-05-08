@@ -18,7 +18,7 @@ export const getSessionCookieOptions = (): CookieOptions => {
   return {
     httpOnly: true,
     secure: isProduction,
-    sameSite: 'lax',
+    sameSite: isProduction ? 'none' : 'lax',
     maxAge,
     ...(domain ? { domain } : {}),
   };

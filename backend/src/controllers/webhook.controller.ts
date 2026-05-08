@@ -16,7 +16,7 @@ export const verifyWalineWebhook = (req: Request, res: Response, next: NextFunct
   if (!expectedToken) {
     if (process.env.NODE_ENV === 'production') {
       logger.warn('Waline webhook rejected: WALINE_WEBHOOK_SECRET not configured in production');
-      res.status(403).json({ success: false, error: 'Webhook not configured' });
+      res.status(403).json({ success: false, error: 'Webhook 服務尚未設定' });
       return;
     }
     logger.warn('Waline webhook: WALINE_WEBHOOK_SECRET not set — requests are unauthenticated (dev only)');
@@ -26,7 +26,7 @@ export const verifyWalineWebhook = (req: Request, res: Response, next: NextFunct
 
   if (!providedToken || providedToken !== expectedToken) {
     logger.warn({ ip: req.ip }, 'Waline webhook rejected: invalid or missing token');
-    res.status(403).json({ success: false, error: 'Invalid webhook token' });
+    res.status(403).json({ success: false, error: 'Webhook 權杖無效' });
     return;
   }
 
@@ -70,7 +70,7 @@ export const handleWalineWebhook = async (req: Request, res: Response) => {
     if (sent) {
       return res.status(200).json({ success: true, message: 'Bark notification sent' });
     } else {
-      return res.status(500).json({ success: false, error: 'Failed to send Bark notification' });
+      return res.status(500).json({ success: false, error: '通知發送失敗' });
     }
   } catch (error) {
     logger.error({ err: error }, 'Error handling Waline webhook');
@@ -82,6 +82,6 @@ export const handleWalineWebhook = async (req: Request, res: Response) => {
       method: req.method,
       url: req.originalUrl,
     });
-    return res.status(500).json({ success: false, error: 'Internal server error' });
+    return res.status(500).json({ success: false, error: '系統暫時發生錯誤，請稍後再試' });
   }
 };

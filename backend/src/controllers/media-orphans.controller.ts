@@ -83,18 +83,18 @@ export const assignOrphanMediaGroup = async (req: Request, res: Response) => {
   } = (req.body || {}) as any;
 
   if (typeof source_url !== 'string' || source_url.trim().length === 0) {
-    res.status(400).json({ success: false, error: 'source_url is required' });
+    res.status(400).json({ success: false, error: '請提供來源網址', code: 'SOURCE_URL_REQUIRED' });
     return;
   }
   const sourceUrl = source_url.trim();
 
   const media = await MediaModel.findByPk(mediaId);
   if (!media) {
-    res.status(404).json({ success: false, error: 'Media not found' });
+    res.status(404).json({ success: false, error: '找不到此媒體', code: 'MEDIA_NOT_FOUND' });
     return;
   }
   if (!isTweetSourceMedia(media.toJSON() as any)) {
-    res.status(400).json({ success: false, error: 'Only tweet-source media can be assigned here' });
+    res.status(400).json({ success: false, error: '僅推文來源的媒體可在此指派', code: 'WRONG_SOURCE_TYPE' });
     return;
   }
 
@@ -133,7 +133,7 @@ export const unassignOrphanMediaGroup = async (req: Request, res: Response) => {
   const { mediaId } = req.params;
   const media = await MediaModel.findByPk(mediaId);
   if (!media) {
-    res.status(404).json({ success: false, error: 'Media not found' });
+    res.status(404).json({ success: false, error: '找不到此媒體', code: 'MEDIA_NOT_FOUND' });
     return;
   }
   await media.update({ group_id: null });

@@ -24,19 +24,19 @@
 ```json
 {
   "success": false,
-  "error": "VISIBLE_MESSAGE",
-  "code": "MACHINE_CODE",
-  "statusCode": 400,
+  "error": "帳號或密碼錯誤，請重新輸入",
+  "code": "INVALID_CREDENTIALS",
+  "statusCode": 401,
   "requestId": "req-xxx",
   "details": []
 }
 ```
 
-- `error`：給前端顯示的主要訊息。
-- `code`：機器可讀的錯誤代碼，預設與 `AppError` 訊息相同。
-- `statusCode`：HTTP status code，方便前端與除錯工具使用。
+- `error`：給前端顯示的用戶友好訊息（繁體中文）。後端會自動將機器碼映射為可讀文案。
+- `code`：機器可讀的錯誤碼（如 `INVALID_CREDENTIALS`、`TOKEN_EXPIRED`、`Forbidden`），供前端或外部工具判斷錯誤類型。
+- `statusCode`：HTTP 狀態碼，方便前端與除錯工具使用。
 - `requestId`：追查後端 log 用的請求識別碼。
-- `details`：驗證錯誤或額外 context，只有在需要時才回傳。
+- `details`：驗證錯誤或額外 context，只有在需要時才回傳。常見於 Zod 驗證失敗時，`details` 為一個陣列，每個元素包含 `field` 與 `message`。
 
 ### API 限流策略 (Rate Limiting)
 
@@ -51,6 +51,19 @@
 
 - `GET /api/auth/me`、`POST /api/auth/logout`、passkey 管理等已認證操作僅受 `apiLimiter` 約束，不套用登入限流。
 - 觸發限流時回傳 HTTP `429 Too Many Requests`，body 為標準 error envelope，並附 `Retry-After` header。
+
+### Session 與 Cookie 設定
+
+| 參數 | 開發環境 | 生產環境 |
+|:---|:---|:---|
+| `httpOnly` | `true` | `true` |
+| `secure` | `false` | `true`（僅 HTTPS） |
+| `sameSite` | `lax` | `none`（跨域架構，允許跨站攜帶 cookie） |
+| `maxAge` | 7 天（可配置） | 7 天（可配置） |
+
+- 生產環境採用 `SameSite=None; Secure` 是為了支援 `gallery.ztmr.club` → `api.ztmr.club` 的跨域請求攜帶 session cookie。
+- 若生產環境改為同域部署（nginx proxy），可將 `sameSite` 設回 `lax` 以獲得更好的 CSRF 保護。
+- 生產環境必須設定 `TRUST_PROXY=true`，使 Express 信任 nginx 反向代理層的 `X-Forwarded-Proto` 標頭，正確判斷 HTTPS。
 
 ---
 

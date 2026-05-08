@@ -53,7 +53,7 @@ const requireR2SyncAuth = (permissionCode: string) => {
         next();
         return;
       }
-      res.status(403).json({ success: false, message: 'Forbidden' });
+      res.status(403).json({ success: false, message: '您沒有權限執行此操作' });
       return;
     }
     await requirePerm(req, res, next);
@@ -123,7 +123,7 @@ router.post('/survey', asyncHandler(createSpeedSurvey));
 router.get('/image/proxy', (req, res) => {
   const { url, mode, filename } = req.query;
   if (!url || typeof url !== 'string') {
-    return res.status(400).json({ error: 'url is required' });
+    return res.status(400).json({ error: '請提供圖片網址' });
   }
   
   const salt = process.env.IMGPROXY_SALT;
@@ -155,7 +155,7 @@ router.get('/image/proxy', (req, res) => {
   const path = `/${paramsArr.join('/')}/${base64Url}`;
   
   if (!salt || !key) {
-    return res.status(500).json({ error: 'Server configuration error: Missing IMGPROXY_SALT or IMGPROXY_KEY. Insecure mode is disabled.' });
+    return res.status(500).json({ error: '圖片處理服務設定不完整' });
   }
 
   import('crypto').then((crypto) => {

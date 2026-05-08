@@ -123,7 +123,7 @@ export const getMediaGroup = async (req: Request, res: Response) => {
     ],
   });
   if (!group) {
-    res.status(404).json({ success: false, error: 'Group not found' });
+    res.status(404).json({ success: false, error: '找不到此媒體群組', code: 'GROUP_NOT_FOUND' });
     return;
   }
   const data = group.toJSON() as any;
@@ -137,7 +137,7 @@ export const updateMediaGroup = async (req: Request, res: Response) => {
   const { id } = req.params;
   const group = await MediaGroupModel.findByPk(id);
   if (!group) {
-    res.status(404).json({ success: false, error: 'Group not found' });
+    res.status(404).json({ success: false, error: '找不到此媒體群組', code: 'GROUP_NOT_FOUND' });
     return;
   }
 
@@ -170,7 +170,7 @@ export const syncMediaRelations = async (req: Request, res: Response) => {
 
   const media = await MediaModel.findByPk(mediaId);
   if (!media) {
-    res.status(404).json({ success: false, error: 'Media not found' });
+    res.status(404).json({ success: false, error: '找不到此媒體', code: 'MEDIA_NOT_FOUND' });
     return;
   }
 
@@ -278,7 +278,7 @@ export const mergeMediaGroups = async (req: Request, res: Response) => {
 
   const source = await MediaGroupModel.findByPk(id);
   if (!source) {
-    res.status(404).json({ success: false, error: 'Group not found' });
+    res.status(404).json({ success: false, error: '找不到此媒體群組', code: 'GROUP_NOT_FOUND' });
     return;
   }
 
@@ -304,7 +304,7 @@ export const mergeMediaGroups = async (req: Request, res: Response) => {
   }
 
   if (!target) {
-    res.status(400).json({ success: false, error: 'TARGET_REQUIRED' });
+    res.status(400).json({ success: false, error: '請指定合併目標', code: 'TARGET_REQUIRED' });
     return;
   }
 
@@ -343,7 +343,7 @@ export const unassignMediaGroup = async (req: Request, res: Response) => {
   const { id } = req.params;
   const group = await MediaGroupModel.findByPk(id);
   if (!group) {
-    res.status(404).json({ success: false, error: 'Group not found' });
+    res.status(404).json({ success: false, error: '找不到此媒體群組', code: 'GROUP_NOT_FOUND' });
     return;
   }
 

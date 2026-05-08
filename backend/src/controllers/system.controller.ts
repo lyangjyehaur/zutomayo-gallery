@@ -469,7 +469,7 @@ export const resolveErrorLog = async (req: Request, res: Response, next: NextFun
 
     const log = await BackendErrorLogModel.findByPk(id);
     if (!log) {
-      res.status(404).json({ success: false, error: 'Error log not found' });
+      res.status(404).json({ success: false, error: '找不到此錯誤記錄', code: 'ERROR_LOG_NOT_FOUND' });
       return;
     }
 
@@ -491,7 +491,7 @@ export const batchResolveErrorLogs = async (req: Request, res: Response, next: N
     const username = (req as any).user?.username || 'unknown';
 
     if (!Array.isArray(ids) || ids.length === 0) {
-      res.status(400).json({ success: false, error: 'ids is required' });
+      res.status(400).json({ success: false, error: '請提供要處理的錯誤記錄 ID', code: 'IDS_REQUIRED' });
       return;
     }
 
