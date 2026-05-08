@@ -495,6 +495,210 @@ body.cursor-native * {
     background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.4) 100%);
   }
 
+  .ambient-midnight-stars-a,
+  .ambient-midnight-stars-b {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .ambient-midnight-stars-a {
+    background:
+      radial-gradient(2px 2px at 5% 3%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 12% 18%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 8% 35%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 3% 52%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 15% 68%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 10% 85%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 18% 95%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 22% 8%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 28% 25%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 25% 42%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 32% 58%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 30% 75%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 35% 12%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 38% 30%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 42% 48%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 45% 65%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 48% 82%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 52% 5%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 55% 22%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 58% 40%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 62% 55%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 65% 72%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 68% 88%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 72% 15%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 75% 32%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 78% 50%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 82% 68%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 85% 85%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 88% 10%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 92% 28%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 95% 45%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 98% 62%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(3px 3px at 20% 50%, rgba(200,210,255,0.9), transparent),
+      radial-gradient(3px 3px at 60% 20%, rgba(200,210,255,0.9), transparent),
+      radial-gradient(3px 3px at 80% 78%, rgba(200,210,255,0.9), transparent),
+      radial-gradient(3px 3px at 40% 90%, rgba(200,210,255,0.8), transparent);
+    animation: midnight-twinkle-a 5s ease-in-out infinite alternate;
+  }
+
+  .ambient-midnight-stars-b {
+    background:
+      radial-gradient(2px 2px at 7% 10%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 14% 28%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 11% 45%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 6% 62%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 17% 78%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 20% 92%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 24% 5%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 27% 22%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 33% 38%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 36% 55%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 40% 72%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 43% 88%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 47% 8%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 50% 25%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 54% 42%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 57% 58%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 61% 75%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 64% 92%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 69% 5%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 73% 22%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 76% 38%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 79% 55%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 83% 72%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 86% 88%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 90% 5%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 93% 22%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 96% 38%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 99% 55%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(3px 3px at 30% 60%, rgba(200,210,255,0.9), transparent),
+      radial-gradient(3px 3px at 70% 35%, rgba(200,210,255,0.8), transparent),
+      radial-gradient(3px 3px at 50% 80%, rgba(200,210,255,0.9), transparent),
+      radial-gradient(3px 3px at 90% 50%, rgba(200,210,255,0.8), transparent);
+    animation: midnight-twinkle-b 3.5s ease-in-out infinite alternate;
+  }
+
+  .ambient-midnight-stars-a,
+  .ambient-midnight-stars-b {
+    opacity: 0;
+  }
+
+  .ambient-midnight .ambient-midnight-stars-a,
+  .ambient-midnight .ambient-midnight-stars-b {
+    opacity: 1;
+  }
+
+  @keyframes midnight-twinkle-a {
+    0% { opacity: 0.3; }
+    33% { opacity: 0.9; }
+    66% { opacity: 0.4; }
+    100% { opacity: 1; }
+  }
+
+  @keyframes midnight-twinkle-b {
+    0% { opacity: 1; }
+    33% { opacity: 0.3; }
+    66% { opacity: 0.8; }
+    100% { opacity: 0.4; }
+  }
+
+  .ambient-midnight .ambient-midnight-text {
+    opacity: 0.5 !important;
+  }
+
+  .tape-playing {
+    animation: tape-vibrate 0.15s linear infinite !important;
+  }
+
+  @keyframes tape-vibrate {
+    0% { transform: translate(0, 0); }
+    25% { transform: translate(-1px, 1px); }
+    50% { transform: translate(1px, -1px); }
+    75% { transform: translate(-1px, -1px); }
+    100% { transform: translate(1px, 1px); }
+  }
+
+  .tape-vhs-bar {
+    height: 2px;
+    background: repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      rgba(255,255,255,0.4) 2px,
+      transparent 4px,
+      rgba(255,255,255,0.2) 6px,
+      transparent 8px
+    );
+    animation: tape-vhs-scroll 0.3s linear infinite;
+  }
+
+  @keyframes tape-vhs-scroll {
+    from { transform: translateX(-8px); }
+    to { transform: translateX(0); }
+  }
+
+  .tape-ejected {
+    animation: tape-eject 0.5s ease-out forwards !important;
+  }
+
+  @keyframes tape-eject {
+    0% { transform: translateY(0); }
+    40% { transform: translateY(-16px); }
+    100% { transform: translateY(-8px); }
+  }
+
+  .ztmy-global-glitch {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    pointer-events: none;
+    animation: global-glitch-burst 1.2s ease-out forwards;
+  }
+
+  @keyframes global-glitch-burst {
+    0% {
+      background: transparent;
+    }
+    5% {
+      background: rgba(255,0,0,0.06);
+      transform: translateX(-3px);
+    }
+    8% {
+      background: rgba(0,255,255,0.06);
+      transform: translateX(4px) skewX(1deg);
+    }
+    12% {
+      background: transparent;
+      transform: translateX(-2px);
+    }
+    18% {
+      background: rgba(255,0,255,0.04);
+      transform: translateX(2px) skewX(-0.5deg);
+    }
+    25% {
+      background: transparent;
+      transform: none;
+    }
+    30% {
+      box-shadow: inset 0 40% 0 rgba(0,0,0,0.15), inset 0 -30% 0 rgba(255,255,255,0.03);
+    }
+    40% {
+      box-shadow: none;
+    }
+    50% {
+      background: rgba(255,255,255,0.02);
+    }
+    60% {
+      background: transparent;
+    }
+    100% {
+      background: transparent;
+      transform: none;
+    }
+  }
+
   /* 2. 動態掃描橫條 (早期實驗性效果，目前未在首頁主要使用) */
   .crt-scanline::after {
     content: " ";

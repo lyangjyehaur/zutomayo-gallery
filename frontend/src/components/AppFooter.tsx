@@ -248,6 +248,10 @@ export const AppFooter = memo(function AppFooter({ is404Route, isGeoTooltipOpen,
           )}
           </div>
 
+          <p className="ambient-midnight-text text-center text-[10px] opacity-0 transition-opacity duration-1000 mt-4" lang="ja">
+            今、真夜中です。
+          </p>
+
           <div className={`${!is404Route ? "pt-8" : ""} flex flex-col md:flex-row justify-between items-center gap-8 md:gap-4 text-[10px]`}>
             <div className="text-center md:text-left flex flex-col leading-tight items-center md:items-start md:flex-1 md:basis-0">
 

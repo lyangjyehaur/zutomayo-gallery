@@ -532,6 +532,7 @@ export default function FanartPage({ f7router }: FanartPageProps) {
         return
       }
       const mediaKey = `media:${mvSheetTarget.id}`
+      f7.dialog.preloader('正在保存關聯...')
       setMvSheetBusy(true)
       setBusyForKeys([mediaKey], true)
       try {
@@ -539,12 +540,13 @@ export default function FanartPage({ f7router }: FanartPageProps) {
         if (!result.success) throw new Error('ASSIGN_FAILED')
         closeMvSheet()
         await refreshAll()
-        f7.toast.create({ text: '已保存並完成關聯', closeTimeout: 1800 }).open()
+        f7.toast.create({ text: 'MV 關聯已保存', closeTimeout: 1800 }).open()
       } catch {
-        f7.toast.create({ text: '保存關聯失敗', closeTimeout: 2200 }).open()
+        f7.toast.create({ text: '保存關聯失敗，請確認網路連線後重試', closeTimeout: 2200 }).open()
       } finally {
         setMvSheetBusy(false)
         setBusyForKeys([mediaKey], false)
+        f7.dialog.close()
       }
       return
     }
@@ -560,6 +562,7 @@ export default function FanartPage({ f7router }: FanartPageProps) {
       const successfulIds: string[] = []
       let failCount = 0
 
+      f7.dialog.preloader('正在批次保存關聯...')
       setMvSheetBusy(true)
       setBusyForKeys(mediaKeys, true)
       try {
@@ -588,17 +591,18 @@ export default function FanartPage({ f7router }: FanartPageProps) {
         }
 
         if (failCount === 0) {
-          f7.toast.create({ text: `已批次通過 ${successfulIds.length} 筆`, closeTimeout: 1800 }).open()
+          f7.toast.create({ text: `已批次保存 ${successfulIds.length} 筆 MV 關聯`, closeTimeout: 1800 }).open()
           return
         }
         if (successfulIds.length === 0) {
-          f7.toast.create({ text: '批次關聯失敗', closeTimeout: 2200 }).open()
+          f7.toast.create({ text: '批次保存關聯失敗，請確認網路連線後重試', closeTimeout: 2200 }).open()
           return
         }
         f7.toast.create({ text: `完成 ${successfulIds.length} 筆，失敗 ${failCount} 筆`, closeTimeout: 2200 }).open()
       } finally {
         setMvSheetBusy(false)
         setBusyForKeys(mediaKeys, false)
+        f7.dialog.close()
       }
       return
     }
@@ -610,6 +614,7 @@ export default function FanartPage({ f7router }: FanartPageProps) {
         return
       }
       const mediaKey = `media:${mvSheetTarget.id}`
+      f7.dialog.preloader('正在更新關聯...')
       setMvSheetBusy(true)
       setBusyForKeys([mediaKey], true)
       try {
@@ -617,12 +622,13 @@ export default function FanartPage({ f7router }: FanartPageProps) {
         if (!result.success) throw new Error('SYNC_FAILED')
         closeMvSheet()
         await refreshAll()
-        f7.toast.create({ text: '已更新關聯', closeTimeout: 1800 }).open()
+        f7.toast.create({ text: 'MV 關聯已更新', closeTimeout: 1800 }).open()
       } catch {
-        f7.toast.create({ text: '更新關聯失敗', closeTimeout: 2200 }).open()
+        f7.toast.create({ text: '更新關聯失敗，請確認網路連線後重試', closeTimeout: 2200 }).open()
       } finally {
         setMvSheetBusy(false)
         setBusyForKeys([mediaKey], false)
+        f7.dialog.close()
       }
       return
     }
@@ -637,6 +643,7 @@ export default function FanartPage({ f7router }: FanartPageProps) {
         return
       }
 
+      f7.dialog.preloader('正在保存解析結果...')
       setMvSheetBusy(true)
       try {
         const imagesToSave = parsedItems.map((item) => ({
@@ -669,11 +676,12 @@ export default function FanartPage({ f7router }: FanartPageProps) {
         if (view === 'organized' && focusKind === 'mv' && mvIds.includes(focus)) {
           await loadCurrentList()
         }
-        f7.toast.create({ text: '手動解析結果已保存', closeTimeout: 1800 }).open()
+        f7.toast.create({ text: '解析結果已保存', closeTimeout: 1800 }).open()
       } catch {
-        f7.toast.create({ text: '保存解析結果失敗', closeTimeout: 2200 }).open()
+        f7.toast.create({ text: '保存解析結果失敗，請確認輸入內容後重試', closeTimeout: 2200 }).open()
       } finally {
         setMvSheetBusy(false)
+        f7.dialog.close()
       }
     }
   }

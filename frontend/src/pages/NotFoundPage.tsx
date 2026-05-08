@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,12 +7,13 @@ export function NotFoundPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const [tapeState, setTapeState] = useState<"idle" | "playing" | "ejected">("idle");
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.umami && typeof window.umami.track === "function") {
       const searchParams = new URLSearchParams(location.search);
       const fromUrl = searchParams.get("from");
-      
+
       window.umami.track('Z_404_Page_View', {
         original_url: fromUrl || location.pathname,
         current_url: window.location.href
@@ -20,11 +21,24 @@ export function NotFoundPage() {
     }
   }, [location]);
 
+  const handleTapeClick = useCallback(() => {
+    if (tapeState !== "idle") return;
+    setTapeState("playing");
+    setTimeout(() => setTapeState("ejected"), 3000);
+  }, [tapeState]);
+
   return (
     <div className="w-full flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md py-16 px-8 flex flex-col items-center justify-center border-4 border-dashed border-border bg-card shadow-[8px_8px_0_0_rgba(0,0,0,1)] transition-all hover:translate-y-[-2px] hover:translate-x-[-2px] hover:shadow-[10px_10px_0_0_rgba(0,0,0,1)]">
-        <div className="text-6xl mb-6 opacity-20 animate-pulse">
+        <div
+          className={`text-6xl mb-6 opacity-20 cursor-pointer select-none transition-all duration-300 ${tapeState === "idle" ? "animate-pulse hover:opacity-40" : ""} ${tapeState === "playing" ? "tape-playing opacity-50" : ""} ${tapeState === "ejected" ? "tape-ejected opacity-10" : ""}`}
+          onClick={handleTapeClick}
+          title={tapeState === "idle" ? "▶" : undefined}
+        >
           <i className="hn hn-cassette-tape"></i>
+          {tapeState === "playing" && (
+            <div className="tape-vhs-bar absolute left-0 right-0" />
+          )}
         </div>
         <div className="flex flex-col items-center leading-tight mb-4">
           <h1 className="text-4xl font-black mb-2 text-center">404</h1>
@@ -37,6 +51,11 @@ export function NotFoundPage() {
         </div>
         <p className="text-sm opacity-60 mb-8 font-mono text-center">
           {t("app.page_not_found_desc", "您尋找的訊號似乎已經消失在午夜之中")}
+        </p>
+        <p
+          className={`text-xs font-mono text-center transition-all duration-700 mb-4 ${tapeState === "playing" ? "opacity-50 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"}`}
+        >
+          {t("app.tape_secret_msg", "このテープには、まだ聴いていない曲が入っているかもしれない。")}
         </p>
         <div className="flex flex-col sm:flex-row gap-4 w-full justify-center mt-4">
           <Button

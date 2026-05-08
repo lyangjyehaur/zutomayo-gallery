@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, forwardRef } from 'react';
+import React, { useState, useCallback, useRef, forwardRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { shouldShowSecondaryLang } from '@/i18n';
 import { VERSION_CONFIG } from '@/config/version';
@@ -8,16 +8,32 @@ interface AppHeaderProps {
   glitchStyleVars: React.CSSProperties;
   onVersionClick: (e: React.MouseEvent) => void;
   onVersionTouchStart: (e: React.TouchEvent) => void;
+  isAmbient: boolean;
 }
 
-export const AppHeader = forwardRef<HTMLElement, AppHeaderProps>(function AppHeader({ isGlobalPaused, glitchStyleVars, onVersionClick, onVersionTouchStart }, ref) {
+export const AppHeader = forwardRef<HTMLElement, AppHeaderProps>(function AppHeader({ isGlobalPaused, glitchStyleVars, onVersionClick, onVersionTouchStart, isAmbient }, ref) {
   const { t } = useTranslation();
   const [isTitleHovering, setIsTitleHovering] = useState(false);
   const [titleBurstKey, setTitleBurstKey] = useState(0);
+  const [showMidnightTitle, setShowMidnightTitle] = useState(false);
   const titleRef = useRef<HTMLSpanElement>(null);
   const titlePointerRef = useRef<{ x: number; y: number } | null>(null);
   const titleRafRef = useRef<number | null>(null);
   const lastTitleBurstAtRef = useRef(0);
+
+  useEffect(() => {
+    if (isAmbient) {
+      setShowMidnightTitle(true);
+      setTitleBurstKey((v) => v + 1);
+      const timer = setTimeout(() => {
+        setShowMidnightTitle(false);
+        setTitleBurstKey((v) => v + 1);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [isAmbient]);
+
+  const displayTitle = showMidnightTitle ? 'ずっと真夜中でいいのに。' : 'ZUTOMAYO Gallery';
 
   return (
     <header ref={ref} className="py-12 md:py-16 text-center bg-card relative overflow-hidden z-30">
@@ -27,7 +43,7 @@ export const AppHeader = forwardRef<HTMLElement, AppHeaderProps>(function AppHea
           <span
             ref={titleRef}
             className={`ztmy-cyber-title-crt ztmy-cyber-title-glow whitespace-nowrap relative z-10 inline-block pb-[0.2em] -mb-[0.2em] px-[0.1em] -mx-[0.1em] will-change-transform ${isTitleHovering ? 'ztmy-cyber-title-hovering' : ''}`}
-            data-text="ZUTOMAYO Gallery"
+            data-text={displayTitle}
             style={{
               animation: 'cyber-jitter var(--jitter-dur, 3.5s) infinite linear',
               '--anim-state': isGlobalPaused ? 'paused' : 'running',
@@ -74,10 +90,10 @@ export const AppHeader = forwardRef<HTMLElement, AppHeaderProps>(function AppHea
             }}
           >
             <span className="ztmy-cyber-hover-layer will-change-transform">
-              <span key={titleBurstKey} className="ztmy-cyber-hover-burst" data-text="ZUTOMAYO Gallery"></span>
-              <span className="ztmy-cyber-title-scan will-change-transform" data-text="ZUTOMAYO Gallery"></span>
-              <span className="ztmy-cyber-text-aberration will-change-transform" data-text="ZUTOMAYO Gallery">
-                ZUTOMAYO Gallery
+              <span key={titleBurstKey} className="ztmy-cyber-hover-burst" data-text={displayTitle}></span>
+              <span className="ztmy-cyber-title-scan will-change-transform" data-text={displayTitle}></span>
+              <span className="ztmy-cyber-text-aberration will-change-transform" data-text={displayTitle}>
+                {displayTitle}
               </span>
             </span>
           </span>
@@ -101,7 +117,7 @@ export const AppHeader = forwardRef<HTMLElement, AppHeaderProps>(function AppHea
             V{VERSION_CONFIG.app}
           </span>
         </h1>
-        <p className="mt-2 text-sm opacity-70">{t("app.slogan", "日々研磨爆裂中！")}</p>
+        <p className="mt-2 text-sm opacity-70">{showMidnightTitle ? '今、真夜中です。' : t("app.slogan", "日々研磨爆裂中！")}</p>
       </header>
   );
 });

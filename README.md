@@ -4,10 +4,10 @@
 
 [繁體中文](README.md) | [简体中文](README.zh-Hans.md) | [English](README.en.md) | [日本語](README.ja.md)
 
-![Version](https://img.shields.io/badge/version-3.6.11-blue)
-![React](https://img.shields.io/badge/React-18.3-61dafb)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.3-3178c6)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-38b2ac)
+Version
+React
+TypeScript
+Tailwind CSS
 
 修訂日期：2026-05-08
 
@@ -49,22 +49,22 @@
 ### 前端
 
 
-| 技術                                                          | 版本    | 用途               |
-| ----------------------------------------------------------- | ----- | ---------------- |
-| [React](https://react.dev/)                                 | 18.3  | UI 框架            |
-| [TypeScript](https://www.typescriptlang.org/)               | 5.3   | 類型安全             |
-| [Vite](https://vitejs.dev/)                                 | 5.4.2 | 建構工具             |
-| [Tailwind CSS](https://tailwindcss.com/)                    | 4.0   | 樣式框架             |
-| [shadcn/ui](https://ui.shadcn.com/)                         | 4.2   | UI 組件庫           |
-| [Neobrutalism](https://www.neobrutalism.dev/)               | -     | 設計風格與主題          |
-| [Fancybox](https://fancyapps.com/fancybox/)                 | 6.1   | 燈箱組件             |
-| [LightGallery](https://www.lightgalleryjs.com/)             | 2.9   | 燈箱組件（debug/除錯用途） |
-| [Masonry](https://masonry.desandro.com/)                    | 4.2   | 瀑布流佈局            |
-| [Monaco Editor](https://microsoft.github.io/monaco-editor/) | 4.7   | 代碼編輯器            |
-| [Waline](https://waline.js.org/)                            | 3.5.0 | 留言系統             |
-| [Umami](https://umami.is/)                                  | -     | 網站數據分析           |
-| [React Router](https://reactrouter.com/)                    | 6.22  | 路由管理             |
-| [SWR](https://swr.vercel.app/)                              | 2.4   | 資料獲取             |
+| 技術                                                          | 版本    | 用途                   |
+| ----------------------------------------------------------- | ----- | -------------------- |
+| [React](https://react.dev/)                                 | 18.3  | UI 框架                |
+| [TypeScript](https://www.typescriptlang.org/)               | 5.3   | 類型安全                 |
+| [Vite](https://vitejs.dev/)                                 | 5.4.2 | 建構工具                 |
+| [Tailwind CSS](https://tailwindcss.com/)                    | 4.0   | 樣式框架                 |
+| [shadcn/ui](https://ui.shadcn.com/)                         | 4.2   | UI 組件庫               |
+| [Neobrutalism](https://www.neobrutalism.dev/)               | -     | 設計風格與主題              |
+| [Fancybox](https://fancyapps.com/fancybox/)                 | 6.1   | 燈箱組件                 |
+| [LightGallery](https://www.lightgalleryjs.com/)             | 2.9   | 燈箱組件（debug/除錯用途）     |
+| [Masonry](https://masonry.desandro.com/)                    | 4.2   | 瀑布流佈局                |
+| [Monaco Editor](https://microsoft.github.io/monaco-editor/) | 4.7   | 代碼編輯器                |
+| [Waline](https://waline.js.org/)                            | 3.5.0 | 留言系統                 |
+| [Umami](https://umami.is/)                                  | -     | 網站數據分析               |
+| [React Router](https://reactrouter.com/)                    | 6.22  | 路由管理                 |
+| [SWR](https://swr.vercel.app/)                              | 2.4   | 資料獲取                 |
 | [Framework7 React](https://framework7.io/react/)            | 9.0   | `review-app` 行動審核 UI |
 
 
@@ -268,38 +268,40 @@ Vite 在 `vite build` 時會以 production mode 載入 `frontend/.env.production
 ### 前端環境變數 (`frontend/.env`)
 
 
-| 變數名稱                               | 說明                                         | 預設值                                       |
-| ---------------------------------- | ------------------------------------------ | ----------------------------------------- |
-| `VITE_API_ROOT`                    | 後端 API 伺服器根路徑，開發時通常維持 `/api`               | `/api`                                    |
-| `VITE_API_ORIGIN`                  | API 伺服器原始網域，用於實際 API 請求與 HTML `preconnect` | `http://localhost:5010`                   |
-| `VITE_IMGPROXY_ORIGIN`             | Imgproxy 服務原始網域；此欄位以本機開發為主                 | `http://localhost:8018`                   |
-| `VITE_ASSETS_ORIGIN`               | 靜態媒體資源原始網域；此欄位以本機開發為主                      | `http://localhost:5173`                   |
-| `VITE_UNPKG_ORIGIN`                | 第三方套件 CDN 原始網域                             | `https://unpkg.com`                       |
-| `VITE_TWITTER_IMAGE_SOURCE_HOST`   | Twitter 圖片來源主機                             | `https://pbs.twimg.com`                   |
-| `VITE_TWITTER_VIDEO_SOURCE_HOST`   | Twitter 影片來源主機                             | `https://video.twimg.com`                 |
-| `VITE_TWITTER_PROXY_PATH`          | Twitter 圖片反代路徑                             | `/ti`                                     |
-| `VITE_TWITTER_VIDEO_PROXY_PATH`    | Twitter 影片反代路徑                             | `/tv`                                     |
+| 變數名稱                             | 說明                                         | 預設值                       |
+| -------------------------------- | ------------------------------------------ | ------------------------- |
+| `VITE_API_ROOT`                  | 後端 API 伺服器根路徑，開發時通常維持 `/api`               | `/api`                    |
+| `VITE_API_ORIGIN`                | API 伺服器原始網域，用於實際 API 請求與 HTML `preconnect` | `http://localhost:5010`   |
+| `VITE_IMGPROXY_ORIGIN`           | Imgproxy 服務原始網域；此欄位以本機開發為主                 | `http://localhost:8018`   |
+| `VITE_ASSETS_ORIGIN`             | 靜態媒體資源原始網域；此欄位以本機開發為主                      | `http://localhost:5173`   |
+| `VITE_UNPKG_ORIGIN`              | 第三方套件 CDN 原始網域                             | `https://unpkg.com`       |
+| `VITE_TWITTER_IMAGE_SOURCE_HOST` | Twitter 圖片來源主機                             | `https://pbs.twimg.com`   |
+| `VITE_TWITTER_VIDEO_SOURCE_HOST` | Twitter 影片來源主機                             | `https://video.twimg.com` |
+| `VITE_TWITTER_PROXY_PATH`        | Twitter 圖片反代路徑                             | `/ti`                     |
+| `VITE_TWITTER_VIDEO_PROXY_PATH`  | Twitter 影片反代路徑                             | `/tv`                     |
+
 
 ### 行動審核前端環境變數 (`review-app/.env`)
 
-| 變數名稱 | 說明 | 預設值 |
-|---|---|---|
-| `VITE_API_ORIGIN` | 可選 API Origin；未設定時由 `review-app/src/lib/api.ts` 自動推導 | 無 |
-| `VITE_API_ROOT` | 開發環境常用 API root，本機通常設為 `/api` 搭配 Vite proxy | `/api` |
-| `VITE_API_URL` | 完整 API base URL；需要覆蓋預設推導時使用 | 無 |
-| `VITE_YOUTUBE_SOURCE_HOSTS`        | YouTube 圖片來源主機列表（逗號分隔）                     | `i.ytimg.com,img.youtube.com,youtube.com` |
-| `VITE_YOUTUBE_PROXY_PATH`          | YouTube 圖片反代路徑                             | `/yi`                                     |
-| `VITE_R2_DOMAIN`                   | (選填) Cloudflare R2 自訂網域                    | `https://r2.dan.tw`                       |
-| `VITE_WALINE_SERVER_URL`           | Waline 伺服器位址；開發時可直接沿用正式站                   | `https://comments.ztmr.club`              |
-| `VITE_WALINE_EMOJI_ORIGIN`         | Waline 表情 CDN 原始網域                         | `https://unpkg.com`                       |
-| `VITE_WALINE_EMOJI_FASTLY_ORIGIN`  | Waline 表情 CDN 備援網域                         | `https://fastly.jsdelivr.net/npm`         |
-| `VITE_WALINE_AVATAR_ORIGIN`        | Waline 頭像來源                                | `https://gravatar.com/avatar`             |
-| `VITE_WALINE_AVATAR_MIRROR_ORIGIN` | Waline 頭像鏡像來源                              | `https://cravatar.cn/avatar`              |
-| `VITE_YOUTUBE_EMBED_ORIGIN`        | YouTube 影片嵌入來源                             | `https://www.youtube.com/embed`           |
-| `VITE_BILIBILI_EMBED_ORIGIN`       | Bilibili 影片嵌入來源                            | `https://player.bilibili.com/player.html` |
-| `VITE_UMAMI_SECONDARY_WEBSITE_ID`  | (選填) commons Umami 網站追蹤 ID；本機開發可留空         | 無                                         |
-| `VITE_UMAMI_SECONDARY_HOST_URL`    | (選填) commons Umami 追蹤主機網址；本機開發可留空          | 無                                         |
-| `VITE_UMAMI_SECONDARY_BASE_SCRIPT` | (選填) commons Umami 腳本基底路徑                  | `/commons`                                |
+
+| 變數名稱                               | 說明                                                   | 預設值                                       |
+| ---------------------------------- | ---------------------------------------------------- | ----------------------------------------- |
+| `VITE_API_ORIGIN`                  | 可選 API Origin；未設定時由 `review-app/src/lib/api.ts` 自動推導 | 無                                         |
+| `VITE_API_ROOT`                    | 開發環境常用 API root，本機通常設為 `/api` 搭配 Vite proxy          | `/api`                                    |
+| `VITE_API_URL`                     | 完整 API base URL；需要覆蓋預設推導時使用                          | 無                                         |
+| `VITE_YOUTUBE_SOURCE_HOSTS`        | YouTube 圖片來源主機列表（逗號分隔）                               | `i.ytimg.com,img.youtube.com,youtube.com` |
+| `VITE_YOUTUBE_PROXY_PATH`          | YouTube 圖片反代路徑                                       | `/yi`                                     |
+| `VITE_R2_DOMAIN`                   | (選填) Cloudflare R2 自訂網域                              | `https://r2.dan.tw`                       |
+| `VITE_WALINE_SERVER_URL`           | Waline 伺服器位址；開發時可直接沿用正式站                             | `https://comments.ztmr.club`              |
+| `VITE_WALINE_EMOJI_ORIGIN`         | Waline 表情 CDN 原始網域                                   | `https://unpkg.com`                       |
+| `VITE_WALINE_EMOJI_FASTLY_ORIGIN`  | Waline 表情 CDN 備援網域                                   | `https://fastly.jsdelivr.net/npm`         |
+| `VITE_WALINE_AVATAR_ORIGIN`        | Waline 頭像來源                                          | `https://gravatar.com/avatar`             |
+| `VITE_WALINE_AVATAR_MIRROR_ORIGIN` | Waline 頭像鏡像來源                                        | `https://cravatar.cn/avatar`              |
+| `VITE_YOUTUBE_EMBED_ORIGIN`        | YouTube 影片嵌入來源                                       | `https://www.youtube.com/embed`           |
+| `VITE_BILIBILI_EMBED_ORIGIN`       | Bilibili 影片嵌入來源                                      | `https://player.bilibili.com/player.html` |
+| `VITE_UMAMI_SECONDARY_WEBSITE_ID`  | (選填) commons Umami 網站追蹤 ID；本機開發可留空                   | 無                                         |
+| `VITE_UMAMI_SECONDARY_HOST_URL`    | (選填) commons Umami 追蹤主機網址；本機開發可留空                    | 無                                         |
+| `VITE_UMAMI_SECONDARY_BASE_SCRIPT` | (選填) commons Umami 腳本基底路徑                            | `/commons`                                |
 
 
 ### 後端環境變數 (`backend/.env`)
@@ -318,7 +320,7 @@ Vite 在 `vite build` 時會以 production mode 載入 `frontend/.env.production
 | `IMGPROXY_KEY`                                            | Imgproxy 簽名用的 Hex 金鑰                          | 無                         |
 | `IMGPROXY_SALT`                                           | Imgproxy 簽名用的 Hex 鹽值                          | 無                         |
 | `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASS` | PostgreSQL 連線設定（主資料庫）                         | 參考 `backend/.env.example` |
-| `R2_`* / `MEILI_*` / `REDIS_*` / `TWITTER_*`              | (選填) 進階功能配置（圖床/搜尋/快取/爬蟲/通知）                   | 參考 `backend/.env.example` |
+| `R2_`* / `MEILI_`* / `REDIS_*` / `TWITTER_*`              | (選填) 進階功能配置（圖床/搜尋/快取/爬蟲/通知）                   | 參考 `backend/.env.example` |
 
 
 ---

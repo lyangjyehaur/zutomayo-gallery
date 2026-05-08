@@ -123,6 +123,10 @@ export default function StagingPage({ f7router }: StagingPageProps) {
   const [crawlerSheetOpened, setCrawlerSheetOpened] = useState(false)
   const [triggeringCrawler, setTriggeringCrawler] = useState(false)
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set())
+  const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null)
+  const [isSticky, setIsSticky] = useState(false)
+  const batchBlockRef = useRef<HTMLDivElement>(null)
+  const sentinelRef = useRef<HTMLDivElement>(null)
   const [crawlerForm, setCrawlerForm] = useState(() => ({
     searchTerms: DEFAULT_SEARCH_TERMS,
     ...createDefaultCrawlerRange(),
@@ -205,6 +209,19 @@ export default function StagingPage({ f7router }: StagingPageProps) {
   useEffect(() => {
     visitWorkspace('staging')
   }, [visitWorkspace])
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!sentinel) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsSticky(!entry.isIntersecting)
+      },
+      { threshold: [0] },
+    )
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [])
 
   const filteredItems = useMemo(() => {
     const keyword = query.trim().toLowerCase()
@@ -348,6 +365,7 @@ export default function StagingPage({ f7router }: StagingPageProps) {
       return
     }
 
+    f7.dialog.preloader('正在保存關聯...')
     setMvSheetBusy(true)
     setBusyForIds(mvSheetTargets, true)
 
@@ -371,13 +389,14 @@ export default function StagingPage({ f7router }: StagingPageProps) {
       setMvSheetBusy(false)
       setMvSheetTargets([])
       setMvSheetOpened(false)
+      f7.dialog.close()
     }
 
     await finalizeMutations(
       successfulIds,
       successCount,
       failCount,
-      mvSheetTargets.length === 1 ? '已通過並建立關聯' : `已批次通過 ${successCount} 筆`,
+      mvSheetTargets.length === 1 ? 'MV 關聯已保存' : `已批次保存 ${successCount} 筆 MV 關聯`,
     )
   }
 
@@ -594,9 +613,24 @@ export default function StagingPage({ f7router }: StagingPageProps) {
         actions={query ? <Link onClick={() => handleQueryInput('')}>清除搜尋</Link> : undefined}
       />
 
-      <ReviewToolbarCard
-       
-        summary={(
+      <div
+        ref={batchBlockRef}
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
+          background: 'var(--f7-page-bg-color, #f7f7f8)',
+          paddingTop: 4,
+          paddingBottom: 4,
+          boxShadow: isSticky ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
+          transition: 'box-shadow 0.15s ease',
+        }}
+      >
+        {/* sentinel: 一個透明元素置於 sticky 容器上方；當它滾出視窗時 Observer 觸發 isSticky=true */}
+        <div ref={sentinelRef} style={{ position: 'sticky', top: -1, height: 1, width: '100%' }} />
+        <ReviewToolbarCard
+         
+          summary={(
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}>
             <Checkbox
               checked={allVisibleSelected}
@@ -626,7 +660,8 @@ export default function StagingPage({ f7router }: StagingPageProps) {
           </>
         )}
         footer="批量工具列會跟著當前狀態切換，保持與單筆 swipeout 行為一致。"
-      />
+        />
+      </div>
 
       <div>
         {loadError && !loading && items.length === 0 ? (
@@ -650,6 +685,9 @@ export default function StagingPage({ f7router }: StagingPageProps) {
           const imgSrc = item.media_type === 'image'
             ? preferTwimgUrl(item.media_url, item.r2_url)
             : preferTwimgUrl(item.thumbnail_url, item.media_url, item.r2_url)
+          const previewUrl = item.media_type === 'image'
+            ? preferTwimgUrl(item.media_url, item.r2_url)
+            : item.media_url
           const subtitle = `@${item.author_handle} · ❤️ ${formatCount(item.like_count)} · 🔁 ${formatCount(item.retweet_count)} · 👁 ${formatCount(item.view_count)}`
           const footer = [
             item.media_type === 'video' ? 'Video' : 'Image',
@@ -672,7 +710,11 @@ export default function StagingPage({ f7router }: StagingPageProps) {
               text={item.source_text || '（無推文文字）'}
               footer={footer}
             >
-              <div slot="media" style={{ width: 72, height: 72, flexShrink: 0 }}>
+              <div
+                slot="media"
+                style={{ width: 72, height: 72, flexShrink: 0, cursor: 'pointer' }}
+                onClick={() => setPreviewMedia({ url: previewUrl, type: item.media_type })}
+              >
                 {item.media_type === 'video' ? (
                   <video src={imgSrc} style={{ borderRadius: 8, width: 72, height: 72, objectFit: 'cover', display: 'block' }} muted playsInline />
                 ) : (
@@ -814,6 +856,62 @@ export default function StagingPage({ f7router }: StagingPageProps) {
           </Block>
         </PageContent>
       </Sheet>
+
+      {previewMedia && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 12500,
+            background: 'rgba(0, 0, 0, 0.92)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+          }}
+          onClick={() => setPreviewMedia(null)}
+        >
+          <button
+            onClick={() => setPreviewMedia(null)}
+            style={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              zIndex: 10,
+              background: 'rgba(255,255,255,0.15)',
+              border: 'none',
+              borderRadius: '50%',
+              width: 36,
+              height: 36,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#fff',
+              fontSize: 20,
+              cursor: 'pointer',
+            }}
+            aria-label="關閉預覽"
+          >
+            ✕
+          </button>
+          {previewMedia.type === 'video' ? (
+            <video
+              src={previewMedia.url}
+              controls
+              autoPlay
+              style={{ maxWidth: '95vw', maxHeight: '95vh', borderRadius: 8 }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <img
+              src={previewMedia.url}
+              alt="媒體預覽"
+              style={{ maxWidth: '95vw', maxHeight: '95vh', objectFit: 'contain', borderRadius: 8 }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          )}
+        </div>
+      )}
 
     </Page>
   )
