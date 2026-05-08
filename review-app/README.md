@@ -142,6 +142,19 @@ review-app/
 - 工作區切換與各頁篩選條件由 `WorkspaceProvider` 寫入 localStorage，鍵值為 `ztmr-review-workspace`
 - `src/lib/moderation-boundaries.ts` 需要與 `CODE_WIKI.md`、`frontend-memory.md`、`docs-index.md`、`.trae/specs/companion-review-app/` 中的描述一起維護，避免接管邊界失真
 
+## PWA 快取與自動更新策略
+
+- 採用 `vite-plugin-pwa` + `injectManifest` 策略，自訂 `src/sw.ts`
+- `registerType: 'autoUpdate'`：新版 SW 偵測到後自動 skipWaiting + 頁面 reload
+- SW 內 `message` 事件監聽 `SKIP_WAITING` 訊息，是 autoUpdate 機制能正常運作的關鍵
+- SW activate 時呼叫 `clientsClaim()`，確保新版 SW 立即接管所有頁面
+- 每次頁面載入時透過 `registration.update()` 強制檢查 SW 更新（略過瀏覽器 24h 快取）
+- `controllerchange` 事件觸發時自動 `window.location.reload()` 載入最新資源
+- 快取分層：
+  - precache（Workbox precache manifest）：JS/CSS/HTML/icon 等靜態資源
+  - `twitter-images`（CacheFirst, 7 天, max 100 entries）：`pbs.twimg.com` 圖片
+  - `api-cache`（NetworkFirst, 5 分鐘, max 50 entries）：後端 API 回應
+
 ## 互動驗證重點
 
 - `Popup`、`Sheet`、`dialog.preloader(...)` 這類會改變遮罩與頁面狀態的互動，不能只看 build，需在瀏覽器實際點開再關閉一次

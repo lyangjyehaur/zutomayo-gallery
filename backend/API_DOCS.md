@@ -38,6 +38,20 @@
 - `requestId`：追查後端 log 用的請求識別碼。
 - `details`：驗證錯誤或額外 context，只有在需要時才回傳。
 
+### API 限流策略 (Rate Limiting)
+
+後端對不同類型的 API 請求套用分層限流，全部以 IP 為單位計數（Redis 儲存，fallback 至 memory）：
+
+| 限流器 | 配額 | 窗口 | 適用範圍 | 備註 |
+|:---|:---|:---|:---|:---|
+| `apiLimiter` | 1000 req | 15 分鐘 | `GET /api/*` 全域 | 一般讀取操作 |
+| `writeLimiter` | 200 req | 15 分鐘 | `POST/PUT/DELETE /api/*` | 寫入操作（排除 `/probe`、`/twitter-resolve`） |
+| `loginLimiter` | 10 req | 15 分鐘 | `POST /api/auth/login`、`/api/public-auth/*` | Session 登入防暴力破解（bcrypt 密集型） |
+| `webauthnLimiter` | 30 req | 15 分鐘 | `POST /api/auth/generate-auth-options`、`POST /api/auth/verify-auth` | WebAuthn 認證（較寬容，因操作失誤率高） |
+
+- `GET /api/auth/me`、`POST /api/auth/logout`、passkey 管理等已認證操作僅受 `apiLimiter` 約束，不套用登入限流。
+- 觸發限流時回傳 HTTP `429 Too Many Requests`，body 為標準 error envelope，並附 `Retry-After` header。
+
 ---
 
 ## 1. 系統與基礎設定 (System & Core)

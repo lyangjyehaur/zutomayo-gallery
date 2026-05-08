@@ -42,6 +42,16 @@ registerRoute(
   })
 )
 
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+  }
+})
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim())
+})
+
 self.addEventListener('push', (event) => {
   const data = event.data?.json() ?? {}
   const title = data.title || 'ZTMR 審核通知'

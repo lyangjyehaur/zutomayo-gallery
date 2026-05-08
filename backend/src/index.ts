@@ -200,16 +200,29 @@ const writeLimiter = rateLimit({
   },
 });
 
-// 認證路由嚴格限流 - 防止暴力破解
-const authLimiter = rateLimit({
+// Session 登入限流 - 防止暴力破解 (bcrypt 密集型)
+const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 分鐘
-  max: isProduction ? 20 : 200,
+  max: isProduction ? 10 : 200,
   standardHeaders: true,
   legacyHeaders: false,
   ...(authRateLimitStore ? { store: authRateLimitStore } : {}),
   message: {
     success: false,
     error: '登入嘗試過於頻繁，請稍後再試',
+  },
+});
+
+// WebAuthn 認證限流 - 較寬容（操作失誤率高）
+const webauthnLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 分鐘
+  max: isProduction ? 30 : 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  ...(authRateLimitStore ? { store: authRateLimitStore } : {}),
+  message: {
+    success: false,
+    error: '認證嘗試過於頻繁，請稍後再試',
   },
 });
 
@@ -233,8 +246,12 @@ if (isProduction) {
 }
 
 // API 路由註冊
-app.use('/api/auth', isProduction ? authLimiter : (req: any, res: any, next: any) => next(), authRoutes);
-app.use('/api/public-auth', isProduction ? authLimiter : (req: any, res: any, next: any) => next(), publicAuthRoutes);
+// /api/auth：login 與 WebAuthn 端點套用獨立限流器；/me、/logout、passkey 管理等已認證操作走全局 apiLimiter
+app.use('/api/auth/login', isProduction ? loginLimiter : (req: any, res: any, next: any) => next());
+app.use('/api/auth/generate-auth-options', isProduction ? webauthnLimiter : (req: any, res: any, next: any) => next());
+app.use('/api/auth/verify-auth', isProduction ? webauthnLimiter : (req: any, res: any, next: any) => next());
+app.use('/api/auth', authRoutes);
+app.use('/api/public-auth', isProduction ? loginLimiter : (req: any, res: any, next: any) => next(), publicAuthRoutes);
 app.use('/api/mvs', mvRoutes);
 app.use('/api/album', albumRoutes);
 app.use('/api/artist', artistRoutes);
