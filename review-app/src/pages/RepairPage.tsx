@@ -61,9 +61,7 @@ const isTwitterUrl = (url?: string | null) => typeof url === 'string' && /(?:twi
 
 const inferSource = (row: RepairGroup): InferredSource => {
   const handle = String(row.author_handle || '').trim().replace(/^@/, '')
-  const candidates = [row.sample_original_url, row.sample_url, row.preview_url]
-    .map((value) => (typeof value === 'string' ? value.trim() : ''))
-    .filter(Boolean)
+  const sourceUrl = typeof row.source_url === 'string' ? row.source_url.trim() : ''
 
   const extract = (raw: string) => {
     const m1 = raw.match(/https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/([^/?#]+)\/status(?:es)?\/(\d+)/i)
@@ -74,6 +72,21 @@ const inferSource = (row: RepairGroup): InferredSource => {
     if (m3) return { handle: '', tweetId: m3[1] }
     return null
   }
+
+  if (sourceUrl) {
+    const hit = extract(sourceUrl)
+    if (hit) {
+      const finalHandle = hit.handle || handle
+      if (finalHandle) {
+        return { url: `https://x.com/${finalHandle}/status/${hit.tweetId}`, confidence: 'high' }
+      }
+      return { url: sourceUrl, confidence: 'high' }
+    }
+  }
+
+  const candidates = [row.sample_original_url, row.sample_url, row.preview_url]
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .filter(Boolean)
 
   for (const raw of candidates) {
     const hit = extract(raw)
@@ -109,6 +122,28 @@ const buildSearchText = (row: RepairGroup, inferred: InferredSource) => {
 const canRepairSource = (row: RepairGroup, inferred: InferredSource) => !row.source_url && inferred.confidence !== 'none' && Boolean(inferred.url)
 const canReparse = (row: RepairGroup, inferred: InferredSource) => isTwitterUrl(row.source_url) || inferred.confidence !== 'none'
 
+const GROUP_FIELD_LABELS: Record<string, string> = {
+  source_url: '來源網址',
+  source_text: '推文內容',
+  author_name: '作者名稱',
+  author_handle: '作者 ID',
+  post_date: '發文時間',
+  like_count: '讚數',
+  retweet_count: '轉推數',
+  view_count: '觀看數',
+  hashtags: '標籤',
+}
+
+const MEDIA_FIELD_LABELS: Record<string, string> = {
+  thumbnail_url: '縮圖網址',
+  media_type: '媒體類型',
+  original_url: '原始網址',
+  url: 'R2 網址',
+}
+
+const ALL_GROUP_FIELDS = Object.keys(GROUP_FIELD_LABELS)
+const ALL_MEDIA_FIELDS = Object.keys(MEDIA_FIELD_LABELS)
+
 export default function RepairPage() {
   const { filters, setRepairFilter, visitWorkspace } = useWorkspace()
   const [queryDraft, setQueryDraft] = useState(filters.repair.query)
@@ -133,9 +168,11 @@ export default function RepairPage() {
   const [reparseLoading, setReparseLoading] = useState(false)
   const [reparseApplying, setReparseApplying] = useState(false)
   const [reparseTargets, setReparseTargets] = useState<string[]>([])
-  const [reparseOverwrite, setReparseOverwrite] = useState(false)
   const [reparseIncludeNewMedia, setReparseIncludeNewMedia] = useState(true)
   const [reparsePreview, setReparsePreview] = useState<RepairReparsePreviewData | null>(null)
+  const [selectedGroupFields, setSelectedGroupFields] = useState<Record<string, Set<string>>>({})
+  const [selectedMediaFields, setSelectedMediaFields] = useState<Record<string, Set<string>>>({})
+  const [selectedNewMediaUrls, setSelectedNewMediaUrls] = useState<Set<string>>(new Set())
 
   const loadList = useCallback(async () => {
     setLoading(true)
@@ -145,6 +182,7 @@ export default function RepairPage() {
         limit: PAGE_SIZE,
         offset,
         q: filters.repair.query,
+        all: filters.repair.showAll,
       })
       setItems(Array.isArray(response.data?.items) ? response.data.items : [])
       setTotal(Number(response.data?.total || 0))
@@ -154,7 +192,7 @@ export default function RepairPage() {
     } finally {
       setLoading(false)
     }
-  }, [filters.repair.query, offset])
+  }, [filters.repair.query, filters.repair.showAll, offset])
 
   useEffect(() => {
     visitWorkspace('repair')
@@ -382,6 +420,21 @@ export default function RepairPage() {
       if (!result.success || !result.data) throw new Error('PREVIEW_FAILED')
       setReparseTargets(readyIds)
       setReparsePreview(result.data)
+      const groupFields: Record<string, Set<string>> = {}
+      const mediaFields: Record<string, Set<string>> = {}
+      const newUrls = new Set<string>()
+      for (const r of result.data.results) {
+        groupFields[r.group_id] = new Set(r.diff)
+        for (const mu of r.media_updates) {
+          mediaFields[mu.media_id] = new Set(mu.diff)
+        }
+        for (const mn of r.media_new) {
+          newUrls.add(mn.parsed.url)
+        }
+      }
+      setSelectedGroupFields(groupFields)
+      setSelectedMediaFields(mediaFields)
+      setSelectedNewMediaUrls(newUrls)
       setReparseOpen(true)
     } catch {
       f7.toast.create({ text: '重解析預覽失敗', closeTimeout: 2200 }).open()
@@ -391,33 +444,51 @@ export default function RepairPage() {
   }, [repairSourceUrl])
 
   const openSingleReparse = (row: RepairGroup) => {
-    void loadReparsePreview([row], reparseOverwrite)
+    void loadReparsePreview([row], true)
   }
 
   const openBatchReparse = () => {
     const targets = visibleItems
       .filter(({ row, inferred }) => selectedIds.has(row.id) && canReparse(row, inferred))
       .map(({ row }) => row)
-    void loadReparsePreview(targets, reparseOverwrite)
+    void loadReparsePreview(targets, true)
   }
 
   const applyReparse = async () => {
     if (reparseTargets.length === 0) return
     setReparseApplying(true)
     try {
+      const selectedGroupFieldsPayload: Record<string, string[]> = {}
+      for (const [id, fields] of Object.entries(selectedGroupFields)) {
+        const arr = Array.from(fields)
+        if (arr.length > 0) selectedGroupFieldsPayload[id] = arr
+      }
+      const selectedMediaFieldsPayload: Record<string, string[]> = {}
+      for (const [id, fields] of Object.entries(selectedMediaFields)) {
+        const arr = Array.from(fields)
+        if (arr.length > 0) selectedMediaFieldsPayload[id] = arr
+      }
       const result = await applyRepairReparse({
         group_ids: reparseTargets,
-        overwrite: reparseOverwrite,
-        include_new_media: reparseIncludeNewMedia,
+        overwrite: true,
+        include_new_media: reparseIncludeNewMedia && selectedNewMediaUrls.size > 0,
+        selected_group_fields: selectedGroupFieldsPayload,
+        selected_media_fields: selectedMediaFieldsPayload,
+        new_media_urls: selectedNewMediaUrls.size > 0 ? Array.from(selectedNewMediaUrls) : undefined,
       })
       if (!result.success) throw new Error('APPLY_FAILED')
       setReparseOpen(false)
       setSelectedIds(new Set())
+      setSelectedGroupFields({})
+      setSelectedMediaFields({})
+      setSelectedNewMediaUrls(new Set())
       setDetailItem(null)
       await loadList()
+      const skippedCount = result.data?.skipped || 0
+      const errorCount = result.data?.errors?.length || 0
       f7.toast.create({
-        text: `完成重解析：更新 ${result.data?.updated_groups || 0} 個 group、${result.data?.updated_media || 0} 個 media，新建 ${result.data?.new_media || 0} 個 media`,
-        closeTimeout: 2600,
+        text: `完成重解析：更新 ${result.data?.updated_groups || 0} 個 group、${result.data?.updated_media || 0} 個 media，新建 ${result.data?.new_media || 0} 個 media${skippedCount > 0 ? `，跳過 ${skippedCount} 個` : ''}${errorCount > 0 ? `，${errorCount} 個錯誤` : ''}`,
+        closeTimeout: 3000,
       }).open()
     } catch {
       f7.toast.create({ text: '套用重解析失敗', closeTimeout: 2200 }).open()
@@ -450,10 +521,16 @@ export default function RepairPage() {
           />
         )}
         summary={(
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Toggle checked={filters.repair.onlyInferable} onToggleChange={(checked: boolean) => setRepairFilter({ onlyInferable: checked })} />
-            <span>只看可推斷來源</span>
-          </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Toggle checked={filters.repair.onlyInferable} onToggleChange={(checked: boolean) => setRepairFilter({ onlyInferable: checked })} />
+              <span>只看可推斷來源</span>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Toggle checked={filters.repair.showAll} onToggleChange={(checked: boolean) => { setRepairFilter({ showAll: checked }); setOffset(0) }} />
+              <span>顯示全部 group</span>
+            </label>
+          </div>
         )}
         actions={(
           <>
@@ -489,20 +566,18 @@ export default function RepairPage() {
         summary={(
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}>
             <Checkbox
-              checked={visibleItems.length > 0 && visibleItems.every(({ row, inferred }) => !canReparse(row, inferred) || selectedIds.has(row.id))}
+              checked={visibleItems.length > 0 && visibleItems.every(({ row }) => selectedIds.has(row.id))}
               onChange={(event) => {
                 const next = new Set(selectedIds)
                 if (event.target.checked) {
-                  visibleItems.forEach(({ row, inferred }) => {
-                    if (canReparse(row, inferred)) next.add(row.id)
-                  })
+                  visibleItems.forEach(({ row }) => next.add(row.id))
                 } else {
                   visibleItems.forEach(({ row }) => next.delete(row.id))
                 }
                 setSelectedIds(next)
               }}
             />
-            全選目前頁面可 reparse 項目
+            全選目前頁面項目
           </label>
         )}
         actions={(
@@ -511,7 +586,7 @@ export default function RepairPage() {
             <Button small outline disabled={selectedCount === 0} onClick={() => setSelectedIds(new Set())}>清空勾選</Button>
           </>
         )}
-        footer={`目前頁面 ${visibleItems.length} 筆，可直接批次處理 ${selectedCount} 筆。`}
+        footer={`目前頁面 ${visibleItems.length} 筆，已選 ${selectedCount} 筆（僅有 Twitter 來源的項目可進行重解析）。`}
       />
 
       {loadError && !loading && visibleItems.length === 0 ? (
@@ -540,7 +615,6 @@ export default function RepairPage() {
               key={row.id}
               checkbox
               checked={selectedIds.has(row.id)}
-              disabled={!canReparse(row, inferred)}
               onChange={(event) => toggleSelection(row.id, event.target.checked)}
               mediaItem
               title={row.author_name || row.author_handle || row.id}
@@ -783,54 +857,178 @@ export default function RepairPage() {
               </NavRight>
             </Navbar>
 
-            <Block strong inset>
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Toggle checked={reparseOverwrite} onToggleChange={(checked: boolean) => setReparseOverwrite(checked)} />
-                  <span>覆寫既有欄位</span>
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Toggle checked={reparseIncludeNewMedia} onToggleChange={(checked: boolean) => setReparseIncludeNewMedia(checked)} />
-                  <span>補進新媒體</span>
-                </label>
-              </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
-                <Button small outline onClick={() => void loadReparsePreview(items.filter((row) => reparseTargets.includes(row.id)), reparseOverwrite)} loading={reparseLoading}>重新預覽</Button>
-                <Button small fill onClick={() => void applyReparse()} loading={reparseApplying}>套用重解析</Button>
-              </div>
-            </Block>
+            {(() => {
+              const totalGroupFields = Object.values(selectedGroupFields).reduce((sum, s) => sum + s.size, 0)
+              const totalMediaFields = Object.values(selectedMediaFields).reduce((sum, s) => sum + s.size, 0)
+              return (
+                <>
+                  <Block strong inset>
+                    <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 12 }}>
+                      共 {reparseTargets.length} 個 group，已勾選 {totalGroupFields} 個 group 欄位 + {totalMediaFields} 個 media 欄位{selectedNewMediaUrls.size > 0 ? ` + ${selectedNewMediaUrls.size} 個新媒體` : ''}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <Button small outline onClick={() => {
+                        const nextGroup: Record<string, Set<string>> = {}
+                        const nextMedia: Record<string, Set<string>> = {}
+                        const nextNew = new Set<string>()
+                        for (const r of (reparsePreview?.results || [])) {
+                          nextGroup[r.group_id] = new Set(r.diff)
+                          for (const mu of r.media_updates) nextMedia[mu.media_id] = new Set(mu.diff)
+                          for (const mn of r.media_new) nextNew.add(mn.parsed.url)
+                        }
+                        setSelectedGroupFields(nextGroup)
+                        setSelectedMediaFields(nextMedia)
+                        setSelectedNewMediaUrls(nextNew)
+                      }}>全選全部</Button>
+                      <Button small outline onClick={() => {
+                        setSelectedGroupFields({})
+                        setSelectedMediaFields({})
+                        setSelectedNewMediaUrls(new Set())
+                      }}>取消全選</Button>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 4 }}>
+                        <Toggle checked={reparseIncludeNewMedia} onToggleChange={(checked: boolean) => setReparseIncludeNewMedia(checked)} />
+                        <span style={{ fontSize: 13 }}>補進新媒體</span>
+                      </label>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
+                      <Button small outline onClick={() => void loadReparsePreview(items.filter((row) => reparseTargets.includes(row.id)), true)} loading={reparseLoading}>重新預覽</Button>
+                      <Button small fill onClick={() => void applyReparse()} loading={reparseApplying}>套用重解析</Button>
+                    </div>
+                  </Block>
 
-            <BlockTitle>預覽結果</BlockTitle>
-            <List mediaList inset strong dividers style={{ marginTop: 12, marginBottom: 12 }}>
-              {reparsePreview?.results.map((result) => (
-                <ListItem
-                  key={result.group_id}
-                  title={result.group_id}
-                  subtitle={`group diff: ${result.diff.join(', ') || '無'} · media update: ${result.media_updates.length}`}
-                  text={result.source_url}
-                  footer={result.media_new.length > 0 ? `可新增媒體 ${result.media_new.length} 筆` : '無新增媒體'}
-                />
-              ))}
-            </List>
-            {!reparseLoading && (!reparsePreview || reparsePreview.results.length === 0) && (
-              <ReviewStateBlock
-                title="這次沒有可套用的預覽結果"
-                description="可切換覆寫選項、重新預覽，或返回清單選擇其他 group。"
-                tone="neutral"
-                compact
-              />
-            )}
+                  <BlockTitle>欄位勾選預覽</BlockTitle>
 
-          {reparsePreview?.errors && reparsePreview.errors.length > 0 && (
-            <>
-              <BlockTitle>錯誤</BlockTitle>
-              <List inset strong>
-                {reparsePreview.errors.map((error) => (
-                  <ListItem key={`${error.group_id}-${error.error}`} title={error.group_id} text={error.error} />
-                ))}
-              </List>
-            </>
-          )}
+                  {reparsePreview?.results.map((result) => {
+                    const groupFields = selectedGroupFields[result.group_id] || new Set<string>()
+                    const unchangedGroupFields = ALL_GROUP_FIELDS.filter(f => !result.diff.includes(f))
+                    return (
+                      <Block key={result.group_id} strong inset style={{ marginBottom: 16 }}>
+                        <div style={{ fontWeight: 700, marginBottom: 4, wordBreak: 'break-all' }}>{result.group_id}</div>
+                        <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 10, wordBreak: 'break-all' }}>{result.source_url}</div>
+
+                        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                          <Button small outline onClick={() => setSelectedGroupFields(prev => ({ ...prev, [result.group_id]: new Set(result.diff) }))}>
+                            全選此 group
+                          </Button>
+                          <Button small outline onClick={() => setSelectedGroupFields(prev => ({ ...prev, [result.group_id]: new Set() }))}>
+                            取消此 group
+                          </Button>
+                        </div>
+
+                        <div style={{ fontSize: 12, opacity: 0.5, marginBottom: 4 }}>Group 欄位</div>
+                        {result.diff.length === 0 && <div style={{ fontSize: 12, opacity: 0.4 }}>（所有欄位皆無變更）</div>}
+                        {result.diff.map(field => (
+                          <label key={field} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0' }}>
+                            <Checkbox
+                              checked={groupFields.has(field)}
+                              onChange={(e) => {
+                                setSelectedGroupFields(prev => {
+                                  const next = new Set(prev[result.group_id] || [])
+                                  if (e.target.checked) next.add(field); else next.delete(field)
+                                  return { ...prev, [result.group_id]: next }
+                                })
+                              }}
+                            />
+                            <span style={{ fontSize: 13, minWidth: 72 }}>{GROUP_FIELD_LABELS[field] || field}</span>
+                            <span style={{ fontSize: 11, opacity: 0.5 }}>
+                              {String((result.current as Record<string, unknown>)[field] ?? '（空）')}
+                              {' → '}
+                              {String((result.parsed as Record<string, unknown>)[field] ?? '（空）')}
+                            </span>
+                          </label>
+                        ))}
+                        {unchangedGroupFields.length > 0 && (
+                          <div style={{ fontSize: 11, opacity: 0.4, marginTop: 6 }}>
+                            無變更：{unchangedGroupFields.map(f => GROUP_FIELD_LABELS[f] || f).join('、')}
+                          </div>
+                        )}
+
+                        {result.media_updates.length > 0 && (
+                          <>
+                            <div style={{ fontSize: 12, opacity: 0.5, marginTop: 14, marginBottom: 6 }}>Media 欄位更新</div>
+                            {result.media_updates.map(mu => {
+                              const mFields = selectedMediaFields[mu.media_id] || new Set<string>()
+                              const mUnchanged = ALL_MEDIA_FIELDS.filter(f => !mu.diff.includes(f))
+                              return (
+                                <div key={mu.media_id} style={{ marginLeft: 8, marginBottom: 10, padding: 8, borderLeft: '2px solid var(--f7-list-border-color, #ccc)' }}>
+                                  <div style={{ fontSize: 11, opacity: 0.55, marginBottom: 4, wordBreak: 'break-all' }}>{mu.media_id}</div>
+                                  {mu.diff.map(field => (
+                                    <label key={field} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 0' }}>
+                                      <Checkbox
+                                        checked={mFields.has(field)}
+                                        onChange={(e) => {
+                                          setSelectedMediaFields(prev => {
+                                            const next = new Set(prev[mu.media_id] || [])
+                                            if (e.target.checked) next.add(field); else next.delete(field)
+                                            return { ...prev, [mu.media_id]: next }
+                                          })
+                                        }}
+                                      />
+                                      <span style={{ fontSize: 12, minWidth: 64 }}>{MEDIA_FIELD_LABELS[field] || field}</span>
+                                      <span style={{ fontSize: 10, opacity: 0.5 }}>
+                                        {String((mu.current as Record<string, unknown>)[field] ?? '（空）')}
+                                        {' → '}
+                                        {String((mu.parsed as Record<string, unknown>)[field] ?? '（空）')}
+                                      </span>
+                                    </label>
+                                  ))}
+                                  {mUnchanged.length > 0 && (
+                                    <div style={{ fontSize: 10, opacity: 0.4, marginTop: 4 }}>
+                                      無變更：{mUnchanged.map(f => MEDIA_FIELD_LABELS[f] || f).join('、')}
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </>
+                        )}
+
+                        {result.media_new.length > 0 && reparseIncludeNewMedia && (
+                          <>
+                            <div style={{ fontSize: 12, opacity: 0.5, marginTop: 14, marginBottom: 6 }}>可新增媒體</div>
+                            {result.media_new.map((mn, idx) => (
+                              <label key={idx} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', marginLeft: 8 }}>
+                                <Checkbox
+                                  checked={selectedNewMediaUrls.has(mn.parsed.url)}
+                                  onChange={(e) => {
+                                    setSelectedNewMediaUrls(prev => {
+                                      const next = new Set(prev)
+                                      if (e.target.checked) next.add(mn.parsed.url); else next.delete(mn.parsed.url)
+                                      return next
+                                    })
+                                  }}
+                                />
+                                <span style={{ fontSize: 12, wordBreak: 'break-all' }}>[{mn.parsed.media_type}] {mn.parsed.url}</span>
+                              </label>
+                            ))}
+                          </>
+                        )}
+                      </Block>
+                    )
+                  })}
+
+                  {!reparseLoading && (!reparsePreview || reparsePreview.results.length === 0) && (
+                    <ReviewStateBlock
+                      title="這次沒有可套用的預覽結果"
+                      description="可重新預覽或返回清單選擇其他 group。"
+                      tone="neutral"
+                      compact
+                    />
+                  )}
+
+                  {reparsePreview?.errors && reparsePreview.errors.length > 0 && (
+                    <>
+                      <BlockTitle>錯誤</BlockTitle>
+                      <List inset strong>
+                        {reparsePreview.errors.map((error) => (
+                          <ListItem key={`${error.group_id}-${error.error}`} title={error.group_id} text={error.error} />
+                        ))}
+                      </List>
+                    </>
+                  )}
+                </>
+              )
+            })()}
         </Page>
       </Popup>
     </Page>

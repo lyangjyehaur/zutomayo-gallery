@@ -10,7 +10,7 @@ export interface WorkspaceFilters {
   staging: { status: StagingStatus; query: string }
   submissions: { status: SubmissionStatus; query: string }
   fanart: { view: FanartView; query: string; focus: string; focusKind: FanartFocusKind }
-  repair: { onlyInferable: boolean; query: string }
+  repair: { onlyInferable: boolean; query: string; showAll: boolean }
 }
 
 export interface WorkspaceState {

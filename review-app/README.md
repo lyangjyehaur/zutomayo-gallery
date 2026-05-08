@@ -8,7 +8,7 @@
 - `StagingPage`：crawler 暫存清單、批次 approve / reject / restore、crawler trigger、頁內 push 詳情檢視
 - `SubmissionsPage`：投稿審核、搜尋、詳情、approve、退回原因填寫
 - `FanartPage`：未整理 / 已丟棄 / 舊資料 / 已組織 / 手動解析視圖，含 assign / sync / discard / restore / parse-save
-- `RepairPage`：group repair 搜尋、推斷來源、edit / merge / unassign、reparse preview / apply
+- `RepairPage`：group repair 搜尋、推斷來源、edit / merge / unassign、reparse preview / apply（支援欄位級勾選更新）
 - `SettingsPage`：推播訂閱、通知偏好、接管邊界入口
 - `SettingsBoundariesPage`：集中查看各工作區接管範圍、限制與對應 API
 

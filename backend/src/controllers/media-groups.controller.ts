@@ -210,12 +210,15 @@ export const listRepairMediaGroups = async (req: Request, res: Response) => {
   const limit = clampInt(req.query.limit, 50, 1, 200);
   const offset = clampInt(req.query.offset, 0, 0, 1000000);
   const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+  const showAll = req.query.all === 'true' || req.query.all === '1';
 
-  const whereClauses: string[] = [
-    `(g.source_url IS NULL OR g.source_url = '' OR g.post_date IS NULL)`,
-  ];
+  const whereClauses: string[] = [];
   const replacements: Record<string, any> = { limit, offset };
   const tweetGroupSql = buildTweetGroupSql('g', 'm0', replacements);
+
+  if (!showAll) {
+    whereClauses.push(`(g.source_url IS NULL OR g.source_url = '' OR g.post_date IS NULL)`);
+  }
 
   if (q) {
     whereClauses.push(

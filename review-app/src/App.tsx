@@ -57,6 +57,7 @@ function AppShell() {
       theme="auto"
       darkMode="auto"
       routes={routes}
+      toast={{ position: 'center' }}
       touch={{
         touchHighlightElements: '.navbar-left, .navbar-right, .popover, .actions-group, .searchbar input, .searchbar-disable-button, .subnavbar, .searchbar-input-wrap .autocomplete-dropdown, .messagebar-area, .notification, .toast',
       }}

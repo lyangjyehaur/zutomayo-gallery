@@ -136,7 +136,7 @@ zutomayo-gallery/
   - `StagingPage` — 爬蟲暫存審核、批次操作、crawler trigger
   - `SubmissionsPage` — 投稿審核、詳情、退回原因
   - `FanartPage` — FanArt 整理、assign / sync / discard / restore / parse-save
-  - `RepairPage` — group repair、merge、unassign、reparse preview / apply
+  - `RepairPage` — group repair、merge、unassign、reparse preview / apply（支援欄位級選擇性更新：Group 層級欄位 + Media 層級欄位 + 新媒體逐項勾選；支援「顯示全部 group」模式，不限於不完整項目）
   - `SettingsPage` — 推播、通知偏好、接管邊界入口
   - `SettingsBoundariesPage` — 集中查看各工作區接管邊界、限制與 API
 - 接管現況：

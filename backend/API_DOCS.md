@@ -8,8 +8,9 @@
 3. [音樂錄影帶 (MVs)](#3-音樂錄影帶-mvs)
 4. [專輯管理 (Albums)](#4-專輯管理-albums)
 5. [二創與社群 (Fanarts & Webhooks)](#5-二創與社群-fanarts--webhooks)
-6. [SEO 與網站地圖 (Sitemap)](#6-seo-與網站地圖-sitemap)
-7. [後端錯誤日誌 (Backend Error Logs)](#7-後端錯誤日誌-backend-error-logs)
+6. [媒體標註 (Annotations)](#6-媒體標註-annotations)
+7. [SEO 與網站地圖 (Sitemap)](#7-seo-與網站地圖-sitemap)
+8. [後端錯誤日誌 (Backend Error Logs)](#8-後端錯誤日誌-backend-error-logs)
 
 ## 通用說明
 - **Base URL**: `/api`
@@ -83,6 +84,19 @@
 | **GET** | `/errors` | 管理員 | 查詢後端錯誤日誌（分頁）。支援多種篩選條件。 |
 | **PATCH** | `/errors/:id/resolve` | 管理員 | 標記或取消標記指定錯誤為已解決。Body: `{ "resolved": true/false }` |
 | **POST** | `/errors/batch-resolve` | 管理員 | 批次標記多筆錯誤為已解決。Body: `{ "ids": ["id1", "id2", ...] }` |
+
+### Media Groups 管理 (路徑: `/system/media/groups`)
+
+需 `SYSTEM_MEDIA_GROUPS` 權限。
+
+| 請求方法 | 端點路徑 | 權限 | 功能說明 |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/repair` | 管理員 | 列出待修復的 media groups（預設僅回傳 `source_url` 為空或 `post_date` 為空的 group）。<br>Query: `limit` (1-200, default 50), `offset`, `q` (搜尋 group id / 作者 / source_url), `all` (`true` 時回傳所有 twitter-sourced group，不限於不完整項目） |
+| **POST** | `/reparse-twitter/preview` | 管理員 | 預覽 Twitter 推文重解析結果。Body: `{ "group_ids": ["id1"], "overwrite": false }`<br>回傳每個 group 的欄位 diff、media updates、可新增的 media。 |
+| **POST** | `/reparse-twitter/apply` | 管理員 | 套用 Twitter 推文重解析。Body: `{ "group_ids": ["id1"], "overwrite": true, "include_new_media": false, "selected_group_fields": {"groupId": ["author_name", "post_date"]}, "selected_media_fields": {"mediaId": ["thumbnail_url"]}, "new_media_urls": ["https://..."] }`<br>`selected_group_fields` / `selected_media_fields` 支援欄位級選擇性更新，未勾選的欄位保留原值。單次最多 50 個 group。 |
+| **PUT** | `/:id` | 管理員 | 更新指定 media group。 |
+| **POST** | `/:id/merge` | 管理員 | 將指定 group 合併至目標 group。 |
+| **POST** | `/:id/unassign` | 管理員 | 將指定 group 內所有 media 拆回 orphan 並刪除 group。 |
 
 ---
 
@@ -196,7 +210,93 @@
 
 ---
 
-## 6. SEO 與網站地圖 (Sitemap)
+## 6. 媒體標註 (Annotations)
+*(路徑: `/api/annotations`)*
+
+媒體標註功能用於在圖片上標記文字與位置，支援前端 Lightbox 顯示標註資訊。MV 詳細 API (`GET /api/mvs/:id`) 回傳的圖片資料中已自動包含 `annotations` 陣列。
+
+| 請求方法 | 端點路徑 | 權限 | 功能說明 |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/media/:mediaId` | 公開 | 取得指定媒體的所有標註，按 `sort_order` 升序排列。 |
+| **GET** | `/mv/:mvId` | 公開 | 取得指定 MV 下所有媒體的標註，回傳以 `media_id` 為 key 的物件。用於前端 Lightbox 一次載入整個 MV 的標註。 |
+| **POST** | `/` | 管理員 | 建立新標註。 |
+| **PUT** | `/:id` | 管理員 | 更新指定標註（支援部分更新）。 |
+| **DELETE** | `/:id` | 管理員 | 刪除指定標註。 |
+
+### POST `/api/annotations` - 建立標註
+
+**Request Body:**
+```json
+{
+  "media_id": "abc123",
+  "label": "吉他手",
+  "x": 25.5,
+  "y": 60.0,
+  "style": "default",
+  "sort_order": 0
+}
+```
+
+| 欄位 | 類型 | 必填 | 說明 |
+| :--- | :--- | :--- | :--- |
+| `media_id` | string | 是 | 關聯的媒體 ID |
+| `label` | string | 是 | 標註文字 (1~500 字元) |
+| `x` | number | 是 | X 軸百分比位置 (0~100) |
+| `y` | number | 是 | Y 軸百分比位置 (0~100) |
+| `style` | string | 否 | 標註樣式類型 (最長 50 字元，預設 `default`) |
+| `sort_order` | integer | 否 | 排序權重 (預設 `0`) |
+
+**Response:** `201 Created`
+```json
+{
+  "success": true,
+  "data": {
+    "id": "xyz789",
+    "media_id": "abc123",
+    "label": "吉他手",
+    "x": 25.5,
+    "y": 60.0,
+    "style": "default",
+    "sort_order": 0,
+    "created_by": "admin_id",
+    "created_at": "2026-05-08T12:00:00.000Z",
+    "updated_at": "2026-05-08T12:00:00.000Z"
+  }
+}
+```
+
+### PUT `/api/annotations/:id` - 更新標註
+
+**Request Body (部分更新):**
+```json
+{
+  "label": "主唱",
+  "x": 30.0
+}
+```
+
+所有欄位皆為選填，僅更新提供的欄位。
+
+### GET `/api/annotations/mv/:mvId` - 取得 MV 所有標註
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "media_id_1": [
+      { "id": "...", "media_id": "media_id_1", "label": "...", "x": 25.5, "y": 60.0, "style": "default", "sort_order": 0, "created_by": "...", "created_at": "...", "updated_at": "..." }
+    ],
+    "media_id_2": [
+      { "id": "...", "media_id": "media_id_2", "label": "...", "x": 50.0, "y": 30.0, "style": "default", "sort_order": 0, "created_by": "...", "created_at": "...", "updated_at": "..." }
+    ]
+  }
+}
+```
+
+---
+
+## 7. SEO 與網站地圖 (Sitemap)
 *(路徑: `/api/sitemap.xml`)*
 
 | 請求方法 | 端點路徑 | 權限 | 功能說明 |
@@ -205,12 +305,12 @@
 
 ---
 
-## 7. 後端錯誤日誌 (Backend Error Logs)
+## 8. 後端錯誤日誌 (Backend Error Logs)
 *(路徑: `/api/system/errors`)*
 
 後端運行時產生的所有異常（包含請求錯誤、未捕獲異常、未處理的 Promise Rejection 等）都會自動記錄至 `backend_error_logs` 資料表。當錯誤數量在時間窗口內超過閾值時，系統會透過 `NotificationService` 發送警告通知（Bark + Web Push + Telegram）。
 
-### 7.1. 查詢錯誤日誌
+### 8.1. 查詢錯誤日誌
 
 **GET `/api/system/errors`**
 
@@ -243,7 +343,7 @@
 }
 ```
 
-### 7.2. 標記錯誤解決
+### 8.2. 標記錯誤解決
 
 **PATCH `/api/system/errors/:id/resolve`**
 
@@ -255,7 +355,7 @@
 { "success": true, "data": { ...updated log } }
 ```
 
-### 7.3. 批次標記解決
+### 8.3. 批次標記解決
 
 **POST `/api/system/errors/batch-resolve`**
 

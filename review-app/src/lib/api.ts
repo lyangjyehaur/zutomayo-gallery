@@ -544,12 +544,13 @@ export async function fetchFanartOverview() {
   }
 }
 
-export async function fetchRepairGroups(params: { limit: number; offset: number; q?: string }) {
+export async function fetchRepairGroups(params: { limit: number; offset: number; q?: string; all?: boolean }) {
   const base = getApiBase()
   const search = new URLSearchParams()
   search.set('limit', String(params.limit))
   search.set('offset', String(params.offset))
   if (params.q?.trim()) search.set('q', params.q.trim())
+  if (params.all) search.set('all', 'true')
   const res = await adminFetch(`${base}/system/media/groups/repair?${search.toString()}`)
   return res.json() as Promise<RepairGroupListResponse>
 }
@@ -618,6 +619,9 @@ export async function applyRepairReparse(payload: {
   group_ids: string[]
   overwrite?: boolean
   include_new_media?: boolean
+  selected_group_fields?: Record<string, string[]>
+  selected_media_fields?: Record<string, string[]>
+  new_media_urls?: string[]
 }) {
   const base = getApiBase()
   const res = await adminFetch(`${base}/system/media/groups/reparse-twitter/apply`, {

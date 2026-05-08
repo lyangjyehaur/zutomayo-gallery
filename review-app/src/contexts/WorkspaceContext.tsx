@@ -11,7 +11,7 @@ const DEFAULT_STATE: WorkspaceState = {
     staging: { status: 'pending', query: '' },
     submissions: { status: 'pending', query: '' },
     fanart: { view: 'unorganized', query: '', focus: '', focusKind: 'tag' },
-    repair: { onlyInferable: false, query: '' },
+    repair: { onlyInferable: false, query: '', showAll: false },
   },
 }
 
