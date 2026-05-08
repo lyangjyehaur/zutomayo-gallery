@@ -46,7 +46,10 @@ export const initRedis = async () => {
 export const isRedisAvailable = () => redisClient.isOpen;
 
 export const deleteKeysByPattern = async (pattern: string) => {
-  if (!redisClient.isOpen) return 0;
+  if (!redisClient.isOpen) {
+    logger.warn({ pattern }, '[Redis Cache] deleteKeysByPattern skipped: client not open');
+    return 0;
+  }
   let deleted = 0;
   const batch: string[] = [];
   for await (const key of redisClient.scanIterator({ MATCH: pattern, COUNT: 200 })) {
@@ -59,5 +62,6 @@ export const deleteKeysByPattern = async (pattern: string) => {
   if (batch.length > 0) {
     deleted += await redisClient.del(batch);
   }
+  logger.info({ pattern, deleted }, '[Redis Cache] deleteKeysByPattern completed');
   return deleted;
 };

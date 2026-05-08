@@ -58,6 +58,13 @@ export const adminFetch = (input: RequestInfo | URL, init: RequestInit = {}) => 
   return fetch(input, { ...init, credentials: "include" })
 }
 
+export const getAllAnnotations = async () => {
+  const res = await adminFetch(getAnnotationsApiBase())
+  if (!res.ok) throw new Error("Failed to fetch all annotations")
+  const json = await res.json()
+  return (json.data || {}) as Record<string, MediaAnnotationRow[]>
+}
+
 export const getAnnotations = async (mediaId: string) => {
   const res = await adminFetch(`${getAnnotationsApiBase()}/media/${encodeURIComponent(mediaId)}`)
   if (!res.ok) throw new Error("Failed to fetch annotations")

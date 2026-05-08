@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
+  getAllAnnotations,
   getAnnotationsByMv,
   createAnnotation,
   updateAnnotation,
@@ -458,25 +459,26 @@ export function AdminAnnotationsPage() {
         all.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
         setAnnotations(all)
       } else {
+        const grouped = await getAllAnnotations()
         const all: AnnotationWithMedia[] = []
-        for (const mv of mvData) {
-          try {
-            const grouped = await getAnnotationsByMv(mv.id)
-            for (const [mediaId, items] of Object.entries(grouped)) {
-              const media = mv.images?.find((img) => (img.id || img.url) === mediaId)
-              if (media?.usage === 'cover') continue
-              for (const a of items) {
-                all.push({
-                  ...a,
-                  mediaUrl: resolveMediaUrl(media?.url),
-                  mediaThumbnail: resolveMediaUrl(media?.thumbnail_url),
-                  mvTitle: mv.title,
-                  mvId: mv.id,
-                })
-              }
+        for (const [mediaId, items] of Object.entries(grouped)) {
+          let foundMedia: { url?: string; thumbnail_url?: string; caption?: string; mvTitle?: string; mvId?: string; usage?: string } | undefined
+          for (const mv of mvData) {
+            const media = mv.images?.find((img) => (img.id || img.url) === mediaId)
+            if (media) {
+              foundMedia = { ...media, mvTitle: mv.title, mvId: mv.id }
+              break
             }
-          } catch {
-            continue
+          }
+          if (foundMedia?.usage === 'cover') continue
+          for (const a of items) {
+            all.push({
+              ...a,
+              mediaUrl: resolveMediaUrl(foundMedia?.url),
+              mediaThumbnail: resolveMediaUrl(foundMedia?.thumbnail_url),
+              mvTitle: foundMedia?.mvTitle,
+              mvId: foundMedia?.mvId,
+            })
           }
         }
         all.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))

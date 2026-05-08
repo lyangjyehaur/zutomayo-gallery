@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  getAllAnnotations,
   getAnnotationsByMedia,
   createAnnotation,
   updateAnnotation,
@@ -13,6 +14,7 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 
 const router = Router();
 
+router.get('/', asyncHandler(getAllAnnotations));
 router.get('/media/:mediaId', cacheMiddleware(300), asyncHandler(getAnnotationsByMedia));
 router.get('/mv/:mvId', cacheMiddleware(300), asyncHandler(getAnnotationsByMv));
 router.post('/', requirePermission(ADMIN_PERMISSIONS.ANNOTATIONS), asyncHandler(createAnnotation));
