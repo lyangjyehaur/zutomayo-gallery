@@ -127,6 +127,7 @@ zutomayo-gallery/
 - 獨立的 Framework7 React 前端應用，專為行動裝置上的媒體審核場景設計
 - 使用 Framework7 React v9，支援 auto theme（iOS/MD 自動切換）與 auto dark mode
 - 連接同一後端 API，透過 session-based auth 與主站共享管理員認證
+- **版本獨立**：採用獨立版本號（目前 `0.0.3`），不隨主專案（root / frontend / backend）的版本變更而同步。根目錄 `scripts/sync-version.mjs` 已排除 `review-app`。僅在 `review-app/` 內部程式碼、功能或資源變更時，才編輯 `review-app/package.json#version` 遞增其自身版本號。
 - `src/index.css` 提供統一的 `review-*` 視覺語彙，涵蓋 navbar、card、list、panel、sheet、popup 與行動端深色主題
 - `src/components/ReviewStateBlock.tsx` 統一空狀態、錯誤狀態與載入狀態，避免各頁各自拼裝 inline UI
 - `src/lib/moderation-boundaries.ts` 集中維護 review-app 與桌面 admin 的接管邊界，會列出每個工作區對應主前端頁面、直接接管能力、桌面 fallback 情境與已知限制

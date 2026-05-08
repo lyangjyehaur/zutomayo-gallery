@@ -2,6 +2,8 @@
 
 `review-app/` 是給手機與平板使用的獨立審核前端，採用 Framework7 React + React 19 + TypeScript + Vite，與主站共用後端 API 與 admin session。
 
+> **⚠️ 版本獨立**：review-app 採用獨立版本號（目前 `0.0.3`），不隨主專案（root / frontend / backend）版本變更而同步。主專案 `npm run release:*` 不會影響 review-app 版本。僅在 review-app 自身程式碼、功能或資源變更時，才編輯 `package.json#version` 手動遞增。詳見專案根目錄 `AGENTS.md`。
+
 目前它不再只是首頁殼層，而是直接承接以下工作流：
 
 - `HomePage`：審核總覽、同步進度、工作區摘要與行動端精簡入口
@@ -38,7 +40,7 @@
 ### `RepairPage` <-> `frontend/src/pages/AdminMediaGroupRepairPage.tsx`
 
 - 對應主前端頁面：`/admin/system/group-repair`
-- 已接管能力：repair 清單搜尋、分頁、來源推斷、only inferable 過濾、補 source_url、edit、merge、unassign、單筆 / 批次 reparse preview / apply
+- 已接管能力：repair 清單搜尋、分頁、來源推斷（優先使用 source_url 直接提取）、only inferable 過濾、顯示全部 group 模式、補 source_url、edit、merge、unassign、單筆 / 批次 reparse preview / apply（支援欄位級選擇性更新：Group 層級欄位 + Media 層級欄位 + 新媒體逐項勾選）
 - 未覆蓋項目：目前沒有明確缺少的核心修復 API 或操作鏈路
 - 已知限制：merge / edit / reparse 以 Sheet / Popup 流程呈現，較適合手機逐步確認；大量結果交叉排查、鍵盤密集輸入或多視窗修復時，桌面 admin 仍較有效率
 
@@ -121,7 +123,7 @@ review-app/
 - `Views`、`Toolbar/Tabbar`、`Panel`：提供手機與平板一致的工作區切換，不依賴主前端桌面 sidebar
 - `Card`、`List`、`ListItem`、`Searchbar`：承載行動端高頻審核清單與篩選
 - `Panel`、`Popup`、`Sheet`、頁內 route page：承接 MV / Tag 關聯、詳情、退回原因、crawler 參數、merge / edit / reparse 等需要完整上下文的操作
-- `Toast`、頁內 `ReviewStateBlock`：分別處理即時操作回饋與可見的載入 / 空狀態 / 錯誤狀態
+- `Toast`、頁內 `ReviewStateBlock`：分別處理即時操作回饋與可見的載入 / 空狀態 / 錯誤狀態。Toast 全域預設 `position: 'center'`（於 `App.tsx` `<F7App toast={{ position: 'center' }}>` 設定）
 - `ReviewSummaryPanel`：壓縮各工作區頁面頂部狀態卡，減少行動端首屏占位
 - `src/lib/moderation-boundaries.ts`：集中維護 review-app 與桌面 admin 的能力邊界，設定頁與跨專案文件都以此為基準同步描述
 
