@@ -165,18 +165,9 @@ export const saveGeoRaw = async (req: Request, res: Response, next: NextFunction
     } = parsed;
 
     const userAgent = req.headers['user-agent'];
-
     const sessionId = typeof geo_session_id === 'string' && geo_session_id.length > 0 ? geo_session_id : null;
-    if (sessionId) {
-      const existing = await GeoRawLogModel.findOne({ where: { geo_session_id: sessionId } });
-      if (existing) {
-        res.json({ success: true, data: { id: (existing as any).id } });
-        return;
-      }
-    }
 
-    const row = await GeoRawLogModel.create({
-      geo_session_id: sessionId,
+    const defaults = {
       ip,
       country: typeof country === 'string' ? country : null,
       raw_country: typeof raw_country === 'string' ? raw_country : null,
@@ -189,9 +180,19 @@ export const saveGeoRaw = async (req: Request, res: Response, next: NextFunction
       maxmind_city_sha256: typeof maxmind_city_sha256 === 'string' ? maxmind_city_sha256 : null,
       maxmind_asn_sha256: typeof maxmind_asn_sha256 === 'string' ? maxmind_asn_sha256 : null,
       user_agent: typeof userAgent === 'string' ? userAgent : null,
-    });
+    };
 
-    res.json({ success: true, data: { id: (row as any).id } });
+    let row: any;
+    if (sessionId) {
+      [row] = await GeoRawLogModel.findOrCreate({
+        where: { geo_session_id: sessionId },
+        defaults,
+      });
+    } else {
+      row = await GeoRawLogModel.create(defaults);
+    }
+
+    res.json({ success: true, data: { id: row.id } });
   } catch (error) {
     if (error instanceof AppError) throw error;
     next(error);
