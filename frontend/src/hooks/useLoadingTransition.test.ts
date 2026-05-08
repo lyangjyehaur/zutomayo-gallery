@@ -7,7 +7,7 @@ const storage: Record<string, string> = {}
 describe("useLoadingTransition", () => {
   beforeEach(() => {
     Object.keys(storage).forEach((k) => delete storage[k])
-    vi.stubGlobal("sessionStorage", {
+    vi.stubGlobal("localStorage", {
       getItem: (key: string) => storage[key] ?? null,
       setItem: (key: string, value: string) => { storage[key] = value },
       removeItem: (key: string) => { delete storage[key] },

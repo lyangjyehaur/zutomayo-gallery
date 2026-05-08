@@ -27,7 +27,7 @@ export function useLoadingTransition({
   const [isTransitioningOut, setIsTransitioningOut] = useState(false);
   const [networkAlertAcknowledged, setNetworkAlertAcknowledged] = useState(() => {
     try {
-      return sessionStorage.getItem('ztmy_network_alerted') === 'true';
+      return localStorage.getItem('ztmy_network_alerted') === 'true';
     } catch {
       return false;
     }
@@ -73,7 +73,7 @@ export function useLoadingTransition({
 
   const handleWarningConfirm = useCallback(() => {
     try {
-      sessionStorage.setItem('ztmy_network_alerted', 'true');
+      localStorage.setItem('ztmy_network_alerted', 'true');
     } catch {}
 
     if (window.umami && typeof window.umami.track === 'function') {

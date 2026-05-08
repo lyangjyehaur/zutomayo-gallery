@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 
 interface NetworkStatus {
   online: boolean;
@@ -9,24 +11,27 @@ interface NetworkStatus {
 }
 
 export function useNetworkStatus(): NetworkStatus {
+  const { t } = useTranslation();
+  const prevTypeRef = useRef<string | undefined>(undefined);
+
   const [status, setStatus] = useState<NetworkStatus>(() => {
-    // 兼容部分舊版瀏覽器
     const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
-    
-    // 檢查 CSS 媒體查詢 prefers-reduced-data (部分新版 iOS Safari 支援)
+
     let reducedData = false;
     if (typeof window !== 'undefined' && window.matchMedia) {
       reducedData = window.matchMedia('(prefers-reduced-data: reduce)').matches;
     }
 
-    // 檢查是否為 iOS Mobile Safari (最保守的 fallback)
     const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes('Mac') && 'ontouchend' in document);
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
     const isIosMobileSafari = isIos && isSafari;
 
+    const initialType = connection?.type;
+    prevTypeRef.current = initialType;
+
     return {
       online: navigator.onLine,
-      type: connection?.type,
+      type: initialType,
       effectiveType: connection?.effectiveType,
       saveData: connection?.saveData || reducedData,
       isIosMobileSafari,
@@ -42,24 +47,42 @@ export function useNetworkStatus(): NetworkStatus {
         reducedData = window.matchMedia('(prefers-reduced-data: reduce)').matches;
       }
 
+      const newType = connection?.type;
+      const prevType = prevTypeRef.current;
+
+      if (newType === 'cellular' && prevType !== 'cellular') {
+        let alreadyAccepted = false;
+        try {
+          alreadyAccepted = localStorage.getItem('ztmy_network_alerted') === 'true';
+        } catch {}
+        if (!alreadyAccepted) {
+          toast.warning(t('app.cellular_network_switched', '已切換到行動網路，請注意流量消耗'), {
+            duration: Infinity,
+            cancel: {
+              label: t('app.cellular_network_switched_acknowledge', '我知道了'),
+              onClick: () => {},
+            },
+          });
+        }
+      }
+
+      prevTypeRef.current = newType;
+
       setStatus({
         online: navigator.onLine,
-        type: connection?.type,
+        type: newType,
         effectiveType: connection?.effectiveType,
         saveData: connection?.saveData || reducedData,
       });
     };
 
-    // 監聽上下線狀態
     window.addEventListener('online', updateStatus);
     window.addEventListener('offline', updateStatus);
-    
-    // 監聽網路環境改變 (如從 wifi 切換到 4g)
+
     if (connection) {
       connection.addEventListener('change', updateStatus);
     }
-    
-    // 監聽 CSS 媒體查詢的變化
+
     let mediaQueryList: MediaQueryList | null = null;
     if (typeof window !== 'undefined' && window.matchMedia) {
       mediaQueryList = window.matchMedia('(prefers-reduced-data: reduce)');
@@ -78,7 +101,7 @@ export function useNetworkStatus(): NetworkStatus {
         mediaQueryList.removeEventListener('change', updateStatus);
       }
     };
-  }, []);
+  }, [t]);
 
   return status;
 }

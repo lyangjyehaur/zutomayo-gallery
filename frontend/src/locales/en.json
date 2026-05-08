@@ -27,6 +27,8 @@
     "feedback": "Feedback",
     "cellular_network_warning": "You are currently using cellular data or data saver mode. Loading large amount of images may consume significant data.",
     "ios_network_warning": "To prevent excessive data usage, please be aware that this site loads a large number of images if you are currently using a cellular network.",
+    "cellular_network_switched": "Switched to cellular network. Please be aware of data usage.",
+    "cellular_network_switched_acknowledge": "Got it",
     "connecting_db": "Connecting to Database...",
     "weak_signal": "Weak signal... please wait",
     "db_sync_failed": "Database sync failed",
@@ -135,6 +137,7 @@
     "album_category_single": "Single / Others",
     "page_not_found": "Page Not Found",
     "page_not_found_desc": "The signal you are looking for seems to have disappeared in the midnight.",
+    "tape_secret_msg": "This tape might still hold a song you haven't heard yet.",
     "back_to_home": "Back to Home",
     "back": "Back"
   },

@@ -25,6 +25,8 @@
     "feedback": "Comentarios",
     "cellular_network_warning": "Estás usando datos móviles o el modo de ahorro de datos. Cargar muchas imágenes puede consumir una gran cantidad de datos.",
     "ios_network_warning": "Para evitar un consumo excesivo de datos, ten en cuenta que este sitio carga una gran cantidad de imágenes si actualmente usas una red móvil.",
+    "cellular_network_switched": "Se ha cambiado a la red móvil. Tenga cuidado con el consumo de datos.",
+    "cellular_network_switched_acknowledge": "Entendido",
     "connecting_db": "Conectando a la base de datos...",
     "weak_signal": "Señal débil... por favor espere",
     "db_sync_failed": "Falló la sincronización de la base de datos",
@@ -134,6 +136,7 @@
     "album_category_single": "Sencillo / Otros",
     "page_not_found": "Página No Encontrada",
     "page_not_found_desc": "La señal que buscas parece haber desaparecido en la medianoche.",
+    "tape_secret_msg": "Esta cinta podría contener una canción que aún no has escuchado.",
     "back_to_home": "Volver al inicio",
     "back": "Volver"
   },
