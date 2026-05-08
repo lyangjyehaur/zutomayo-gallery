@@ -216,6 +216,7 @@ function App({
   }, [backgroundLocation?.pathname]);
   const bgMvIdMatch = backgroundPathnameWithoutLang ? backgroundPathnameWithoutLang.match(/^\/mv\/([^/]+)/) : null;
   const selectedMvId = (modalMvIdMatch ? modalMvIdMatch[1] : null) || (bgMvIdMatch ? bgMvIdMatch[1] : null);
+  const isFanartRoute = !!modalPathnameWithoutLang.match(/^\/mv\/[^/]+\/fanart/);
   const modalIllustratorIdMatch = modalPathnameWithoutLang.match(/^\/illustrators\/([^/]+)/);
   const selectedIllustratorId = modalIllustratorIdMatch ? modalIllustratorIdMatch[1] : null;
 
@@ -238,6 +239,7 @@ function App({
   }, []);
 
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [mvViewMode, setMvViewMode] = useState<'detail' | 'fanart'>('detail');
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isGeoTooltipOpen, setIsGeoTooltipOpen] = useState(false);
   const [isSurveyForceOpen, setIsSurveyForceOpen] = useState(false);
@@ -349,6 +351,14 @@ function App({
     return null;
   }, [mvData, mvRoute, selectedMvId]);
 
+  const handleViewModeChange = useCallback((mode: 'detail' | 'fanart') => {
+    setMvViewMode(mode);
+    const newPath = mode === 'fanart'
+      ? `${basePath}/mv/${selectedMvId}/fanart`
+      : `${basePath}/mv/${selectedMvId}`;
+    navigate(newPath, { state: { backgroundLocation: backgroundLocation || location }, replace: true });
+  }, [basePath, selectedMvId, navigate, backgroundLocation, location]);
+
   const selectedIllustrator = useMemo(() => {
     if (!selectedIllustratorId) return null;
     const decodedId = decodeURIComponent(selectedIllustratorId);
@@ -379,6 +389,10 @@ function App({
   }, [metadata, mvData, selectedIllustratorId]);
 
   useBodyScrollLock(isFeedbackOpen || !!selectedMvId || !!selectedIllustratorId || isAboutOpen || isFanArtSubmitRoute);
+
+  useEffect(() => {
+    setMvViewMode(isFanartRoute ? 'fanart' : 'detail');
+  }, [selectedMvId, isFanartRoute]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && sessionStorage.getItem('umami_identify_sent') === 'true') return;
@@ -656,6 +670,8 @@ function App({
         metadata={metadata}
         isFav={selectedMv ? favorites.includes(selectedMv.id) : false}
         onToggleFav={() => selectedMv && toggleFav(selectedMv.id)}
+        viewMode={mvViewMode}
+        onViewModeChange={handleViewModeChange}
         onClose={() => {
           if (document.body.classList.contains('fancybox__body') || document.querySelector('.fancybox__container')) {
             return;
@@ -947,6 +963,7 @@ export default function RootApp() {
               <Route path="me/submissions" element={null} />
               <Route path="albums" element={null} />
               <Route path="mv/:id" element={<MVRouteBoundary />} />
+              <Route path="mv/:id/fanart" element={<MVRouteBoundary />} />
               <Route path="404" element={null} />
               <Route path="*" element={null} />
             </Route>

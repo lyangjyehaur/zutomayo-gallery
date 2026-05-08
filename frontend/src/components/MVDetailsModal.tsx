@@ -40,6 +40,8 @@ interface MVDetailsModalProps {
   isFav?: boolean;
   onToggleFav?: () => void;
   metadata?: any;
+  viewMode?: 'detail' | 'fanart';
+  onViewModeChange?: (mode: 'detail' | 'fanart') => void;
 }
 
 /**
@@ -50,7 +52,7 @@ interface MVDetailsModalProps {
  * 2. LightGallery 燈箱通過 Portal 渲染到 body，層級高於 Dialog
  * 3. 通過 CSS 和事件管理確保兩者正確協作
  */
-export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata }: MVDetailsModalProps) {
+export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata, viewMode = 'detail', onViewModeChange }: MVDetailsModalProps) {
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -187,6 +189,8 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata }: MV
   const titleMarqueeMeasureRef = useRef<HTMLSpanElement>(null);
 
   useLayoutEffect(() => {
+    if (viewMode !== 'detail') return;
+
     const MARQUEE_GAP = 32;
     const MARQUEE_SPEED = 48;
     const MIN_MARQUEE_DURATION = 8;
@@ -306,6 +310,7 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata }: MV
   }, [mv]);
 
   useEffect(() => {
+    if (viewMode !== 'detail') return;
     if (typeof window === 'undefined') return;
 
     const updateHeight = () => {
@@ -369,6 +374,17 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata }: MV
     setIsLightboxOpen(true);
   };
 
+  const handleFanartLightboxOpen = () => {
+    if (window.umami && typeof window.umami.track === 'function') {
+      window.umami.track('Z_Open_Fanart_Lightbox', {
+        title: mv?.title,
+        id: mv?.id
+      });
+    }
+    isLightboxOpenRef.current = true;
+    setIsLightboxOpen(true);
+  };
+
   useEffect(() => {
     // 建立提取參數的工具函式
     const getUtmSource = () => {
@@ -392,6 +408,14 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata }: MV
     return mv?.images ? mv.images.filter(img => img.usage !== 'cover' && img.type !== 'fanart') : [];
   }, [mv?.images]);
 
+  const fanartCount = React.useMemo(() => {
+    return mv?.images ? mv.images.filter(img => img.type === 'fanart').length : 0;
+  }, [mv?.images]);
+
+  const fanartImages = React.useMemo(() => {
+    return mv?.images ? mv.images.filter(img => img.type === 'fanart') : [];
+  }, [mv?.images]);
+
   // 判斷是否為 macOS (排除 iOS 與觸控裝置，讓手機端統一顯示右上角叉叉)
   const isMac = React.useMemo(() => {
     if (typeof window === 'undefined') return false;
@@ -404,8 +428,8 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata }: MV
     <>
       {mv && (
         <Helmet>
-          <title>{`${mv.title} | ZUTOMAYO Gallery`}</title>
-          <meta property="og:title" content={`${mv.title} | ZUTOMAYO Gallery`} />
+          <title>{viewMode === 'fanart' ? `Fanart · ${mv.title}` : mv.title} | ZUTOMAYO Gallery</title>
+          <meta property="og:title" content={`${viewMode === 'fanart' ? `Fanart · ${mv.title}` : mv.title} | ZUTOMAYO Gallery`} />
           <meta
             property="og:description"
             content={String(mv.description || '').replace(/\s+/g, ' ').trim().slice(0, 160)}
@@ -493,7 +517,91 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata }: MV
           }
         `}</style>
         {/* CRT 背景層 */}
-        <div className={MODAL_THEME.crt}></div>
+        {viewMode !== 'fanart' && <div className={MODAL_THEME.crt}></div>}
+
+        {viewMode === 'fanart' ? (
+          <>
+            <DialogHeader className="relative z-30 pt-6 pb-4 md:pt-8 md:pb-5 border-b-4 border-border shadow-md transition-all duration-200">
+              <div className={`absolute top-4 z-[110] ${isMac ? 'left-4 md:left-8 md:top-6' : 'right-4 md:right-8 md:top-6'}`}>
+                <button 
+                  className={`bg-background text-foreground border-3 border-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all ${isMac ? 'w-auto px-3' : 'w-10'} h-10 flex items-center justify-center rounded-none font-black uppercase tracking-widest text-xs gap-1.5`}
+                  onClick={() => onViewModeChange?.('detail')}
+                  data-umami-event="Z_Close_Fanart_Mode"
+                  data-umami-event-title={mv?.title}
+                >
+                  {isMac ? (
+                    <>
+                      <i className="hn hn-angle-left text-xs leading-none"></i>
+                      <span>返回</span>
+                    </>
+                  ) : (
+                    <i className="hn hn-times text-2xl leading-none"></i>
+                  )}
+                </button>
+              </div>
+              
+              <DialogTitle 
+                className={`text-2xl cursor-default uppercase tracking-tighter font-black flex flex-col overflow-hidden w-full text-center ${isMac ? 'pl-24 md:pl-32 pr-4' : 'pr-16 md:pr-20'}`} 
+                lang="ja"
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <span className="text-sm font-mono opacity-60 tracking-widest">
+                    {t("app.fanart_gallery", "FanArt 畫廊")}
+                    {shouldShowSecondaryLang(i18n.language) && (
+                      <span className="text-[10px] font-mono opacity-40 ml-2 normal-case">FanArt_Gallery</span>
+                    )}
+                  </span>
+                  <span className="ztmy-modal-glitch text-center" data-text={mv?.title}>{mv?.title}</span>
+                </div>
+              </DialogTitle>
+              <DialogDescription className="sr-only">
+                {mv?.title} FanArt Gallery
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex-1 overflow-auto custom-scrollbar relative z-20">
+              <div className="max-w-screen-2xl mx-auto px-8 py-8">
+                {fanartImages.length > 0 ? (
+                  <FancyboxViewer
+                    images={fanartImages}
+                    mvTitle={mv.title}
+                    mvId={mv.id}
+                    itemsPerPage={12}
+                    autoLoadMore={false}
+                    showHeader={false}
+                    enablePagination={true}
+                    breakpointColumns={GALLERY_BREAKPOINTS}
+                    className="!p-0 !min-h-0"
+                    onLightboxOpen={handleFanartLightboxOpen}
+                    onLightboxClose={() => {
+                      setTimeout(() => {
+                        isLightboxOpenRef.current = false;
+                        setIsLightboxOpen(false);
+                      }, 50);
+                    }}
+                  />
+                ) : (
+                  <div className="w-full py-32 flex flex-col items-center justify-center border-4 border-dashed border-border select-none">
+                    <div className="text-5xl mb-4 opacity-20">
+                      <i className="hn hn-image text-5xl"></i>
+                    </div>
+                    <div className="flex flex-col items-center leading-tight">
+                      <h3 className="text-lg font-black uppercase tracking-widest opacity-80">
+                        {t("app.no_fanart", "暫無 FanArt")}
+                      </h3>
+                      {shouldShowSecondaryLang(i18n.language) && (
+                        <span className="text-[10px] font-mono opacity-40 mt-1">
+                          NO_FANART_DATA
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
 
         <DialogHeader className="relative z-30 pt-6 pb-4 md:pt-8 md:pb-5 border-b-4 border-border shadow-md transition-all duration-200">
           {/* 使用一般的 button 取代 DialogClose 來完全控制關閉行為 */}
@@ -901,7 +1009,26 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata }: MV
                   <>
                     <div className="space-y-4">
                     <h4 className="font-bold border-b-3 border-black pb-2 flex items-center gap-2 uppercase tracking-widest">
-                      <i className="hn hn-image text-xl text-ztmy-green"></i>{t("app.reference_art", "設定資料圖")}</h4>
+                      <i className="hn hn-image text-xl text-ztmy-green"></i>{t("app.reference_art", "設定資料圖")}
+                      {onViewModeChange && fanartCount > 0 && (
+                        <span className="ml-auto">
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              onViewModeChange('fanart');
+                            }}
+                            className="text-[10px] font-black border-2 border-black px-2 py-1 bg-main text-black hover:bg-black hover:text-main transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none flex items-center gap-1"
+                            data-umami-event="Z_Open_Fanart_From_MV"
+                            data-umami-event-title={mv?.title}
+                            data-umami-event-id={mv?.id}
+                          >
+                            <i className="hn hn-image text-xs"></i>
+                            {t("app.view_fanart", "查看 FanArt")} ({fanartCount})
+                          </button>
+                        </span>
+                      )}
+                    </h4>
                     {galleryImages.length > 0 ? (
                       <GalleryViewer
                         images={galleryImages}
@@ -985,6 +1112,8 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata }: MV
             </ScrollArea>
           </div>
         </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
     </>
