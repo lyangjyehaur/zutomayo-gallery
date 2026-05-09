@@ -236,4 +236,95 @@ slide.panzoomRef.on('render', renderFn);
 - **MVService 記憶體快取**：標注寫入時需同時清除 Redis 快取和 `mvService.clearCache()`，否則前台無法即時看到更新
 
 ---
+
+## 8. 圖片分享與 URL Hash 系統
+
+### A. 概述
+
+每張圖片在 Fancybox 燈箱中都可透過點擊「分享」按鈕複製一個帶有 hash 錨點的唯一 URL。其他使用者造訪該 URL 時，系統會自動解析 hash、定位對應圖片並打開燈箱。
+
+URL 格式：`https://zutomayo.com/mv/{mv-slug}#img-{photoId}`
+
+### B. 技術實現
+
+**Hash 寫入（Carousel.change）：**
+當使用者在燈箱中切換圖片時，`Carousel.ready Carousel.change` 事件處理器會讀取當前 slide 的 `mediaId`（即 `photo.id`），並透過 `window.history.replaceState` 更新 URL hash。不使用 `pushState` 以避免產生大量瀏覽器歷史記錄。
+
+```tsx
+const newHash = `#${FANCYBOX_HASH_PREFIX}${slideMediaId}`;
+if (window.location.hash !== newHash) {
+  window.history.replaceState(null, '', window.location.pathname + window.location.search + newHash);
+}
+```
+
+**Hash 解析（頁面載入時自動打開）：**
+`FancyboxViewer` 掛載後，`useEffect` 會檢查 URL hash。若 hash 符合 `#img-{id}` 格式，會在 `displayedPhotos` 中搜尋對應圖片：
+- 找到 → 自動打開燈箱並定位到該圖片
+- 未找到 → 顯示「圖片不存在」toast，同時清除 URL hash
+
+**Hash 清除（燈箱關閉）：**
+Fancybox `close` 事件中清除 URL hash，恢復乾淨的頁面 URL。
+
+### C. 複製到剪貼簿（`lib/clipboard.ts`）
+
+分享按鈕點擊後，系統需要將完整 URL 複製到使用者剪貼簿。由於不同環境（HTTPS/HTTP、localhost/區域網IP、Mac/Windows）對剪貼簿 API 的支援差異極大，採用 **漸進式降級策略**：
+
+```
+Path 1: navigator.clipboard.writeText()  ← 安全上下文 (HTTPS/localhost)
+  ↓ 不可用或失敗
+Path 2: execCommand('copy')              ← 非安全上下文的 fallback
+```
+
+**Path 2 的關鍵設計（Windows 相容性）：**
+早期實作使用 `<textarea>` + `document.body.appendChild`，但在 Fancybox 燈箱內無法正常工作。原因是 Fancybox 有焦點鎖定機制，附加到 `document.body`（燈箱外部）的元素會在 `focus()` 後被立即奪回焦點。Windows Chrome 對此更加嚴格，導致 `execCommand('copy')` 返回 `true` 但剪貼簿實際為空。
+
+**最終方案：**
+- 使用 `<div contentEditable>` 取代 `<textarea>`，內容透過 `textContent` 設置
+- 元素掛載到 `.fancybox__container` 內部（燈箱焦點鎖定範圍內），fallback 為 `document.body`
+- 使用 `Range.selectNodeContents()` + `Selection.addRange()` 精確控制選取範圍
+- 元素樣式：`1px × 1px`、`opacity: 0.01`（技術上可見，滿足 execCommand 要求）、`z-index: 99999`、`pointer-events: none`
+
+### D. 分享 URL 的路徑清理
+
+分享的 URL 需要移除語言前綴（如 `/zh-TW/`），確保接收者以自己的語言偏好瀏覽：
+
+```tsx
+const pathParts = window.location.pathname.split('/');
+if (pathParts.length > 1 && isSupportedLang(pathParts[1])) {
+  cleanPath = '/' + pathParts.slice(2).join('/');
+} else {
+  cleanPath = window.location.pathname;
+}
+const url = window.location.origin + cleanPath + `#img-${photoId}`;
+```
+
+### E. 後端資料完整性（`metadata.service.ts`）
+
+畫師頁面的「綜合插畫」（collaborations）圖片資料來自 `media` 表。早期後端 API 在組裝回應時遺漏了 `media.id` 欄位，導致前端 `photoId` 為 `undefined`，hash 無法生成。
+
+**修復：** 在 `getMetadata()` 的 collaborations 映射中加入 `id: media.id`。
+
+### F. 語言重定向時的 Hash 保留（`App.tsx`）
+
+所有 `Navigate` 元件在執行語言重定向時，必須保留 `location.hash`，否則使用者在帶有 `#img-{id}` 的 URL 造訪時，hash 會在重定向過程中被丟棄：
+
+```tsx
+<Navigate replace to={`/${targetLng}${path}${location.hash}`} />
+```
+
+涉及 6 處 `Navigate` 呼叫。
+
+### G. i18n 覆蓋
+
+分享功能新增 5 個 i18n key，已涵蓋全部 8 個語言（zh-TW、zh-CN、zh-HK、ja、ko、en、es）：
+
+| Key | 用途 |
+|-----|------|
+| `app.share_image` | 分享按鈕預設文字 |
+| `app.copy_link_success` | 複製成功 toast |
+| `app.copy_link_failed` | 複製失敗 toast |
+| `app.image_not_found` | 圖片不存在 toast |
+| `app.copied` | 分享按鈕複製成功後的文字 |
+
+---
 *備註：如果你在維護時發現排版又被撐開了，請優先檢查是否有新的外掛或組件（例如 Waline 評論）在最外層使用了 `flex` 且沒有加上 `min-w-0` 的束縛。*

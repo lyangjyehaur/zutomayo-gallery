@@ -732,7 +732,7 @@ function RootLocaleRedirect({ commonProps }: { commonProps: AppCommonProps }) {
 
   return (
     <>
-      <Navigate replace to={`/${targetLng}${search ? `?${search}` : ""}`} />
+      <Navigate replace to={`/${targetLng}${search ? `?${search}` : ""}${location.hash}`} />
       <App {...commonProps} />
     </>
   );
@@ -753,7 +753,7 @@ function FallbackRedirect({ commonProps }: { commonProps: AppCommonProps }) {
 
   return (
     <>
-      <Navigate replace to={`/${targetLng}${location.pathname}${cleanSearch}`} />
+      <Navigate replace to={`/${targetLng}${location.pathname}${cleanSearch}${location.hash}`} />
       <App {...commonProps} />
     </>
   );
@@ -786,7 +786,7 @@ function LocalizedAppLayout({ commonProps }: { commonProps: AppCommonProps }) {
     if (queryLng !== lng) {
       return (
         <>
-          <Navigate replace to={targetPath} />
+          <Navigate replace to={`${targetPath}${location.hash}`} />
           <App {...commonProps} />
         </>
       );
@@ -794,7 +794,7 @@ function LocalizedAppLayout({ commonProps }: { commonProps: AppCommonProps }) {
     if (hasQueryLng) {
       return (
         <>
-          <Navigate replace to={`${location.pathname}${cleanSearch}`} />
+          <Navigate replace to={`${location.pathname}${cleanSearch}${location.hash}`} />
           <App {...commonProps} />
         </>
       );
@@ -804,7 +804,7 @@ function LocalizedAppLayout({ commonProps }: { commonProps: AppCommonProps }) {
   if (hasQueryLng && isSupportedLang(lng)) {
     return (
       <>
-        <Navigate replace to={`${location.pathname}${cleanSearch}`} />
+        <Navigate replace to={`${location.pathname}${cleanSearch}${location.hash}`} />
         <App {...commonProps} />
       </>
     );
@@ -814,7 +814,7 @@ function LocalizedAppLayout({ commonProps }: { commonProps: AppCommonProps }) {
     const targetLng = normalizeLang(queryLng || i18n.resolvedLanguage || i18n.language);
     return (
       <>
-        <Navigate replace to={`/${targetLng}${location.pathname}${cleanSearch}`} />
+        <Navigate replace to={`/${targetLng}${location.pathname}${cleanSearch}${location.hash}`} />
         <App {...commonProps} />
       </>
     );

@@ -128,6 +128,7 @@ export const getMetadata = async (): Promise<MetadataResponse> => {
     const artistCollaborations = mediaList.filter(m => mediaIds.includes((m as any).id)).map(m => {
         const media = m.toJSON() as any;
         return {
+          id: media.id,
           url: media.url,
           thumbnail_url: media.thumbnail_url || undefined,
           thumbnail: media.thumbnail_url || undefined, // keep for backward compatibility

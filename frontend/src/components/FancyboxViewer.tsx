@@ -15,8 +15,9 @@ import { getProxyImgUrl, isMediaVideo } from '@/lib/image';
 import { GALLERY_BREAKPOINTS } from '@/components/galleryBreakpoints';
 export { GALLERY_BREAKPOINTS } from '@/components/galleryBreakpoints';
 import { useTranslation } from 'react-i18next';
-import { shouldShowSecondaryLang } from '@/i18n';
+import { shouldShowSecondaryLang, isSupportedLang } from '@/i18n';
 import { toast } from 'sonner';
+import { copyToClipboard } from '@/lib/clipboard';
 
 const FANCYBOX_HASH_PREFIX = 'img-';
 
@@ -252,14 +253,30 @@ const FancyboxCaptionOverlay = ({ api, photos, annotationsMap }: { api: any; pho
 
   const handleCopyShareLink = useCallback(() => {
     const photoId = photos[activeIndex]?.id;
-    if (!photoId) return;
-    const url = window.location.origin + window.location.pathname + window.location.search + `#${FANCYBOX_HASH_PREFIX}${photoId}`;
-    navigator.clipboard.writeText(url).then(() => {
+    if (!photoId) {
+      toast.error(t('app.image_not_found', '圖片不存在或已被刪除'));
+      return;
+    }
+
+    const pathParts = window.location.pathname.split('/');
+    let cleanPath: string;
+    if (pathParts.length > 1 && isSupportedLang(pathParts[1])) {
+      cleanPath = '/' + pathParts.slice(2).join('/');
+    } else {
+      cleanPath = window.location.pathname;
+    }
+
+    const url = window.location.origin + cleanPath + `#${FANCYBOX_HASH_PREFIX}${photoId}`;
+    copyToClipboard(url).then((success) => {
       setCopyFeedback(true);
-      toast.success(t('app.copy_link_success', '連結已複製！'));
+      if (success) {
+        toast.success(t('app.copy_link_success', '連結已複製！'));
+      } else {
+        toast.error(t('app.copy_link_failed', '複製失敗，請手動複製連結'));
+      }
       setTimeout(() => setCopyFeedback(false), 1500);
     }).catch(() => {
-      toast.error(t('app.copy_link_failed', '複製失敗'));
+      toast.error(t('app.copy_link_failed', '複製失敗，請手動複製連結'));
     });
   }, [activeIndex, photos, t]);
 
@@ -305,7 +322,7 @@ const FancyboxCaptionOverlay = ({ api, photos, annotationsMap }: { api: any; pho
                 data-umami-event-photo-id={photos[activeIndex]?.id}
               >
                 <i className={`hn ${copyFeedback ? 'hn-check' : 'hn-share'}`}></i>
-                <span>{copyFeedback ? '✓' : t('app.share_image', '分享')}</span>
+                <span>{copyFeedback ? t('app.copied', '已複製!') : t('app.share_image', '分享')}</span>
               </button>
             </div>
           </div>
@@ -695,7 +712,8 @@ export default function FancyboxViewer({
           tweetDate: img.group?.post_date,
           originalUrl: img.url,
           annotations: img.annotations || [],
-          ...img
+          ...img,
+          id: img.id || img.url,
         };
       });
     },
@@ -887,7 +905,7 @@ export default function FancyboxViewer({
         handlePhotoClickRef.current(index);
       });
     } else {
-      toast.error((window as any).__t?.('app.image_not_found', '圖片不存在或已被刪除') || '圖片不存在或已被刪除');
+      toast.error(t('app.image_not_found', '圖片不存在或已被刪除'));
       if (window.history.replaceState) {
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
       }
