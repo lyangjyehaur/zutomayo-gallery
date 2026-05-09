@@ -16,6 +16,9 @@ import { GALLERY_BREAKPOINTS } from '@/components/galleryBreakpoints';
 export { GALLERY_BREAKPOINTS } from '@/components/galleryBreakpoints';
 import { useTranslation } from 'react-i18next';
 import { shouldShowSecondaryLang } from '@/i18n';
+import { toast } from 'sonner';
+
+const FANCYBOX_HASH_PREFIX = 'img-';
 
 interface FancyboxViewerProps {
   images: MVMedia[];
@@ -183,6 +186,7 @@ const FancyboxCaptionOverlay = ({ api, photos, annotationsMap }: { api: any; pho
   const [isZooming, setIsZooming] = useState(false);
   const [isThumbsHidden, setIsThumbsHidden] = useState(false);
   const [captionHeight, setCaptionHeight] = useState<number | 'auto'>('auto');
+  const [copyFeedback, setCopyFeedback] = useState(false);
   const captionScrollRef = useRef<HTMLDivElement>(null);
   const captionContentRef = useRef<HTMLDivElement>(null);
 
@@ -246,6 +250,19 @@ const FancyboxCaptionOverlay = ({ api, photos, annotationsMap }: { api: any; pho
   const richText = photos[activeIndex]?.richText ?? '';
   const activeAnnotations = annotationsMap.get(activeIndex) || [];
 
+  const handleCopyShareLink = useCallback(() => {
+    const photoId = photos[activeIndex]?.id;
+    if (!photoId) return;
+    const url = window.location.origin + window.location.pathname + window.location.search + `#${FANCYBOX_HASH_PREFIX}${photoId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopyFeedback(true);
+      toast.success(t('app.copy_link_success', '連結已複製！'));
+      setTimeout(() => setCopyFeedback(false), 1500);
+    }).catch(() => {
+      toast.error(t('app.copy_link_failed', '複製失敗'));
+    });
+  }, [activeIndex, photos, t]);
+
   const isHidden = isZooming || isThumbsHidden;
 
   useEffect(() => {
@@ -278,7 +295,19 @@ const FancyboxCaptionOverlay = ({ api, photos, annotationsMap }: { api: any; pho
       >
         <div ref={captionContentRef}>
           <div className="ztmy-fb-caption-header">
-            <h4>{title}</h4>
+            <div className="ztmy-fb-caption-header-top">
+              <h4>{title}</h4>
+              <button
+                className={`ztmy-fb-share-btn ${copyFeedback ? 'is-copied' : ''}`}
+                onClick={handleCopyShareLink}
+                title={t('app.share_image', '分享圖片')}
+                data-umami-event="Z_Copy_Image_Link"
+                data-umami-event-photo-id={photos[activeIndex]?.id}
+              >
+                <i className={`hn ${copyFeedback ? 'hn-check' : 'hn-share'}`}></i>
+                <span>{copyFeedback ? '✓' : t('app.share_image', '分享')}</span>
+              </button>
+            </div>
           </div>
           <div className="ztmy-fb-caption-rich">
             <div className="rich-text" dangerouslySetInnerHTML={{ __html: richText || t("app.no_desc", "暫無描述 (NO_METADATA_FOUND)") }} />
@@ -841,6 +870,30 @@ export default function FancyboxViewer({
     displayedPhotosRef.current = displayedPhotos;
   }, [displayedPhotos]);
 
+  const hashAutoOpenedRef = useRef(false);
+  const handlePhotoClickRef = useRef<(index: number) => void>(() => {});
+  useEffect(() => {
+    if (hashAutoOpenedRef.current) return;
+    const hash = window.location.hash;
+    if (!hash || !hash.startsWith(`#${FANCYBOX_HASH_PREFIX}`)) return;
+    const targetId = hash.slice(FANCYBOX_HASH_PREFIX.length + 1);
+    if (!targetId) return;
+    const photos = displayedPhotosRef.current;
+    if (!photos || photos.length === 0) return;
+    const index = photos.findIndex(p => p.id === targetId);
+    if (index !== -1) {
+      hashAutoOpenedRef.current = true;
+      requestAnimationFrame(() => {
+        handlePhotoClickRef.current(index);
+      });
+    } else {
+      toast.error((window as any).__t?.('app.image_not_found', '圖片不存在或已被刪除') || '圖片不存在或已被刪除');
+      if (window.history.replaceState) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    }
+  }, [displayedPhotos]);
+
   const annotationsMap = useMemo(() => {
     const map = new Map<number, MediaAnnotation[]>();
     displayedPhotos.forEach((photo, index) => {
@@ -906,6 +959,8 @@ export default function FancyboxViewer({
       });
       el.remove();
     });
+
+    if (i18n.language === 'ja') return;
 
     const annotations = annMap.get(slide.index) || [];
     if (annotations.length === 0) return;
@@ -1001,7 +1056,7 @@ export default function FancyboxViewer({
           downloadSrc: photo.raw,
           alt: photo.caption,
           type: photo.isVideo ? 'html5video' : 'image',
-          mediaId: photo.originalUrl,
+          mediaId: photo.id,
           ...(photo.isVideo && {
             width: photo.width,
             height: photo.height,
@@ -1031,6 +1086,15 @@ export default function FancyboxViewer({
           'Carousel.ready Carousel.change': (fancybox: any) => {
             const slide = fancybox.getSlide();
             if (!slide || !slide.el) return;
+
+            const slideMediaId = slide.mediaId;
+            if (slideMediaId && typeof slideMediaId === 'string') {
+              const newHash = `#${FANCYBOX_HASH_PREFIX}${slideMediaId}`;
+              if (window.location.hash !== newHash) {
+                window.history.replaceState(null, '', window.location.pathname + window.location.search + newHash);
+              }
+            }
+
             const img = slide.el.querySelector('.f-panzoom__content');
             if (img && img.tagName === 'IMG') {
               img.onerror = () => {
@@ -1100,6 +1164,10 @@ export default function FancyboxViewer({
               overlayRef.current = null;
             }
             fancyboxRef.current = null;
+
+            if (window.location.hash.startsWith(`#${FANCYBOX_HASH_PREFIX}`)) {
+              window.history.replaceState(null, '', window.location.pathname + window.location.search);
+            }
             
             // 確保在動畫結束後再觸發 onClose，避免跟其他彈窗邏輯衝突
             setTimeout(() => {
@@ -1129,6 +1197,8 @@ export default function FancyboxViewer({
     },
     [handleAfterOpen, handleAfterClose, annotationsMap, injectAnnotationPins],
   );
+
+  handlePhotoClickRef.current = handlePhotoClick;
 
   useEffect(() => {
     return () => {
@@ -1355,12 +1425,15 @@ export default function FancyboxViewer({
         }
 
         .ztmy-fb-caption-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
           margin-bottom: 12px;
           padding-bottom: 8px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .ztmy-fb-caption-header-top {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
         }
 
         .ztmy-fb-caption-header h4 {
@@ -1369,6 +1442,37 @@ export default function FancyboxViewer({
           font-weight: 700;
           margin: 0;
           letter-spacing: 0.02em;
+        }
+
+        .ztmy-fb-share-btn {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          padding: 2px 8px;
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          border-radius: 4px;
+          background: rgba(255, 255, 255, 0.1);
+          color: rgba(255, 255, 255, 0.8);
+          font-size: 11px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          flex-shrink: 0;
+        }
+
+        .ztmy-fb-share-btn:hover {
+          background: rgba(255, 255, 255, 0.2);
+          border-color: rgba(255, 255, 255, 0.5);
+          color: #fff;
+        }
+
+        .ztmy-fb-share-btn.is-copied {
+          background: rgba(34, 197, 94, 0.3);
+          border-color: rgba(34, 197, 94, 0.6);
+          color: #4ade80;
+        }
+
+        .ztmy-fb-share-btn .hn {
+          font-size: 12px;
         }
 
         .ztmy-fb-caption-rich .rich-text {

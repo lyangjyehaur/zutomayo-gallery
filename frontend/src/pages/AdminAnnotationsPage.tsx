@@ -55,9 +55,10 @@ const LANG_LABELS: Record<string, string> = {
 }
 
 const getI18nStatus = (labelI18n?: Record<string, string>) => {
-  if (!labelI18n) return { done: 0, total: SUPPORTED_LANGS.length }
-  const done = SUPPORTED_LANGS.filter((lang) => labelI18n[lang]?.trim()).length
-  return { done, total: SUPPORTED_LANGS.length }
+  if (!labelI18n) return { done: 0, total: SUPPORTED_LANGS.length - 1 }
+  const targetLangs = SUPPORTED_LANGS.filter((l) => l !== 'ja')
+  const done = targetLangs.filter((lang) => labelI18n[lang]?.trim()).length
+  return { done, total: targetLangs.length }
 }
 
 function CoordinatePicker({
@@ -337,7 +338,7 @@ function AnnotationForm({
         <div className="flex flex-col gap-2 md:col-span-2">
           <div className="text-[10px] font-black uppercase opacity-70">多語言翻譯</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {SUPPORTED_LANGS.filter((l) => l !== "zh-TW").map((lang) => (
+            {SUPPORTED_LANGS.filter((l) => l !== "zh-TW" && l !== "ja").map((lang) => (
               <div key={lang} className="flex flex-col gap-0.5">
                 <div className="text-[9px] font-mono opacity-50">{LANG_LABELS[lang]} ({lang})</div>
                 <Textarea
