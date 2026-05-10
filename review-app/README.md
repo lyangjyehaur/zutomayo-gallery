@@ -7,11 +7,11 @@
 目前它不再只是首頁殼層，而是直接承接以下工作流：
 
 - `HomePage`：審核總覽、同步進度、工作區摘要與行動端精簡入口
-- `StagingPage`：crawler 暫存清單、批次 approve / reject / restore、crawler trigger、頁內 push 詳情檢視
+- `StagingPage`：crawler 暫存清單、批次 approve / reject / restore、crawler trigger、頁內 push 詳情檢視；支援無限滾動與手動分頁兩種模式
 - `SubmissionsPage`：投稿審核、搜尋、詳情、approve、退回原因填寫
 - `FanartPage`：未整理 / 已丟棄 / 舊資料 / 已組織 / 手動解析視圖，含 assign / sync / discard / restore / parse-save
 - `RepairPage`：group repair 搜尋、推斷來源、edit / merge / unassign、reparse preview / apply（支援欄位級勾選更新）
-- `SettingsPage`：推播訂閱、通知偏好、接管邊界入口
+- `SettingsPage`：推播訂閱、通知偏好、列表模式設定（無限滾動 / 手動分頁）、接管邊界入口
 - `SettingsBoundariesPage`：集中查看各工作區接管範圍、限制與對應 API
 
 ## 能力對照
@@ -142,6 +142,7 @@ review-app/
 - 登入頁、loading、tabbar、sheet header 盡量對齊 Framework7 v9 官方寫法，例如 `LoginScreen`、`dialog.preloader(...)`、`ToolbarPane`
 - 各頁仍可保留 toast 作為即時回饋，但首次載入失敗或無資料時要顯示可見的頁面內狀態區塊
 - 工作區切換與各頁篩選條件由 `WorkspaceProvider` 寫入 localStorage，鍵值為 `ztmr-review-workspace`
+- 分頁模式設定（無限滾動啟用與否、當前頁碼）也透過同一個 context 持久化，刷新後自動恢復
 - `src/lib/moderation-boundaries.ts` 需要與 `CODE_WIKI.md`、`frontend-memory.md`、`docs-index.md`、`.trae/specs/companion-review-app/` 中的描述一起維護，避免接管邊界失真
 
 ## PWA 快取與自動更新策略
@@ -163,6 +164,7 @@ review-app/
 - `MvSheet` 相關鏈路至少要驗證 `列表或詳情 -> 關聯 / 更新關聯 -> 取消`，確認 panel 動畫、左側留白與返回狀態都正確
 - `StagingPage` 的 `詳情 -> 通過並關聯 MV/Tag` 需驗證可只選特殊標籤、不選 MV 仍能完成通過
 - `StagingPage`、`RepairPage` 的勾選清單要同時驗證 checkbox 可點、右側 `詳情` 可開、swipeout 操作不互相搶事件
+- `StagingPage` 分頁模式切換：Settings 頁開關 Toggle 後，列表模式應即時切換；手動分頁時輸入框跳頁、上一頁/下一頁按鈕應正確運作
 - `SubmissionsPage`、`FanartPage` 等詳情型列表，需確認右側 `詳情` 按鈕不會污染 router / hash 狀態
 - 若要在本機用 `localhost` 驗證登入流程，開發環境可配合 `VITE_API_ROOT=/api` 使用 `vite.config.ts` 內的 proxy 設定
 
