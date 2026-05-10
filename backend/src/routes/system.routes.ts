@@ -23,6 +23,7 @@ import { rebuildR2 } from '../controllers/r2_rebuild.js';
 import { ADMIN_PERMISSIONS } from '../constants/admin-permissions.js';
 import { requireAnyPermission, requirePermission } from '../middleware/auth.middleware.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
+import { cacheMiddleware } from '../middleware/cache.middleware.js';
 import { errorEventEmitter } from '../services/error-events.service.js';
 
 const router = Router();
@@ -61,7 +62,7 @@ const requireR2SyncAuth = (permissionCode: string) => {
 };
 
 // Public: Get system status (maintenance mode)
-router.get('/status', asyncHandler(getSystemStatus));
+router.get('/status', cacheMiddleware(60), asyncHandler(getSystemStatus));
 
 // Public: Get client geo location info
 router.get('/geo', asyncHandler(getClientGeo));

@@ -463,7 +463,7 @@ const PhotoItem = React.memo(function PhotoItem({ photo, index, onPhotoClick, de
                 className="w-full h-full object-cover relative z-10"
                 muted
                 playsInline
-                preload="metadata"
+                preload="none"
                 style={{
                   position: 'absolute',
                   inset: 0,
@@ -1131,11 +1131,13 @@ export default function FancyboxViewer({
             const host = document.createElement('div');
             host.className = 'ztmy-fb-overlay-host';
             container.appendChild(host);
-            const root = createRoot(host);
-            root.render(<FancyboxCaptionOverlay api={api} photos={currentPhotos} annotationsMap={annotationsMap} />);
-            overlayRef.current = { root, host };
-            (api as any).__ztmyOverlay = { root, host };
-            setTimeout(() => injectAnnotationPins(api, annotationsMap), 100);
+            requestAnimationFrame(() => {
+              const root = createRoot(host);
+              root.render(<FancyboxCaptionOverlay api={api} photos={currentPhotos} annotationsMap={annotationsMap} />);
+              overlayRef.current = { root, host };
+              (api as any).__ztmyOverlay = { root, host };
+            });
+            setTimeout(() => injectAnnotationPins(api, annotationsMap), 200);
           },
           'Carousel.change': (fancybox: any) => {
             setTimeout(() => injectAnnotationPins(fancybox, annotationsMap), 50);
@@ -1266,8 +1268,7 @@ export default function FancyboxViewer({
 
         .fancybox__backdrop {
           z-index: 0 !important;
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
+          background: rgba(0, 0, 0, 0.88) !important;
         }
 
         .fancybox__container.fancybox-neo-container {

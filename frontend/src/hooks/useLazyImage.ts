@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSharedObserver } from '@/hooks/useSharedObserver';
 
 interface UseLazyImageOptions {
   rootMargin?: string;
@@ -6,23 +7,21 @@ interface UseLazyImageOptions {
   triggerOnce?: boolean;
 }
 
-/**
- * 圖片懶加載 Hook
- * 使用 Intersection Observer 實現精確的懶加載控制
- */
 export function useLazyImage(options: UseLazyImageOptions = {}) {
-  const { 
-    rootMargin = '50px', 
+  const {
+    rootMargin = '50px',
     threshold = 0.01,
-    triggerOnce = true 
+    triggerOnce = true
   } = options;
-  
+
   const [shouldLoad, setShouldLoad] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isError, setIsError] = useState(false);
   const elementRef = useRef<HTMLDivElement | null>(null);
-  const observerRef = useRef<IntersectionObserver | null>(null);
   const [element, setElement] = useState<HTMLDivElement | null>(null);
+  const triggerOnceRef = useRef(triggerOnce);
+
+  const { observe, unobserve } = useSharedObserver({ rootMargin, threshold });
 
   const setRef = useCallback((node: HTMLDivElement | null) => {
     elementRef.current = node;
@@ -32,32 +31,23 @@ export function useLazyImage(options: UseLazyImageOptions = {}) {
   useEffect(() => {
     if (!element) return;
 
-    // 如果已經觸發過且設置了 triggerOnce，不再觀察
-    if (triggerOnce && shouldLoad) return;
+    if (triggerOnceRef.current && shouldLoad) return;
 
-    observerRef.current = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setShouldLoad(true);
-          if (triggerOnce) {
-            observerRef.current?.disconnect();
-          }
-        } else if (!triggerOnce) {
-          setShouldLoad(false);
+    observe(element, (entry) => {
+      if (entry.isIntersecting) {
+        setShouldLoad(true);
+        if (triggerOnceRef.current) {
+          unobserve(element);
         }
-      },
-      { 
-        rootMargin,
-        threshold,
+      } else if (!triggerOnceRef.current) {
+        setShouldLoad(false);
       }
-    );
-
-    observerRef.current.observe(element);
+    });
 
     return () => {
-      observerRef.current?.disconnect();
+      unobserve(element);
     };
-  }, [element, rootMargin, threshold, triggerOnce, shouldLoad]);
+  }, [element, observe, unobserve, shouldLoad]);
 
   const handleLoad = useCallback(() => {
     setIsLoaded(true);
@@ -70,8 +60,8 @@ export function useLazyImage(options: UseLazyImageOptions = {}) {
   }, []);
 
   return {
-    elementRef: setRef, // 回傳一個 callback ref
-    element, // 可以用來綁定其他需要實際 DOM 的 hook
+    elementRef: setRef,
+    element,
     shouldLoad,
     isLoaded,
     isError,
@@ -80,10 +70,6 @@ export function useLazyImage(options: UseLazyImageOptions = {}) {
   };
 }
 
-/**
- * 漸進式圖片加載 Hook
- * 先加載低質量預覽，再加載高清圖
- */
 export function useProgressiveImage(
   lowQualityUrl: string | undefined,
   highQualityUrl: string,
@@ -95,7 +81,6 @@ export function useProgressiveImage(
   useEffect(() => {
     if (!lazyState.shouldLoad) return;
 
-    // 預加載高清圖
     const img = new Image();
     img.src = highQualityUrl;
     img.onload = () => setHighResLoaded(true);
@@ -108,20 +93,14 @@ export function useProgressiveImage(
   };
 }
 
-/**
- * 批量圖片預加載 Hook
- * 用於預加載下一頁圖片
- */
 export function usePreloadImages(imageUrls: string[], enabled: boolean = true) {
   useEffect(() => {
     if (!enabled || imageUrls.length === 0) return;
 
-    // 使用 requestIdleCallback 在空閒時預加載
     const preload = () => {
       imageUrls.forEach((url, index) => {
-        // 限制同時預加載數量
         if (index >= 4) return;
-        
+
         const img = new Image();
         img.src = url;
       });

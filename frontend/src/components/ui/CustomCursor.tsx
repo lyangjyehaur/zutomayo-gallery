@@ -1,6 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { createPortal } from 'react-dom';
+
+const computedStyleCache = new WeakMap<Element, { value: CSSStyleDeclaration; ts: number }>();
+const CACHE_TTL = 2000;
+
+function getCachedComputedStyle(el: Element): CSSStyleDeclaration {
+  const now = Date.now();
+  const cached = computedStyleCache.get(el);
+  if (cached && now - cached.ts < CACHE_TTL) return cached.value;
+  const value = window.getComputedStyle(el);
+  computedStyleCache.set(el, { value, ts: now });
+  return value;
+}
 
 export default function CustomCursor() {
   const cursorRef = useRef<HTMLImageElement>(null);
@@ -17,15 +28,14 @@ export default function CustomCursor() {
     } else {
       document.body.classList.remove('is-admin');
     }
-    
-    // Check if the device supports hover (ignore touch devices)
+
     const isTouch = !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
     setIsTouchDevice(isTouch);
-    
+
     if (isTouch || isAdminRoute) {
       return;
     }
-    
+
     if (cursorRef.current) {
       cursorRef.current.style.opacity = '0';
     }
@@ -33,8 +43,7 @@ export default function CustomCursor() {
     let rafId: number | null = null;
     let lastX = 0;
     let lastY = 0;
-    // 不再使用 lastTarget 作為攔截條件
-    // let lastTarget: HTMLElement | null = null;
+    let lastCursorTypeTime = 0;
 
     const renderPosition = () => {
       if (cursorRef.current && !document.body.classList.contains('cursor-native')) {
@@ -44,12 +53,18 @@ export default function CustomCursor() {
       rafId = null;
     };
 
-    const updatePosition = (e: MouseEvent) => {
+    const handleMouseMove = (e: MouseEvent) => {
       lastX = e.clientX;
       lastY = e.clientY;
       if (!rafId) {
         rafId = requestAnimationFrame(renderPosition);
       }
+
+      const now = Date.now();
+      if (now - lastCursorTypeTime < 50) return;
+      lastCursorTypeTime = now;
+
+      updateCursorType(e);
     };
 
     const handleMouseLeave = () => {
@@ -84,32 +99,12 @@ export default function CustomCursor() {
       const target = e.target as HTMLElement;
       if (!target) return;
 
-      // 如果 body 已經加上 cursor-native（按下 Alt），則停止判定
       if (document.body.classList.contains('cursor-native')) return;
 
-      // Dynamic re-parenting if fancybox is open
-      // 由於 Fancybox 5 使用了特殊的容器層級或 transform，有時單純的 z-index 無法突破。
-      // 我們恢復手動將游標 appendChild 到 Fancybox 容器內的作法，以確保它永遠在最上層。
-      // 同時也要檢查是否有我們的自定義對話框 (如 AppleMusicTimeline 燈箱下載框)
-      // 注意：這一步必須放在 setState 之外，避免與 React 渲染衝突
-      if (cursorRef.current && e.type !== 'interval') {
-        const customDialog = document.getElementById('ztmy-download-dialog');
-        const fancyboxContainer = document.querySelector('.fancybox__container');
-        
-        if (customDialog && cursorRef.current.parentElement !== customDialog) {
-          customDialog.appendChild(cursorRef.current);
-        } else if (!customDialog && fancyboxContainer && cursorRef.current.parentElement !== fancyboxContainer) {
-          fancyboxContainer.appendChild(cursorRef.current);
-        } else if (!customDialog && !fancyboxContainer && cursorRef.current.parentElement !== document.body) {
-          document.body.appendChild(cursorRef.current);
-        }
-      }
-
-      // 取得瀏覽器原生賦予這個元素的樣式
-      const computedStyle = window.getComputedStyle(target);
+      const computedStyle = getCachedComputedStyle(target);
       const cursorValue = computedStyle.cursor;
 
-      const isFancyboxTarget = target.classList.contains('f-button') || 
+      const isFancyboxTarget = target.classList.contains('f-button') ||
                                target.closest('.f-button') !== null ||
                                target.classList.contains('carousel__button') ||
                                target.closest('.carousel__button') !== null ||
@@ -117,13 +112,9 @@ export default function CustomCursor() {
                                target.tagName.toLowerCase() === 'svg' && target.closest('.f-button') !== null ||
                                target.tagName.toLowerCase() === 'path' && target.closest('.f-button') !== null;
 
-      // cursorValue 通常會像是: "url(data:image/gif;...), pointer" 或 "text"
-      // 我們需要解析出最後面的那個關鍵字（例如 pointer, text, help）
       const cursorParts = cursorValue.split(',');
       const actualCursor = cursorParts[cursorParts.length - 1].trim();
 
-      // 優化：避免 React 重複渲染，同時解決 stale closure (過期閉包) 導致的狀態卡死問題
-      // 【終極效能方案】：完全放棄 useState 驅動，改用 ref 直接操作 DOM 替換 src
       const setTypeIfDifferent = (newType: string) => {
         if (cursorTypeRef.current !== newType) {
           cursorTypeRef.current = newType;
@@ -133,14 +124,12 @@ export default function CustomCursor() {
         }
       };
 
-      // 檢查是否是在 Waline 評論區內 (Waline 內部使用了很多自定義元素，有些可能沒有顯式聲明 cursor)
       const isWalineTarget = target.closest('.wl-editor') || target.closest('.wl-panel');
       const isWalineButton = target.closest('.wl-btn') || target.closest('.wl-action') || target.closest('.wl-reaction-item') || target.closest('.wl-like') || target.closest('.wl-reply') || target.closest('.wl-edit') || target.closest('.wl-emoji') || target.closest('.wl-tab');
 
-      // 檢查 Fancybox 的抓取狀態
-      const isFancyboxGrab = target.classList.contains('is-grab') || 
-                             target.closest('.is-grab') !== null || 
-                             target.classList.contains('is-grabbing') || 
+      const isFancyboxGrab = target.classList.contains('is-grab') ||
+                             target.closest('.is-grab') !== null ||
+                             target.classList.contains('is-grabbing') ||
                              target.closest('.is-grabbing') !== null ||
                              target.classList.contains('has-panzoom') ||
                              target.closest('.has-panzoom') !== null ||
@@ -148,36 +137,40 @@ export default function CustomCursor() {
                              target.closest('.fancybox__content') !== null ||
                              target.tagName.toLowerCase() === 'img' && target.closest('.fancybox__slide') !== null;
 
-      const isUnderFancybox = target.closest('.fancybox__container') !== null || 
+      const isUnderFancybox = target.closest('.fancybox__container') !== null ||
                               target.classList.contains('fancybox__container') ||
                               document.querySelector('.fancybox__container') !== null;
 
-      // 檢查是否是一般的互動元素 (即使它們沒有顯式設置 cursor: pointer)
-      const isInteractiveElement = 
-        target.tagName.toLowerCase() === 'a' || 
+      const isInteractiveElement =
+        target.tagName.toLowerCase() === 'a' ||
         target.closest('a') !== null ||
-        target.tagName.toLowerCase() === 'button' || 
+        target.tagName.toLowerCase() === 'button' ||
         target.closest('button') !== null ||
         target.getAttribute('role') === 'button' ||
         target.closest('[role="button"]') !== null;
 
-      // 大部分普通的 div/span/p 都是 auto，直接返回 Normal 可以省下 90% 的判斷時間
-      // 注意：我們必須確保它不是任何需要特殊處理的元素（如 Waline, Fancybox, input, textarea 等）
-      // 使用 isContentEditable 來判斷那些被設定為可以編輯的 div (例如 Waline 編輯器)
       if (actualCursor === 'auto' && !isWalineTarget && !isWalineButton && !isFancyboxTarget && !isFancyboxGrab && !isUnderFancybox && !isInteractiveElement && target.tagName.toLowerCase() !== 'input' && target.tagName.toLowerCase() !== 'textarea' && !target.isContentEditable) {
-        // 如果有 title 還是要顯示 Help
         if (target.hasAttribute('title') || target.closest('[title]')) {
           setTypeIfDifferent('Help');
           return;
         }
-        
+
+        setTypeIfDifferent('Normal');
+        return;
+      }
+
+      if (actualCursor === 'default' && !isWalineTarget && !isWalineButton && !isFancyboxTarget && !isFancyboxGrab && !isUnderFancybox && !isInteractiveElement && target.tagName.toLowerCase() !== 'input' && target.tagName.toLowerCase() !== 'textarea' && !target.isContentEditable) {
+        if (target.hasAttribute('title') || target.closest('[title]')) {
+          setTypeIfDifferent('Help');
+          return;
+        }
+
         setTypeIfDifferent('Normal');
         return;
       }
 
       const isAnnotationTarget = target.closest('[data-annotation]') !== null;
 
-      // 優先處理 Move (抓取) 及 Resize
       if (actualCursor === 'nwse-resize' || actualCursor === 'nw-resize' || actualCursor === 'se-resize') {
         setTypeIfDifferent('Diagonal1');
       } else if (actualCursor === 'nesw-resize' || actualCursor === 'ne-resize' || actualCursor === 'sw-resize') {
@@ -195,9 +188,9 @@ export default function CustomCursor() {
       } else if (actualCursor === 'pointer' || isInteractiveElement || isWalineButton || isFancyboxTarget) {
         setTypeIfDifferent('Link');
       } else if (actualCursor === 'alias') {
-        setTypeIfDifferent('Alternate'); // 或者如果你有專門的捷徑指標
+        setTypeIfDifferent('Alternate');
       } else if (actualCursor === 'context-menu') {
-        setTypeIfDifferent('Person'); // 或者其他的
+        setTypeIfDifferent('Person');
       } else if (actualCursor === 'text' || actualCursor === 'vertical-text' || target.tagName.toLowerCase() === 'input' || target.tagName.toLowerCase() === 'textarea' || target.isContentEditable || (isWalineTarget && !isWalineButton)) {
         setTypeIfDifferent('Text');
       } else if (actualCursor === 'wait' || actualCursor === 'progress' || target.closest('[aria-busy="true"]') || target.closest('.is-loading') || target.classList.contains('is-loading')) {
@@ -213,14 +206,11 @@ export default function CustomCursor() {
       } else if (actualCursor === 'not-allowed') {
         setTypeIfDifferent('Unavailable');
       } else {
-        // 如果在 Fancybox 中且沒有命中上述特定的指標，而且是 auto 的話，為了保證指針不消失，先預設給 Normal
-        // 但排除互動元素，因為互動元素應該要是 Link
         if (isUnderFancybox && actualCursor === 'auto' && !isFancyboxTarget && !isInteractiveElement) {
           setTypeIfDifferent('Normal');
           return;
         }
 
-        // 如果上面都沒命中，但它有 title 或 disabled 屬性，我們手動補位
         if (target.hasAttribute('disabled') || target.closest('[disabled]')) {
           setTypeIfDifferent('Unavailable');
         } else if (target.tagName.toLowerCase() === 'a' || target.tagName.toLowerCase() === 'button' || target.closest('a') || target.closest('button')) {
@@ -235,11 +225,28 @@ export default function CustomCursor() {
       }
     };
 
-    window.addEventListener('mousemove', updatePosition, { capture: true, passive: true });
-    // 使用 mousemove 觸發更新
-    window.addEventListener('mousemove', updateCursorType, { capture: true, passive: true });
+    const reparentCursor = () => {
+      if (!cursorRef.current) return;
+      const customDialog = document.getElementById('ztmy-download-dialog');
+      const fancyboxContainer = document.querySelector('.fancybox__container');
+      const cursor = cursorRef.current;
+
+      if (customDialog && cursor.parentElement !== customDialog) {
+        customDialog.appendChild(cursor);
+      } else if (!customDialog && fancyboxContainer && cursor.parentElement !== fancyboxContainer) {
+        fancyboxContainer.appendChild(cursor);
+      } else if (!customDialog && !fancyboxContainer && cursor.parentElement !== document.body) {
+        document.body.appendChild(cursor);
+      }
+    };
+
+    const mutationObserver = new MutationObserver(() => {
+      reparentCursor();
+    });
+    mutationObserver.observe(document.body, { childList: true, subtree: true });
+
+    window.addEventListener('mousemove', handleMouseMove, { capture: true, passive: true });
     window.addEventListener('mouseleave', handleMouseLeave);
-    // Also update on mouse down/up in case cursor changes
     window.addEventListener('mousedown', updateCursorType, { capture: true });
     window.addEventListener('mouseup', updateCursorType, { capture: true });
     window.addEventListener('keydown', handleKeyDown, { capture: true });
@@ -247,16 +254,16 @@ export default function CustomCursor() {
 
     return () => {
       disableNativeCursor();
+      mutationObserver.disconnect();
       if (rafId) cancelAnimationFrame(rafId);
-      
-      window.removeEventListener('mousemove', updatePosition, { capture: true });
-      window.removeEventListener('mousemove', updateCursorType, { capture: true });
+
+      window.removeEventListener('mousemove', handleMouseMove, { capture: true });
       window.removeEventListener('mouseleave', handleMouseLeave);
       window.removeEventListener('mousedown', updateCursorType, { capture: true });
       window.removeEventListener('mouseup', updateCursorType, { capture: true });
       window.removeEventListener('keydown', handleKeyDown, { capture: true });
       window.removeEventListener('keyup', handleKeyUp, { capture: true });
-      
+
     };
   }, [isAdminRoute]);
 
@@ -271,19 +278,15 @@ export default function CustomCursor() {
       style={{
         width: '32px',
         height: '32px',
-        zIndex: 2147483647, // Maximum possible z-index
+        zIndex: 2147483647,
         position: 'fixed',
         top: 0,
         left: 0,
-        // Instead of setting display: none here (which gets reset on re-render),
-        // we'll rely on a CSS class or let JS set it.
-        imageRendering: 'pixelated' // Preserve sharp edges for low-res pixel art cursors
+        imageRendering: 'pixelated'
       }}
       onError={(e) => {
-        // Fallback to gif/png if apng is missing or fails
         const img = e.target as HTMLImageElement;
         if (img.src.endsWith('.apng')) {
-          // Check if it's Person or Pin which are static .png
           if (img.src.includes('Person') || img.src.includes('Pin')) {
             img.src = img.src.replace('.apng', '.png');
           } else {
@@ -294,4 +297,3 @@ export default function CustomCursor() {
     />
   );
 }
-

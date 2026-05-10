@@ -28,6 +28,17 @@ export function useAnimationPause({
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
+  useEffect(() => {
+    if (isTabActive) {
+      document.body.classList.remove('tab-hidden');
+    } else {
+      document.body.classList.add('tab-hidden');
+    }
+    return () => {
+      document.body.classList.remove('tab-hidden');
+    };
+  }, [isTabActive]);
+
   const isGlobalPaused =
     !!selectedMvId ||
     !!selectedIllustratorId ||

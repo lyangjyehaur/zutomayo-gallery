@@ -8,13 +8,16 @@ import { logger } from '../utils/logger.js';
 
 // 運行時數據緩存，支持熱更新
 let runtimeData: MVItem[] | null = null;
+let runtimeDataMap: Map<string, MVItem> | null = null;
 const getRuntimeData = async (): Promise<MVItem[]> => {
   if (!runtimeData) {
     try {
       runtimeData = await getMVsFromDB();
+      runtimeDataMap = new Map(runtimeData.map(mv => [mv.id, mv]));
     } catch (e) {
       logger.error({ err: e }, 'Failed to read from DB, returning empty array');
       runtimeData = [];
+      runtimeDataMap = new Map();
     }
   }
   return runtimeData || [];
@@ -35,6 +38,7 @@ export interface UpdateResult {
 export class MVService {
   clearCache(): void {
     runtimeData = null;
+    runtimeDataMap = null;
   }
 
   async getAllMVs(filters: {
@@ -44,7 +48,7 @@ export class MVService {
     artist?: string;
     sort?: 'asc' | 'desc';
   }): Promise<MVItem[]> {
-    let data = [...await getRuntimeData()];
+    let data = await getRuntimeData();
 
     if (filters.search) {
       try {
@@ -87,14 +91,15 @@ export class MVService {
 
     // 只有在沒有使用搜尋（即沒有 Meilisearch 相關度排序）時，才套用預設排序
     if (!filters.search) {
-      if (filters.sort === 'desc') return data.reverse();
+      if (filters.sort === 'desc') return [...data].reverse();
     }
     
     return data;
   }
 
   async getMVById(id: string): Promise<MVItem | undefined> {
-    return (await getRuntimeData()).find(mv => mv.id === id);
+    await getRuntimeData();
+    return runtimeDataMap?.get(id);
   }
 
   // 預留未來對接資料庫：此處目前操作文件，未來只需改為 DB Query
@@ -168,6 +173,7 @@ export class MVService {
 
     // 更新成功後，更新運行時緩存
     runtimeData = finalData;
+    runtimeDataMap = new Map(finalData.map(mv => [mv.id, mv]));
     
     // 背景同步至 Meilisearch (不阻塞 API 回應)
     syncDataToMeili().catch(err => {

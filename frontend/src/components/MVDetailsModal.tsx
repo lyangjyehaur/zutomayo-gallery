@@ -853,14 +853,14 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata, view
                               .map(img => img.url) || [] // 移除 getProxyImgUrl，交由 CoverCarousel 內部處理
                           } 
                           title={mv?.title || ''} 
-                          isPaused={isLightboxOpen} 
+                          isPaused={true} 
                           forceLoad={true} 
                           hideCrt={true} 
                           mode="sd"
                         />
                       </div>
                       <div className={`absolute inset-0 transition-colors z-10 ${videoPlatform === 'youtube' && isChinaIP ? 'bg-black/60' : 'bg-black/40 group-hover:bg-black/20'}`} />
-                      <div className="absolute inset-0 opacity-20 pointer-events-none crt-lines z-15"></div>
+                      <div className="absolute inset-0 pointer-events-none z-15" style={{ background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px)' }}></div>
                       
                       <div className="relative z-40 flex flex-col items-center gap-6">
                         {/* 播放按鈕 - 背景模糊、無陰影、無懸浮位移 */}
@@ -969,14 +969,14 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata, view
                       </TabsList>
                     )}
                   </div>
-                  <TabsContent value="desc" className="flex-1 min-h-0 m-0 border-0 p-0 shadow-none outline-none">
+                  <TabsContent value="desc" className="flex flex-col flex-1 min-h-0 m-0 border-0 p-0 shadow-none outline-none">
                     <ScrollArea className="flex-1 min-h-0 custom-scrollbar w-full">
                       <div className="p-4 min-[430px]:p-8 pt-4 min-[430px]:pt-6">
                         <p className="text-xs min-[430px]:text-sm leading-relaxed whitespace-pre-wrap opacity-90 font-base" lang="ja">{mv?.description}</p>
                       </div>
                     </ScrollArea>
                   </TabsContent>
-                  <TabsContent value="creators" className="flex-1 min-h-0 m-0 border-0 p-0 shadow-none outline-none">
+                  <TabsContent value="creators" className="flex flex-col flex-1 min-h-0 m-0 border-0 p-0 shadow-none outline-none">
                     <ScrollArea className="flex-1 min-h-0 custom-scrollbar w-full">
                       <div className="p-4 min-[430px]:p-8 pt-4 min-[430px]:pt-6 flex flex-col gap-3">
                         {creators.map((c) => (

@@ -886,7 +886,7 @@ export default function RootApp() {
   const { data: systemStatus, mutate: mutateSystemStatus } = useSWR<{ maintenance: boolean; type?: 'data' | 'ui'; eta?: string | null; buildTime?: string | null }>(
     `${getSystemApiBase()}/status`,
     fetcher,
-    { revalidateOnFocus: true }
+    { revalidateOnFocus: false, dedupingInterval: 60000 }
   );
 
   const location = useLocation();

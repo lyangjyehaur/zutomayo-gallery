@@ -315,6 +315,26 @@ body.is-admin .border-l-4 {
       cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), crosshair !important;
     }
 
+    body:not(.is-admin):not(.cursor-native) .cursor-default {
+      cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), default !important;
+    }
+
+    body:not(.is-admin):not(.cursor-native) .cursor-grab {
+      cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), grab !important;
+    }
+
+    body:not(.is-admin):not(.cursor-native) .cursor-grabbing {
+      cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), grabbing !important;
+    }
+
+    body:not(.is-admin):not(.cursor-native) .cursor-zoom-in {
+      cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), zoom-in !important;
+    }
+
+    body:not(.is-admin):not(.cursor-native) .cursor-zoom-out {
+      cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), zoom-out !important;
+    }
+
     /* 針對那些沒有標準對應的，我們保留自定義類名以供 JS 識別 */
     body:not(.is-admin):not(.cursor-native) .pin-cursor, body:not(.is-admin):not(.cursor-native) .handwriting-cursor {
       cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), auto !important;
@@ -1745,12 +1765,7 @@ body.cursor-native * {
   align-items: center !important;
   position: relative !important;
   overflow: visible !important; /* Allow pseudo-elements to show */
-  background-color: color-mix(in srgb, var(--secondary-background) 85%, transparent) !important; /* 提高不透明度，讓顏色更深更實 */
-  backdrop-filter: blur(12px) !important; /* 加強毛玻璃效果 */
-  -webkit-backdrop-filter: blur(12px) !important;
-  transform: translate3d(0, 0, 0) !important; /* 強制開啟 GPU 渲染以修復 Windows Chrome 的 blur 錯誤 */
-  -webkit-backface-visibility: hidden; /* 強制硬體加速 */
-  backface-visibility: hidden;
+  background-color: color-mix(in srgb, var(--secondary-background) 95%, transparent) !important;
   color: #FFFFFF !important; /* 預設圖標：白色 */
 }
 
@@ -1776,12 +1791,7 @@ body.cursor-native * {
   font-weight: bold;
   font-size: 16px;
   color: #FFFFFF; /* 計數器文字預設白色 */
-  background-color: color-mix(in srgb, var(--secondary-background) 85%, transparent) !important; /* 提高不透明度，讓顏色更深更實 */
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  transform: translate3d(0, 0, 0) !important;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
+  background-color: color-mix(in srgb, var(--secondary-background) 95%, transparent) !important;
   margin-right: -3px !important; /* 補償更粗的邊框重疊 */
 }
 
@@ -1963,3 +1973,10 @@ body.cursor-native * {
   border-radius: 0px !important;
 }
 body { overflow-x: hidden; }
+
+.tab-hidden .crt-lines::before,
+.tab-hidden .crt-lines::after,
+.tab-hidden .crt-lines-global::before,
+.tab-hidden .crt-lines-global::after {
+  animation-play-state: paused !important;
+}

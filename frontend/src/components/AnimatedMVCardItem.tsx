@@ -2,6 +2,7 @@ import { memo, useRef, useState, useEffect, useCallback } from "react";
 import { MVItem } from "@/lib/types";
 import { MVCard } from "@/components/MVCard";
 import { useLazyImage } from "@/hooks/useLazyImage";
+import { useSharedObserver } from "@/hooks/useSharedObserver";
 
 export const AnimatedMVCardItem = memo(function AnimatedMVCardItem({
   mv,
@@ -26,16 +27,14 @@ export const AnimatedMVCardItem = memo(function AnimatedMVCardItem({
   });
 
   const [isInView, setIsInView] = useState(true);
+  const { observe, unobserve } = useSharedObserver({ threshold: 0 });
 
   useEffect(() => {
-    if (!containerRef.current) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setIsInView(entry.isIntersecting),
-      { threshold: 0 },
-    );
-    observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, []);
+    const el = containerRef.current;
+    if (!el) return;
+    observe(el, (entry) => setIsInView(entry.isIntersecting));
+    return () => unobserve(el);
+  }, [observe, unobserve]);
 
   const isEffectivelyPaused = isPaused || !isInView;
 

@@ -7,7 +7,7 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 
 const router = Router();
 
-router.get('/metadata', asyncHandler(getMetadata));
+router.get('/metadata', cacheMiddleware(300), asyncHandler(getMetadata));
 router.post('/metadata', requirePermission(ADMIN_PERMISSIONS.MVS), asyncHandler(updateMetadata));
 
 router.get('/', cacheMiddleware(300), asyncHandler(getMVs)); // 5分鐘快取
