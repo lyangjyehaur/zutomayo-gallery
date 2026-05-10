@@ -28,34 +28,45 @@ const readStoredState = (): WorkspaceState => {
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) return DEFAULT_STATE
 
-    const parsed = JSON.parse(raw) as Partial<WorkspaceState>
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(raw)
+    } catch {
+      return DEFAULT_STATE
+    }
+
+    if (parsed == null || typeof parsed !== 'object') {
+      return DEFAULT_STATE
+    }
+
+    const state = parsed as Partial<WorkspaceState>
     return {
-      activeWorkspace: parsed.activeWorkspace || DEFAULT_STATE.activeWorkspace,
+      activeWorkspace: state.activeWorkspace || DEFAULT_STATE.activeWorkspace,
       recentWorkspaces:
-        parsed.recentWorkspaces && parsed.recentWorkspaces.length > 0
-          ? parsed.recentWorkspaces.slice(0, 6)
+        Array.isArray(state.recentWorkspaces) && state.recentWorkspaces.length > 0
+          ? state.recentWorkspaces.slice(0, 6)
           : DEFAULT_STATE.recentWorkspaces,
       filters: {
         staging: {
           ...DEFAULT_STATE.filters.staging,
-          ...parsed.filters?.staging,
+          ...((state.filters?.staging as object) || {}),
         },
         submissions: {
           ...DEFAULT_STATE.filters.submissions,
-          ...parsed.filters?.submissions,
+          ...((state.filters?.submissions as object) || {}),
         },
         fanart: {
           ...DEFAULT_STATE.filters.fanart,
-          ...parsed.filters?.fanart,
+          ...((state.filters?.fanart as object) || {}),
         },
         repair: {
           ...DEFAULT_STATE.filters.repair,
-          ...parsed.filters?.repair,
+          ...((state.filters?.repair as object) || {}),
         },
       },
       pagination: {
         ...DEFAULT_STATE.pagination,
-        ...parsed.pagination,
+        ...((state.pagination as object) || {}),
       },
     }
   } catch {
