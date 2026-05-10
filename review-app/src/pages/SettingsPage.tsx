@@ -17,7 +17,7 @@ const DEFAULT_PREFS: NotificationPreferences = {
 
 export default function SettingsPage() {
   const { user, logout, setUser } = useAuth()
-  const { visitWorkspace } = useWorkspace()
+  const { visitWorkspace, pagination, setPagination } = useWorkspace()
   const push = usePushSubscription()
   const prefs: NotificationPreferences = user?.notification_preferences || DEFAULT_PREFS
 
@@ -109,6 +109,13 @@ export default function SettingsPage() {
         </ListItem>
         <ListItem title="爬蟲完成">
           <Toggle slot="after" checked={prefs.crawler} onToggleChange={(checked: boolean) => handleTogglePref('crawler', checked)} />
+        </ListItem>
+      </List>
+
+      <BlockTitle>列表模式</BlockTitle>
+      <List inset strong>
+        <ListItem title="無限滾動載入" subtitle="開啟後往下滑動自動載入更多，關閉則使用手動分頁">
+          <Toggle slot="after" checked={pagination.infiniteLoading} onToggleChange={(checked: boolean) => setPagination({ infiniteLoading: checked })} />
         </ListItem>
       </List>
 

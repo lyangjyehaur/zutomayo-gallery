@@ -13,10 +13,16 @@ export interface WorkspaceFilters {
   repair: { onlyInferable: boolean; query: string; showAll: boolean }
 }
 
+export interface PaginationState {
+  infiniteLoading: boolean
+  currentPage: number
+}
+
 export interface WorkspaceState {
   activeWorkspace: WorkspaceKey
   recentWorkspaces: WorkspaceKey[]
   filters: WorkspaceFilters
+  pagination: PaginationState
 }
 
 export interface WorkspaceContextValue extends WorkspaceState {
@@ -25,6 +31,7 @@ export interface WorkspaceContextValue extends WorkspaceState {
   setSubmissionFilter: (filter: Partial<WorkspaceFilters['submissions']>) => void
   setFanartFilter: (filter: Partial<WorkspaceFilters['fanart']>) => void
   setRepairFilter: (filter: Partial<WorkspaceFilters['repair']>) => void
+  setPagination: (state: Partial<PaginationState>) => void
 }
 
 export const WorkspaceContext = createContext<WorkspaceContextValue | null>(null)

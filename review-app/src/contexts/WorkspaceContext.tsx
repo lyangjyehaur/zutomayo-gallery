@@ -13,6 +13,10 @@ const DEFAULT_STATE: WorkspaceState = {
     fanart: { view: 'unorganized', query: '', focus: '', focusKind: 'tag' },
     repair: { onlyInferable: false, query: '', showAll: false },
   },
+  pagination: {
+    infiniteLoading: false,
+    currentPage: 1,
+  },
 }
 
 const readStoredState = (): WorkspaceState => {
@@ -48,6 +52,10 @@ const readStoredState = (): WorkspaceState => {
           ...DEFAULT_STATE.filters.repair,
           ...parsed.filters?.repair,
         },
+      },
+      pagination: {
+        ...DEFAULT_STATE.pagination,
+        ...parsed.pagination,
       },
     }
   } catch {
@@ -125,6 +133,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }))
   }, [])
 
+  const setPagination = useCallback((pagination: Partial<import('./WorkspaceContext').PaginationState>) => {
+    setState((prev) => ({
+      ...prev,
+      pagination: {
+        ...prev.pagination,
+        ...pagination,
+      },
+    }))
+  }, [])
+
   const value = useMemo<WorkspaceContextValue>(() => ({
     ...state,
     visitWorkspace,
@@ -132,7 +150,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setSubmissionFilter,
     setFanartFilter,
     setRepairFilter,
-  }), [setFanartFilter, setRepairFilter, setStagingFilter, setSubmissionFilter, state, visitWorkspace])
+    setPagination,
+  }), [setFanartFilter, setRepairFilter, setPagination, setStagingFilter, setSubmissionFilter, state, visitWorkspace])
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>
 }

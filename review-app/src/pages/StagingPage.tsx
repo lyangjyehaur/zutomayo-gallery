@@ -106,7 +106,7 @@ interface StagingPageProps {
 }
 
 export default function StagingPage({ f7router }: StagingPageProps) {
-  const { filters, setStagingFilter, visitWorkspace } = useWorkspace()
+  const { filters, setStagingFilter, visitWorkspace, pagination, setPagination } = useWorkspace()
   const [status, setStatus] = useState<StagingStatus>(filters.staging.status)
   const [query, setQuery] = useState(filters.staging.query)
   const [items, setItems] = useState<StagingFanart[]>([])
@@ -125,6 +125,8 @@ export default function StagingPage({ f7router }: StagingPageProps) {
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set())
   const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null)
   const [isSticky, setIsSticky] = useState(false)
+  const [totalPages, setTotalPages] = useState(1)
+  const [pageInputValue, setPageInputValue] = useState(String(pagination.currentPage))
   const batchBlockRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const [crawlerForm, setCrawlerForm] = useState(() => ({
@@ -132,7 +134,7 @@ export default function StagingPage({ f7router }: StagingPageProps) {
     ...createDefaultCrawlerRange(),
     maxItems: '1000',
   }))
-  const pageRef = useRef(1)
+  const pageRef = useRef(pagination.currentPage)
   const allowInfinite = useRef(true)
 
   const loadProgress = useCallback(async (silent = false) => {
@@ -172,8 +174,9 @@ export default function StagingPage({ f7router }: StagingPageProps) {
       const newItems = Array.isArray(response.data) ? response.data : []
       setItems((prev) => (reset ? newItems : [...prev, ...newItems]))
 
-      const totalPages = Number(response.meta?.totalPages || 0)
-      const nextHasMore = totalPages > 0 ? pageNum < totalPages : newItems.length >= PAGE_SIZE
+      const total = Number(response.meta?.totalPages || 0)
+      setTotalPages(total)
+      const nextHasMore = total > 0 ? pageNum < total : newItems.length >= PAGE_SIZE
       setHasMore(nextHasMore)
       allowInfinite.current = nextHasMore
     } catch {
@@ -188,7 +191,9 @@ export default function StagingPage({ f7router }: StagingPageProps) {
     pageRef.current = 1
     allowInfinite.current = true
     setHasMore(true)
-  }, [])
+    setPagination({ currentPage: 1 })
+    setPageInputValue('1')
+  }, [setPagination])
 
   const reloadCurrentStatus = useCallback(async () => {
     resetPagination()
@@ -287,7 +292,7 @@ export default function StagingPage({ f7router }: StagingPageProps) {
     setItems([])
     setStatus(nextStatus)
     setStagingFilter({ status: nextStatus })
-    void loadItems(nextStatus, 1, true)
+    void loadItems(nextStatus, pagination.currentPage, true)
     void loadProgress(true)
   }
 
@@ -307,25 +312,39 @@ export default function StagingPage({ f7router }: StagingPageProps) {
       setQuery(filters.staging.query)
     }
 
+    pageRef.current = pagination.currentPage
+    setPageInputValue(String(pagination.currentPage))
+
     if (filters.staging.status !== status) {
       resetPagination()
       setSelection(new Set())
       setItems([])
       setStatus(filters.staging.status)
-      void loadItems(filters.staging.status, 1, true)
+      void loadItems(filters.staging.status, pagination.currentPage, true)
       return
     }
 
     if (loading || items.length > 0) return
     resetPagination()
-    void loadItems(status, 1, true)
+    void loadItems(status, pagination.currentPage, true)
   }
 
   const handleInfinite = () => {
-    if (!allowInfinite.current || loading) return
+    if (!allowInfinite.current || loading || !pagination.infiniteLoading) return
     const nextPage = pageRef.current + 1
     pageRef.current = nextPage
+    setPagination({ currentPage: nextPage })
+    setPageInputValue(String(nextPage))
     void loadItems(status, nextPage)
+  }
+
+  const handleManualPageChange = (pageNum: number) => {
+    const targetPage = Math.max(1, Math.min(pageNum, totalPages))
+    if (targetPage === pageRef.current || loading) return
+    pageRef.current = targetPage
+    setPagination({ currentPage: targetPage })
+    setPageInputValue(String(targetPage))
+    void loadItems(status, targetPage, true)
   }
 
   const toggleSelection = (id: string, checked: boolean) => {
@@ -543,7 +562,7 @@ export default function StagingPage({ f7router }: StagingPageProps) {
   return (
     <Page
       ptr
-      infinite
+      infinite={pagination.infiniteLoading}
       infinitePreloader={false}
       infiniteDistance={50}
       onPtrRefresh={handleRefresh}
@@ -602,7 +621,39 @@ export default function StagingPage({ f7router }: StagingPageProps) {
         )}
         summary={(
           <>
-            搜尋只會篩目前已載入項目；下拉可刷新，往下滑可繼續載入更多資料。
+            {pagination.infiniteLoading ? (
+              <>搜尋只會篩目前已載入項目；下拉可刷新，往下滑可繼續載入更多資料。</>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span>手動分頁模式：</span>
+                <Button small outline onClick={() => handleManualPageChange(pageRef.current - 1)} disabled={pageRef.current <= 1 || loading}>上一頁</Button>
+                <input
+                  type="number"
+                  min={1}
+                  max={totalPages}
+                  value={pageInputValue}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setPageInputValue(val)
+                    const num = parseInt(val, 10)
+                    if (Number.isFinite(num) && num >= 1 && num <= totalPages) {
+                      handleManualPageChange(num)
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const num = parseInt(pageInputValue, 10)
+                      if (Number.isFinite(num)) {
+                        handleManualPageChange(num)
+                      }
+                    }
+                  }}
+                  style={{ width: 60, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--f7-border-color)', textAlign: 'center' }}
+                />
+                <span>/ {totalPages}</span>
+                <Button small outline onClick={() => handleManualPageChange(pageRef.current + 1)} disabled={pageRef.current >= totalPages || loading}>下一頁</Button>
+              </div>
+            )}
             <div style={{ marginTop: 10 }}>
               <div>目前狀態 {status}</div>
               <div>顯示 {filteredItems.length}</div>
