@@ -6,12 +6,6 @@ const DEV_ORIGINS = [
   'http://localhost:3000',
 ]
 
-const PROD_DEFAULT_ORIGINS = [
-  'https://gallery.ztmr.club',
-  'https://review.ztmy.art',
-  'https://review.ztmr.club',
-]
-
 const getAllowedOrigins = (): string[] => {
   const origins: string[] = []
 
@@ -21,8 +15,6 @@ const getAllowedOrigins = (): string[] => {
 
   if (process.env.NODE_ENV !== 'production') {
     origins.push(...DEV_ORIGINS)
-  } else {
-    origins.push(...PROD_DEFAULT_ORIGINS)
   }
 
   return [...new Set(origins)]
