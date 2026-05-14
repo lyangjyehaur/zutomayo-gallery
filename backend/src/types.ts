@@ -52,6 +52,7 @@ export interface MVItem {
   youtube: string;
   bilibili: string;
   description: string;
+  heroVideo: string;
   creators: MVCreator[];
   albums: MVAlbum[];
   keywords: MVKeyword[];

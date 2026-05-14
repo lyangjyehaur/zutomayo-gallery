@@ -84,6 +84,8 @@ export async function getMVsFromDB(): Promise<MVItem[]> {
     if (mv.twitter_video_url) mv.twitter_video_url = formatMediaUrl(mv.twitter_video_url);
     if (mv.youtube_cover_url) mv.youtube_cover_url = formatMediaUrl(mv.youtube_cover_url);
 
+    mv.heroVideo = mv.hero_video_url || '';
+
     return mv as MVItem;
   });
 }
@@ -164,6 +166,7 @@ export async function saveMVsToDB(mvs: MVItem[], transaction?: any): Promise<voi
         youtube: mv.youtube || '',
         bilibili: mv.bilibili || '',
         description: mv.description || '',
+        hero_video_url: mv.heroVideo || null,
       }, { transaction: t });
 
       // 2. 清除舊關聯

@@ -64,7 +64,8 @@ export interface MVItem {
   youtube: string;
   bilibili: string;
   description: string;
-  autoLoadMore?: boolean; // 是否開啟自動載入下一頁 (前台用)
+  heroVideo: string;
+  autoLoadMore?: boolean;
   creators: MVCreator[];
   albums: MVAlbum[];
   keywords: MVKeyword[];

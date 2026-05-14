@@ -18,6 +18,7 @@
 | `youtube` | `VARCHAR(255)` | `NULL` | YouTube 影片 ID |
 | `bilibili` | `VARCHAR(255)` | `NULL` | Bilibili 影片 ID (BV 號) |
 | `description`| `TEXT` | `NULL` | 影片說明或備註 |
+| `hero_video_url`| `TEXT` | `NULL` | Hero Video 影片網址 (R2 或外部 URL) |
 | `created_at` | `TIMESTAMP` | | 建立時間 |
 | `updated_at` | `TIMESTAMP` | | 更新時間 |
 

@@ -6,25 +6,25 @@ import { MVItem } from "@/lib/types"
 const mockMVData: MVItem[] = [
   {
     id: "1", title: "MV Alpha", year: "2024", date: "2024-01-15",
-    youtube: "", bilibili: "", description: "Desc Alpha",
+    youtube: "", bilibili: "", description: "Desc Alpha", heroVideo: "",
     creators: [{ name: "Artist A" }], albums: [{ name: "Album X" }],
     keywords: [], images: [],
   },
   {
     id: "2", title: "MV Beta", year: "2023", date: "2023-06-20",
-    youtube: "", bilibili: "", description: "Desc Beta",
+    youtube: "", bilibili: "", description: "Desc Beta", heroVideo: "",
     creators: [{ name: "Artist B" }], albums: [{ name: "Album Y" }],
     keywords: [], images: [],
   },
   {
     id: "3", title: "MV Gamma", year: "2024", date: "2024-03-10",
-    youtube: "", bilibili: "", description: "Desc Gamma",
+    youtube: "", bilibili: "", description: "Desc Gamma", heroVideo: "",
     creators: [{ name: "Artist A" }], albums: [{ name: "Album X" }],
     keywords: [], images: [],
   },
   {
     id: "4", title: "MV Delta", year: "2022", date: "2022-12-01",
-    youtube: "", bilibili: "", description: "Desc Delta",
+    youtube: "", bilibili: "", description: "Desc Delta", heroVideo: "",
     creators: [{ name: "Artist C" }], albums: [{ name: "Album Z" }],
     keywords: [], images: [],
   },

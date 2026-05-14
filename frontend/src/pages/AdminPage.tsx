@@ -1712,6 +1712,7 @@ export function AdminPage() {
       youtube: "",
       bilibili: "",
       description: "",
+      heroVideo: "",
       images: [],
       creators: [{ name: "Waboku" }],
       albums: [],
@@ -2124,6 +2125,122 @@ export function AdminPage() {
                     onChange={(e) => updateField('bilibili', e.target.value)} 
                     className={getErrorClass(currentMV.bilibili)}
                   />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-xs font-bold uppercase flex items-start gap-2">
+                    <i className="hn hn-youtube-play text-base mr-2" />
+                    <span className="flex flex-col leading-tight">
+                      <span className="opacity-70">Hero Video 網址</span>
+                      <span className="text-[10px] font-mono opacity-40 normal-case">Hero Video URL (R2 或外部 URL)</span>
+                    </span>
+                  </label>
+                  <div className="space-y-3">
+                    <Input 
+                      value={currentMV.heroVideo || ''} 
+                      onChange={(e) => updateField('heroVideo', e.target.value)} 
+                      placeholder="https://r2.dan.tw/hero-videos/..."
+                      className="font-sans"
+                    />
+                    {currentMV.heroVideo && (
+                      <div className="space-y-2 border-2 border-black/10 p-3 bg-black/5">
+                        <div className="text-xs font-bold opacity-60">影片預覽</div>
+                        <video 
+                          src={currentMV.heroVideo} 
+                          controls 
+                          className="w-full max-h-[200px] bg-black"
+                        />
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="file"
+                          accept="video/mp4,video/webm,video/quicktime,video/x-m4v,video/x-msvideo"
+                          id="hero-video-upload"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            
+                            if (file.size > 500 * 1024 * 1024) {
+                              toast.error('影片檔案過大，最大允許 500MB');
+                              return;
+                            }
+                            
+                            const formData = new FormData();
+                            formData.append('video', file);
+                            formData.append('mvId', currentMV.id);
+                            
+                            toast.loading('上傳中...', { id: 'hero-video-upload' });
+                            
+                            try {
+                              const response = await adminFetch(`${apiUrl}/system/hero-video/upload`, {
+                                method: 'POST',
+                                body: formData,
+                              });
+                              
+                              const result = await response.json();
+                              
+                              if (result.success && result.data?.url) {
+                                updateField('heroVideo', result.data.url);
+                                toast.success('上傳成功', { id: 'hero-video-upload' });
+                              } else {
+                                toast.error(result.error || '上傳失敗', { id: 'hero-video-upload' });
+                              }
+                            } catch (err) {
+                              toast.error('上傳失敗：' + (err instanceof Error ? err.message : '未知錯誤'), { id: 'hero-video-upload' });
+                            }
+                          }}
+                        />
+                        <Button
+                          variant="neutral"
+                          size="sm"
+                          className="border-2 border-black shadow-none hover:bg-black/10"
+                          onClick={() => {
+                            document.getElementById('hero-video-upload')?.click();
+                          }}
+                        >
+                          <i className="hn hn-upload mr-2" />
+                          上傳影片
+                        </Button>
+                        {currentMV.heroVideo && (
+                          <Button
+                            variant="neutral"
+                            size="sm"
+                            className="border-2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white shadow-none"
+                            onClick={async () => {
+                              if (!confirm('確定要刪除此影片嗎？')) return;
+                              
+                              try {
+                                const response = await adminFetch(`${apiUrl}/system/hero-video`, {
+                                  method: 'DELETE',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ videoUrl: currentMV.heroVideo }),
+                                });
+                                
+                                const result = await response.json();
+                                
+                                if (result.success) {
+                                  updateField('heroVideo', '');
+                                  toast.success('影片已刪除');
+                                } else {
+                                  toast.error(result.error || '刪除失敗');
+                                }
+                              } catch (err) {
+                                toast.error('刪除失敗：' + (err instanceof Error ? err.message : '未知錯誤'));
+                              }
+                            }}
+                          >
+                            <i className="hn hn-trash mr-2" />
+                            刪除影片
+                          </Button>
+                        )}
+                      </div>
+                      <div className="text-[10px] font-mono opacity-40">
+                        支援格式：mp4, webm, mov, m4v, avi。最大檔案大小：500MB
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-xs font-bold uppercase flex items-start gap-2">

@@ -21,6 +21,7 @@ export const MVModel = sequelize.define('MV', {
   youtube: { type: DataTypes.STRING, comment: 'YouTube 影片 ID' },
   bilibili: { type: DataTypes.STRING, comment: 'Bilibili BV 號' },
   description: { type: DataTypes.TEXT, comment: '影片說明或備註' },
+  hero_video_url: { type: DataTypes.TEXT, comment: 'Hero Video 影片網址 (R2 或外部 URL)' },
 }, { tableName: 'mvs', timestamps: false, comment: '儲存 MV 核心資訊' });
 
 export const MediaModel = sequelize.define('Media', {

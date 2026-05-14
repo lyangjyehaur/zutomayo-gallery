@@ -49,6 +49,7 @@ export const mvItemSchema = z.object({
   description: z.string().max(5000).optional().or(z.literal('')),
   youtube: z.string().optional().or(z.literal('')),
   bilibili: z.string().optional().or(z.literal('')),
+  heroVideo: z.string().url('無效的影片 URL').optional().or(z.literal('')),
   keywords: z.array(
     z.object({
       id: z.string().optional(),

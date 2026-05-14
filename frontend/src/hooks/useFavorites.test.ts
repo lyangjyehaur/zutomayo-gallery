@@ -17,12 +17,12 @@ vi.mock("sonner", () => ({
 const mockMVData: MVItem[] = [
   {
     id: "1", title: "MV Alpha", year: "", date: "",
-    youtube: "", bilibili: "", description: "",
+    youtube: "", bilibili: "", description: "", heroVideo: "",
     creators: [], albums: [], keywords: [], images: [],
   },
   {
     id: "2", title: "MV Beta", year: "", date: "",
-    youtube: "", bilibili: "", description: "",
+    youtube: "", bilibili: "", description: "", heroVideo: "",
     creators: [], albums: [], keywords: [], images: [],
   },
 ]

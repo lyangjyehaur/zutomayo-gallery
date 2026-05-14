@@ -18,15 +18,36 @@ import {
 import { assignOrphanMediaGroup, listOrphanMedia, unassignOrphanMediaGroup } from '../controllers/media-orphans.controller.js';
 import { getMediaGroup, listMediaGroups, listRepairMediaGroups, mergeMediaGroups, syncMediaRelations, unassignMediaGroup, updateMediaGroup, previewReparseTwitter, applyReparseTwitter } from '../controllers/media-groups.controller.js';
 import { createAnnouncement, deleteAnnouncement, listAnnouncements, updateAnnouncement, updateAnnouncementOrder } from '../controllers/announcements.controller.js';
-import { syncImagesToR2 } from '../controllers/r2.controller.js';
+import { syncImagesToR2, uploadHeroVideo, deleteHeroVideo, getHeroVideoConfig } from '../controllers/r2.controller.js';
 import { rebuildR2 } from '../controllers/r2_rebuild.js';
 import { ADMIN_PERMISSIONS } from '../constants/admin-permissions.js';
 import { requireAnyPermission, requirePermission } from '../middleware/auth.middleware.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { cacheMiddleware } from '../middleware/cache.middleware.js';
 import { errorEventEmitter } from '../services/error-events.service.js';
+import multer from 'multer';
+import os from 'os';
+import crypto from 'crypto';
+import path from 'path';
 
 const router = Router();
+
+const heroVideoStorage = multer.memoryStorage();
+
+const heroVideoUpload = multer({
+  storage: heroVideoStorage,
+  limits: {
+    fileSize: 500 * 1024 * 1024,
+  },
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v', 'video/x-msvideo'];
+    if (allowedTypes.includes(file.mimetype || '')) {
+      cb(null, true);
+    } else {
+      cb(new Error(`不支持的影片格式: ${file.mimetype || 'unknown'}`));
+    }
+  },
+});
 
 const getClientIp = (req: any): string => {
   const raw = (req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.ip || '') as string;
@@ -178,5 +199,10 @@ router.get('/image/proxy', (req, res) => {
     res.status(500).json({ error: 'crypto error' });
   });
 });
+
+// Hero Video Routes
+router.get('/hero-video/config', asyncHandler(getHeroVideoConfig));
+router.post('/hero-video/upload', requirePermission(ADMIN_PERMISSIONS.MVS), heroVideoUpload.single('video'), asyncHandler(uploadHeroVideo));
+router.delete('/hero-video', requirePermission(ADMIN_PERMISSIONS.MVS), asyncHandler(deleteHeroVideo));
 
 export default router;

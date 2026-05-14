@@ -84,6 +84,9 @@
 | **GET** | `/errors` | 管理員 | 查詢後端錯誤日誌（分頁）。支援多種篩選條件。 |
 | **PATCH** | `/errors/:id/resolve` | 管理員 | 標記或取消標記指定錯誤為已解決。Body: `{ "resolved": true/false }` |
 | **POST** | `/errors/batch-resolve` | 管理員 | 批次標記多筆錯誤為已解決。Body: `{ "ids": ["id1", "id2", ...] }` |
+| **GET** | `/hero-video/config` | 公開 | 取得 Hero Video 上傳配置資訊（支援格式、檔案大小限制）。 |
+| **POST** | `/hero-video/upload` | 管理員 | 上傳 Hero Video 影片至 R2 儲存桶。需使用 `multipart/form-data` 格式。 |
+| **DELETE** | `/hero-video` | 管理員 | 刪除 R2 中的 Hero Video 影片。Body: `{ "videoUrl": "https://..." }` |
 
 ### Media Groups 管理 (路徑: `/system/media/groups`)
 
@@ -97,6 +100,69 @@
 | **PUT** | `/:id` | 管理員 | 更新指定 media group。 |
 | **POST** | `/:id/merge` | 管理員 | 將指定 group 合併至目標 group。 |
 | **POST** | `/:id/unassign` | 管理員 | 將指定 group 內所有 media 拆回 orphan 並刪除 group。 |
+
+### Hero Video 管理 (路徑: `/system/hero-video`)
+
+需 `MVS` 權限。
+
+| 請求方法 | 端點路徑 | 權限 | 功能說明 |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/config` | 公開 | 取得 Hero Video 上傳配置資訊。 |
+| **POST** | `/upload` | 管理員 | 上傳 Hero Video 影片至 R2 儲存桶。 |
+| **DELETE** | `/` | 管理員 | 刪除 R2 中的 Hero Video 影片。 |
+
+### GET `/api/system/hero-video/config` - 取得上傳配置
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "allowedFormats": ["mp4", "webm", "mov", "m4v", "avi"],
+    "maxFileSize": 524288000,
+    "maxFileSizeMB": 500
+  }
+}
+```
+
+### POST `/api/system/hero-video/upload` - 上傳影片
+
+需使用 `multipart/form-data` 格式，包含以下欄位：
+- `video` (必填): 影片檔案
+- `mvId` (必填): 關聯的 MV ID
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "url": "https://r2.dan.tw/hero-videos/mv-id/1234567890abcdef.mp4",
+    "fileName": "original-video.mp4",
+    "size": 104857600
+  }
+}
+```
+
+**錯誤回應:**
+- `400`: 檔案格式不支援、檔案過大、缺少參數
+- `500`: 伺服器錯誤或 R2 上傳失敗
+
+### DELETE `/api/system/hero-video` - 刪除影片
+
+**Request Body:**
+```json
+{
+  "videoUrl": "https://r2.dan.tw/hero-videos/mv-id/1234567890abcdef.mp4"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "影片已成功刪除"
+}
+```
 
 ---
 
@@ -130,6 +196,24 @@
 | **POST** | `/probe` | 管理員 | 探測指定圖片網址的原始尺寸 (`width` 與 `height`)。<br>Body: `{ "url": "https://..." }` |
 | **POST** | `/twitter-resolve` | 管理員 | 解析 Twitter 貼文網址，自動提取出推文內的圖片直連網址與畫師文字資訊。<br>Body: `{ "url": "https://x.com/..." }` |
 | **POST** | `/verify-admin` | 管理員 | 檢查目前登入的管理員是否仍在使用不安全的系統預設密碼。 |
+
+### MVItem 資料結構
+
+```typescript
+interface MVItem {
+  id: string;           // MV 唯一識別碼 (slug)
+  title: string;        // MV 標題
+  year: string;         // 發布年份 (YYYY)
+  date: string;         // 發布日期
+  youtube: string;      // YouTube 影片 ID
+  bilibili: string;     // Bilibili BV 號
+  description: string;   // 影片說明或備註
+  heroVideo: string;     // Hero Video 影片網址 (R2 或外部 URL)
+  creators: MVCreator[];  // 畫師/動畫師列表
+  albums: MVAlbum[];      // 所屬專輯列表
+  keywords: MVKeyword[];   // 關鍵字/標籤列表
+  images: MVMedia[];       // 媒體圖片列表
+}
 
 ---
 

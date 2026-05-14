@@ -5,12 +5,14 @@ import { logger } from '../utils/logger.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-// R2 配置
 const ACCOUNT_ID = process.env.R2_ACCOUNT_ID || '';
 const ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || '';
 const SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || '';
 const BUCKET_NAME = process.env.R2_BUCKET_NAME || 'zutomayo-gallery-archive';
 export const R2_PUBLIC_DOMAIN = process.env.R2_PUBLIC_DOMAIN || 'https://r2.dan.tw';
+
+export const ALLOWED_VIDEO_FORMATS = ['mp4', 'webm', 'mov', 'm4v', 'avi'];
+export const MAX_VIDEO_FILE_SIZE = 500 * 1024 * 1024;
 
 let s3Client: S3Client | null = null;
 
@@ -312,9 +314,135 @@ export const backupImageToR2 = async (
         logger.error({ url }, '[R2] Max retries reached, giving up');
         return null;
       }
-      // 等待一段時間後重試 (1s, 2s, 3s...)
       await new Promise(resolve => setTimeout(resolve, attempt * 1000));
     }
   }
   return null;
+};
+
+export const validateVideoFormat = (fileName: string): boolean => {
+  const ext = fileName.split('.').pop()?.toLowerCase() || '';
+  return ALLOWED_VIDEO_FORMATS.includes(ext);
+};
+
+export const validateVideoSize = (sizeBytes: number): boolean => {
+  return sizeBytes <= MAX_VIDEO_FILE_SIZE;
+};
+
+export const uploadVideoToR2 = async (
+  buffer: Buffer,
+  mvId: string,
+  fileName: string,
+  options?: R2UploadOptions
+): Promise<{ url: string | null; error?: string }> => {
+  if (!s3Client) {
+    return { url: null, error: 'R2 service not initialized' };
+  }
+
+  const ext = fileName.split('.').pop()?.toLowerCase() || '';
+  if (!validateVideoFormat(fileName)) {
+    return { url: null, error: `不支援的影片格式。允許的格式：${ALLOWED_VIDEO_FORMATS.join(', ')}` };
+  }
+
+  if (!validateVideoSize(buffer.length)) {
+    const maxMB = MAX_VIDEO_FILE_SIZE / (1024 * 1024);
+    return { url: null, error: `影片檔案過大。最大允許 ${maxMB}MB` };
+  }
+
+  const videoFolder = `hero-videos/${mvId}`;
+  const uniqueFileName = `${videoFolder}/${Date.now()}-${crypto.randomBytes(4).toString('hex')}.${ext}`;
+
+  const contentTypeMap: Record<string, string> = {
+    'mp4': 'video/mp4',
+    'webm': 'video/webm',
+    'mov': 'video/quicktime',
+    'm4v': 'video/x-m4v',
+    'avi': 'video/x-msvideo',
+  };
+
+  const retryCount = options?.retryCount ?? 3;
+  let attempt = 0;
+
+  while (attempt < retryCount) {
+    try {
+      if (!options?.forceUpdate) {
+        const exists = await checkImageExists(uniqueFileName);
+        if (exists) {
+          logger.info({ fileName: uniqueFileName }, '[R2] Video already exists');
+          return { url: `${R2_PUBLIC_DOMAIN}/${uniqueFileName}` };
+        }
+      }
+
+      const metadata: Record<string, string> = {
+        'uploaded-by': 'ztmy-gallery-backend',
+        'upload-timestamp': new Date().toISOString(),
+        'mv-id': mvId,
+        'original-filename': fileName,
+      };
+
+      if (options?.metadata) {
+        Object.assign(metadata, options.metadata);
+      }
+
+      logger.info({ fileName: uniqueFileName, sizeMB: (buffer.length / 1024 / 1024).toFixed(2) }, '[R2] Uploading video to R2');
+      await s3Client.send(new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: uniqueFileName,
+        Body: buffer,
+        ContentType: contentTypeMap[ext] || 'video/mp4',
+        CacheControl: 'public, max-age=31536000, immutable',
+        Metadata: metadata
+      }));
+
+      return { url: `${R2_PUBLIC_DOMAIN}/${uniqueFileName}` };
+    } catch (error) {
+      attempt++;
+      logger.error({ err: error, fileName: uniqueFileName, attempt, retryCount }, '[R2] Error uploading video');
+      if (attempt >= retryCount) {
+        logger.error({ fileName: uniqueFileName }, '[R2] Max retries reached, giving up');
+        return { url: null, error: '上傳失敗，請稍後再試' };
+      }
+      await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+    }
+  }
+
+  return { url: null, error: '上傳失敗' };
+};
+
+export const deleteVideoFromR2 = async (videoUrl: string): Promise<boolean> => {
+  if (!s3Client) return false;
+
+  try {
+    const urlObj = new URL(videoUrl);
+    const fileName = urlObj.pathname.replace(/^\//, '');
+
+    if (!fileName.startsWith('hero-videos/')) {
+      logger.warn({ fileName }, '[R2] Refusing to delete non-hero-video file');
+      return false;
+    }
+
+    await s3Client.send(new DeleteObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: fileName,
+    }));
+
+    logger.info({ fileName }, '[R2] Successfully deleted video');
+    return true;
+  } catch (error) {
+    logger.error({ err: error, videoUrl }, '[R2] Error deleting video');
+    return false;
+  }
+};
+
+export const extractR2KeyFromUrl = (url: string): string | null => {
+  try {
+    const urlObj = new URL(url);
+    const key = urlObj.pathname.replace(/^\//, '');
+    if (key && key.startsWith('hero-videos/')) {
+      return key;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 };
