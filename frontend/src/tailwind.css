@@ -78,6 +78,14 @@ html.motion-reduced .bg-card\/40 {
   background-color: var(--background) !important;
 }
 
+/* 确保 MV 详情页的 YouTube 和 Bilibili 按钮激活状态颜色不被覆盖 */
+.motion-reduced button:has(.hn-youtube)[data-state="active"] {
+  background-color: #ff0000 !important;
+}
+.motion-reduced button:has(.hn-retro-pc)[data-state="active"] {
+  background-color: #FB7299 !important;
+}
+
 /* 确保 dialog overlay 保持半透明遮罩效果 */
 .motion-reduced [data-radix-dialog-overlay],
 .motion-reduced [data-slot="dialog-overlay"] {
