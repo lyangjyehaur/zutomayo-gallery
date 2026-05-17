@@ -82,6 +82,7 @@ import { useScrollPosition } from "@/hooks/useScrollPosition";
 import { useAnimationPause } from "@/hooks/useAnimationPause";
 import { useAmbientMode } from "@/hooks/useAmbientMode";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { isSupportedLang, normalizeLang } from "@/i18n";
 
 const AdminPage = React.lazy(() => import("@/pages/AdminPage").then((m) => ({ default: m.AdminPage })));
@@ -282,6 +283,8 @@ function App({
   const scrolled = useScrollPosition();
 
   const headerRef = useRef<HTMLElement>(null);
+
+  const { isReduced, toggleReduced } = useReducedMotion();
 
   const isGlobalPaused = useAnimationPause({
     selectedMvId, selectedIllustratorId, isFeedbackOpen, isAboutOpen, isMobile, headerRef,
@@ -645,6 +648,8 @@ function App({
         mvData={mvData}
         pageFallback={pageFallback}
         onOpenSpeedSurvey={() => setIsSurveyForceOpen(true)}
+        isReducedMotion={isReduced}
+        onToggleReducedMotion={toggleReduced}
       />
 
       <AppFooter

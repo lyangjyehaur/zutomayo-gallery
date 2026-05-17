@@ -47,7 +47,12 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ isIconOnly = false }) => {
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme((prev) => (prev === "light" ? "dark" : "light"));
+    const newTheme = theme === "light" ? "dark" : "light";
+    setTheme(newTheme);
+    toast(newTheme === "light" ? t("app.toast_light_mode") : t("app.toast_dark_mode"), {
+      duration: 2000,
+      position: "bottom-center",
+    });
   };
 
   const buttonContent = theme === "light" ? (

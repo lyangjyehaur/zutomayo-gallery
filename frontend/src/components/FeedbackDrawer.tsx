@@ -31,8 +31,8 @@ export function FeedbackDrawer({ isFeedbackOpen, setIsFeedbackOpen, shouldRender
       <div
         className={`fixed left-0 top-0 bottom-0 h-screen w-full lg:w-[768px] xl:w-[800px] border-r-0 lg:border-r-4 border-black ${MODAL_THEME.content.drawer} shadow-none lg:shadow-neo z-[100] flex flex-col origin-center ${
           isFeedbackOpen
-            ? "animate-[drawer-mobile-fade-in_700ms_cubic-bezier(0.32,0.72,0,1)_forwards] lg:animate-[drawer-desktop-fade-in_700ms_cubic-bezier(0.32,0.72,0,1)_forwards] pointer-events-auto"
-            : "animate-[drawer-mobile-fade-out_700ms_cubic-bezier(0.32,0.72,0,1)_forwards] lg:animate-[drawer-desktop-fade-out_700ms_cubic-bezier(0.32,0.72,0,1)_forwards] pointer-events-none"
+            ? "animate-[drawer-mobile-fade-in_700ms_cubic-bezier(0.32,0.72,0,1)_forwards lg:animate-[drawer-desktop-fade-in_700ms_cubic-bezier(0.32,0.72,0,1)_forwards pointer-events-auto"
+            : "animate-[drawer-mobile-fade-out_700ms_cubic-bezier(0.32,0.72,0,1)_forwards lg:animate-[drawer-desktop-fade-out_700ms_cubic-bezier(0.32,0.72,0,1)_forwards pointer-events-none"
         }`}
         style={{
           visibility: isFeedbackOpen ? "visible" : "hidden",

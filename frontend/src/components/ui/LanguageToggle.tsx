@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "./dropdown-menu";
 import { isSupportedLang, shouldShowSecondaryLang } from "@/i18n";
+import { toast } from "sonner";
 
 interface LanguageToggleProps {
   isIconOnly?: boolean;
@@ -54,6 +55,11 @@ export const LanguageToggle: React.FC<LanguageToggleProps> = ({ isIconOnly = fal
     const to = `/${code}${getPathRest(location.pathname)}${search ? `?${search}` : ""}`;
     navigate(to);
     setIsOpen(false);
+    const langInfo = languages.find(l => l.code === code);
+    toast(langInfo?.name || code, {
+      duration: 2000,
+      position: "bottom-center",
+    });
   };
 
   const currentLang = languages.find(l => l.code === i18n.language) || languages[0];

@@ -64,6 +64,25 @@ function AlbumCardComponent({ album, isEven, idx, itemIndex, isAllowedToLoad, on
   const [isReady, setIsReady] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [isReducedMotion, setIsReducedMotion] = useState(() => {
+    if (typeof document === 'undefined') return false;
+    return document.documentElement.classList.contains('motion-reduced');
+  });
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      if (typeof document !== 'undefined') {
+        setIsReducedMotion(document.documentElement.classList.contains('motion-reduced'));
+      }
+    });
+
+    if (typeof document !== 'undefined') {
+      observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     if (!containerRef.current) return;
     
@@ -96,9 +115,14 @@ function AlbumCardComponent({ album, isEven, idx, itemIndex, isAllowedToLoad, on
   }, []);
 
   useEffect(() => {
+    // 性能模式下立即就準備好，無需等待
+    if (isReducedMotion && !isReady && isVisible && isAllowedToLoad) {
+      setIsReady(true);
+      onLoaded(itemIndex);
+    }
     // 當卡片被標記為可以加載（isAllowedToLoad = true）並且在畫面中，但可能因為網路等因素一直沒載完，給一個 timeout 兜底
     // 避免後面的卡片永遠被卡住
-    if (isAllowedToLoad && isVisible && !isReady) {
+    else if (isAllowedToLoad && isVisible && !isReady) {
       const timer = setTimeout(() => {
         onLoaded(itemIndex); // 強制放行下一個
       }, 1500); // 最多等 1.5 秒
@@ -108,7 +132,7 @@ function AlbumCardComponent({ album, isEven, idx, itemIndex, isAllowedToLoad, on
       // 但我們不再將它直接視為 ready，而是讓它保持未載入狀態，直到使用者再次滾動到它
       onLoaded(itemIndex);
     }
-  }, [isAllowedToLoad, isVisible, isReady, onLoaded, itemIndex]);
+  }, [isAllowedToLoad, isVisible, isReady, isReducedMotion, onLoaded, itemIndex]);
 
   return (
     <div 
@@ -178,11 +202,11 @@ function AlbumCardComponent({ album, isEven, idx, itemIndex, isAllowedToLoad, on
                       decoding="async"
                       alt={album.caption}
                       referrerPolicy="no-referrer"
-                      className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out opacity-0 pointer-events-none`}
+                      className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out ${isReducedMotion ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
                     />
                     {/* 3D CD 盒效果 - 放大容器避免裁切 */}
                     <div className="absolute inset-[-20%] z-10 pointer-events-none">
-                      {isVisible && isAllowedToLoad && (
+                      {!isReducedMotion && isVisible && isAllowedToLoad && (
                         <Suspense fallback={null}>
                           <CDCase3D 
                             imgUrl={getOptimizedAppleMusicUrl(album.originalUrl, 400, 'webp')} 

@@ -54,10 +54,42 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
   const proxied = useMemo(() => urls.map((u) => {
     return getProxyImgUrl(u, mode);
   }), [urls, mode]);
+  
   const prefersReducedMotion = useMemo(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }, []);
+  
+  const [isReducedMotion, setIsReducedMotion] = useState(() => {
+    if (typeof document === 'undefined') return false;
+    return document.documentElement.classList.contains('motion-reduced');
+  });
+
+  const isReducedMotionRef = useRef(isReducedMotion);
+  useEffect(() => {
+    isReducedMotionRef.current = isReducedMotion;
+  }, [isReducedMotion]);
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      if (typeof document !== 'undefined') {
+        const newValue = document.documentElement.classList.contains('motion-reduced');
+        setIsReducedMotion(newValue);
+      }
+    });
+
+    if (typeof document !== 'undefined') {
+      observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  const effectiveIsPaused = isPaused || isReducedMotion;
+  const effectiveIsPausedRef = useRef(effectiveIsPaused);
+  useEffect(() => {
+    effectiveIsPausedRef.current = effectiveIsPaused;
+  }, [effectiveIsPaused]);
 
   const { elementRef, shouldLoad: lazyShouldLoad } = useLazyImage({ rootMargin: '600px', threshold: 0.01, triggerOnce: false });
   const shouldLoad = forceLoad || lazyShouldLoad;
@@ -117,7 +149,7 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
     if (!aliveRef.current) return;
     if (!shouldLoad) return;
     if (prefersReducedMotion) return;
-    if (isPaused) return;
+    if (effectiveIsPausedRef.current) return;
 
     clearTimers();
     // 1. 決定下一次切換的時間間隔
@@ -186,11 +218,11 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
         }, Math.max(80, Math.floor(glitchMs * 0.55)));
       }
     }, delay);
-  }, [clearTimers, prefersReducedMotion, proxied, shouldLoad, isPaused, initialDelay]);
+  }, [clearTimers, prefersReducedMotion, proxied, shouldLoad, isReducedMotionRef, initialDelay]);
 
   useEffect(() => {
     if (!shouldLoad) return;
-    if (isPaused) {
+    if (effectiveIsPaused) {
       clearTimers();
       return;
     }
@@ -198,7 +230,7 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
     return () => {
       clearTimers();
     };
-  }, [shouldLoad, scheduleNext, clearTimers, isPaused]);
+  }, [shouldLoad, scheduleNext, clearTimers, effectiveIsPaused]);
 
   const currentSrc = proxied[currentIndex] || '';
   const nextSrc = nextIndex !== null ? proxied[nextIndex] : null;
@@ -336,7 +368,7 @@ export const CoverCarousel = memo(function CoverCarousel({ coverImages, title, i
         {glitch.active && glitch.mode === 'scan' && <div className="absolute inset-0 z-30 ztmy-scanline-pop" />}
 
         {/* 5. 常駐偶發效果：水平錯位橫紋 (Rolling Slice) - 只有在視野內才渲染以節省效能 */}
-        {shouldLoad && !isPaused && currentSrc && (
+        {shouldLoad && !effectiveIsPaused && currentSrc && (
           <img
             src={currentSrc}
             alt="切片效果 (slice)"

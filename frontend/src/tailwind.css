@@ -2,6 +2,142 @@
 @plugin "tailwindcss-animate";
 @custom-variant dark (&:is(.dark *));
 
+/* 動畫效果模式控制 - motion-reduced 類用於禁用華麗特效 */
+:root {
+  --animation-duration-multiplier: 1;
+}
+
+/* Reduced Motion Mode: 禁用非必要的華麗動畫效果 */
+.motion-reduced {
+  --animation-duration-multiplier: 0.1;
+}
+
+/* 在 reduced 模式下禁用 backdrop-filter 以提升性能 */
+.motion-reduced * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* 在 reduced 模式下保持 dialog overlay 的半透明效果（遮罩），但修复 modal 内容区域的半透明背景 */
+/* 注意：Drawer 和 Dialog 的背景样式应该保持和华丽模式一致，只是移除 backdrop-filter */
+/* dropdown-menu 保持 main 背景，因为它应该是不同的 */
+.motion-reduced [data-slot="dropdown-menu-content"],
+.motion-reduced [data-radix-dropdown-menu-content] {
+  background-color: var(--main) !important;
+}
+
+/* 修复抽屉和 modal 本体的背景透明度问题 - 保持与华丽模式一致的纯色背景 */
+/* 使用更具体和高优先级的选择器确保规则生效 */
+html.motion-reduced .bg-background\/75,
+html.motion-reduced .bg-background\/80,
+html.motion-reduced .bg-background\/50,
+html.motion-reduced .bg-background\/40,
+html.motion-reduced .bg-card\/40 {
+  background-color: var(--background) !important;
+}
+
+.motion-reduced .bg-background\/75,
+.motion-reduced .bg-background\/80,
+.motion-reduced .bg-background\/50,
+.motion-reduced .bg-background\/40,
+.motion-reduced .bg-card\/40 {
+  background-color: var(--background) !important;
+}
+
+/* 性能模式下禁用背景透明度 - 强制纯色背景以保持一致性 */
+.motion-reduced [class*="background"][class*="/"] {
+  background-color: var(--background) !important;
+}
+
+/* 修复 MVDetailsModal 中的半透明区域 */
+.motion-reduced .mv-modal-content,
+.motion-reduced .modal-header-overlay,
+.motion-reduced .bg-main\/50,
+.motion-reduced .bg-red-900\/50 {
+  background-color: var(--main) !important;
+}
+
+/* 性能模式下，所有内容区域的半透明背景都变成纯色（但 overlay 遮罩保持半透明） */
+.motion-reduced .bg-black\/5,
+.motion-reduced .bg-black\/10,
+.motion-reduced .bg-black\/20,
+.motion-reduced .bg-black\/30,
+.motion-reduced .bg-black\/40,
+.motion-reduced .bg-black\/50,
+.motion-reduced .bg-black\/60,
+.motion-reduced .bg-black\/70,
+.motion-reduced .bg-black\/80,
+.motion-reduced .bg-black\/90 {
+  /* 对于黑色背景类，保持半透明是作为 overlay 遮罩使用的，所以不处理 */
+}
+
+/* 但对于明确的内容区域背景，还是要变成纯色 */
+.motion-reduced [data-slot="dialog-content"].bg-background\/75,
+.motion-reduced [data-slot="drawer-content"].bg-background\/75 {
+  background-color: var(--background) !important;
+}
+
+/* 确保 dialog overlay 保持半透明遮罩效果 */
+.motion-reduced [data-radix-dialog-overlay],
+.motion-reduced [data-slot="dialog-overlay"] {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+/* 在 reduced 模式下禁用華麗特效 */
+.motion-reduced .crt-lines::before,
+.motion-reduced .crt-lines::after,
+.motion-reduced .crt-lines-global::before,
+.motion-reduced .crt-lines-global::after {
+  animation: none !important;
+  opacity: 0 !important;
+}
+
+.motion-reduced .ambient-midnight-stars-a,
+.motion-reduced .ambient-midnight-stars-b {
+  animation: none !important;
+  opacity: 0 !important;
+}
+
+.motion-reduced .tape-playing,
+.motion-reduced .tape-vhs-bar,
+.motion-reduced .tape-ejected {
+  animation: none !important;
+}
+
+.motion-reduced .ztmy-glitch-jitter,
+.motion-reduced .ztmy-invert-flash,
+.motion-reduced .ztmy-signal-drop,
+.motion-reduced .ztmy-noise-pop,
+.motion-reduced .ztmy-scanline-pop,
+.motion-reduced .ztmy-rolling-slice,
+.motion-reduced .ztmy-global-glitch {
+  animation: none !important;
+  filter: none !important;
+}
+
+.motion-reduced .ztmy-cyber-title-crt,
+.motion-reduced .ztmy-cyber-title-glow::after,
+.motion-reduced .ztmy-cyber-text-aberration,
+.motion-reduced .ztmy-cyber-title-scan::before,
+.motion-reduced .ztmy-cyber-title-scan::after,
+.motion-reduced .ztmy-cyber-title-fast-scan::before,
+.motion-reduced .ztmy-cyber-title-slow-scan::before,
+.motion-reduced .ztmy-cyber-title-hovering .ztmy-cyber-hover-burst::before,
+.motion-reduced .ztmy-cyber-title-hovering .ztmy-cyber-hover-burst::after {
+  animation: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+
+.motion-reduced .ztmy-modal-glitch,
+.motion-reduced .ztmy-modal-glitch::before,
+.motion-reduced .ztmy-modal-glitch::after {
+  animation: none !important;
+}
+
+/* 保留 hover-3d 效果因為它對用戶體驗有幫助 */
+/* .motion-reduced .hover-3d 可選擇啟用 */
+
 /* 自定義滾動條樣式 */
 .custom-scrollbar::-webkit-scrollbar {
   width: 8px;

@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useLayoutEffect, useState, useRef, useCallback, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -66,6 +66,25 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata, view
   const [isChinaIP, setIsChinaIP] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [infoTab, setInfoTab] = useState<'desc' | 'creators'>('desc');
+
+  const [isReducedMotion, setIsReducedMotion] = useState(() => {
+    if (typeof document === 'undefined') return false;
+    return document.documentElement.classList.contains('motion-reduced');
+  });
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      if (typeof document !== 'undefined') {
+        setIsReducedMotion(document.documentElement.classList.contains('motion-reduced'));
+      }
+    });
+
+    if (typeof document !== 'undefined') {
+      observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     setInfoTab('desc');
@@ -846,18 +865,26 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata, view
                     >
                       <div className="absolute inset-0 z-0">
                         {/* 播放器背景底圖：不需要 full 畫質，這裡傳入 small 即可讓 image.ts 自動降級為 sddefault.jpg */}
-                        <CoverCarousel 
-                          coverImages={
-                            mv?.images
-                              ?.filter(img => img.usage === 'cover')
-                              .map(img => img.url) || [] // 移除 getProxyImgUrl，交由 CoverCarousel 內部處理
-                          } 
-                          title={mv?.title || ''} 
-                          isPaused={true} 
-                          forceLoad={true} 
-                          hideCrt={true} 
-                          mode="sd"
-                        />
+                        {isReducedMotion ? (
+                          <img
+                            src={getProxyImgUrl(mv?.images?.find(img => img.usage === 'cover')?.url || '', 'sd')}
+                            alt={mv?.title || ''}
+                            className="absolute inset-0 w-full h-full object-cover"
+                          />
+                        ) : (
+                          <CoverCarousel 
+                            coverImages={
+                              mv?.images
+                                ?.filter(img => img.usage === 'cover')
+                                .map(img => img.url) || [] // 移除 getProxyImgUrl，交由 CoverCarousel 內部處理
+                            } 
+                            title={mv?.title || ''} 
+                            isPaused={true} 
+                            forceLoad={true} 
+                            hideCrt={true} 
+                            mode="sd"
+                          />
+                        )}
                       </div>
                       <div className={`absolute inset-0 transition-colors z-10 ${videoPlatform === 'youtube' && isChinaIP ? 'bg-black/60' : 'bg-black/40 group-hover:bg-black/20'}`} />
                       <div className="absolute inset-0 pointer-events-none z-15" style={{ background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px)' }}></div>

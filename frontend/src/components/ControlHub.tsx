@@ -4,6 +4,7 @@ import { shouldShowSecondaryLang } from "@/i18n";
 import { MVItem } from "@/lib/types";
 import { MODAL_THEME } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import LanguageToggle from "@/components/ui/LanguageToggle";
+import { PerformanceModeToggle } from "@/components/PerformanceModeToggle";
 
 const SubmitFanArtPage = React.lazy(() => import("@/pages/SubmitFanArtPage").then((m) => ({ default: m.SubmitFanArtPage })));
 
@@ -51,6 +53,8 @@ interface ControlHubProps {
   mvData: MVItem[];
   pageFallback: React.ReactNode;
   onOpenSpeedSurvey: () => void;
+  isReducedMotion: boolean;
+  onToggleReducedMotion: () => void;
 }
 
 export function ControlHub({
@@ -81,6 +85,8 @@ export function ControlHub({
   mvData,
   pageFallback,
   onOpenSpeedSurvey,
+  isReducedMotion,
+  onToggleReducedMotion,
 }: ControlHubProps) {
   const { t, i18n } = useTranslation();
   const is404Route = pathnameWithoutLang === "/404";
@@ -124,9 +130,13 @@ export function ControlHub({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                onClick={() =>
-                  setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))
-                }
+                onClick={() => {
+                  setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"));
+                  toast(sortOrder === "desc" ? t("app.toast_sort_oldest") : t("app.toast_sort_newest"), {
+                    duration: 2000,
+                    position: "bottom-center",
+                  });
+                }}
                 variant="neutral"
                 size="icon"
                 data-active={sortOrder === "asc"}
@@ -186,7 +196,13 @@ export function ControlHub({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                onClick={() => navigate(showFavOnly ? basePath : `${basePath}/favorites`)}
+                onClick={() => {
+                  navigate(showFavOnly ? basePath : `${basePath}/favorites`);
+                  toast(showFavOnly ? t("app.toast_back_to_all") : t("app.toast_show_fav_only"), {
+                    duration: 2000,
+                    position: "bottom-center",
+                  });
+                }}
                 variant="neutral"
                 size="icon"
                 data-active={showFavOnly}
@@ -524,6 +540,12 @@ export function ControlHub({
         </div>
         <div className="z-40 relative">
           <ThemeToggle isIconOnly={true} />
+        </div>
+        <div className="z-45 relative">
+          <PerformanceModeToggle
+            isReduced={isReducedMotion}
+            onToggle={onToggleReducedMotion}
+          />
         </div>
       </div>
     </div>
