@@ -78,15 +78,6 @@ html.motion-reduced .bg-card\/40 {
   background-color: var(--background) !important;
 }
 
-/* 确保 MV 详情页的 YouTube 和 Bilibili 按钮激活状态颜色不被覆盖 */
-.motion-reduced button:has(.hn-youtube)[data-state="active"] {
-  background-color: #ff0000 !important;
-}
-
-.motion-reduced button:has(.hn-retro-pc)[data-state="active"] {
-  background-color: #FB7299 !important;
-}
-
 /* 确保 dialog overlay 保持半透明遮罩效果 */
 .motion-reduced [data-radix-dialog-overlay],
 .motion-reduced [data-slot="dialog-overlay"] {
@@ -135,514 +126,1994 @@ html.motion-reduced .bg-card\/40 {
 .motion-reduced .ztmy-cyber-title-hovering .ztmy-cyber-hover-burst::before,
 .motion-reduced .ztmy-cyber-title-hovering .ztmy-cyber-hover-burst::after {
   animation: none !important;
-  filter: none !important;
-}
-
-.motion-reduced .vhs-tracking,
-.motion-reduced .vhs-rolling-bar,
-.motion-reduced .vhs-noise-overlay {
-  animation: none !important;
-  opacity: 0 !important;
-}
-
-.motion-reduced .glitch-effect,
-.motion-reduced .glitch-text,
-.motion-reduced .glitch-text::before,
-.motion-reduced .glitch-text::after {
-  animation: none !important;
   text-shadow: none !important;
-}
-
-.motion-reduced .scan-line-overlay {
-  animation: none !important;
-  background: none !important;
-}
-
-.motion-reduced .ambient-glow {
-  animation: none !important;
-  opacity: 0.5 !important;
-}
-
-.motion-reduced .neon-flicker {
-  animation: none !important;
-  opacity: 0.8 !important;
-}
-
-.motion-reduced .particle-float,
-.motion-reduced .particle-fade {
-  animation: none !important;
-  opacity: 0 !important;
-}
-
-.motion-reduced .loading-pulse {
-  animation: none !important;
-}
-
-.motion-reduced .hover-lift {
-  transform: none !important;
-  transition: none !important;
-}
-
-.motion-reduced .card-flip {
-  animation: none !important;
-  transform: none !important;
-}
-
-.motion-reduced .parallax-bg {
-  transform: none !important;
-}
-
-.motion-reduced .scroll-reveal {
-  animation: none !important;
-  opacity: 1 !important;
-}
-
-.motion-reduced .hover-glow {
-  box-shadow: none !important;
-  transition: none !important;
-}
-
-.motion-reduced .hover-scale {
-  transform: none !important;
-  transition: none !important;
-}
-
-.motion-reduced .hover-shine {
-  background-position: 200% center !important;
-}
-
-.motion-reduced .hover-border-glow {
-  box-shadow: none !important;
-  transition: none !important;
-}
-
-.motion-reduced .noise-overlay {
-  animation: none !important;
-  opacity: 0 !important;
-}
-
-.motion-reduced .ripple-effect::after {
-  animation: none !important;
-}
-
-.motion-reduced .hover-rotate {
-  transform: none !important;
-  transition: none !important;
-}
-
-.motion-reduced .morph-bg {
-  animation: none !important;
-  border-radius: 0 !important;
-}
-
-.motion-reduced .video-bg,
-.motion-reduced .animated-gradient,
-.motion-reduced .animated-mesh {
-  animation: none !important;
-  background: var(--background) !important;
-}
-
-.motion-reduced .animated-svg path {
-  animation: none !important;
-  stroke-dashoffset: 0 !important;
-}
-
-.motion-reduced .magnetic-effect {
-  transform: none !important;
-}
-
-.motion-reduced .spring-bounce {
-  animation: none !important;
-}
-
-.motion-reduced .slide-in-up,
-.motion-reduced .slide-in-down,
-.motion-reduced .slide-in-left,
-.motion-reduced .slide-in-right,
-.motion-reduced .fade-in,
-.motion-reduced .zoom-in,
-.motion-reduced .flip-in {
-  animation: none !important;
-  opacity: 1 !important;
-  transform: none !important;
-}
-
-.motion-reduced .typing-cursor::after {
-  animation: none !important;
-}
-
-.motion-reduced .blob-morph {
-  animation: none !important;
-  border-radius: 0 !important;
-}
-
-.motion-reduced .hover-wiggle {
-  animation: none !important;
-}
-
-.motion-reduced .page-transition-enter {
-  opacity: 1 !important;
-}
-
-.motion-reduced .page-transition-exit {
-  opacity: 0 !important;
-}
-
-/* 性能模式下禁用卡片轮播动画 */
-.motion-reduced .carousel-slide {
-  animation: none !important;
-  transform: none !important;
-}
-
-.motion-reduced .carousel-indicator {
-  animation: none !important;
-}
-
-/* 性能模式下禁用 MV 卡片详情中的全屏播放器 VHS 效果 */
-.motion-reduced .vhs-effect {
-  animation: none !important;
   filter: none !important;
 }
 
-.motion-reduced .vhs-effect::before,
-.motion-reduced .vhs-effect::after {
-  animation: none !important;
-  opacity: 0 !important;
-}
-
-/* 性能模式下禁用 MV 卡片详情中的 VHS 滚动条 */
-.motion-reduced .vhs-scroll-bar {
-  animation: none !important;
-  opacity: 0 !important;
-}
-
-/* 性能模式下禁用 3D 模型旋转 */
-.motion-reduced canvas[id*="three"],
-.motion-reduced canvas[id*="3d"],
-.motion-reduced canvas[class*="three"] {
+.motion-reduced .ztmy-modal-glitch,
+.motion-reduced .ztmy-modal-glitch::before,
+.motion-reduced .ztmy-modal-glitch::after {
   animation: none !important;
 }
 
-/* 性能模式下禁用 MV 卡片翻转效果 */
-.motion-reduced .mv-card-3d,
-.motion-reduced .mv-card-3d-inner,
-.motion-reduced .mv-card-3d-front,
-.motion-reduced .mv-card-3d-back {
-  transform: none !important;
-  transition: none !important;
-  perspective: none !important;
-}
-
-/* 性能模式下禁用动画效果和滤镜 */
-.motion-reduced * {
-  animation-duration: 0.01ms !important;
-  animation-iteration-count: 1 !important;
-  transition-duration: 0.01ms !important;
-}
-
-.motion-reduced .group:hover .group-hover\:animate-none {
-  animation: none !important;
-}
-
-/* 性能模式下禁用悬停效果的阴影和位移 */
-.motion-reduced .group:hover .group-hover\:shadow-\[4px_4px_0px_0px_rgba\(0\2c 0\2c 0\2c 1\)\] {
-  box-shadow: none !important;
-  transform: none !important;
-}
-
-.motion-reduced .group:hover .group-hover\:-translate-y-\[2px\] {
-  transform: none !important;
-}
-
-.motion-reduced .group:hover .group-hover\:-translate-x-\[2px\] {
-  transform: none !important;
-}
-
-.motion-reduced .group:hover .group-hover\:translate-y-\[2px\] {
-  transform: none !important;
-}
-
-.motion-reduced .group:hover .group-hover\:translate-x-\[2px\] {
-  transform: none !important;
-}
-
-.motion-reduced .group:hover .group-hover\:-translate-y-\[1px\] {
-  transform: none !important;
-}
-
-.motion-reduced .group:hover .group-hover\:-translate-x-\[1px\] {
-  transform: none !important;
-}
-
-.motion-reduced .group:hover .group-hover\:translate-y-\[1px\] {
-  transform: none !important;
-}
-
-.motion-reduced .group:hover .group-hover\:translate-x-\[1px\] {
-  transform: none !important;
-}
-
-.motion-reduced .group:hover .group-hover\:-translate-y-\[4px\] {
-  transform: none !important;
-}
-
-.motion-reduced .group:hover .group-hover\:-translate-x-\[4px\] {
-  transform: none !important;
-}
-
-.motion-reduced .group:hover .group-hover\:translate-y-\[4px\] {
-  transform: none !important;
-}
-
-.motion-reduced .group:hover .group-hover\:translate-x-\[4px\] {
-  transform: none !important;
-}
-
-.motion-reduced .group:hover .group-hover\:hover\:translate-y-\[2px\] {
-  transform: none !important;
-}
-
-.motion-reduced .group:hover .group-hover\:hover\:translate-x-\[2px\] {
-  transform: none !important;
-}
-
-.motion-reduced .group:hover .group-hover\:hover\:-translate-y-\[2px\] {
-  transform: none !important;
-}
-
-.motion-reduced .group:hover .group-hover\:hover\:-translate-x-\[2px\] {
-  transform: none !important;
-}
-
-.motion-reduced .group:hover .group-hover\:hover\:-translate-y-\[4px\] {
-  transform: none !important;
-}
-
-.motion-reduced .group:hover .group-hover\:hover\:-translate-x-\[4px\] {
-  transform: none !important;
-}
-
-.motion-reduced .group:hover .group-hover\:hover\:translate-y-\[4px\] {
-  transform: none !important;
-}
-
-.motion-reduced .group:hover .group-hover\:hover\:translate-x-\[4px\] {
-  transform: none !important;
-}
-
-.motion-reduced .group:hover .group-hover\:shadow-none {
-  box-shadow: none !important;
-}
-
-.motion-reduced .group:hover .group-hover\:bg-main\/80 {
-  background-color: var(--main) !important;
-}
-
-.motion-reduced .group:hover .group-hover\:bg-main {
-  background-color: var(--main) !important;
-}
-
-.motion-reduced .group:hover .group-hover\:bg-main\/50 {
-  background-color: var(--main) !important;
-}
-
-.motion-reduced .group:hover .group-hover\:bg-main\/20 {
-  background-color: var(--main) !important;
-}
-
-.motion-reduced .group:hover .group-hover\:bg-main\/30 {
-  background-color: var(--main) !important;
-}
-
-.motion-reduced .group:hover .group-hover\:bg-main\/40 {
-  background-color: var(--main) !important;
-}
-
-.motion-reduced .group:hover .group-hover\:bg-main\/60 {
-  background-color: var(--main) !important;
-}
-
-.motion-reduced .group:hover .group-hover\:bg-main\/70 {
-  background-color: var(--main) !important;
-}
-
-.motion-reduced .group:hover .group-hover\:bg-main\/90 {
-  background-color: var(--main) !important;
-}
-
-.motion-reduced .group:hover .group-hover\:bg-main\/10 {
-  background-color: var(--main) !important;
-}
-
-.motion-reduced .group:hover .group-hover\:bg-black\/5 {
-  background-color: var(--main) !important;
-}
-
-.motion-reduced .group:hover .group-hover\:bg-black\/10 {
-  background-color: var(--main) !important;
-}
-
-.motion-reduced .group:hover .group-hover\:bg-black\/20 {
-  background-color: var(--main) !important;
-}
-
-/* 性能模式下禁用 Focus Ring 动画 */
-.motion-reduced .focus-ring::after {
-  animation: none !important;
-  opacity: 0 !important;
-}
-
-/* 性能模式下禁用 Loading Spinner */
-.motion-reduced .loading-spinner {
-  animation: none !important;
-}
-
-/* 性能模式下禁用 Marquee 滚动 */
-.motion-reduced .marquee-content {
-  animation: none !important;
-}
-
-/* 性能模式下禁用 Pull to Refresh */
-.motion-reduced .pull-to-refresh {
-  animation: none !important;
-}
-
-/* 性能模式下禁用 Stagger 动画 */
-.motion-reduced .stagger-item {
-  animation: none !important;
-  opacity: 1 !important;
-  transform: none !important;
-}
-
-/* 性能模式下禁用视差滚动 */
-.motion-reduced .parallax-element {
-  transform: none !important;
-  position: static !important;
-}
-
-/* 性能模式下禁用计数器动画 */
-.motion-reduced .count-up-number {
-  animation: none !important;
-}
-
-/* 性能模式下禁用音频可视化 */
-.motion-reduced .audio-visualizer {
-  animation: none !important;
-  opacity: 0 !important;
-}
-
-/* 性能模式下禁用 SVG 描边动画 */
-.motion-reduced .stroke-draw {
-  animation: none !important;
-  stroke-dashoffset: 0 !important;
-}
-
-/* 性能模式下禁用 CSS 变量动画 */
-.motion-reduced {
-  animation: none !important;
-  transition: none !important;
-}
-
-/* 性能模式下禁用 backdrop-blur */
-.motion-reduced * {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-
-/* 性能模式下禁用 filter 效果 */
-.motion-reduced * {
-  filter: none !important;
-}
-
-/* 性能模式下禁用 mix-blend-mode 效果 */
-.motion-reduced * {
-  mix-blend-mode: normal !important;
-}
-
-/* 性能模式下禁用 clip-path 动画 */
-.motion-reduced * {
-  clip-path: none !important;
-}
-
-/* 性能模式下禁用 mask 动画 */
-.motion-reduced * {
-  mask: none !important;
-  -webkit-mask: none !important;
-}
-
-/* 性能模式下禁用 transform3d */
-.motion-reduced * {
-  transform: none !important;
-  transform-style: flat !important;
-}
-
-/* 性能模式下禁用 will-change 优化 */
-.motion-reduced * {
-  will-change: auto !important;
-}
-
-/* 性能模式下禁用硬件加速 */
-.motion-reduced * {
-  -webkit-font-smoothing: auto !important;
-  -moz-osx-font-smoothing: auto !important;
-}
-
-/* 性能模式下简化阴影效果 */
-.motion-reduced * {
-  box-shadow: none !important;
-}
-
-.motion-reduced .shadow-\[2px_2px_0px_0px_rgba\(0\2c 0\2c 0\2c 1\)\] {
-  box-shadow: none !important;
-}
-
-.motion-reduced .shadow-\[4px_4px_0px_0px_rgba\(0\2c 0\2c 0\2c 1\)\] {
-  box-shadow: none !important;
-}
-
-.motion-reduced .shadow-\[6px_6px_0px_0px_rgba\(0\2c 0\2c 0\2c 1\)\] {
-  box-shadow: none !important;
-}
-
-.motion-reduced .shadow-\[8px_8px_0px_0px_rgba\(0\2c 0\2c 0\2c 1\)\] {
-  box-shadow: none !important;
-}
-
-.motion-reduced .shadow-\[10px_10px_0px_0px_rgba\(0\2c 0\2c 0\2c 1\)\] {
-  box-shadow: none !important;
-}
-
-.motion-reduced .shadow-\[12px_12px_0px_0px_rgba\(0\2c 0\2c 0\2c 1\)\] {
-  box-shadow: none !important;
-}
-
-.motion-reduced .shadow-none {
-  box-shadow: none !important;
-}
-
-.motion-reduced .shadow-neo {
-  box-shadow: none !important;
-}
-
-.motion-reduced .shadow-neo-sm {
-  box-shadow: none !important;
-}
-
-.motion-reduced .shadow-neo-lg {
-  box-shadow: none !important;
-}
-
-.motion-reduced .shadow-\[var\(--shadow\)\] {
-  box-shadow: none !important;
-}
-
-/* 性能模式下禁用图片滤镜 */
-.motion-reduced img {
-  filter: none !important;
-}
-
-/* 性能模式下禁用 SVG 动画 */
-.motion-reduced svg * {
-  animation: none !important;
-  transition: none !important;
+/* 保留 hover-3d 效果因為它對用戶體驗有幫助 */
+/* .motion-reduced .hover-3d 可選擇啟用 */
+
+/* 自定義滾動條樣式 */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--background);
+  border-left: 1px solid var(--border);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--main);
+  border: 1px solid var(--border);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--border);
+}
+
+/* Light mode (default) */
+:root, .light {
+  --background: oklch(93.88% 0.033 300.19);
+  --secondary-background: oklch(100% 0 0);
+  --foreground: oklch(0% 0 0);
+  --main-foreground: oklch(0% 0 0);
+  --main: oklch(70.28% 0.1753 295.36);
+  --border: oklch(0% 0 0);
+  --ring: oklch(0% 0 0);
+  --overlay: oklch(0% 0 0 / 0.8);
+  --shadow: 4px 4px 0px 0px var(--border);
+  --admin-radius: 8px;
+  --admin-shadow: 3px 3px 0px 0px var(--border);
+  --admin-shadow-sm: 2px 2px 0px 0px var(--border);
+  --admin-panel-bg: var(--secondary-background);
+  --admin-header-bg: var(--secondary-background);
+  --chart-1: #A985FF;
+  --chart-2: #00D696;
+  --chart-3: #FACC00;
+  --chart-4: #FF4D50;
+  --chart-5: #0099FF;
+  --chart-active-dot: #000;
+}
+
+/* Dark mode */
+.dark {
+  --background: oklch(30.14% 0.0826 296.5);
+  --secondary-background: oklch(23.93% 0 0);
+  --foreground: oklch(92.49% 0 0);
+  --main-foreground: oklch(0% 0 0);
+  --main: oklch(70.28% 0.1753 295.36);
+  --border: oklch(0% 0 0);
+  --ring: oklch(100% 0 0);
+  --shadow: 4px 4px 0px 0px var(--border);
+  --admin-radius: 8px;
+  --admin-shadow: 3px 3px 0px 0px var(--border);
+  --admin-shadow-sm: 2px 2px 0px 0px var(--border);
+  --admin-panel-bg: var(--secondary-background);
+  --admin-header-bg: var(--secondary-background);
+  --chart-1: #A985FF;
+  --chart-2: #00BD84;
+  --chart-3: #E0B700;
+  --chart-4: #FF6669;
+  --chart-5: #008AE5;
+  --chart-active-dot: #fff;
+}
+
+body.is-admin {
+  --admin-shadow: 2px 2px 0px 0px var(--border);
+  --admin-shadow-sm: 1px 1px 0px 0px var(--border);
+  --admin-panel-bg: color-mix(in oklab, var(--secondary-background) 88%, var(--background));
+  --admin-header-bg: color-mix(in oklab, var(--secondary-background) 96%, var(--background));
+  --shadow: var(--admin-shadow);
+  --shadow-shadow: var(--admin-shadow);
+}
+
+body.is-admin .shadow-neo {
+  box-shadow: var(--admin-shadow) !important;
+}
+
+body.is-admin .shadow-neo-sm {
+  box-shadow: var(--admin-shadow-sm) !important;
+}
+
+body.is-admin .border-4 {
+  border-width: 2px !important;
+}
+
+body.is-admin .border-b-4 {
+  border-bottom-width: 2px !important;
+}
+
+body.is-admin .border-t-4 {
+  border-top-width: 2px !important;
+}
+
+body.is-admin .border-r-4 {
+  border-right-width: 2px !important;
+}
+
+body.is-admin .border-l-4 {
+  border-left-width: 2px !important;
+}
+
+@theme inline {
+  --animate-avatar-jump: avatar-jump 1.5s cubic-bezier(0.28, 0.84, 0.42, 1) infinite;
+  @keyframes avatar-jump {
+    0% { transform: translateY(0) rotate(0) scale(1, 1); }
+    10% { transform: translateY(0) rotate(0) scale(1.2, 0.8); }
+    20% { transform: translateY(-12px) rotate(-15deg) scale(0.9, 1.1); }
+    30% { transform: translateY(-14px) rotate(15deg) scale(1, 1); }
+    40% { transform: translateY(-12px) rotate(-12deg) scale(1, 1); }
+    50% { transform: translateY(-14px) rotate(12deg) scale(1, 1); }
+    60% { transform: translateY(-12px) rotate(-10deg) scale(1, 1); }
+    70% { transform: translateY(-14px) rotate(8deg) scale(1, 1); }
+    80% { transform: translateY(0) rotate(0) scale(1.15, 0.85); }
+    90% { transform: translateY(-3px) rotate(0) scale(0.98, 1.02); }
+    100% { transform: translateY(0) rotate(0) scale(1, 1); }
+  }
+
+  --animate-avatar-land: avatar-land 0.4s cubic-bezier(0.28, 0.84, 0.42, 1) forwards;
+  @keyframes avatar-land {
+    0% { transform: translateY(0) rotate(0) scale(1, 1); }
+    30% { transform: translateY(0) rotate(0) scale(1.15, 0.85); }
+    60% { transform: translateY(-4px) rotate(0) scale(0.95, 1.05); }
+    100% { transform: translateY(0) rotate(0) scale(1, 1); }
+  }
+
+  --animate-dialog-fade-in: dialog-fade-in 700ms cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  @keyframes dialog-fade-in {
+    from { opacity: 0; transform: translate(0, 12px); }
+    to { opacity: 1; transform: translate(0, 0); }
+  }
+
+  --animate-dialog-fade-out: dialog-fade-out 700ms cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  @keyframes dialog-fade-out {
+    from { opacity: 1; transform: translate(0, 0); }
+    to { opacity: 0; transform: translate(0, -12px); }
+  }
+
+  @keyframes drawer-mobile-fade-in {
+    from { opacity: 0; transform: translate(0, 12px); }
+    to { opacity: 1; transform: translate(0, 0); }
+  }
+
+  @keyframes drawer-mobile-fade-out {
+    from { opacity: 1; transform: translate(0, 0); }
+    to { opacity: 0; transform: translate(0, -12px); }
+  }
+
+  @keyframes drawer-desktop-fade-in {
+    from { opacity: 0; transform: translate(-48px, 0); }
+    to { opacity: 1; transform: translate(0, 0); }
+  }
+
+  @keyframes drawer-desktop-fade-out {
+    from { opacity: 1; transform: translate(0, 0); }
+    to { opacity: 0; transform: translate(-48px, 0); }
+  }
+  
+  --color-main: var(--main);
+  --color-background: var(--background);
+  --color-secondary-background: var(--secondary-background);
+  --color-foreground: var(--foreground);
+  --color-main-foreground: var(--main-foreground);
+  --color-border: var(--border);
+  --color-overlay: var(--overlay);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --spacing-boxShadowX: 4px;
+  --spacing-boxShadowY: 4px;
+  --spacing-reverseBoxShadowX: -4px;
+  --spacing-reverseBoxShadowY: -4px;
+  --radius-base: 0px;
+  --shadow-shadow: var(--shadow);
+  --font-weight-base: 400;
+  --font-weight-heading: 900;
+}
+
+.hn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  vertical-align: middle;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Force pixel icons to snap to integer multiples of 24px for crisp rendering */
+.hn.text-xs, .hn.text-sm, .hn.text-base, .hn.text-lg, .hn.text-xl {
+  font-size: 24px !important;
+}
+.hn.text-3xl, .hn.text-4xl {
+  font-size: 48px !important;
+}
+.hn.text-6xl {
+  font-size: 72px !important;
+}
+  
+@layer base {
+  body {
+    @apply text-foreground font-base bg-background;
+  }
+
+  /* 滑鼠點擊時移除 outline，鍵盤導航時保留自定義 focus 樣式 */
+  *:focus {
+    outline: none;
+  }
+  *:focus-visible {
+    outline: 2px solid var(--main);
+    outline-offset: 2px;
+  }
+
+  h1, h2, h3, h4, h5, h6{
+    @apply font-heading;
+  }
+
+  /* Global Scrollbar Customization based on ScrollArea component */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 9999px;
+    border: 1px solid transparent;
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  /* 隱藏預設滑鼠指標，讓 CustomCursor.tsx 接管 */
+  
+  /* 將所有元素的預設滑鼠隱藏，但不覆寫它們的 cursor 值（使用 transparent color 技巧或乾脆依賴 JS 控制） */
+  * {
+    /* 這裡不能直接用 cursor: none !important，因為這會讓 JS 讀出來的 getComputedStyle().cursor 永遠是 'none' */
+  }
+}
+
+/* 由於我們需要讀取原生 cursor 狀態，我們不能在 CSS 中粗暴地把它變成 none。
+   正確的做法是在我們的 React 元件 (CustomCursor.tsx) 中注入一個全域 style 標籤來覆蓋外觀，
+   或者更簡單的作法是：使用一個全透明的 1x1 像素圖片作為所有元素的預設光標！ */
+@media (hover: hover) and (pointer: fine) {
+  @layer base {
+    body.cursor-native, body.cursor-native * {
+      cursor: auto !important;
+    }
+
+    body:not(.is-admin):not(.cursor-native) {
+      /* 使用 1x1 全透明 GIF 替換所有指標，這樣能保留原始的 cursor 語義給 JS 讀取，但在視覺上是隱藏的 */
+      cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), auto !important;
+    }
+    
+    /* 讓所有會改變游標的元素也都套用這個透明圖片，但「同時」保留它們原本的 CSS cursor 屬性作為 fallback。
+       這樣 JS 的 getComputedStyle().cursor 還是能讀到 pointer, text, not-allowed 等狀態。 */
+    body:not(.is-admin):not(.cursor-native) a, body:not(.is-admin):not(.cursor-native) button, body:not(.is-admin):not(.cursor-native) [role="button"], body:not(.is-admin):not(.cursor-native) .cursor-pointer, 
+    body:not(.is-admin):not(.cursor-native) .wl-btn, body:not(.is-admin):not(.cursor-native) .wl-action, body:not(.is-admin):not(.cursor-native) .wl-item, body:not(.is-admin):not(.cursor-native) .wl-reaction-item, body:not(.is-admin):not(.cursor-native) .wl-reaction-img, body:not(.is-admin):not(.cursor-native) .wl-reaction-text, body:not(.is-admin):not(.cursor-native) .wl-like, body:not(.is-admin):not(.cursor-native) .wl-reply, body:not(.is-admin):not(.cursor-native) .wl-edit, body:not(.is-admin):not(.cursor-native) .wl-sort li, body:not(.is-admin):not(.cursor-native) .wl-emoji, body:not(.is-admin):not(.cursor-native) .wl-logout, body:not(.is-admin):not(.cursor-native) .wl-tab {
+      cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), pointer !important;
+    }
+    
+    body:not(.is-admin):not(.cursor-native) [disabled], body:not(.is-admin):not(.cursor-native) .cursor-not-allowed {
+      cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), not-allowed !important;
+    }
+    
+    body:not(.is-admin):not(.cursor-native) .cursor-text, body:not(.is-admin):not(.cursor-native) .wl-editor, body:not(.is-admin):not(.cursor-native) input, body:not(.is-admin):not(.cursor-native) textarea, body:not(.is-admin):not(.cursor-native) [contenteditable="true"] {
+      cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), text !important;
+    }
+    
+    /* 由於 WebKit 內核 (Chrome, Safari, Edge) 強制鎖定 textarea 右下角 resizer 的原生系統游標，
+       任何 CSS 都無法覆蓋它。為了保證全站客製化游標的沉浸感，我們直接禁用原生的 resize 功能。
+       (現代的評論框如 Waline 通常會自動撐開高度，不需要手動拉伸) */
+    body:not(.is-admin):not(.cursor-native) textarea, body:not(.is-admin):not(.cursor-native) .wl-editor, body:not(.is-admin):not(.cursor-native) [contenteditable="true"] {
+      resize: none !important;
+    }
+    
+    /* 強制覆蓋所有會觸發 resize 的原生游標，全部替換為透明圖 + 原生狀態 fallback 
+       這招是為了解決瀏覽器會在 resize 邊緣強行渲染系統游標的 Bug */
+    body:not(.is-admin):not(.cursor-native) [style*="resize"] {
+      cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), auto !important;
+    }
+    
+    body:not(.is-admin):not(.cursor-native) .cursor-help {
+      cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), help !important;
+    }
+
+    body:not(.is-admin):not(.cursor-native) .cursor-wait, body:not(.is-admin):not(.cursor-native) [aria-busy="true"] {
+      cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), wait !important;
+    }
+    
+    body:not(.is-admin):not(.cursor-native) .cursor-progress, body:not(.is-admin):not(.cursor-native) .is-loading {
+      cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), progress !important;
+    }
+
+    body:not(.is-admin):not(.cursor-native) .cursor-crosshair {
+      cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), crosshair !important;
+    }
+
+    body:not(.is-admin):not(.cursor-native) .cursor-default {
+      cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), default !important;
+    }
+
+    body:not(.is-admin):not(.cursor-native) .cursor-grab {
+      cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), grab !important;
+    }
+
+    body:not(.is-admin):not(.cursor-native) .cursor-grabbing {
+      cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), grabbing !important;
+    }
+
+    body:not(.is-admin):not(.cursor-native) .cursor-zoom-in {
+      cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), zoom-in !important;
+    }
+
+    body:not(.is-admin):not(.cursor-native) .cursor-zoom-out {
+      cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), zoom-out !important;
+    }
+
+    /* 針對那些沒有標準對應的，我們保留自定義類名以供 JS 識別 */
+    body:not(.is-admin):not(.cursor-native) .pin-cursor, body:not(.is-admin):not(.cursor-native) .handwriting-cursor {
+      cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), auto !important;
+    }
+
+    /* 強制覆蓋 Fancybox 在圖片上的放大鏡和抓取手勢，改為透明 */
+    body:not(.is-admin):not(.cursor-native) .is-zoomable, body:not(.is-admin):not(.cursor-native) .is-zoomable *, body:not(.is-admin):not(.cursor-native) .fancybox__content, body:not(.is-admin):not(.cursor-native) .fancybox__content *, body:not(.is-admin):not(.cursor-native) [data-fancybox] *, body:not(.is-admin):not(.cursor-native) .f-button *, body:not(.is-admin):not(.cursor-native) .is-grab, body:not(.is-admin):not(.cursor-native) .is-grab *,
+    body:not(.is-admin):not(.cursor-native) .fancybox__viewport, body:not(.is-admin):not(.cursor-native) .fancybox__viewport *, body:not(.is-admin):not(.cursor-native) .fancybox__container, body:not(.is-admin):not(.cursor-native) .fancybox__container * {
+      cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), auto !important;
+    }
+    
+    body:not(.is-admin):not(.cursor-native) .is-grab, body:not(.is-admin):not(.cursor-native) .is-grab *, body:not(.is-admin):not(.cursor-native) .is-grabbing, body:not(.is-admin):not(.cursor-native) .is-grabbing *, 
+    body:not(.is-admin):not(.cursor-native) .fancybox__slide--image.is-grab *, body:not(.is-admin):not(.cursor-native) .fancybox__slide--image.is-grabbing * {
+      cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), auto !important;
+    }
+  }
+
+  /* 由於 Fancybox 可能會使用內聯樣式 (inline style) 強制改變指標 (例如 style="cursor: zoom-in;")，
+     所以我們需要確保 .fancybox__container 下的所有元素都被覆蓋 */
+  body:not(.is-admin):not(.cursor-native) .fancybox__container * {
+    cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), auto !important;
+  }
+
+  /* 額外確保 Fancybox 背景與整體容器的指標覆蓋 */
+  body:not(.is-admin):not(.cursor-native) .fancybox__container {
+    cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), auto !important;
+  }
+
+  body:not(.is-admin):not(.cursor-native) .fancybox__slide {
+    cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), auto !important;
+  }
+
+  body:not(.is-admin):not(.cursor-native) .fancybox__backdrop {
+    cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), auto !important;
+  }
+
+  body:not(.is-admin):not(.cursor-native) .fancybox__carousel {
+    cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), auto !important;
+  }
+
+  body:not(.is-admin):not(.cursor-native) .fancybox__content {
+    cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), auto !important;
+  }
+
+  body:not(.is-admin):not(.cursor-native) .fancybox__container [data-fancybox],
+  body:not(.is-admin):not(.cursor-native) .fancybox__container .is-zoomable, 
+  body:not(.is-admin):not(.cursor-native) .fancybox__container .is-zoomable *,
+  body:not(.is-admin):not(.cursor-native) .fancybox__slide--image {
+    cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), move !important;
+  }
+
+  body:not(.is-admin):not(.cursor-native) .fancybox__container .is-grab, 
+  body:not(.is-admin):not(.cursor-native) .fancybox__container .is-grab *,
+  body:not(.is-admin):not(.cursor-native) .fancybox__container .has-panzoom.is-zoomable {
+    cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), move !important;
+  }
+
+  body:not(.is-admin):not(.cursor-native) .fancybox__container .is-grabbing, 
+  body:not(.is-admin):not(.cursor-native) .fancybox__container .is-grabbing * {
+    cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), grabbing !important;
+  }
+
+  body:not(.is-admin):not(.cursor-native) .fancybox__container .f-button,
+  body:not(.is-admin):not(.cursor-native) .fancybox__container .f-button * {
+    cursor: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'), pointer !important;
+  }
+}
+
+body.cursor-native,
+body.cursor-native * {
+  cursor: auto !important;
+}
+
+@layer utilities {
+  /* =========================================================
+     ZTMY CRT & Glitch Effects 
+     ========================================================= */
+
+  /* 1. 常駐 CRT 掃描線與暗角濾鏡效果 */
+  /* 調用方式：在容器加上 className="crt-lines" */
+  .crt-lines {
+    overflow: hidden;
+  }
+  /* z-index 分層規範（避免極端數值）：
+     0-49   基礎內容
+     50     CRT 掃描線
+     60     底部固定懸浮按鈕
+     90     Drawer Overlay
+     100    Modal / Dialog 內容
+     110    Modal 關閉按鈕
+     120    Popover / Dropdown
+     130    Tooltip / Toast
+     140    Route Boundary Loading
+     150    Route Boundary NotFound / Lightgallery / Fancybox
+     152    Lightgallery 組件層
+  */
+  /* 細微的彩色水平條紋（模擬像素柵格） */
+  .crt-lines::before {
+    content: " ";
+    display: block;
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+    --sweep-color: rgba(255, 255, 255, 0.4);
+    background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, var(--sweep-color) 50%, rgba(255,255,255,0) 100%),
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), 
+                linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05));
+    z-index: 50;
+    background-size: 100% 400px, 100% 4px, 3px 100%;
+    background-repeat: no-repeat, repeat, repeat;
+    background-position: 0 calc(0% - 400px), 0 0, 0 0;
+    pointer-events: none;
+    opacity: 0.15; /* 淺色模式下掃描線較淡 */
+    animation: crt-flicker-box 4s infinite, crt-sweep 8s infinite linear;
+  }
+  /* 四周暗角 (Vignette) 與螢幕反光感 */
+  .crt-lines::after {
+    content: " ";
+    display: block;
+    position: absolute;
+    inset: 0;
+    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.15); /* 淺色模式下暗角較淡 */
+    background: radial-gradient(circle, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0.05) 100%);
+    pointer-events: none;
+    z-index: 50;
+  }
+
+  /* 深色模式下的卡片/彈窗 CRT 特效加重 */
+  .dark .crt-lines::before {
+    opacity: 1; /* 恢復原本的深色強度 */
+    --sweep-color: rgba(255, 255, 255, 0.08);
+    animation: crt-flicker-box-dark 4s infinite, crt-sweep 8s infinite linear;
+  }
+  .dark .crt-lines::after {
+    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.4);
+    background: radial-gradient(circle, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0.15) 100%);
+  }
+
+  /* 首頁全螢幕專用的 CRT 暗角 (範圍更大) */
+  .crt-lines-global {
+    overflow: hidden;
+  }
+  .crt-lines-global::before {
+    content: " ";
+    display: block;
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+    --sweep-color: rgba(255, 255, 255, 0.3);
+    background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, var(--sweep-color) 50%, rgba(255,255,255,0) 100%),
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), 
+                linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05));
+    z-index: 50;
+    background-size: 100% 600px, 100% 4px, 3px 100%;
+    background-repeat: no-repeat, repeat, repeat;
+    background-position: 0 calc(0% - 600px), 0 0, 0 0;
+    pointer-events: none;
+    opacity: 0.15;
+    animation: crt-flicker 5s infinite alternate, crt-sweep-global 12s infinite linear;
+  }
+  .crt-lines-global::after {
+    content: " ";
+    display: block;
+    position: absolute;
+    inset: 0;
+    box-shadow: inset 0 0 150px rgba(0, 0, 0, 0.15);
+    background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.1) 100%);
+    pointer-events: none;
+    z-index: 50;
+  }
+  
+  /* 深色模式下的全螢幕 CRT 特效加重 */
+  .dark .crt-lines-global::before {
+    opacity: 0.4;
+    --sweep-color: rgba(255, 255, 255, 0.05);
+    animation: crt-flicker-dark 5s infinite alternate, crt-sweep-global 12s infinite linear;
+  }
+  .dark .crt-lines-global::after {
+    box-shadow: inset 0 0 150px rgba(0, 0, 0, 0.7);
+    background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.4) 100%);
+  }
+
+  .ambient-midnight-stars-a,
+  .ambient-midnight-stars-b {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .ambient-midnight-stars-a {
+    background:
+      radial-gradient(2px 2px at 5% 3%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 12% 18%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 8% 35%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 3% 52%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 15% 68%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 10% 85%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 18% 95%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 22% 8%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 28% 25%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 25% 42%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 32% 58%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 30% 75%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 35% 12%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 38% 30%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 42% 48%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 45% 65%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 48% 82%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 52% 5%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 55% 22%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 58% 40%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 62% 55%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 65% 72%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 68% 88%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 72% 15%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 75% 32%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 78% 50%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 82% 68%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 85% 85%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 88% 10%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 92% 28%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 95% 45%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 98% 62%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(3px 3px at 20% 50%, rgba(200,210,255,0.9), transparent),
+      radial-gradient(3px 3px at 60% 20%, rgba(200,210,255,0.9), transparent),
+      radial-gradient(3px 3px at 80% 78%, rgba(200,210,255,0.9), transparent),
+      radial-gradient(3px 3px at 40% 90%, rgba(200,210,255,0.8), transparent);
+    animation: midnight-twinkle-a 5s ease-in-out infinite alternate;
+  }
+
+  .ambient-midnight-stars-b {
+    background:
+      radial-gradient(2px 2px at 7% 10%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 14% 28%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 11% 45%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 6% 62%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 17% 78%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 20% 92%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 24% 5%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 27% 22%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 33% 38%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 36% 55%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 40% 72%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 43% 88%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 47% 8%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 50% 25%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 54% 42%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 57% 58%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 61% 75%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 64% 92%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 69% 5%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 73% 22%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 76% 38%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 79% 55%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 83% 72%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 86% 88%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 90% 5%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 93% 22%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(2px 2px at 96% 38%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 99% 55%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(3px 3px at 30% 60%, rgba(200,210,255,0.9), transparent),
+      radial-gradient(3px 3px at 70% 35%, rgba(200,210,255,0.8), transparent),
+      radial-gradient(3px 3px at 50% 80%, rgba(200,210,255,0.9), transparent),
+      radial-gradient(3px 3px at 90% 50%, rgba(200,210,255,0.8), transparent);
+    animation: midnight-twinkle-b 3.5s ease-in-out infinite alternate;
+  }
+
+  .ambient-midnight-stars-a,
+  .ambient-midnight-stars-b {
+    opacity: 0;
+  }
+
+  .ambient-midnight .ambient-midnight-stars-a,
+  .ambient-midnight .ambient-midnight-stars-b {
+    opacity: 1;
+  }
+
+  @keyframes midnight-twinkle-a {
+    0% { opacity: 0.3; }
+    33% { opacity: 0.9; }
+    66% { opacity: 0.4; }
+    100% { opacity: 1; }
+  }
+
+  @keyframes midnight-twinkle-b {
+    0% { opacity: 1; }
+    33% { opacity: 0.3; }
+    66% { opacity: 0.8; }
+    100% { opacity: 0.4; }
+  }
+
+  .ambient-midnight .ambient-midnight-text {
+    opacity: 0.5 !important;
+  }
+
+  .tape-playing {
+    animation: tape-vibrate 0.15s linear infinite !important;
+  }
+
+  @keyframes tape-vibrate {
+    0% { transform: translate(0, 0); }
+    25% { transform: translate(-1px, 1px); }
+    50% { transform: translate(1px, -1px); }
+    75% { transform: translate(-1px, -1px); }
+    100% { transform: translate(1px, 1px); }
+  }
+
+  .tape-vhs-bar {
+    height: 2px;
+    background: repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      rgba(255,255,255,0.4) 2px,
+      transparent 4px,
+      rgba(255,255,255,0.2) 6px,
+      transparent 8px
+    );
+    animation: tape-vhs-scroll 0.3s linear infinite;
+  }
+
+  @keyframes tape-vhs-scroll {
+    from { transform: translateX(-8px); }
+    to { transform: translateX(0); }
+  }
+
+  .tape-ejected {
+    animation: tape-eject 0.5s ease-out forwards !important;
+  }
+
+  @keyframes tape-eject {
+    0% { transform: translateY(0); }
+    40% { transform: translateY(-16px); }
+    100% { transform: translateY(-8px); }
+  }
+
+  .ztmy-global-glitch {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    pointer-events: none;
+    animation: global-glitch-burst 1.2s ease-out forwards;
+  }
+
+  @keyframes global-glitch-burst {
+    0% {
+      background: transparent;
+    }
+    5% {
+      background: rgba(255,0,0,0.06);
+      transform: translateX(-3px);
+    }
+    8% {
+      background: rgba(0,255,255,0.06);
+      transform: translateX(4px) skewX(1deg);
+    }
+    12% {
+      background: transparent;
+      transform: translateX(-2px);
+    }
+    18% {
+      background: rgba(255,0,255,0.04);
+      transform: translateX(2px) skewX(-0.5deg);
+    }
+    25% {
+      background: transparent;
+      transform: none;
+    }
+    30% {
+      box-shadow: inset 0 40% 0 rgba(0,0,0,0.15), inset 0 -30% 0 rgba(255,255,255,0.03);
+    }
+    40% {
+      box-shadow: none;
+    }
+    50% {
+      background: rgba(255,255,255,0.02);
+    }
+    60% {
+      background: transparent;
+    }
+    100% {
+      background: transparent;
+      transform: none;
+    }
+  }
+
+  /* 2. 動態掃描橫條 (早期實驗性效果，目前未在首頁主要使用) */
+  .crt-scanline::after {
+    content: " ";
+    display: block;
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 100px;
+    background: linear-gradient(to bottom, transparent 0%, rgba(0, 255, 0, 0.05) 50%, transparent 100%);
+    opacity: 0.1;
+    z-index: 0;
+    pointer-events: none;
+    animation: var(--animate-scanline);
+  }
+
+  /* 標題文字滾動動畫 - 無遮罩版本 */
+  @keyframes marquee-title {
+    from {
+      transform: translateX(0%);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  /* CRT 微發光閃爍動畫 */
+  @keyframes crt-flicker {
+    0%, 100% { opacity: 0.15; }
+    5%       { opacity: 0.12; }
+    10%      { opacity: 0.16; }
+    15%      { opacity: 0.13; }
+    20%      { opacity: 0.15; }
+    50%      { opacity: 0.15; }
+    55%      { opacity: 0.18; }
+    60%      { opacity: 0.14; }
+    65%      { opacity: 0.15; }
+  }
+
+  @keyframes crt-flicker-dark {
+    0%, 100% { opacity: 0.40; }
+    5%       { opacity: 0.35; }
+    10%      { opacity: 0.45; }
+    15%      { opacity: 0.38; }
+    20%      { opacity: 0.40; }
+    50%      { opacity: 0.40; }
+    55%      { opacity: 0.48; }
+    60%      { opacity: 0.36; }
+    65%      { opacity: 0.40; }
+  }
+
+  @keyframes crt-flicker-box {
+    0%, 100% { opacity: 0.15; }
+    5%       { opacity: 0.12; }
+    10%      { opacity: 0.16; }
+    15%      { opacity: 0.13; }
+    20%      { opacity: 0.15; }
+    50%      { opacity: 0.15; }
+    55%      { opacity: 0.18; }
+    60%      { opacity: 0.14; }
+    65%      { opacity: 0.15; }
+  }
+
+  @keyframes crt-flicker-box-dark {
+    0%, 100% { opacity: 1; }
+    5%       { opacity: 0.85; }
+    10%      { opacity: 0.95; }
+    15%      { opacity: 0.90; }
+    20%      { opacity: 1; }
+    50%      { opacity: 1; }
+    55%      { opacity: 0.88; }
+    60%      { opacity: 0.96; }
+    65%      { opacity: 1; }
+  }
+
+  @keyframes crt-sweep {
+    0% { background-position: 0 calc(0% - 400px), 0 0, 0 0; }
+    40% { background-position: 0 calc(100% + 400px), 0 0, 0 0; }
+    100% { background-position: 0 calc(100% + 400px), 0 0, 0 0; }
+  }
+
+  @keyframes crt-sweep-global {
+    0% { background-position: 0 calc(0% - 600px), 0 0, 0 0; }
+    40% { background-position: 0 calc(100% + 600px), 0 0, 0 0; }
+    100% { background-position: 0 calc(100% + 600px), 0 0, 0 0; }
+  }
+
+  .animate-marquee-title {
+    animation: marquee-title 8s linear infinite;
+    will-change: transform;
+  }
+
+  @keyframes marquee {
+    0% { transform: translateX(0%) }
+    100% { transform: translateX(-100%) }
+  }
+  .animate-marquee {
+    animation: marquee 20s linear infinite;
+  }
+  
+  @keyframes marquee2 {
+    0% { transform: translateX(100%) }
+    100% { transform: translateX(0%) }
+  }
+  .animate-marquee2 {
+    animation: marquee2 20s linear infinite;
+  }
+
+  @keyframes card-title-marquee {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(calc(0px - var(--marquee-distance, 0px)), 0, 0);
+    }
+  }
+  .animate-card-title-marquee {
+    animation: card-title-marquee var(--marquee-duration, 8s) linear infinite !important;
+  }
+  
+  /* 滾動標題容器遮罩（可選） */
+  .card-title-mask {
+    mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      black 0.75rem,
+      black calc(100% - 0.75rem),
+      transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      black 0.75rem,
+      black calc(100% - 0.75rem),
+      transparent 100%
+    );
+  }
+
+  /* 3. 隨機故障效果 - Noise Pop (雪花噪點閃爍) */
+  /* 調用方式：在圖片上層覆蓋一個 div className="ztmy-noise-pop" */
+  @keyframes ztmy-noise-pop {
+    0% { opacity: 0; transform: translate3d(0,0,0); }
+    10% { opacity: 0.55; }
+    40% { opacity: 0.15; }
+    70% { opacity: 0.35; }
+    100% { opacity: 0; transform: translate3d(0,0,0); }
+  }
+  .ztmy-noise-pop {
+    background-image:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.08) 0px, rgba(255,255,255,0.08) 1px, rgba(0,0,0,0) 2px, rgba(0,0,0,0) 6px),
+      repeating-linear-gradient(90deg, rgba(0,255,157,0.06) 0px, rgba(0,255,157,0.06) 1px, rgba(0,0,0,0) 2px, rgba(0,0,0,0) 7px);
+    mix-blend-mode: overlay;
+    animation: ztmy-noise-pop 800ms steps(2) both;
+    pointer-events: none;
+  }
+
+  /* 4. 隨機故障效果 - Scanline Pop (粗大掃描帶刷過) */
+  /* 調用方式：在圖片上層覆蓋一個 div className="ztmy-scanline-pop" */
+  @keyframes ztmy-scanline-pop {
+    0% { transform: translateY(-30%); opacity: 0; }
+    20% { opacity: 0.9; }
+    100% { transform: translateY(120%); opacity: 0; }
+  }
+  .ztmy-scanline-pop {
+    background: linear-gradient(to bottom, transparent 0%, rgba(0,255,157,0.3) 40%, rgba(255,255,255,0.4) 50%, rgba(0,255,157,0.3) 60%, transparent 100%);
+    mix-blend-mode: screen;
+    animation: ztmy-scanline-pop 800ms linear both;
+    pointer-events: none;
+  }
+
+  /* 5. 隨機故障效果 - Glitch Jitter (畫面劇烈抖動撕裂) */
+  /* 調用方式：直接加在圖片的父容器上 className="ztmy-glitch-jitter" */
+  @keyframes ztmy-glitch-jitter {
+    0% { transform: translate3d(0,0,0); filter: saturate(1) contrast(1); }
+    8% { transform: translate3d(-6px, 3px, 0); filter: saturate(2) contrast(1.8) hue-rotate(90deg); }
+    16% { transform: translate3d(4px, -5px, 0); }
+    24% { transform: translate3d(-4px, -2px, 0); filter: saturate(1.5) contrast(1.5) invert(0.2); }
+    32% { transform: translate3d(5px, 4px, 0); }
+    40% { transform: translate3d(0,0,0); }
+    100% { transform: translate3d(0,0,0); filter: saturate(1) contrast(1); }
+  }
+  .ztmy-glitch-jitter {
+    animation: ztmy-glitch-jitter 800ms steps(1) both;
+  }
+
+  /* 6. 隨機故障效果 - Invert Flash (反色與過曝閃爍) */
+  /* 調用方式：直接加在圖片的父容器上 className="ztmy-invert-flash" */
+  @keyframes ztmy-invert-flash {
+    0% { filter: invert(0) brightness(1) contrast(1); transform: scale(1); }
+    10% { filter: invert(1) brightness(2) contrast(1.5); transform: scale(1.05); }
+    20% { filter: invert(0) brightness(1.5) contrast(1.2); transform: scale(1); }
+    30% { filter: invert(1) brightness(2.5) contrast(2) hue-rotate(180deg); transform: scale(1.02); }
+    40% { filter: invert(0) brightness(1) contrast(1); transform: scale(1); }
+    100% { filter: invert(0) brightness(1) contrast(1); transform: scale(1); }
+  }
+  .ztmy-invert-flash {
+    animation: ztmy-invert-flash 600ms steps(1) both;
+  }
+
+  /* 7. 隨機故障效果 - Signal Drop (短暫訊號中斷/黑屏) */
+  /* 調用方式：直接加在圖片的父容器上 className="ztmy-signal-drop" */
+  @keyframes ztmy-signal-drop {
+    0% { filter: brightness(1) contrast(1); transform: scaleY(1); }
+    5% { filter: brightness(0.2); transform: scaleY(0.02); }
+    90% { filter: brightness(0.2); transform: scaleY(0.02); }
+    95% { filter: brightness(1.5) contrast(1.2); transform: scaleY(1); }
+    100% { filter: brightness(1) contrast(1); transform: scaleY(1); }
+  }
+  .ztmy-signal-drop {
+    animation: ztmy-signal-drop 300ms cubic-bezier(0.4, 0, 0.2, 1) both;
+    background-color: #111;
+  }
+
+  /* 標題科技風掃描特效 (Cyber Scan) */
+  .ztmy-cyber-title-crt {
+    position: relative;
+    display: inline-block;
+    padding-bottom: 0.2em; /* 增加底部 padding，防止 y 尾巴被切斷 */
+    margin-bottom: -0.2em; /* 補償 padding，不影響外部佈局 */
+    animation: cyber-jitter var(--jitter-dur, 3.5s) var(--g-del-1, 0s) infinite linear;
+    animation-play-state: var(--anim-state, running);
+    z-index: 1; /* 確保偽元素層級正確 */
+  }
+
+  .ztmy-cyber-hover-layer {
+    position: relative;
+    display: inline-block;
+    transform: translate(calc(var(--mx, 0) * 6px), calc(var(--my, 0) * 4px));
+    transition: transform 120ms cubic-bezier(0.2, 0.9, 0.2, 1), filter 120ms cubic-bezier(0.2, 0.9, 0.2, 1);
+  }
+
+  .ztmy-cyber-title-hovering .ztmy-cyber-hover-layer {
+    transform: translate(calc(var(--mx, 0) * 10px), calc(var(--my, 0) * 6px)) scale(1.01);
+    filter: drop-shadow(0 0 14px rgba(255, 0, 255, 0.25)) drop-shadow(0 0 10px rgba(0, 255, 255, 0.18));
+  }
+
+  .ztmy-cyber-title-hovering .ztmy-cyber-title-scan {
+    filter: saturate(1.25) brightness(1.1);
+  }
+
+  .ztmy-cyber-title-hovering .ztmy-cyber-text-aberration {
+    filter: saturate(1.15) brightness(1.05);
+  }
+
+  .ztmy-cyber-hover-burst {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 12;
+  }
+
+  .ztmy-cyber-hover-burst::before,
+  .ztmy-cyber-hover-burst::after {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    filter: saturate(1.6) brightness(1.2);
+  }
+
+  .ztmy-cyber-hover-burst::before {
+    color: rgba(255, 0, 255, 0.9);
+    text-shadow: calc(var(--glitch-random, 1) * -6px) 0 0 rgba(255, 0, 0, 0.85), calc(var(--glitch-random, 1) * 6px) 0 0 rgba(0, 255, 255, 0.85);
+    animation: cyber-hover-burst-a 420ms steps(2, end) 1 both;
+    animation-play-state: var(--anim-state, running);
+  }
+
+  .ztmy-cyber-hover-burst::after {
+    color: rgba(0, 255, 255, 0.9);
+    text-shadow: calc(var(--glitch-random, 1) * 6px) 0 0 rgba(255, 0, 0, 0.85), calc(var(--glitch-random, 1) * -6px) 0 0 rgba(0, 0, 255, 0.85);
+    animation: cyber-hover-burst-b 480ms steps(2, end) 1 both;
+    animation-delay: 40ms;
+    animation-play-state: var(--anim-state, running);
+  }
+
+  @keyframes cyber-hover-burst-a {
+    0% { opacity: 0; clip-path: inset(50% 0 50% 0); transform: translate(0, 0) skewX(0deg); }
+    8% { opacity: 1; }
+    18% { clip-path: inset(10% 0 70% 0); transform: translate(calc(var(--glitch-random, 1) * -16px), -2px) skewX(calc(var(--glitch-random, 1) * -10deg)); }
+    34% { clip-path: inset(55% 0 25% 0); transform: translate(calc(var(--glitch-random, 1) * 12px), 1px) skewX(calc(var(--glitch-random, 1) * 8deg)); }
+    54% { clip-path: inset(78% 0 10% 0); transform: translate(calc(var(--glitch-random, 1) * -10px), 2px) skewX(calc(var(--glitch-random, 1) * -6deg)); }
+    72% { opacity: 0.8; clip-path: inset(35% 0 45% 0); transform: translate(calc(var(--glitch-random, 1) * 8px), -1px) skewX(calc(var(--glitch-random, 1) * 6deg)); }
+    100% { opacity: 0; clip-path: inset(50% 0 50% 0); transform: translate(0, 0) skewX(0deg); }
+  }
+
+  @keyframes cyber-hover-burst-b {
+    0% { opacity: 0; clip-path: inset(50% 0 50% 0); transform: translate(0, 0) skewX(0deg); }
+    10% { opacity: 1; }
+    22% { clip-path: inset(65% 0 20% 0); transform: translate(calc(var(--glitch-random, 1) * 18px), 1px) skewX(calc(var(--glitch-random, 1) * 12deg)); }
+    40% { clip-path: inset(22% 0 58% 0); transform: translate(calc(var(--glitch-random, 1) * -14px), -2px) skewX(calc(var(--glitch-random, 1) * -10deg)); }
+    60% { clip-path: inset(45% 0 35% 0); transform: translate(calc(var(--glitch-random, 1) * 10px), 2px) skewX(calc(var(--glitch-random, 1) * 8deg)); }
+    78% { opacity: 0.75; clip-path: inset(80% 0 10% 0); transform: translate(calc(var(--glitch-random, 1) * -8px), -1px) skewX(calc(var(--glitch-random, 1) * -6deg)); }
+    100% { opacity: 0; clip-path: inset(50% 0 50% 0); transform: translate(0, 0) skewX(0deg); }
+  }
+
+  /* 加上CRT螢幕閃爍層 */
+  .ztmy-cyber-title-crt::before {
+    content: attr(data-text); /* 使用 attr 提取文字作為遮罩，不留背景 */
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    color: transparent; /* 文字本身設為透明 */
+    /* 將原來的漸層背景改為使用 background-clip: text，這樣掃描線只會出現在文字的形狀內 */
+    background: linear-gradient(transparent 50%, rgba(128, 128, 128, 0.25) 50%);
+    background-size: 100% 4px;
+    -webkit-background-clip: text;
+    background-clip: text;
+    z-index: 15; /* 把掃描線的 z-index 提高到比光束(10)還要大 */
+    pointer-events: none;
+    mix-blend-mode: difference; /* 改用 difference 模式，在淺色底黑字/深色底白字都能產生對比色差 */
+    animation: crt-scroll var(--crt-scroll-dur, 10s) linear infinite;
+    animation-play-state: var(--anim-state, running);
+    opacity: 0.5; /* 降低整體掃描線的透明度，讓它更淡 */
+  }
+  
+  @keyframes crt-scroll {
+    0% { background-position: 0 0; }
+    100% { background-position: 0 100%; }
+  }
+
+  /* 第一條掃描線 (快) 改為獨立類，避免和 crt 衝突 */
+  .ztmy-cyber-title-fast-scan::before {
+    content: attr(data-text);
+    position: absolute;
+    left: calc(var(--glitch-random, 1) * 8px); /* 更明顯的錯位 */
+    top: 0;
+    width: 100%;
+    height: 100%;
+    padding-bottom: 0.2em;
+    color: var(--main);
+    text-shadow: 
+      0 0 15px var(--main), 
+      calc(var(--glitch-random, 1) * -4px) 0 0 red, 
+      calc(var(--glitch-random, 1) * 4px) 0 0 blue;
+    clip-path: polygon(0 -5%, 100% -5%, 100% 0%, 0 0%);
+    animation: cyber-scan-fast var(--scan-fast-dur, 3.2s) var(--g-del-2, 0s) cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    animation-play-state: var(--anim-state, running);
+    pointer-events: none;
+    mix-blend-mode: hard-light;
+    opacity: 0;
+    z-index: 3;
+  }
+  
+  /* 第二條掃描線 (慢，偶發) */
+  .ztmy-cyber-title-slow-scan::before {
+    content: attr(data-text);
+    position: absolute;
+    left: calc(var(--glitch-random, 1) * -6px); /* 更明顯的錯位 */
+    top: 0;
+    width: 100%;
+    height: 100%;
+    padding-bottom: 0.2em; /* 同步偽元素的 padding，確保覆蓋範圍一致 */
+    color: #fff; /* 瞬間的強白光 */
+    text-shadow: 
+      0 0 20px #fff, 
+      calc(var(--glitch-random, 1) * 5px) 0 0 cyan, 
+      calc(var(--glitch-random, 1) * -5px) 0 0 magenta;
+    clip-path: polygon(0 -2%, 100% -2%, 100% 0%, 0 0%);
+    animation: cyber-scan-slow var(--scan-slow-dur, 5.5s) var(--g-del-3, 0s) cubic-bezier(0.1, 0.7, 1.0, 0.1) infinite;
+    animation-play-state: var(--anim-state, running);
+    pointer-events: none;
+    mix-blend-mode: overlay;
+    filter: contrast(1.5) brightness(1.5);
+    opacity: 0;
+    z-index: 2;
+  }
+  
+  @keyframes cyber-scan-fast {
+    0%, 30% { clip-path: polygon(0 -5%, 100% -5%, 100% 0%, 0 0%); transform: skewX(0deg) translate(0, 0); opacity: 0; }
+    30.1% { opacity: 1; }
+    34% { 
+      clip-path: polygon(0 40%, 100% 40%, 100% 50%, 0 50%); /* 掃過中間時也保持細長 */
+      transform: skewX(calc(var(--glitch-random, 1) * -12deg)) translate(calc(var(--glitch-random, 1) * -10px), 2px); 
+    }
+    36.9% { 
+      clip-path: polygon(0 95%, 100% 95%, 100% 100%, 0 100%); /* 裁切範圍不超過 100% */
+      transform: skewX(0deg) translate(0, 0); 
+      opacity: 1; 
+    }
+    37%, 100% { 
+      clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0 100%); /* 完全縮到底部變為0高 */
+      opacity: 0; 
+    }
+  }
+  
+  @keyframes cyber-scan-slow {
+    0%, 75% { clip-path: polygon(0 -2%, 100% -2%, 100% 0%, 0 0%); transform: scaleY(1) translate(0, 0); opacity: 0; }
+    75.1% { opacity: 0.9; }
+    80% { 
+      clip-path: polygon(0 20%, 100% 20%, 100% 25%, 0 25%); /* 掃過中間時也保持細長 */
+      transform: scaleY(1.2) translate(calc(var(--glitch-random, 1) * 8px), -3px) skewX(calc(var(--glitch-random, 1) * 8deg)); 
+    }
+    85% { 
+      clip-path: polygon(0 75%, 100% 75%, 100% 80%, 0 80%); 
+      transform: scaleY(1.3) translate(calc(var(--glitch-random, 1) * -8px), 3px) skewX(calc(var(--glitch-random, 1) * -8deg)); 
+    }
+    88.9% { 
+      clip-path: polygon(0 95%, 100% 95%, 100% 100%, 0 100%); /* 裁切範圍不超過 100% */
+      transform: scaleY(1) translate(0, 0); 
+      opacity: 0.9; 
+    }
+    89%, 100% { 
+      clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0 100%); /* 完全縮到底部變為0高 */
+      opacity: 0; 
+    }
+  }
+
+
+  
+  /* 霓虹漸變光束 */
+  .ztmy-cyber-title-glow::after {
+    content: attr(data-text);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10; /* 把 z-index 提高，讓光束能蓋在純色文字上方 */
+    color: transparent;
+    -webkit-text-stroke: 6px transparent;
+    /* 調淡紫/洋紅色光束的透明度 */
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      transparent 35%,
+      rgba(157, 0, 255, 0.6) 45%, /* 降低深紫色的不透明度 */
+      rgba(255, 0, 255, 0.7) 50%, /* 降低洋紅色的不透明度 */
+      rgba(157, 0, 255, 0.6) 55%, /* 降低深紫色的不透明度 */
+      transparent 65%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    background-repeat: no-repeat; /* 確保只有單一光束，不會因為重複而出現半截光束 */
+    -webkit-background-clip: text;
+    background-clip: text;
+    background-position: 130% 0; /* 預設停在畫面外 */
+    /* 讓霓虹光束同時疊加平移掃描與紅藍色差閃爍動畫，注意時間與延遲的配合 */
+    animation: 
+      cyber-gradient-pan var(--glow-dur, 3s) var(--g-del-6, 0s) linear infinite,
+      cyber-chromatic-aberration var(--aberration-dur, 5.1s) var(--g-del-1, 0s) infinite;
+    animation-play-state: var(--anim-state, running);
+    pointer-events: none;
+    /* 讓它有輕微的發光效果 */
+    filter: drop-shadow(0 0 8px rgba(255, 0, 255, 0.4)); /* 同時降低外發光陰影的濃度 */
+    mix-blend-mode: screen; /* 讓光束在黑白背景下都能有發亮疊加效果 */
+    will-change: background-position, text-shadow, filter;
+  }
+  
+  @keyframes cyber-gradient-pan {
+    /* 130% 對應光束完全在左側畫面外，-30% 對應完全在右側畫面外，實現完美的無縫單次掃描 */
+    0%, 15% { background-position: 130% 0; }
+    85%, 100% { background-position: -30% 0; }
+  }
+
+  @keyframes cyber-jitter {
+    0%, 93% { transform: translate(0, 0) skewX(0); }
+    94% { transform: translate(calc(var(--glitch-random, 1) * -3px), calc(var(--glitch-random, 1) * 1px)) skewX(calc(var(--glitch-random, 1) * -4deg)); filter: opacity(0.85); }
+    95% { transform: translate(calc(var(--glitch-random, 1) * 3px), calc(var(--glitch-random, 1) * -1px)) skewX(calc(var(--glitch-random, 1) * 4deg)); filter: opacity(0.9); }
+    96% { transform: translate(calc(var(--glitch-random, 1) * -2px), calc(var(--glitch-random, 1) * 1px)) skewX(calc(var(--glitch-random, 1) * -2deg)); filter: opacity(0.95); }
+    97%, 100% { transform: translate(0, 0) skewX(0); }
+  }
+  
+  /* 全域文字色像差偶發放大縮小 */
+  @keyframes cyber-chromatic-aberration {
+    0%, 30% { 
+      text-shadow: 
+        calc(var(--glitch-random, 1) * -1px) 0 0 rgba(255, 0, 0, 0.3),
+        calc(var(--glitch-random, 1) * 1px) 0 0 rgba(0, 255, 255, 0.3); 
+    }
+    31%, 33% { /* 隨機小幅度的色差放大縮小 */
+      text-shadow: 
+        calc(var(--glitch-random, 1) * -3px) 0 0 rgba(255, 0, 0, 0.5),
+        calc(var(--glitch-random, 1) * 2px) 0 0 rgba(0, 255, 255, 0.5); 
+    }
+    34%, 60% { 
+      text-shadow: 
+        calc(var(--glitch-random, 1) * 0px) 0 0 rgba(255, 0, 0, 0),
+        calc(var(--glitch-random, 1) * 0px) 0 0 rgba(0, 255, 255, 0); 
+    }
+    61%, 63% { /* 另一次不同方向的隨機小幅度色差 */
+      text-shadow: 
+        calc(var(--glitch-random, 1) * 2px) 0 0 rgba(255, 0, 0, 0.4),
+        calc(var(--glitch-random, 1) * -2px) 0 0 rgba(0, 255, 255, 0.4); 
+    }
+    64%, 90% { 
+      text-shadow: 
+        calc(var(--glitch-random, 1) * -1px) 0 0 rgba(255, 0, 0, 0.3),
+        calc(var(--glitch-random, 1) * 1px) 0 0 rgba(0, 255, 255, 0.3); 
+    }
+    /* 保留原來的劇烈大閃爍 */
+    91% { 
+      text-shadow: 
+        calc(var(--glitch-random, 1) * -8px) 0 0 rgba(255, 0, 0, 0.9),
+        calc(var(--glitch-random, 1) * 8px) 0 0 rgba(0, 255, 255, 0.9); 
+      filter: saturate(1.8) brightness(1.3);
+      transform: scale(1);
+    }
+    92% { 
+      text-shadow: 
+        calc(var(--glitch-random, 1) * 5px) 0 0 rgba(255, 0, 0, 0.8),
+        calc(var(--glitch-random, 1) * -5px) 0 0 rgba(0, 255, 255, 0.8); 
+      filter: saturate(1.4) brightness(1.1);
+      transform: scale(1);
+    }
+    93% { 
+      text-shadow: 
+        calc(var(--glitch-random, 1) * -12px) 0 0 rgba(255, 0, 0, 1),
+        calc(var(--glitch-random, 1) * 12px) 0 0 rgba(0, 255, 255, 1); 
+      filter: saturate(2.5) brightness(1.6);
+      transform: scale(1);
+    }
+    94%, 100% { 
+      text-shadow: 
+        calc(var(--glitch-random, 1) * -1px) 0 0 rgba(255, 0, 0, 0.3),
+        calc(var(--glitch-random, 1) * 1px) 0 0 rgba(0, 255, 255, 0.3); 
+      filter: none;
+      transform: scale(1);
+    }
+  }
+
+  /* 內層文字：負責靜態色像差與局部橫向撕裂 */
+  .ztmy-cyber-text-aberration {
+    position: relative;
+    display: inline-block;
+    /* 輕微的靜態色像差 */
+    text-shadow: 
+      calc(var(--glitch-random, 1) * -1px) 0 0 rgba(255, 0, 0, 0.3),
+      calc(var(--glitch-random, 1) * 1px) 0 0 rgba(0, 255, 255, 0.3);
+    animation: cyber-chromatic-aberration var(--aberration-dur, 5.1s) var(--g-del-1, 0s) infinite;
+    animation-play-state: var(--anim-state, running);
+  }
+
+  /* 內層文字：負責靜態色像差與局部橫向撕裂 */
+  .ztmy-cyber-text-aberration {
+    position: relative;
+    display: inline-block;
+    /* 輕微的靜態色像差 */
+    text-shadow: 
+      calc(var(--glitch-random, 1) * -1px) 0 0 rgba(255, 0, 0, 0.3),
+      calc(var(--glitch-random, 1) * 1px) 0 0 rgba(0, 255, 255, 0.3);
+    animation: cyber-chromatic-aberration var(--aberration-dur, 5.1s) var(--g-del-1, 0s) infinite;
+    animation-play-state: var(--anim-state, running);
+  }
+
+  /* 局部橫向錯位撕裂層 1 */
+  .ztmy-cyber-text-aberration::before {
+    content: attr(data-text);
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    padding-bottom: 0.2em;
+    color: var(--foreground);
+    background: var(--background); /* 遮住背後原本的文字 */
+    clip-path: inset(50% 0 50% 0); /* 平常隱藏 */
+    animation: cyber-slice-1 var(--slice-1-dur, 4.3s) var(--g-del-2, 0s) infinite linear;
+    animation-play-state: var(--anim-state, running);
+    pointer-events: none;
+    mix-blend-mode: screen; /* 讓色像差更明顯疊加 */
+  }
+  
+  /* 局部橫向錯位撕裂層 2 */
+  .ztmy-cyber-text-aberration::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    padding-bottom: 0.2em;
+    color: var(--foreground);
+    background: var(--background);
+    clip-path: inset(50% 0 50% 0);
+    animation: cyber-slice-2 var(--slice-2-dur, 6.7s) var(--g-del-3, 0s) infinite linear;
+    animation-play-state: var(--anim-state, running);
+    pointer-events: none;
+    mix-blend-mode: screen;
+  }
+
+  @keyframes cyber-slice-1 {
+    0%, 92% { clip-path: inset(50% 0 50% 0); transform: translate(0, 0); }
+    93% { clip-path: inset(20% 0 60% 0); transform: translate(calc(var(--glitch-random, 1) * -8px), 2px) skewX(-5deg); text-shadow: 3px 0 0 red, -3px 0 0 blue; filter: hue-rotate(90deg) saturate(2); }
+    94% { clip-path: inset(60% 0 20% 0); transform: translate(calc(var(--glitch-random, 1) * 6px), -1px) skewX(5deg); text-shadow: -4px 0 0 red, 4px 0 0 cyan; filter: invert(0.2) saturate(1.5); }
+    95% { clip-path: inset(30% 0 50% 0); transform: translate(calc(var(--glitch-random, 1) * -4px), 1px) skewX(-2deg); text-shadow: 2px 0 0 magenta, -2px 0 0 lime; filter: hue-rotate(-90deg) saturate(1.5); }
+    96%, 100% { clip-path: inset(50% 0 50% 0); transform: translate(0, 0); filter: none; }
+  }
+
+  @keyframes cyber-slice-2 {
+    0%, 95% { clip-path: inset(50% 0 50% 0); transform: translate(0, 0); }
+    96% { clip-path: inset(40% 0 40% 0); transform: translate(calc(var(--glitch-random, 1) * 8px), -2px) skewX(5deg); text-shadow: -3px 0 0 red, 3px 0 0 blue; filter: hue-rotate(-90deg) saturate(2); }
+    97% { clip-path: inset(10% 0 70% 0); transform: translate(calc(var(--glitch-random, 1) * -6px), 1px) skewX(-5deg); text-shadow: 4px 0 0 red, -4px 0 0 cyan; filter: invert(0.2) saturate(1.5); }
+    98% { clip-path: inset(80% 0 10% 0); transform: translate(calc(var(--glitch-random, 1) * 4px), -1px) skewX(2deg); text-shadow: -2px 0 0 magenta, 2px 0 0 lime; filter: hue-rotate(90deg) saturate(1.5); }
+    99%, 100% { clip-path: inset(50% 0 50% 0); transform: translate(0, 0); filter: none; }
+  }
+
+  /* 隨機掃描線從上到下掃過並產生錯位 */
+  .ztmy-cyber-title-scan {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 8; /* 放在文字上方，光束下方 */
+    pointer-events: none;
+  }
+  
+  /* 第一條掃描線 (快，主色調發光) */
+  .ztmy-cyber-title-scan::before {
+    content: attr(data-text);
+    position: absolute;
+    left: calc(var(--glitch-random, 1) * 8px); /* 放大基礎錯位距離 */
+    top: 0;
+    width: 100%;
+    height: 100%;
+    color: var(--main); /* 賽博朋克常見掃描線顏色1：主題色/青色/洋紅 */
+    text-shadow: 
+      0 0 15px var(--main), 
+      calc(var(--glitch-random, 1) * -4px) 0 0 red, 
+      calc(var(--glitch-random, 1) * 4px) 0 0 blue;
+    clip-path: polygon(0 -5%, 100% -5%, 100% 0%, 0 0%); /* 變細 */
+    animation: cyber-scan-fast var(--scan-fast-dur, 3.2s) infinite cubic-bezier(0.4, 0, 0.2, 1); /* 加快頻率 */
+    animation-play-state: var(--anim-state, running);
+    pointer-events: none;
+    mix-blend-mode: hard-light;
+    opacity: 0;
+  }
+
+  /* 第二條掃描線 (慢，強白光與青色/洋紅色差) */
+  .ztmy-cyber-title-scan::after {
+    content: attr(data-text);
+    position: absolute;
+    left: calc(var(--glitch-random, 1) * -6px); /* 反方向基礎錯位 */
+    top: 0;
+    width: 100%;
+    height: 100%;
+    color: #fff; /* 賽博朋克常見掃描線顏色2：過曝的強白光 */
+    text-shadow: 
+      0 0 20px #fff, 
+      calc(var(--glitch-random, 1) * 5px) 0 0 cyan, 
+      calc(var(--glitch-random, 1) * -5px) 0 0 magenta;
+    clip-path: polygon(0 -2%, 100% -2%, 100% 0%, 0 0%); /* 變細 */
+    animation: cyber-scan-slow var(--scan-slow-dur, 5.5s) infinite cubic-bezier(0.1, 0.7, 1.0, 0.1); /* 加快頻率 */
+    animation-play-state: var(--anim-state, running);
+    pointer-events: none;
+    mix-blend-mode: overlay;
+    filter: contrast(1.5) brightness(1.5);
+    opacity: 0;
+  }
+
+  @keyframes cyber-scan-fast {
+    0%, 30% { clip-path: polygon(0 -5%, 100% -5%, 100% 0%, 0 0%); transform: skewX(0deg) translate(0, 0); opacity: 0; }
+    30.1% { opacity: 1; }
+    34% { 
+      clip-path: polygon(0 40%, 100% 40%, 100% 50%, 0 50%); /* 掃過中間時也保持細長 */
+      transform: skewX(calc(var(--glitch-random, 1) * -12deg)) translate(calc(var(--glitch-random, 1) * -10px), 2px); 
+    }
+    36.9% { 
+      clip-path: polygon(0 95%, 100% 95%, 100% 100%, 0 100%); /* 裁切範圍不超過 100% */
+      transform: skewX(0deg) translate(0, 0); 
+      opacity: 1; 
+    }
+    37%, 100% { 
+      clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0 100%); /* 完全縮到底部變為0高 */
+      opacity: 0; 
+    }
+  }
+
+  @keyframes cyber-scan-slow {
+    0%, 75% { clip-path: polygon(0 -2%, 100% -2%, 100% 0%, 0 0%); transform: scaleY(1) translate(0, 0); opacity: 0; }
+    75.1% { opacity: 0.9; }
+    80% { 
+      clip-path: polygon(0 20%, 100% 20%, 100% 25%, 0 25%); /* 掃過中間時也保持細長 */
+      transform: scaleY(1.2) translate(calc(var(--glitch-random, 1) * 8px), -3px) skewX(calc(var(--glitch-random, 1) * 8deg)); 
+    }
+    85% { 
+      clip-path: polygon(0 75%, 100% 75%, 100% 80%, 0 80%); 
+      transform: scaleY(1.3) translate(calc(var(--glitch-random, 1) * -8px), 3px) skewX(calc(var(--glitch-random, 1) * -8deg)); 
+    }
+    88.9% { 
+      clip-path: polygon(0 95%, 100% 95%, 100% 100%, 0 100%); /* 裁切範圍不超過 100% */
+      transform: scaleY(1) translate(0, 0); 
+      opacity: 0.9; 
+    }
+    89%, 100% { 
+      clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0 100%); /* 完全縮到底部變為0高 */
+      opacity: 0; 
+    }
+  }
+
+
+
+  /* 專為 Modal 標題設計的獨立 Glitch 特效（避免與外層排版/跑馬燈衝突） */
+  .ztmy-modal-glitch {
+    position: relative;
+    /* 輕微常駐色像差 */
+    text-shadow: 1px 0 0 rgba(255, 0, 0, 0.5), -1px 0 0 rgba(0, 255, 255, 0.5);
+    animation: 
+      modal-aberration calc(4s * var(--glitch-random, 1)) infinite linear alternate,
+      modal-jitter calc(2.7s * var(--glitch-random, 1)) infinite linear;
+  }
+
+  @keyframes modal-jitter {
+    0%, 92% { transform: translate(0, 0) skewX(0); }
+    93% { transform: translate(-3px, 1px) skewX(-5deg); filter: opacity(0.8); }
+    94% { transform: translate(3px, -1px) skewX(5deg); filter: opacity(0.9); }
+    95% { transform: translate(-1px, 2px) skewX(-2deg); filter: opacity(0.85); }
+    96%, 100% { transform: translate(0, 0) skewX(0); }
+  }
+
+  @keyframes modal-aberration {
+    0%, 90% { text-shadow: 1px 0 0 rgba(255, 0, 0, 0.5), -1px 0 0 rgba(0, 255, 255, 0.5); filter: none; transform: skewX(0); }
+    92% { text-shadow: -3px 0 0 red, 3px 0 0 cyan; filter: saturate(1.5); transform: skewX(4deg); }
+    94% { text-shadow: 3px 0 0 magenta, -3px 0 0 lime; filter: saturate(2); transform: skewX(-4deg); }
+    96%, 100% { text-shadow: 1px 0 0 rgba(255, 0, 0, 0.5), -1px 0 0 rgba(0, 255, 255, 0.5); filter: none; transform: skewX(0); }
+  }
+
+  .ztmy-modal-glitch::before {
+    content: attr(data-text);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    color: var(--foreground);
+    background: var(--background); /* 遮擋背後原文字 */
+    clip-path: inset(50% 0 50% 0);
+    animation: modal-slice calc(3.5s * var(--glitch-random, 1)) infinite linear;
+    pointer-events: none;
+  }
+
+  @keyframes modal-slice {
+    0%, 85% { clip-path: inset(50% 0 50% 0); transform: translate(0); }
+    87% { clip-path: inset(20% 0 60% 0); transform: translate(-6px, 2px) skewX(-10deg); text-shadow: 4px 0 0 red, -2px 0 0 blue; filter: contrast(1.5); }
+    89% { clip-path: inset(60% 0 20% 0); transform: translate(5px, -1px) skewX(5deg); text-shadow: -4px 0 0 cyan, 2px 0 0 magenta; filter: invert(0.1); }
+    91%, 100% { clip-path: inset(50% 0 50% 0); transform: translate(0); }
+  }
+
+  .ztmy-modal-glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    left: -2px; /* 稍微錯位 */
+    top: 0;
+    width: 100%;
+    height: 100%;
+    color: #fff; /* 強白光 */
+    background: transparent;
+    clip-path: polygon(0 -10%, 100% -10%, 100% 0, 0 0);
+    text-shadow: 0 0 10px #fff, 2px 0 0 cyan, -2px 0 0 magenta;
+    animation: modal-scan calc(4.5s * var(--glitch-random, 1)) infinite cubic-bezier(0.1, 0.7, 1.0, 0.1);
+    mix-blend-mode: screen;
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  @keyframes modal-scan {
+    0%, 75% { clip-path: polygon(0 -10%, 100% -10%, 100% 0, 0 0); opacity: 0; transform: scaleY(1); }
+    76% { opacity: 1; transform: scaleY(1.1); }
+    80% { clip-path: polygon(0 30%, 100% 30%, 100% 40%, 0 40%); opacity: 0.9; transform: scaleY(1.1); }
+    85% { clip-path: polygon(0 80%, 100% 80%, 100% 90%, 0 90%); opacity: 0.9; transform: scaleY(1.1); }
+    90%, 100% { clip-path: polygon(0 110%, 100% 110%, 100% 120%, 0 120%); opacity: 0; transform: scaleY(1); }
+  }
+
+  /* 8. 常駐偶發效果 - Rolling Slice (偶發性橫向掃描線錯位) */
+  /* 調用方式：複製一個與底圖相同的 img，加上 className="ztmy-rolling-slice"，並用 inline style 隨機化 animationDelay */
+  @keyframes ztmy-rolling-slice {
+    0%, 85% { clip-path: inset(0 0 100% 0); transform: translateX(0); opacity: 0; }
+    86% { clip-path: inset(10% 0 85% 0); transform: translateX(-8px); opacity: 1; filter: hue-rotate(90deg) contrast(1.5); }
+    88% { clip-path: inset(30% 0 65% 0); transform: translateX(8px); opacity: 1; filter: hue-rotate(-90deg) contrast(1.5); }
+    90% { clip-path: inset(50% 0 45% 0); transform: translateX(-6px); opacity: 1; filter: hue-rotate(45deg) contrast(1.5); }
+    92% { clip-path: inset(70% 0 25% 0); transform: translateX(6px); opacity: 1; filter: hue-rotate(-45deg) contrast(1.5); }
+    94% { clip-path: inset(90% 0 5% 0); transform: translateX(-4px); opacity: 1; filter: invert(0.2) contrast(1.5); }
+    95%, 100% { clip-path: inset(100% 0 0 0); transform: translateX(0); opacity: 0; }
+  }
+  .ztmy-rolling-slice {
+    animation: ztmy-rolling-slice 6s infinite linear;
+    pointer-events: none;
+  }
+
+  /* =========================================================
+     ZTMY Transitions (Image Carousel) 
+     ========================================================= */
+
+  /* 1. Block Glitch (塊狀撕裂) */
+  @keyframes block-glitch-out {
+    0% { clip-path: inset(0 0 0 0); transform: translateX(0); opacity: 1; filter: contrast(1); }
+    20% { clip-path: inset(20% 0 60% 0); transform: translateX(-10px); opacity: 0.8; filter: contrast(1.5) hue-rotate(90deg); }
+    40% { clip-path: inset(60% 0 10% 0); transform: translateX(15px); opacity: 0.5; filter: contrast(2) invert(0.2); }
+    60% { clip-path: inset(10% 0 80% 0); transform: translateX(-20px); opacity: 0.3; }
+    80% { clip-path: inset(80% 0 5% 0); transform: translateX(10px); opacity: 0.1; }
+    100% { clip-path: inset(100% 0 0 0); transform: translateX(0); opacity: 0; }
+  }
+  .ztmy-block-glitch-out {
+    animation: block-glitch-out var(--animation-duration, 600ms) cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  @keyframes block-glitch-in {
+    0% { clip-path: inset(0 0 100% 0); transform: translateX(20px); opacity: 0; filter: contrast(2) hue-rotate(-90deg); }
+    20% { clip-path: inset(80% 0 5% 0); transform: translateX(-15px); opacity: 0.2; }
+    40% { clip-path: inset(10% 0 80% 0); transform: translateX(10px); opacity: 0.5; }
+    60% { clip-path: inset(60% 0 10% 0); transform: translateX(-5px); opacity: 0.8; filter: contrast(1.5); }
+    80% { clip-path: inset(20% 0 60% 0); transform: translateX(2px); opacity: 0.9; }
+    100% { clip-path: inset(0 0 0 0); transform: translateX(0); opacity: 1; filter: contrast(1); }
+  }
+  .ztmy-block-glitch-in {
+    animation: block-glitch-in var(--animation-duration, 600ms) cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  /* 2. VHS Fast Forward (錄影帶快轉) */
+  @keyframes vhs-ff-out {
+    0% { transform: translateY(0) skewX(0); filter: saturate(1) contrast(1); opacity: 1; }
+    25% { transform: translateY(-10%) skewX(5deg); filter: saturate(0) contrast(2) drop-shadow(5px 0 0 red) drop-shadow(-5px 0 0 cyan); opacity: 0.8; }
+    50% { transform: translateY(-30%) skewX(-5deg); filter: saturate(0) contrast(3) drop-shadow(10px 0 0 red) drop-shadow(-10px 0 0 cyan); opacity: 0.5; }
+    75% { transform: translateY(-60%) skewX(2deg); opacity: 0.2; }
+    100% { transform: translateY(-100%) skewX(0); opacity: 0; }
+  }
+  .ztmy-vhs-ff-out {
+    animation: vhs-ff-out var(--animation-duration, 500ms) linear forwards;
+  }
+
+  @keyframes vhs-ff-in {
+    0% { transform: translateY(100%) skewX(0); opacity: 0; }
+    25% { transform: translateY(60%) skewX(-5deg); opacity: 0.2; }
+    50% { transform: translateY(30%) skewX(5deg); filter: saturate(0) contrast(3) drop-shadow(10px 0 0 red) drop-shadow(-10px 0 0 cyan); opacity: 0.5; }
+    75% { transform: translateY(10%) skewX(-2deg); filter: saturate(0) contrast(2) drop-shadow(5px 0 0 red) drop-shadow(-5px 0 0 cyan); opacity: 0.8; }
+    100% { transform: translateY(0) skewX(0); filter: saturate(1) contrast(1); opacity: 1; }
+  }
+  .ztmy-vhs-ff-in {
+    animation: vhs-ff-in var(--animation-duration, 500ms) linear forwards;
+  }
+
+  /* 3. Pixelate (像素化過場模擬) */
+  /* 因為 CSS 無法直接做真實像素化，我們用模糊 + 嚴重對比 + 縮放來模擬 8-bit 切換感 */
+  @keyframes pixelate-out {
+    0% { filter: blur(0px) contrast(1); opacity: 1; transform: scale(1); }
+    50% { filter: blur(8px) contrast(3) grayscale(1); opacity: 0.5; transform: scale(0.95); }
+    100% { filter: blur(16px) contrast(5) grayscale(1); opacity: 0; transform: scale(0.9); }
+  }
+  .ztmy-pixelate-out {
+    animation: pixelate-out var(--animation-duration, 600ms) steps(5) forwards;
+  }
+
+  @keyframes pixelate-in {
+    0% { filter: blur(16px) contrast(5) grayscale(1); opacity: 0; transform: scale(1.1); }
+    50% { filter: blur(8px) contrast(3) grayscale(1); opacity: 0.5; transform: scale(1.05); }
+    100% { filter: blur(0px) contrast(1); opacity: 1; transform: scale(1); }
+  }
+  .ztmy-pixelate-in {
+    animation: pixelate-in var(--animation-duration, 600ms) steps(5) forwards;
+  }
+
+  .hover-3d {
+    display: inline-grid;
+    perspective: 75rem;
+    --transform: 0, 0;
+    --shine: 100% 100%;
+    --shadow: 0rem 0rem 0rem;
+    --ease: linear(0, 0.931 13.8%, 1.196 21.4%, 1.343 29.8%, 1.378 36%, 1.365 43.2%, 1.059 78%, 1);
+    /* 將 4 層 drop-shadow 簡化為 1 層以大幅提升大圖片的效能 */
+    filter: drop-shadow(var(--shadow) 0.4rem rgba(0, 0, 0, 0.15));
+    will-change: filter, transform;
+    transition: filter ease-out 400ms;
+  }
+
+  .hover-3d > :nth-child(n + 2) {
+    isolation: isolate;
+    z-index: 1;
+    scale: 1.2;
+  }
+
+  .hover-3d > :first-child {
+    position: relative;
+    overflow: hidden;
+    grid-area: 1/1/4/4;
+    transform: translateZ(0) rotate3d(var(--transform), 0, 10deg);
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
+    will-change: transform, scale;
+    transition:
+      transform var(--ease) 500ms,
+      scale var(--ease) 500ms,
+      outline-color ease-out 500ms;
+    outline: 0.5px solid #0000;
+    outline-offset: -1px;
+  }
+
+  .hover-3d > :first-child::before {
+    width: 33.333333%;
+    height: 33.333333%;
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    z-index: 1;
+    scale: 500%;
+    opacity: 0;
+    filter: blur(0.75rem);
+    background-image: radial-gradient(circle at 50%, rgba(255, 255, 255, 0.3) 10%, transparent 50%);
+    mix-blend-mode: overlay;
+    translate: var(--shine);
+    transition:
+      translate var(--ease) 500ms,
+      opacity ease-out 400ms;
+  }
+
+  .hover-3d:hover {
+    --ease: linear(0, 0.708 15.2%, 0.927 23.6%, 1.067 33%, 1.12 41%, 1.13 50.2%, 1.019 83.2%, 1);
+  }
+
+  .hover-3d:hover > :first-child {
+    outline-color: #fff1;
+    scale: 1.05;
+  }
+
+  .hover-3d:hover > :first-child::before {
+    opacity: 1;
+  }
+
+  .hover-3d > :nth-child(2) {
+    grid-area: 1/1/2/2;
+  }
+
+  .hover-3d > :nth-child(3) {
+    grid-area: 1/2/2/3;
+  }
+
+  .hover-3d > :nth-child(4) {
+    grid-area: 1/3/2/4;
+  }
+
+  .hover-3d > :nth-child(5) {
+    grid-area: 2/1/3/2;
+  }
+
+  .hover-3d > :nth-child(6) {
+    grid-area: 2/3/3/4;
+  }
+
+  .hover-3d > :nth-child(7) {
+    grid-area: 3/1/4/2;
+  }
+
+  .hover-3d > :nth-child(8) {
+    grid-area: 3/2/4/3;
+  }
+
+  .hover-3d > :nth-child(9) {
+    grid-area: 3/3/4/4;
+  }
+
+  .hover-3d:has(> :nth-child(2):hover) {
+    --transform: -1, 1;
+    --shine: 0% 0%;
+    --shadow: -0.5rem -0.5rem;
+  }
+
+  .hover-3d:has(> :nth-child(3):hover) {
+    --transform: -1, 0;
+    --shine: 100% 0%;
+    --shadow: 0rem -0.5rem;
+  }
+
+  .hover-3d:has(> :nth-child(4):hover) {
+    --transform: -1, -1;
+    --shine: 200% 0%;
+    --shadow: 0.5rem -0.5rem;
+  }
+
+  .hover-3d:has(> :nth-child(5):hover) {
+    --transform: 0, 1;
+    --shine: 0% 100%;
+    --shadow: -0.5rem 0rem;
+  }
+
+  .hover-3d:has(> :nth-child(6):hover) {
+    --transform: 0, -1;
+    --shine: 200% 100%;
+    --shadow: 0.5rem 0rem;
+  }
+
+  .hover-3d:has(> :nth-child(7):hover) {
+    --transform: 1, 1;
+    --shine: 0% 200%;
+    --shadow: -0.5rem 0.5rem;
+  }
+
+  .hover-3d:has(> :nth-child(8):hover) {
+    --transform: 1, 0;
+    --shine: 100% 200%;
+    --shadow: 0rem 0.5rem;
+  }
+
+  .hover-3d:has(> :nth-child(9):hover) {
+    --transform: 1, -1;
+    --shine: 200% 200%;
+    --shadow: 0.5rem 0.5rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hover-3d,
+    .hover-3d > :first-child,
+    .hover-3d > :first-child::before {
+      transition: none;
+    }
+
+    .hover-3d > :first-child {
+      transform: none;
+      scale: 1;
+    }
+  }
+}
+
+/* Fancybox Neobrutalism Overrides */
+.fancybox__container {
+  /* Override default Toolbar styles */
+  --f-toolbar-padding: 16px;
+  --f-toolbar-gap: 0px; /* 取消按鈕間距 */
+  
+  /* Desktop defaults */
+  --f-button-width: 48px;
+  --f-button-height: 48px;
+  --f-button-border-radius: 0px;
+  --f-button-bg: var(--secondary-background); /* 預設背景：secondary-background */
+  --f-button-hover-bg: var(--main); /* Hover 背景：main */
+  --f-button-active-bg: var(--main);
+  --f-button-color: #FFFFFF; /* 預設圖標：白色 */
+  --f-button-hover-color: #000000; /* Hover 圖標：黑色 */
+  --f-button-svg-width: 0; /* Hide default SVGs */
+  --f-button-svg-height: 0;
+  
+  /* Counter styles */
+  --f-counter-bg: var(--secondary-background);
+  --f-counter-padding: 8px 16px;
+  --f-counter-margin: 0 0 0 0; /* 取消 counter 間距 */
+  --f-counter-border-radius: 0px;
+}
+
+/* Mobile adjustments for Fancybox buttons */
+@media (max-width: 768px) {
+  .fancybox__container {
+    --f-toolbar-padding: 8px;
+    --f-button-width: 36px;
+    --f-button-height: 36px;
+    --f-counter-padding: 4px 12px;
+  }
+}
+
+/* Neobrutalism Button Base */
+.fancybox__container .f-button {
+  border: 3px solid #000000 !important; /* 邊框：黑色 */
+  box-shadow: 4px 4px 0px #000000 !important; /* 陰影：黑色 */
+  transition: all 0.15s ease-in-out !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  position: relative !important;
+  overflow: visible !important; /* Allow pseudo-elements to show */
+  background-color: color-mix(in srgb, var(--secondary-background) 95%, transparent) !important;
+  color: #FFFFFF !important; /* 預設圖標：白色 */
+}
+
+/* Hover: 按下的效果 (取消浮起，改為向右下壓，縮小陰影) */
+.fancybox__container .f-button:hover {
+  transform: translate3d(4px, 4px, 0) !important;
+  box-shadow: 0px 0px 0px #000000 !important; /* 按下時陰影完全消失 */
+  background-color: color-mix(in srgb, var(--main) 80%, transparent) !important; /* Hover 半透明主色 */
+  color: #000000 !important; /* Hover 圖標：黑色 */
+}
+
+/* Active: 完全按到底 (無陰影) */
+.fancybox__container .f-button:active {
+  transform: translate3d(4px, 4px, 0) !important; /* 推到底 */
+  box-shadow: 0px 0px 0px #000000 !important;
+}
+
+/* Neobrutalism Counter */
+.fancybox__container .f-counter {
+  border: 3px solid #000000 !important; /* 計數器邊框同步黑色 */
+  box-shadow: 4px 4px 0px #000000 !important; /* 計數器陰影同步黑色 */
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 16px;
+  color: #FFFFFF; /* 計數器文字預設白色 */
+  background-color: color-mix(in srgb, var(--secondary-background) 95%, transparent) !important;
+  margin-right: -3px !important; /* 補償更粗的邊框重疊 */
+}
+
+/* Hide default SVGs completely */
+.fancybox__container .f-button svg {
+  display: none !important;
+}
+
+/* Base style for custom SVG backgrounds */
+.fancybox__container .f-button::before {
+  content: "";
+  display: block;
+  width: 24px;
+  height: 24px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: currentColor; /* Inherit text color (white/black) */
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+@media (max-width: 768px) {
+  .fancybox__container .f-button::before {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* Map specific buttons to Custom SVGs via CSS Masks */
+.fancybox__container .f-button[data-fancybox-close]::before,
+.fancybox__container .f-button[title="Close"]::before {
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="15 13 16 13 16 14 17 14 17 15 18 15 18 16 19 16 19 17 20 17 20 18 21 18 21 19 22 19 22 20 21 20 21 21 20 21 20 22 19 22 19 21 18 21 18 20 17 20 17 19 16 19 16 18 15 18 15 17 14 17 14 16 13 16 13 15 11 15 11 16 10 16 10 17 9 17 9 18 8 18 8 19 7 19 7 20 6 20 6 21 5 21 5 22 4 22 4 21 3 21 3 20 2 20 2 19 3 19 3 18 4 18 4 17 5 17 5 16 6 16 6 15 7 15 7 14 8 14 8 13 9 13 9 11 8 11 8 10 7 10 7 9 6 9 6 8 5 8 5 7 4 7 4 6 3 6 3 5 2 5 2 4 3 4 3 3 4 3 4 2 5 2 5 3 6 3 6 4 7 4 7 5 8 5 8 6 9 6 9 7 10 7 10 8 11 8 11 9 13 9 13 8 14 8 14 7 15 7 15 6 16 6 16 5 17 5 17 4 18 4 18 3 19 3 19 2 20 2 20 3 21 3 21 4 22 4 22 5 21 5 21 6 20 6 20 7 19 7 19 8 18 8 18 9 17 9 17 10 16 10 16 11 15 11 15 13"/></svg>');
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="15 13 16 13 16 14 17 14 17 15 18 15 18 16 19 16 19 17 20 17 20 18 21 18 21 19 22 19 22 20 21 20 21 21 20 21 20 22 19 22 19 21 18 21 18 20 17 20 17 19 16 19 16 18 15 18 15 17 14 17 14 16 13 16 13 15 11 15 11 16 10 16 10 17 9 17 9 18 8 18 8 19 7 19 7 20 6 20 6 21 5 21 5 22 4 22 4 21 3 21 3 20 2 20 2 19 3 19 3 18 4 18 4 17 5 17 5 16 6 16 6 15 7 15 7 14 8 14 8 13 9 13 9 11 8 11 8 10 7 10 7 9 6 9 6 8 5 8 5 7 4 7 4 6 3 6 3 5 2 5 2 4 3 4 3 3 4 3 4 2 5 2 5 3 6 3 6 4 7 4 7 5 8 5 8 6 9 6 9 7 10 7 10 8 11 8 11 9 13 9 13 8 14 8 14 7 15 7 15 6 16 6 16 5 17 5 17 4 18 4 18 3 19 3 19 2 20 2 20 3 21 3 21 4 22 4 22 5 21 5 21 6 20 6 20 7 19 7 19 8 18 8 18 9 17 9 17 10 16 10 16 11 15 11 15 13"/></svg>');
+}
+
+.fancybox__container .f-button[data-fancybox-download]::before,
+.fancybox__container .f-button[title="Download"]::before {
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="2" y="20" width="20" height="3"/><polygon points="20 8 20 10 19 10 19 11 18 11 18 12 17 12 17 13 16 13 16 14 15 14 15 15 14 15 14 16 13 16 13 17 11 17 11 16 10 16 10 15 9 15 9 14 8 14 8 13 7 13 7 12 6 12 6 11 5 11 5 10 4 10 4 8 5 8 5 7 7 7 7 8 8 8 8 9 9 9 9 10 10 10 10 1 14 1 14 10 15 10 15 9 16 9 16 8 17 8 17 7 19 7 19 8 20 8"/></svg>');
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="2" y="20" width="20" height="3"/><polygon points="20 8 20 10 19 10 19 11 18 11 18 12 17 12 17 13 16 13 16 14 15 14 15 15 14 15 14 16 13 16 13 17 11 17 11 16 10 16 10 15 9 15 9 14 8 14 8 13 7 13 7 12 6 12 6 11 5 11 5 10 4 10 4 8 5 8 5 7 7 7 7 8 8 8 8 9 9 9 9 10 10 10 10 1 14 1 14 10 15 10 15 9 16 9 16 8 17 8 17 7 19 7 19 8 20 8"/></svg>');
+}
+
+.fancybox__container .f-button[data-fancybox-zoomIn]::before,
+.fancybox__container .f-button[title="Zoom in"]::before {
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="23 11 23 13 22 13 22 14 14 14 14 22 13 22 13 23 11 23 11 22 10 22 10 14 2 14 2 13 1 13 1 11 2 11 2 10 10 10 10 2 11 2 11 1 13 1 13 2 14 2 14 10 22 10 22 11 23 11"/></svg>');
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="23 11 23 13 22 13 22 14 14 14 14 22 13 22 13 23 11 23 11 22 10 22 10 14 2 14 2 13 1 13 1 11 2 11 2 10 10 10 10 2 11 2 11 1 13 1 13 2 14 2 14 10 22 10 22 11 23 11"/></svg>');
+}
+
+.fancybox__container .f-button[data-fancybox-zoomOut]::before,
+.fancybox__container .f-button[title="Zoom out"]::before {
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="23 11 23 13 22 13 22 14 2 14 2 13 1 13 1 11 2 11 2 10 22 10 22 11 23 11"/></svg>');
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="23 11 23 13 22 13 22 14 2 14 2 13 1 13 1 11 2 11 2 10 22 10 22 11 23 11"/></svg>');
+}
+
+.fancybox__container .f-button[data-fancybox-toggle1to1]::before,
+.fancybox__container .f-button[title="Toggle zoom"]::before,
+.fancybox__container .f-button[title="Toggle zoom level"]::before,
+.fancybox__container .f-button[title="Zoom"]::before,
+.fancybox__container .f-button[data-panzoom-action="toggleZoom"]::before,
+.fancybox__container .f-button[data-panzoom-action="toggleFull"]::before,
+.fancybox__container .f-button[data-fancybox-zoom]::before,
+.fancybox__container .f-button[data-action="toggleZoom"]::before {
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="9 20 9 23 2 23 2 22 1 22 1 15 4 15 4 20 9 20"/><polygon points="9 1 9 4 4 4 4 9 1 9 1 2 2 2 2 1 9 1"/><polygon points="23 15 23 22 22 22 22 23 15 23 15 20 20 20 20 15 23 15"/><polygon points="23 2 23 9 20 9 20 4 15 4 15 1 22 1 22 2 23 2"/></svg>');
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="9 20 9 23 2 23 2 22 1 22 1 15 4 15 4 20 9 20"/><polygon points="9 1 9 4 4 4 4 9 1 9 1 2 2 2 2 1 9 1"/><polygon points="23 15 23 22 22 22 22 23 15 23 15 20 20 20 20 15 23 15"/><polygon points="23 2 23 9 20 9 20 4 15 4 15 1 22 1 22 2 23 2"/></svg>');
+}
+
+.fancybox__container .f-button[data-fancybox-thumbs]::before,
+.fancybox__container .f-button[title="Thumbnails"]::before,
+.fancybox__container .f-button[title="Toggle thumbnails"]::before,
+.fancybox__container .f-button[data-carousel-go-thumbs]::before,
+.fancybox__container .f-button[data-fancybox-toggle-thumbs]::before,
+.fancybox__container .f-button[data-fancybox-thumbs-toggle]::before,
+.fancybox__container .f-button[data-action="toggleThumbs"]::before,
+.fancybox__container .f-button[data-thumbs-action="toggle"]::before {
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m10,13H2v1h-1v8h1v1h8v-1h1v-8h-1v-1Zm-1,8H3v-6h6v6Z"/><path d="m10,2v-1H2v1h-1v8h1v1h8v-1h1V2h-1Zm-7,7V3h6v6H3Z"/><path d="m22,13h-8v1h-1v8h1v1h8v-1h1v-8h-1v-1Zm-1,8h-6v-6h6v6Z"/><path d="m22,2v-1h-8v1h-1v8h1v1h8v-1h1V2h-1Zm-1,7h-6V3h6v6Z"/></svg>');
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m10,13H2v1h-1v8h1v1h8v-1h1v-8h-1v-1Zm-1,8H3v-6h6v6Z"/><path d="m10,2v-1H2v1h-1v8h1v1h8v-1h1V2h-1Zm-7,7V3h6v6H3Z"/><path d="m22,13h-8v1h-1v8h1v1h8v-1h1v-8h-1v-1Zm-1,8h-6v-6h6v6Z"/><path d="m22,2v-1h-8v1h-1v8h1v1h8v-1h1V2h-1Zm-1,7h-6V3h6v6Z"/></svg>');
+}
+
+.fancybox__container .f-button[data-autoplay-action="toggle"]::before,
+.fancybox__container .f-button[title="Start slideshow"]::before {
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="22 11 22 13 21 13 21 14 20 14 20 15 18 15 18 16 16 16 16 17 15 17 15 18 13 18 13 19 11 19 11 20 10 20 10 21 8 21 8 22 6 22 6 23 3 23 3 22 2 22 2 2 3 2 3 1 6 1 6 2 8 2 8 3 10 3 10 4 11 4 11 5 13 5 13 6 15 6 15 7 16 7 16 8 18 8 18 9 20 9 20 10 21 10 21 11 22 11"/></svg>');
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="22 11 22 13 21 13 21 14 20 14 20 15 18 15 18 16 16 16 16 17 15 17 15 18 13 18 13 19 11 19 11 20 10 20 10 21 8 21 8 22 6 22 6 23 3 23 3 22 2 22 2 2 3 2 3 1 6 1 6 2 8 2 8 3 10 3 10 4 11 4 11 5 13 5 13 6 15 6 15 7 16 7 16 8 18 8 18 9 20 9 20 10 21 10 21 11 22 11"/></svg>');
+}
+
+/* Handle Autoplay Toggle States (Pause icon when playing) */
+.fancybox__container.has-autoplay .f-button[data-autoplay-action="toggle"]::before,
+.fancybox__container.has-autoplay .f-button[title="Pause slideshow"]::before {
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg>');
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg>');
+}
+
+/* Navigation Arrows Override */
+.fancybox__container .f-button.is-prev,
+.fancybox__container .f-button.is-next,
+.fancybox__container .f-button[data-carousel-go-prev],
+.fancybox__container .f-button[data-carousel-go-next] {
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  margin: 0 !important;
+  position: absolute !important;
+  border-radius: 0px !important; /* 強制移除圓角 */
+}
+
+.fancybox__container .f-button.is-prev,
+.fancybox__container .f-button[data-carousel-go-prev] {
+  left: 16px !important;
+}
+
+.fancybox__container .f-button.is-next,
+.fancybox__container .f-button[data-carousel-go-next] {
+  right: 16px !important;
+}
+
+/* 箭頭按鈕 Hover: 向右下壓 */
+.fancybox__container .f-button.is-prev:hover,
+.fancybox__container .f-button.is-next:hover,
+.fancybox__container .f-button[data-carousel-go-prev]:hover,
+.fancybox__container .f-button[data-carousel-go-next]:hover {
+  transform: translateY(-50%) translate(4px, 4px) !important;
+  box-shadow: 0px 0px 0px #000000 !important; /* 陰影完全消失 */
+  background-color: color-mix(in srgb, var(--main) 80%, transparent) !important; /* Hover 半透明主色 */
+  color: #000000 !important; /* Hover 圖標：黑色 */
+}
+
+/* 箭頭按鈕 Active: 壓到底 */
+.fancybox__container .f-button.is-prev:active,
+.fancybox__container .f-button.is-next:active,
+.fancybox__container .f-button[data-carousel-go-prev]:active,
+.fancybox__container .f-button[data-carousel-go-next]:active {
+  transform: translateY(-50%) translate(4px, 4px) !important;
+  box-shadow: 0px 0px 0px #000000 !important;
+}
+
+/* 為了消除工具列相鄰按鈕邊框重疊，讓相鄰的按鈕往左移 */
+.fancybox__container .f-carousel__toolbar__column > * + * {
+  margin-left: -3px !important; /* 配合 3px 邊框修正 */
+}
+
+/* Navigation Arrows */
+.fancybox__container .f-button.is-prev::before,
+.fancybox__container .f-button[data-carousel-go-prev]::before {
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="17 5 17 7 16 7 16 8 15 8 15 9 14 9 14 10 13 10 13 11 12 11 12 13 13 13 13 14 14 14 14 15 15 15 15 16 16 16 16 17 17 17 17 19 16 19 16 20 14 20 14 19 13 19 13 18 12 18 12 17 11 17 11 16 10 16 10 15 9 15 9 14 8 14 8 13 7 13 7 11 8 11 8 10 9 10 9 9 10 9 10 8 11 8 11 7 12 7 12 6 13 6 13 5 14 5 14 4 16 4 16 5 17 5"/></svg>');
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="17 5 17 7 16 7 16 8 15 8 15 9 14 9 14 10 13 10 13 11 12 11 12 13 13 13 13 14 14 14 14 15 15 15 15 16 16 16 16 17 17 17 17 19 16 19 16 20 14 20 14 19 13 19 13 18 12 18 12 17 11 17 11 16 10 16 10 15 9 15 9 14 8 14 8 13 7 13 7 11 8 11 8 10 9 10 9 9 10 9 10 8 11 8 11 7 12 7 12 6 13 6 13 5 14 5 14 4 16 4 16 5 17 5"/></svg>');
+  transform: translate3d(-50%, -50%, 0) !important; /* 取消其他位移 */
+}
+
+.fancybox__container .f-button.is-next::before,
+.fancybox__container .f-button[data-carousel-go-next]::before {
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="7 19 7 17 8 17 8 16 9 16 9 15 10 15 10 14 11 14 11 13 12 13 12 11 11 11 11 10 10 10 10 9 9 9 9 8 8 8 8 7 7 7 7 5 8 5 8 4 10 4 10 5 11 5 11 6 12 6 12 7 13 7 13 8 14 8 14 9 15 9 15 10 16 10 16 11 17 11 17 13 16 13 16 14 15 14 15 15 14 15 14 16 13 16 13 17 12 17 12 18 11 18 11 19 10 19 10 20 8 20 8 19 7 19"/></svg>');
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="7 19 7 17 8 17 8 16 9 16 9 15 10 15 10 14 11 14 11 13 12 13 12 11 11 11 11 10 10 10 10 9 9 9 9 8 8 8 8 7 7 7 7 5 8 5 8 4 10 4 10 5 11 5 11 6 12 6 12 7 13 7 13 8 14 8 14 9 15 9 15 10 16 10 16 11 17 11 17 13 16 13 16 14 15 14 15 15 14 15 14 16 13 16 13 17 12 17 12 18 11 18 11 19 10 19 10 20 8 20 8 19 7 19"/></svg>');
+  transform: translate3d(-50%, -50%, 0) !important; /* 取消其他位移 */
+}
+
+/* 針對左右箭頭按鈕單獨設定 top 偏移 */
+.fancybox__container .f-button.is-prev::before,
+.fancybox__container .f-button.is-next::before,
+.fancybox__container .f-button[data-carousel-go-prev]::before,
+.fancybox__container .f-button[data-carousel-go-next]::before {
+  top: 50% !important; /* 強制覆寫之前殘留的 73% */
+  left: 50% !important;
+  transform: translate3d(-50%, -50%, 0) !important;
+}
+
+/* 強制移除所有 Fancybox 縮圖 (Thumbs) 相關的圓角，以符合 Neobrutalism */
+:root {
+  --f-thumb-border-radius: 0px !important;
+}
+
+.fancybox__container .f-thumbs__slide__button,
+.fancybox__container .f-thumbs__slide__img,
+.fancybox__container .f-thumbs__slide button,
+.fancybox__container .f-thumbs__slide button::after,
+.fancybox__container .f-thumbs img {
+  border-radius: 0px !important;
+}
+body { overflow-x: hidden; }
+
+.tab-hidden .crt-lines::before,
+.tab-hidden .crt-lines::after,
+.tab-hidden .crt-lines-global::before,
+.tab-hidden .crt-lines-global::after {
+  animation-play-state: paused !important;
 }
