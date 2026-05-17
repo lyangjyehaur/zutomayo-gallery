@@ -50,10 +50,11 @@ html.motion-reduced .bg-card\/40 {
 }
 
 /* 修复 MVDetailsModal 中的半透明区域 */
+/* 注意：bg-main/50 是 MV 播放按钮的背景，需要保持主色调 */
+/* bg-red-900/50 是 YouTube OFFLINE 按钮的背景，需要保持红色 */
+/* 所以这里只修复 mv-modal-content 和 modal-header-overlay */
 .motion-reduced .mv-modal-content,
-.motion-reduced .modal-header-overlay,
-.motion-reduced .bg-main\/50,
-.motion-reduced .bg-red-900\/50 {
+.motion-reduced .modal-header-overlay {
   background-color: var(--main) !important;
 }
 
