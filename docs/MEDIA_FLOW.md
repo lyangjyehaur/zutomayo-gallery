@@ -13,9 +13,10 @@
 - **觸發機制**：後端透過 `node-cron` 定時解析 Twitter RSS (由 `TWITTER_RSS_URL` 提供)。
 - **處理流程**：
   1. **解析推文**：透過 `TwitterService.extractMediaFromTweet` 提取推文中的圖片/影片真實網址。
-  2. **備份至 R2**：呼叫 `backupImageToR2` 下載最高畫質媒體 (`?name=orig`) 並上傳至 R2 (`zutomayo-gallery-archive` Bucket)。
-  3. **寫入資料庫**：將推文資訊存入 `media_groups` (狀態設為 `unorganized`)，並將媒體存入 `media` 表。
-  4. **通知管理員**：若設定了 `BARK_URL`，則發送 Bark 推播通知。
+  2. **備份至 R2**：呼叫 `backupImageToR2` 下載最高畫質媒體 (`?name=orig`) 並上傳至 R2 crawler 暫存路徑。
+  3. **寫入暫存資料庫**：將每個新候選媒體寫入 `staging_fanarts`，狀態為 `pending`；批准前不建立正式 `media_groups` / `media`。
+  4. **通知管理員**：透過 `TelegramBotService.sendFanartReviewNotification()` 發送 Telegram inline 審核按鈕。
+  5. **批准後入庫**：管理員或 Telegram callback 批准後，staging promotion 流程才建立/更新 `media_groups` 與 `media`。
 - **程式碼參考**：[twitter-monitor.service.ts](file:///Users/lyangjyehaur/Projects/zutomayo-gallery/backend/src/services/twitter-monitor.service.ts)
 
 ### 1.2 管理員手動同步/重建 (R2 Rebuild)
@@ -39,6 +40,7 @@
 - **`mvs`**：MV 核心資料表。
 - **`media`**：統一媒體表，儲存所有圖片/影片的 `url` (R2 網址) 與 `original_url` (原始網址)。
 - **`media_groups`**：媒體分組，用於綁定同一篇推文來源的多張圖片，紀錄作者與來源連結。
+- **`staging_fanarts`**：自動監聽與爬蟲的二創候選暫存表，狀態包含 `pending` / `on_hold` / `approved` / `rejected`；只有批准後才 promote 至正式媒體表。
 - **`mv_media`**：中繼表 (Junction Table)，定義特定圖片在特定 MV 中的角色 (`usage`: cover/gallery) 與排序 (`order_index`)。
 - **程式碼參考**：[DB_SCHEMA.md](file:///Users/lyangjyehaur/Projects/zutomayo-gallery/docs/DB_SCHEMA.md)
 

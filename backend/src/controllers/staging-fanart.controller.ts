@@ -13,6 +13,8 @@ import { logger } from '../utils/logger.js';
 const mvService = new MVService();
 
 const generateShortId = () => nanoid(16);
+export type StagingReviewAction = 'approve' | 'hold' | 'reject';
+type StagingStatus = 'pending' | 'on_hold' | 'approved' | 'rejected';
 
 async function fetchMediaToBuffer(url: string): Promise<{ buffer: Buffer; contentType: string; ext: string } | null> {
   let fetchUrl = url;
@@ -110,6 +112,7 @@ export const getProgress = async (req: Request, res: Response) => {
 
   const statusCounts = {
     pending: 0,
+    on_hold: 0,
     approved: 0,
     rejected: 0,
   };
@@ -133,7 +136,7 @@ export const getProgress = async (req: Request, res: Response) => {
 
 export const getStagingFanarts = async (req: Request, res: Response) => {
   const status = (req.query.status as string) || 'pending';
-  const allowedStatuses = new Set(['pending', 'approved', 'rejected']);
+  const allowedStatuses = new Set(['pending', 'on_hold', 'approved', 'rejected']);
   if (!allowedStatuses.has(status)) {
     throw new AppError(400, 'Invalid status');
   }
@@ -161,19 +164,7 @@ export const getStagingFanarts = async (req: Request, res: Response) => {
   });
 };
 
-export const approveStagingFanart = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { mvs } = req.body;
-  const staging = await StagingFanartModel.findByPk(id);
-
-  if (!staging) {
-    throw new AppError(404, 'Staging fanart not found');
-  }
-
-  if (staging.get('status') !== 'pending') {
-    throw new AppError(400, 'Only pending fanarts can be approved');
-  }
-
+async function promoteStagingFanart(staging: any, mvs?: unknown) {
   const originalUrl = staging.get('original_url') as string;
   const mediaUrl = staging.get('media_url') as string;
   const r2Url = staging.get('r2_url') as string;
@@ -315,6 +306,22 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
   }
 
   await staging.update({ status: 'approved' });
+}
+
+export const approveStagingFanart = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { mvs } = req.body;
+  const staging = await StagingFanartModel.findByPk(id);
+
+  if (!staging) {
+    throw new AppError(404, 'STAGING_FANART_NOT_FOUND', 'Staging fanart not found');
+  }
+
+  if (!['pending', 'on_hold'].includes(String(staging.get('status')))) {
+    throw new AppError(400, 'Only pending or on-hold fanarts can be approved');
+  }
+
+  await promoteStagingFanart(staging, mvs);
 
   res.json({ success: true, message: 'Approved and moved to MediaGroup successfully' });
 };
@@ -324,11 +331,11 @@ export const rejectStagingFanart = async (req: Request, res: Response) => {
   const staging = await StagingFanartModel.findByPk(id);
 
   if (!staging) {
-    throw new AppError(404, 'Staging fanart not found');
+    throw new AppError(404, 'STAGING_FANART_NOT_FOUND', 'Staging fanart not found');
   }
 
-  if (staging.get('status') !== 'pending') {
-    throw new AppError(400, 'Only pending fanarts can be rejected');
+  if (!['pending', 'on_hold'].includes(String(staging.get('status')))) {
+    throw new AppError(400, 'Only pending or on-hold fanarts can be rejected');
   }
 
   await staging.update({ status: 'rejected' });
@@ -336,16 +343,75 @@ export const rejectStagingFanart = async (req: Request, res: Response) => {
   res.json({ success: true, message: 'Rejected successfully' });
 };
 
+export const holdStagingFanart = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await applyStagingReviewAction(id, 'hold');
+  res.json({ success: true, message: result.alreadyProcessed ? 'Already on hold' : 'Put on hold successfully', data: result });
+};
+
+export async function applyStagingReviewAction(id: string, action: StagingReviewAction) {
+  const staging = await StagingFanartModel.findByPk(id);
+
+  if (!staging) {
+    throw new AppError(404, 'STAGING_FANART_NOT_FOUND', 'Staging fanart not found');
+  }
+
+  const currentStatus = String(staging.get('status')) as StagingStatus;
+  let changed = false;
+  let alreadyProcessed = false;
+
+  if (action === 'hold') {
+    if (currentStatus === 'on_hold') {
+      alreadyProcessed = true;
+    } else if (currentStatus === 'pending') {
+      await staging.update({ status: 'on_hold' });
+      changed = true;
+    } else {
+      throw new AppError(409, 'INVALID_REVIEW_STATE_TRANSITION', 'Invalid review state transition');
+    }
+  } else if (action === 'reject') {
+    if (currentStatus === 'rejected') {
+      alreadyProcessed = true;
+    } else if (currentStatus === 'pending' || currentStatus === 'on_hold') {
+      await staging.update({ status: 'rejected' });
+      changed = true;
+    } else {
+      throw new AppError(409, 'INVALID_REVIEW_STATE_TRANSITION', 'Invalid review state transition');
+    }
+  } else if (action === 'approve') {
+    if (currentStatus === 'approved') {
+      alreadyProcessed = true;
+    } else if (currentStatus === 'pending' || currentStatus === 'on_hold') {
+      await promoteStagingFanart(staging);
+      changed = true;
+    } else {
+      throw new AppError(409, 'INVALID_REVIEW_STATE_TRANSITION', 'Invalid review state transition');
+    }
+  } else {
+    throw new AppError(400, 'INVALID_REVIEW_ACTION', 'Invalid action');
+  }
+
+  await staging.reload();
+
+  return {
+    id,
+    action,
+    status: staging.get('status'),
+    changed,
+    alreadyProcessed,
+  };
+}
+
 export const restoreStagingFanart = async (req: Request, res: Response) => {
   const { id } = req.params;
   const staging = await StagingFanartModel.findByPk(id);
 
   if (!staging) {
-    throw new AppError(404, 'Staging fanart not found');
+    throw new AppError(404, 'STAGING_FANART_NOT_FOUND', 'Staging fanart not found');
   }
 
-  if (staging.get('status') !== 'rejected') {
-    throw new AppError(400, 'Only rejected fanarts can be restored');
+  if (!['rejected', 'on_hold'].includes(String(staging.get('status')))) {
+    throw new AppError(400, 'Only rejected or on-hold fanarts can be restored');
   }
 
   await staging.update({ status: 'pending' });

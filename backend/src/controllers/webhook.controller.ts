@@ -1,7 +1,90 @@
 import { Request, Response, NextFunction } from 'express';
+import crypto from 'crypto';
+import { applyStagingReviewAction } from './staging-fanart.controller.js';
 import { errorEventEmitter } from '../services/error-events.service.js';
 import { NotificationService } from '../services/notification.service.js';
+import { parseFanartReviewCallbackData } from '../services/telegram-bot.service.js';
 import { logger } from '../utils/logger.js';
+
+const TELEGRAM_SECRET_HEADER = 'x-telegram-bot-api-secret-token';
+
+function isValidSecret(provided: string | undefined, expected: string): boolean {
+  if (!provided) return false;
+  const providedBuffer = Buffer.from(provided);
+  const expectedBuffer = Buffer.from(expected);
+  if (providedBuffer.length !== expectedBuffer.length) return false;
+  return crypto.timingSafeEqual(providedBuffer, expectedBuffer);
+}
+
+export const verifyTelegramWebhook = (req: Request, res: Response, next: NextFunction): void => {
+  const expectedToken = process.env.TELEGRAM_WEBHOOK_SECRET;
+  if (!expectedToken) {
+    logger.warn('Telegram webhook rejected: TELEGRAM_WEBHOOK_SECRET not configured');
+    res.status(403).json({
+      success: false,
+      error: 'Telegram webhook secret is not configured',
+      code: 'TELEGRAM_WEBHOOK_SECRET_NOT_CONFIGURED',
+    });
+    return;
+  }
+
+  const providedToken = req.header(TELEGRAM_SECRET_HEADER);
+  if (!isValidSecret(providedToken, expectedToken)) {
+    logger.warn({ ip: req.ip }, 'Telegram webhook rejected: invalid secret token');
+    res.status(403).json({
+      success: false,
+      error: 'Telegram webhook secret invalid',
+      code: 'INVALID_TELEGRAM_WEBHOOK_SECRET',
+    });
+    return;
+  }
+
+  next();
+};
+
+export const handleTelegramWebhook = async (req: Request, res: Response) => {
+  const callbackQuery = req.body?.callback_query;
+  if (!callbackQuery) {
+    return res.status(200).json({ success: true, message: 'Ignored non-callback update' });
+  }
+
+  const parsed = parseFanartReviewCallbackData(callbackQuery.data);
+  if (!parsed) {
+    await answerTelegramCallback(callbackQuery.id, '不支援的審核動作');
+    return res.status(200).json({ success: true, message: 'Ignored unsupported callback' });
+  }
+
+  try {
+    const result = await applyStagingReviewAction(parsed.stagingId, parsed.action);
+    const actionLabel = parsed.action === 'approve' ? '批准' : parsed.action === 'hold' ? '暫存觀察' : '拒絕';
+    const suffix = result.alreadyProcessed ? '（已處理過）' : '';
+    await answerTelegramCallback(callbackQuery.id, `${actionLabel}完成${suffix}`);
+    return res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    await answerTelegramCallback(callbackQuery.id, '審核動作無法套用');
+    throw err;
+  }
+};
+
+async function answerTelegramCallback(callbackQueryId: unknown, text: string): Promise<void> {
+  if (typeof callbackQueryId !== 'string' || !callbackQueryId) return;
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) return;
+
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        callback_query_id: callbackQueryId,
+        text: text.substring(0, 200),
+        show_alert: false,
+      }),
+    });
+  } catch (err) {
+    logger.warn({ err }, 'Failed to answer Telegram callback query');
+  }
+}
 
 /**
  * Waline webhook token 驗證中間件

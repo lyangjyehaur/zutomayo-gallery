@@ -236,9 +236,27 @@ interface MVItem {
 | **GET** | `/api/fanarts/gallery/summary` | 公開 | 取得 FanArt 畫廊的篩選統計資料（標籤計數、MV 計數）。 |
 | **GET** | `/api/fanarts/unorganized` | 管理員 | 取得爬蟲抓取但尚未被分類或整理的 Twitter 二創圖片 (Fanart) 列表。 |
 | **POST** | `/api/fanarts/:id/status` | 管理員 | 更新指定二創圖片的狀態 (例如標記為 `organized` 或 `rejected`)。<br>Body: `{ "status": "organized" }` |
+| **POST** | `/api/staging-fanarts/:id/hold` | 管理員 | 將待審核暫存二創標記為 `on_hold`，保留觀察，不升入正式媒體庫。 |
+| **POST** | `/api/webhook/telegram` | Telegram secret header | 接收 Telegram inline review callback。<br>Header: `X-Telegram-Bot-Api-Secret-Token: <TELEGRAM_WEBHOOK_SECRET>` |
 | **POST** | `/api/webhook/waline` | 公開 | 接收 Waline 留言系統的 Webhook 推播，可用於觸發網站快取更新或社群通知。 |
 
 ---
+
+### POST `/api/webhook/telegram` - Telegram 二創審核回調
+
+此端點由 Gallery backend 自己接收 Telegram Bot webhook。設定 Telegram `setWebhook` 時需提供 `secret_token`，Telegram 會在請求中帶上 `X-Telegram-Bot-Api-Secret-Token`，後端會與 `TELEGRAM_WEBHOOK_SECRET` 比對。
+
+支援的 inline button `callback_data`：
+- `fa:ok:<stagingId>`：批准，將 staging promote 至正式 `media_groups` / `media`。
+- `fa:hold:<stagingId>`：暫存觀察，狀態改為 `on_hold`。
+- `fa:no:<stagingId>`：拒絕，狀態改為 `rejected`。
+
+狀態轉移規則：
+- `pending -> on_hold`
+- `pending/on_hold -> rejected`
+- `pending/on_hold -> approved`
+- `approved + approve`、`rejected + reject`、`on_hold + hold` 視為冪等重送，回傳 `alreadyProcessed: true`。
+- `approved -> reject`、`rejected -> approve` 等危險轉移回 `409 INVALID_REVIEW_STATE_TRANSITION`。
 
 ## 5.5 Web Push 訂閱 (Push Subscriptions)
 *(路徑: `/api/push`)*

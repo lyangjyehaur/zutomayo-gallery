@@ -303,3 +303,5 @@
 
 管理員可透過任一已啟用的渠道即時收到新投稿通知，加快審核響應速度。
 
+> 注意：投稿系統通知仍走 `NotificationService.send()`；crawler / RSS 二創候選的 inline 審核按鈕屬於另一條 staging flow，會直接由 `TelegramBotService.sendFanartReviewNotification()` 發送，並由 Gallery backend 的 `/api/webhook/telegram` 接收 callback。兩者不要混用資料表或審核入口。
+

@@ -97,7 +97,7 @@ zutomayo-gallery/
 - `backend/src/services/push.service.ts`
   - `PushService` 管理 Web Push 訂閱與 VAPID 加密推播
 - `backend/src/services/telegram-bot.service.ts`
-  - `TelegramBotService` 發送 Telegram Bot 通知
+  - `TelegramBotService` 發送 Telegram Bot 通知；RSS 二創候選使用 inline keyboard 審核通知，callback_data 採 `fa:ok:<id>` / `fa:hold:<id>` / `fa:no:<id>` 短格式
 - `backend/src/services/mv.service.ts`
   - 管理 MV 讀取與更新流程
   - 使用運行時快取 `runtimeData`
@@ -114,6 +114,10 @@ zutomayo-gallery/
   - 採 session-based auth，並支援 WebAuthn / Passkeys
 - `backend/src/controllers/media-groups.controller.ts`
   - 管理媒體分組、推文來源媒體與維護流程
+- `backend/src/controllers/staging-fanart.controller.ts`
+  - 管理 crawler / RSS 二創暫存審核；批准前候選停留在 `staging_fanarts`，批准後才 promote 至正式 `media_groups` / `media`
+- `backend/src/controllers/webhook.controller.ts`
+  - 接收 Waline webhook 與 backend-owned Telegram inline 審核 callback；Telegram 端點使用官方 `X-Telegram-Bot-Api-Secret-Token` 對比 `TELEGRAM_WEBHOOK_SECRET`
 - `backend/src/controllers/fanart.controller.ts`
   - 提供 fanart 展示與相關彙整資料
 - `backend/src/controllers/admin-submissions.controller.ts`
@@ -171,7 +175,7 @@ zutomayo-gallery/
   - `media_groups`
   - `sys_configs`
   - `sys_announcements`
-  - `staging_fanarts`
+  - `staging_fanarts`：crawler / RSS 二創候選暫存表，狀態包含 `pending` / `on_hold` / `approved` / `rejected`
   - `public_users`
   - `auth_passkeys`
   - `backend_error_logs`

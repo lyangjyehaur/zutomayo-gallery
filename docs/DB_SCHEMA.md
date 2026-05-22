@@ -256,7 +256,7 @@
 | `updated_at` | `TIMESTAMP` | | 更新時間 |
 
 ### 4.5. `staging_fanarts` (二創圖暫存表)
-暫存從 Twitter 等來源爬取的二創圖，等待後續處理或人工審核。
+暫存從 Twitter RSS / crawler 等來源爬取的二創圖。批准前資料停留在此表，不建立正式 `media_groups` / `media`；Telegram inline review 與後台審核共用同一套 promote 流程。
 | 欄位名稱 | 型別 | 約束 | 說明 |
 | :--- | :--- | :--- | :--- |
 | `id` | `VARCHAR(36)` | `PRIMARY KEY` | 暫存資料唯一識別碼 (使用 NanoID) |
@@ -266,7 +266,7 @@
 | `r2_url` | `TEXT` | `NULL` | R2 備份連結 (可為空) |
 | `media_type` | `VARCHAR(20)` | `NULL` | 媒體格式類型 (image/video) |
 | `crawled_at` | `TIMESTAMP` | `NULL` | 爬取時間 |
-| `status` | `VARCHAR(50)` | `DEFAULT 'pending'` | 處理狀態 (pending/approved/rejected) |
+| `status` | `VARCHAR(50)` | `DEFAULT 'pending'` | 處理狀態 (`pending`/`on_hold`/`approved`/`rejected`) |
 | `source` | `VARCHAR(50)` | `NULL` | 資料來源 (crawler/rss) |
 | `created_at` | `TIMESTAMP` | | 建立時間 |
 | `updated_at` | `TIMESTAMP` | | 更新時間 |

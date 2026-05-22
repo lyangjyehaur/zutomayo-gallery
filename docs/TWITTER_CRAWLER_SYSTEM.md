@@ -5,7 +5,7 @@
 ## 1. 系統架構概覽 (Architecture Overview)
 
 系統主要由以下幾個模組構成：
-1. **即時監聽模組 (RSS Monitor)**: 透過 `TwitterMonitorService` 即時監聽 Twitter RSS，適合處理新發布的推文。
+1. **即時監聽模組 (RSS Monitor)**: 透過 `TwitterMonitorService` 即時監聽 Twitter RSS，適合處理新發布的推文；新候選會先寫入 `staging_fanarts`。
 2. **歷史推文爬蟲 (Twitter API Crawler)**: 透過 `fetch-zutomayo-art-tweets.ts` 使用 Twitter API v2，大量爬取特定帳號（如 `@zutomayo_art`）的歷史推文。
 3. **媒體下載與 R2 儲存**: 自動抓取最高畫質的圖片 (`name=orig`) 與影片，並將檔案上傳至 Cloudflare R2 以進行備份與加速。
 4. **暫存審核機制 (Staging System)**: 爬蟲取得的資料會先進入「暫存區」，狀態標記為 `pending`，需經過管理員人工審核後，才會正式寫入系統的媒體庫 (`MediaGroup` / `Media`)。
@@ -23,7 +23,7 @@
 - `r2_url`: 備份到 R2 的網址
 - `media_type`: 媒體類型 (`image` / `video`)
 - `crawled_at`: 爬取時間
-- `status`: 處理狀態，包含 `pending` (待審核), `approved` (已核准), `rejected` (已拒絕)
+- `status`: 處理狀態，包含 `pending` (待審核), `on_hold` (暫存觀察), `approved` (已核准), `rejected` (已拒絕)
 - `source`: 資料來源 (如 `crawler` 或 `rss`)
 
 ### 2.2 爬蟲狀態表 (`crawler_states`)
@@ -63,33 +63,36 @@
 
 1. **背景觸發與進度查詢**
    - `triggerCrawler`: 可透過 API 背景觸發爬蟲程式。
-   - `getProgress`: 回傳目前的爬蟲進度 (`total_crawled`) 與各狀態的數量統計 (pending / approved / rejected)。
+   - `getProgress`: 回傳目前的爬蟲進度 (`total_crawled`) 與各狀態的數量統計 (pending / on_hold / approved / rejected)。
 
 2. **取得待審核清單 (`getPendingStagingFanarts`)**
-   - 支援分頁查詢 (`page`, `limit`)，按爬取時間 (`crawled_at`) 降冪排序，返回所有狀態為 `pending` 的資料。
+   - 支援分頁查詢 (`page`, `limit`) 與 `status` 篩選，按爬取時間 (`crawled_at`) 降冪排序。
 
 3. **審核通過 (`approveStagingFanart`)**
-   - 系統會確保該筆資料狀態為 `pending`。
+   - 系統會確保該筆資料狀態為 `pending` 或 `on_hold`。
    - 使用推文網址 (`original_url`) 查詢或建立對應的推文群組 (`MediaGroupModel`)，狀態標為 `unorganized`。
    - 在正式媒體庫 (`MediaModel`) 建立該圖片/影片的紀錄，綁定 R2 備份網址並關聯至該推文群組。
    - 將 `StagingFanartModel` 的狀態更新為 `approved`。
 
 4. **審核拒絕 (`rejectStagingFanart`)**
-   - 直接將該筆暫存資料的狀態更新為 `rejected`，不會建立正式資料。
+   - 直接將 `pending` 或 `on_hold` 暫存資料的狀態更新為 `rejected`，不會建立正式資料。
+
+5. **暫存觀察 (`holdStagingFanart`)**
+   - 將 `pending` 暫存資料更新為 `on_hold`，保留給後續人工判斷。
 
 ## 6. 通知機制 (Notification)
 
 爬蟲與 RSS 監聽系統整合了統一通知服務 `NotificationService`，在關鍵事件發生時自動推送通知給管理員：
 
 ### 6.1 通知觸發時機
-- **RSS 監聯發現新推文**：`TwitterMonitorService` 偵測到新推文並寫入暫存區後，呼叫 `NotificationService.send()` 發送通知。
+- **RSS 監聽發現新推文**：`TwitterMonitorService` 偵測到新推文並寫入暫存區後，呼叫 `TelegramBotService.sendFanartReviewNotification()` 發送含 inline buttons 的審核通知。
 - **爬蟲任務完成**：歷史推文爬蟲 (`runCrawler`) 執行完畢後，觸發通知告知管理員。
 
 ### 6.2 通知渠道
 `NotificationService.send({ type, title, body, url })` 為統一入口，會同時觸發以下三個渠道：
 - **Bark**：推送到 iOS Bark App（原有的 inline Bark 邏輯已重構至此服務）
 - **Web Push**：透過 `PushService` 發送 VAPID 加密的瀏覽器推播通知
-- **Telegram**：透過 `TelegramBotService` 發送 Telegram Bot 訊息
+- **Telegram**：透過 `TelegramBotService` 發送 Telegram Bot 訊息；二創審核 callback 由 Gallery backend 的 `POST /api/webhook/telegram` 接收，驗證 `X-Telegram-Bot-Api-Secret-Token` 對比 `TELEGRAM_WEBHOOK_SECRET`，解析 `fa:ok:<id>` / `fa:hold:<id>` / `fa:no:<id>` 後呼叫 staging review action。
 
 ### 6.3 重構說明
 舊版在爬蟲流程中直接呼叫 Bark API 的 inline 邏輯，已重構為透過 `NotificationService` 統一發送，降低耦合度並擴展支援多渠道通知。
