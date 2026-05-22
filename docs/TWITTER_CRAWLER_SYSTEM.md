@@ -9,6 +9,7 @@
 2. **歷史推文爬蟲 (Twitter API Crawler)**: 透過 `fetch-zutomayo-art-tweets.ts` 使用 Twitter API v2，大量爬取特定帳號（如 `@zutomayo_art`）的歷史推文。
 3. **媒體下載與 R2 儲存**: 自動抓取最高畫質的圖片 (`name=orig`) 與影片，並將檔案上傳至 Cloudflare R2 以進行備份與加速。
 4. **暫存審核機制 (Staging System)**: 爬蟲取得的資料會先進入「暫存區」，狀態標記為 `pending`，需經過管理員人工審核後，才會正式寫入系統的媒體庫 (`MediaGroup` / `Media`)。
+5. **監聽目標管理 (Monitor Targets)**: 後台 `/admin/monitor-targets` 管理手動 user / hashtag 來源；畫師資料表中的 `twitter` 欄位則自動成為 read-only 監聽來源。
 
 ## 2. 資料庫 Schema (Database Schema)
 
@@ -32,6 +33,16 @@
 - `pagination_token`: Twitter API v2 提供的分頁 Token，用於獲取下一頁
 - `total_crawled`: 該帳號目前已爬取的總數量
 
+### 2.3 監聽目標表 (`monitor_targets`)
+用於儲存後台手動設定的 RSS Monitor 來源。
+- `type`: 監聽類型，支援 `user` 與 `hashtag`。
+- `handle`: 標準化後的帳號或 hashtag，不含 `@` / `#`。
+- `label`: 後台顯示名稱。
+- `enabled`: 是否啟用監聽；停用項目仍可在後台管理。
+- `note`: 管理備註。
+
+畫師管理中的 `artists.twitter` 不寫入 `monitor_targets`，但會在 RSS Monitor 執行時自動合併為 user 來源。
+
 ## 3. 爬蟲機制、Rate Limit 與分頁處理
 
 歷史推文爬蟲 (`runCrawler`) 是基於 `twitter-api-v2` 實作：
@@ -44,6 +55,17 @@
 ### 3.2 API 速率限制 (Rate Limit) 處理
 - **主動延遲**: 每完成一頁（100 筆）的請求與處理後，程式會主動休眠 (`sleep(3000)`) 3 秒，降低請求頻率。
 - **被動重試 (HTTP 429)**: 當捕捉到 HTTP 429 Too Many Requests 錯誤時，系統會自動休眠 5 分鐘 (`sleep(5 * 60 * 1000)`)，等待 API 限制解除後繼續執行。
+
+### 3.3 RSS Monitor 來源合併
+`TwitterMonitorService.checkRss()` 每次執行會合併以下來源並依 RSS URL 去重：
+- `artists.twitter` 中可解析出的 user handle。
+- `monitor_targets` 內啟用的 `user` 目標。
+- `monitor_targets` 內啟用的 `hashtag` 目標。
+- 舊版環境變數 `TWITTER_RSS_URL`，作為相容 fallback。
+
+手動與畫師來源會使用 `TWITTER_RSSHUB_BASE_URL` / `RSSHUB_BASE_URL` 產生 RSSHub URL，預設為 `https://rsshub.app`。若 `TWITTER_RSS_URL` 指向帶 path prefix 的 RSSHub（例如 `/rsshub/twitter/user/...`），系統會沿用該 prefix 生成 DB 來源 URL。
+
+Admin 介面的「監聽目標管理」頁會呼叫 `/api/monitor-targets/sources` 顯示畫師 read-only 來源、手動 user 來源與 hashtag 來源，並透過 `/api/monitor-targets` CRUD 手動目標。
 
 ## 4. 檔案下載與 R2 儲存
 
@@ -79,6 +101,9 @@
 
 5. **暫存觀察 (`holdStagingFanart`)**
    - 將 `pending` 暫存資料更新為 `on_hold`，保留給後續人工判斷。
+
+6. **還原待審核 (`restoreStagingFanart` / `batchRestoreStagingFanarts`)**
+   - 將 `rejected` 或 `on_hold` 的暫存資料還原為 `pending`，讓管理員可重新審核。
 
 ## 6. 通知機制 (Notification)
 

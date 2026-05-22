@@ -44,10 +44,13 @@ interface ProgressData {
   } | null;
   statusCounts: {
     pending: number;
+    on_hold: number;
     approved: number;
     rejected: number;
   };
 }
+
+type ReviewQueueStatus = 'pending' | 'on_hold' | 'rejected';
 
 export function AdminStagingFanartPage() {
   const settingsKey = 'ztmy_admin_staging_fanart_settings';
@@ -82,13 +85,15 @@ export function AdminStagingFanartPage() {
     return Number.isFinite(p) && p > 0 ? p : 1;
   });
   const [totalPages, setTotalPages] = useState(1);
-  const [viewStatus, setViewStatus] = useState<'pending' | 'rejected'>(() => {
-    return initialSettings?.viewStatus === 'rejected' ? 'rejected' : 'pending';
+  const [viewStatus, setViewStatus] = useState<ReviewQueueStatus>(() => {
+    return ['pending', 'on_hold', 'rejected'].includes(initialSettings?.viewStatus)
+      ? initialSettings.viewStatus
+      : 'pending';
   });
-  
+
   const [progress, setProgress] = useState<ProgressData | null>(null);
   const [isProgressLoading, setIsProgressLoading] = useState(false);
-  
+
   const [searchTerms, setSearchTerms] = useState(() => {
     return typeof initialSettings?.searchTerms === 'string' && initialSettings.searchTerms.trim()
       ? initialSettings.searchTerms
@@ -158,7 +163,7 @@ export function AdminStagingFanartPage() {
     }
   }, [baseApiUrl]);
 
-  const fetchFanarts = useCallback(async (p: number, status: 'pending' | 'rejected') => {
+  const fetchFanarts = useCallback(async (p: number, status: ReviewQueueStatus) => {
     setIsLoading(true);
     try {
       const res = await adminFetch(`${baseApiUrl}/staging-fanarts?page=${p}&limit=60&status=${status}`);
@@ -198,7 +203,7 @@ export function AdminStagingFanartPage() {
     }
   }, [fetchProgress, progress?.syncProgress?.status]);
 
-  const switchViewStatus = (status: 'pending' | 'rejected') => {
+  const switchViewStatus = (status: ReviewQueueStatus) => {
     setViewStatus(status);
     setPage(1);
     setSelectedCards(new Set());
@@ -220,7 +225,7 @@ export function AdminStagingFanartPage() {
       toast.error('開始日期不能大於結束日期');
       return;
     }
-    
+
     setIsTriggering(true);
     try {
       const startDateStr = format(startDate, 'yyyy-MM-dd');
@@ -228,7 +233,7 @@ export function AdminStagingFanartPage() {
       const res = await adminFetch(`${baseApiUrl}/staging-fanarts/trigger`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           searchTerms,
           startDate: startDateStr,
           endDate: endDateStr,
@@ -249,7 +254,7 @@ export function AdminStagingFanartPage() {
     }
   };
 
-  const handleAction = async (id: string, action: 'approve' | 'reject' | 'restore') => {
+  const handleAction = async (id: string, action: 'approve' | 'hold' | 'reject' | 'restore') => {
     try {
       const isApprove = action === 'approve';
       const isRestore = action === 'restore';
@@ -263,36 +268,16 @@ export function AdminStagingFanartPage() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(action === 'restore' ? '已還原為待審核' : data.message);
+        toast.success(action === 'restore' ? '已還原為待審核' : action === 'hold' ? '已移至暫存觀察' : data.message);
         setFanarts(prev => prev.filter(f => f.id !== id));
         setSelectedCards(prev => {
           const next = new Set(prev);
           next.delete(id);
           return next;
         });
-        
-        setProgress(prev => {
-          if (!prev) return prev;
-          if (action === 'restore') {
-            return {
-              ...prev,
-              statusCounts: {
-                ...prev.statusCounts,
-                pending: prev.statusCounts.pending + 1,
-                rejected: Math.max(0, prev.statusCounts.rejected - 1)
-              }
-            };
-          }
-          return {
-            ...prev,
-            statusCounts: {
-              ...prev.statusCounts,
-              pending: Math.max(0, prev.statusCounts.pending - 1),
-              [action === 'approve' ? 'approved' : 'rejected']: prev.statusCounts[action === 'approve' ? 'approved' : 'rejected'] + 1
-            }
-          };
-        });
-        
+
+        fetchProgress();
+
         if (fanarts.length <= 1) {
           fetchFanarts(page, viewStatus);
         }
@@ -304,13 +289,13 @@ export function AdminStagingFanartPage() {
     }
   };
 
-  const handleBatchAction = async (action: 'approve' | 'reject') => {
+  const handleBatchAction = async (action: 'approve' | 'hold' | 'reject') => {
     if (selectedCards.size === 0) return;
-    
+
     const ok = await confirm({
-      title: action === 'approve' ? '批次核准' : '批次拒絕',
-      description: `確定要批次${action === 'approve' ? '核准' : '拒絕'}這 ${selectedCards.size} 張卡片嗎？`,
-      confirmText: action === 'approve' ? '核准' : '拒絕',
+      title: action === 'approve' ? '批次核准' : action === 'hold' ? '批次暫存觀察' : '批次拒絕',
+      description: `確定要批次${action === 'approve' ? '核准' : action === 'hold' ? '移至暫存觀察' : '拒絕'}這 ${selectedCards.size} 張卡片嗎？`,
+      confirmText: action === 'approve' ? '核准' : action === 'hold' ? '暫存觀察' : '拒絕',
       cancelText: '取消',
     });
     if (!ok) return;
@@ -331,7 +316,7 @@ export function AdminStagingFanartPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-        
+
         if (res.ok) {
           const data = await res.json();
           if (data.success) {
@@ -358,7 +343,7 @@ export function AdminStagingFanartPage() {
     if (selectedCards.size === 0) return;
     const ok = await confirm({
       title: '批次還原',
-      description: `確定要將這 ${selectedCards.size} 筆已拒絕資料還原回待審核嗎？`,
+      description: `確定要將這 ${selectedCards.size} 筆資料還原回待審核嗎？`,
       confirmText: '還原',
       cancelText: '取消',
     });
@@ -369,7 +354,7 @@ export function AdminStagingFanartPage() {
       const res = await adminFetch(`${baseApiUrl}/staging-fanarts/batch-restore`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: Array.from(selectedCards) })
+        body: JSON.stringify({ ids: Array.from(selectedCards), statuses: [viewStatus] })
       });
       const data = await res.json();
       if (data.success) {
@@ -403,6 +388,13 @@ export function AdminStagingFanartPage() {
               onClick={() => switchViewStatus('pending')}
             >
               待審核 ({progress?.statusCounts?.pending || 0})
+            </Button>
+            <Button
+              variant="outline"
+              className={`border-2 border-black font-bold shadow-neo-sm h-8 ${viewStatus === 'on_hold' ? 'bg-blue-200' : 'bg-white'}`}
+              onClick={() => switchViewStatus('on_hold')}
+            >
+              暫存觀察 ({progress?.statusCounts?.on_hold || 0})
             </Button>
             <Button
               variant="outline"
@@ -455,11 +447,11 @@ export function AdminStagingFanartPage() {
               <h2 className="text-lg font-black uppercase tracking-widest flex items-center gap-2 shrink-0">
                 <i className="hn hn-chart-bar" /> 抓取進度與統計
               </h2>
-              
+
               <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
                 <div className="flex items-center gap-2 flex-1 md:flex-none">
                   <span className="text-sm font-bold uppercase shrink-0">Search:</span>
-                  <Input 
+                  <Input
                     value={searchTerms}
                     onChange={(e) => setSearchTerms(e.target.value)}
                     className="border-2 border-black font-bold shadow-neo-sm h-8 w-[280px] md:w-[420px] bg-background"
@@ -476,7 +468,7 @@ export function AdminStagingFanartPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold uppercase shrink-0">最大抓取數量:</span>
-                    <Input 
+                    <Input
                       type="number"
                       value={maxItems}
                       onChange={(e) => setMaxItems(parseInt(e.target.value, 10) || 0)}
@@ -485,8 +477,8 @@ export function AdminStagingFanartPage() {
                     />
                   </div>
                 </div>
-                <Button 
-                  variant="default" 
+                <Button
+                  variant="default"
                   size="sm"
                   className="bg-black text-white hover:bg-black/80 border-2 border-black font-bold shadow-neo-sm h-8"
                   onClick={handleTriggerCrawler}
@@ -494,8 +486,8 @@ export function AdminStagingFanartPage() {
                 >
                   <i className={`hn ${isTriggering ? 'hn-refresh animate-spin' : 'hn-play'} mr-2`} /> 抓取 {startDate && endDate ? `${format(startDate, 'yyyy-MM-dd')}~${format(endDate, 'yyyy-MM-dd')}` : '指定區間'} 的推文
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   className="border-2 border-black font-bold shadow-neo-sm h-8"
                   onClick={fetchProgress}
@@ -522,8 +514,8 @@ export function AdminStagingFanartPage() {
                 <span className="font-black text-xl">{progress?.syncProgress?.total_crawled || 0}</span>
               </div>
             </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="border-2 border-black p-3 bg-secondary-background">
                 <div className="text-xs font-bold uppercase opacity-70 mb-1">X/Twitter 抓取進度</div>
                 <div className="text-2xl font-black">
@@ -531,17 +523,22 @@ export function AdminStagingFanartPage() {
                   <span className="text-sm font-bold opacity-50 ml-1">/ {progress?.syncProgress?.current_run_total || '?'}</span>
                 </div>
               </div>
-              
+
               <div className="border-2 border-black p-3 bg-yellow-200">
                 <div className="text-xs font-bold uppercase opacity-70 mb-1">待審核 (Pending)</div>
                 <div className="text-2xl font-black">{progress?.statusCounts?.pending || 0}</div>
               </div>
-              
+
+              <div className="border-2 border-black p-3 bg-blue-200">
+                <div className="text-xs font-bold uppercase opacity-70 mb-1">暫存觀察 (On Hold)</div>
+                <div className="text-2xl font-black">{progress?.statusCounts?.on_hold || 0}</div>
+              </div>
+
               <div className="border-2 border-black p-3 bg-ztmy-green/50">
                 <div className="text-xs font-bold uppercase opacity-70 mb-1">已核准 (Approved)</div>
                 <div className="text-2xl font-black">{progress?.statusCounts?.approved || 0}</div>
               </div>
-              
+
               <div className="border-2 border-black p-3 bg-red-200">
                 <div className="text-xs font-bold uppercase opacity-70 mb-1">已拒絕 (Rejected)</div>
                 <div className="text-2xl font-black">{progress?.statusCounts?.rejected || 0}</div>
@@ -558,14 +555,14 @@ export function AdminStagingFanartPage() {
         ) : fanarts.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 border-4 border-dashed border-black/20 text-black/50 font-bold text-lg uppercase tracking-widest">
             <i className="hn hn-inbox text-4xl mb-4" />
-            {viewStatus === 'pending' ? 'No pending fanarts' : 'No rejected fanarts'}
+            {viewStatus === 'pending' ? 'No pending fanarts' : viewStatus === 'on_hold' ? 'No on-hold fanarts' : 'No rejected fanarts'}
           </div>
         ) : (
           <div className="flex flex-col gap-4">
             <div className="sticky top-0 z-30 flex flex-wrap items-center justify-between p-3 border-2 border-black bg-white shadow-neo-sm">
               <label className="flex items-center gap-2 cursor-pointer font-bold select-none">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   className="w-5 h-5 accent-black border-2 border-black cursor-pointer"
                   checked={selectedCards.size === fanarts.length && fanarts.length > 0}
                   onChange={(e) => {
@@ -578,9 +575,9 @@ export function AdminStagingFanartPage() {
                 />
                 <span className="uppercase tracking-wider">全選 ({selectedCards.size})</span>
               </label>
-              
+
               <div className="flex items-center gap-2 mt-2 sm:mt-0">
-                {viewStatus === 'pending' ? (
+                {viewStatus === 'pending' || viewStatus === 'on_hold' ? (
                   <>
                     <div className="w-[200px]">
                       <MultiSelect
@@ -590,15 +587,33 @@ export function AdminStagingFanartPage() {
                         placeholder="批次選擇 MV..."
                       />
                     </div>
-                    <Button 
-                      variant="outline" 
+                    {viewStatus === 'pending' ? (
+                      <Button
+                        variant="outline"
+                        className="border-2 border-black bg-blue-500 text-white font-black uppercase tracking-wider hover:bg-blue-600 h-8"
+                        disabled={selectedCards.size === 0 || isLoading}
+                        onClick={() => handleBatchAction('hold')}
+                      >
+                        <i className="hn hn-pause mr-2" /> 批次暫存
+                      </Button>
+                    ) : (
+                      <Button
+                        className="border-2 border-black bg-yellow-200 font-black text-black uppercase tracking-wider hover:bg-yellow-300 h-8"
+                        disabled={selectedCards.size === 0 || isLoading}
+                        onClick={handleBatchRestore}
+                      >
+                        <i className="hn hn-refresh mr-2" /> 批次還原
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
                       className="border-2 border-black bg-red-500 text-white font-black uppercase tracking-wider hover:bg-red-600 h-8"
                       disabled={selectedCards.size === 0 || isLoading}
                       onClick={() => handleBatchAction('reject')}
                     >
                       <i className="hn hn-trash mr-2" /> 批次拒絕
                     </Button>
-                    <Button 
+                    <Button
                       className="border-2 border-black bg-ztmy-green font-black text-black uppercase tracking-wider hover:bg-[#8aff8a] h-8"
                       disabled={selectedCards.size === 0 || isLoading}
                       onClick={() => handleBatchAction('approve')}
@@ -620,14 +635,14 @@ export function AdminStagingFanartPage() {
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
               {fanarts.map(f => (
-                <div 
-                  key={f.id} 
+                <div
+                  key={f.id}
                   className={`bg-card border-4 border-black shadow-neo flex flex-col overflow-hidden group relative transition-colors ${selectedCards.has(f.id) ? 'ring-4 ring-ztmy-green ring-offset-2' : ''}`}
                 >
                   {/* Card Checkbox overlay */}
                   <label className="absolute top-2 left-2 z-20 cursor-pointer bg-white border-2 border-black p-1 shadow-neo-sm hover:scale-110 transition-transform flex items-center justify-center">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       className="w-5 h-5 accent-black cursor-pointer"
                       checked={selectedCards.has(f.id)}
                       onChange={(e) => {
@@ -644,22 +659,22 @@ export function AdminStagingFanartPage() {
 
                   <div className="aspect-square bg-black relative border-b-4 border-black">
                   {f.media_type === 'video' ? (
-                    <video 
-                      src={f.r2_url || f.media_url} 
+                    <video
+                      src={f.r2_url || f.media_url}
                       className="w-full h-full object-cover"
                       controls
                       preload="metadata"
                     />
                   ) : (
-                    <img 
-                      src={f.r2_url || f.media_url} 
-                      alt="Fanart" 
+                    <img
+                      src={f.r2_url || f.media_url}
+                      alt="Fanart"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                   )}
-                  <a 
-                    href={f.original_url} 
-                    target="_blank" 
+                  <a
+                    href={f.original_url}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="absolute top-2 right-2 size-8 bg-black text-white border-2 border-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-neo-sm z-10"
                     title="View Original"
@@ -667,15 +682,15 @@ export function AdminStagingFanartPage() {
                     <i className="hn hn-external-link" />
                   </a>
                 </div>
-                
+
                 <div className="p-2 flex flex-col gap-2 flex-1">
                   <div className="flex flex-col gap-1 text-[10px] sm:text-xs font-mono font-bold opacity-70">
                     <span className="truncate" title={f.tweet_id}>ID: {f.tweet_id}</span>
                     <span>Type: {f.media_type}</span>
                     <span className="truncate" title={new Date(f.crawled_at).toLocaleString()}>Date: {new Date(f.crawled_at).toLocaleDateString()}</span>
                   </div>
-                  
-                  {viewStatus === 'pending' ? (
+
+                {viewStatus === 'pending' || viewStatus === 'on_hold' ? (
                     <div className="flex flex-col gap-1 mt-1">
                       <span className="text-[10px] sm:text-xs font-bold uppercase">Associated MVs:</span>
                       <MultiSelect
@@ -688,14 +703,41 @@ export function AdminStagingFanartPage() {
                   ) : null}
 
                   {viewStatus === 'pending' ? (
-                    <div className="mt-auto grid grid-cols-2 gap-2 pt-2">
-                      <Button 
+                    <div className="mt-auto grid grid-cols-3 gap-2 pt-2">
+                      <Button
                         className="w-full bg-red-500 text-white hover:bg-red-600 border-2 border-black shadow-neo-sm font-black uppercase tracking-wider text-xs h-8"
                         onClick={() => handleAction(f.id, 'reject')}
                       >
                         <i className="hn hn-trash sm:mr-1" /> <span className="hidden sm:inline">拒絕</span>
                       </Button>
-                      <Button 
+                      <Button
+                        className="w-full bg-blue-500 text-white hover:bg-blue-600 border-2 border-black shadow-neo-sm font-black uppercase tracking-wider text-xs h-8"
+                        onClick={() => handleAction(f.id, 'hold')}
+                      >
+                        <i className="hn hn-pause sm:mr-1" /> <span className="hidden sm:inline">暫存</span>
+                      </Button>
+                      <Button
+                        className="w-full bg-ztmy-green text-black hover:bg-[#8aff8a] border-2 border-black shadow-neo-sm font-black uppercase tracking-wider text-xs h-8"
+                        onClick={() => handleAction(f.id, 'approve')}
+                      >
+                        <i className="hn hn-check sm:mr-1" /> <span className="hidden sm:inline">核准</span>
+                      </Button>
+                    </div>
+                  ) : viewStatus === 'on_hold' ? (
+                    <div className="mt-auto grid grid-cols-3 gap-2 pt-2">
+                      <Button
+                        className="w-full bg-red-500 text-white hover:bg-red-600 border-2 border-black shadow-neo-sm font-black uppercase tracking-wider text-xs h-8"
+                        onClick={() => handleAction(f.id, 'reject')}
+                      >
+                        <i className="hn hn-trash sm:mr-1" /> <span className="hidden sm:inline">拒絕</span>
+                      </Button>
+                      <Button
+                        className="w-full bg-yellow-200 text-black hover:bg-yellow-300 border-2 border-black shadow-neo-sm font-black uppercase tracking-wider text-xs h-8"
+                        onClick={() => handleAction(f.id, 'restore')}
+                      >
+                        <i className="hn hn-refresh sm:mr-1" /> <span className="hidden sm:inline">還原</span>
+                      </Button>
+                      <Button
                         className="w-full bg-ztmy-green text-black hover:bg-[#8aff8a] border-2 border-black shadow-neo-sm font-black uppercase tracking-wider text-xs h-8"
                         onClick={() => handleAction(f.id, 'approve')}
                       >

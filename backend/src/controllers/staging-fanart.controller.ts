@@ -317,30 +317,33 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
     throw new AppError(404, 'STAGING_FANART_NOT_FOUND', 'Staging fanart not found');
   }
 
-  if (!['pending', 'on_hold'].includes(String(staging.get('status')))) {
+  const currentStatus = String(staging.get('status'));
+  if (currentStatus === 'approved') {
+    res.json({
+      success: true,
+      message: 'Already approved',
+      data: { id, action: 'approve', status: currentStatus, changed: false, alreadyProcessed: true },
+    });
+    return;
+  }
+
+  if (!['pending', 'on_hold'].includes(currentStatus)) {
     throw new AppError(400, 'Only pending or on-hold fanarts can be approved');
   }
 
   await promoteStagingFanart(staging, mvs);
 
-  res.json({ success: true, message: 'Approved and moved to MediaGroup successfully' });
+  res.json({
+    success: true,
+    message: 'Approved and moved to MediaGroup successfully',
+    data: { id, action: 'approve', status: 'approved', changed: true, alreadyProcessed: false },
+  });
 };
 
 export const rejectStagingFanart = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const staging = await StagingFanartModel.findByPk(id);
-
-  if (!staging) {
-    throw new AppError(404, 'STAGING_FANART_NOT_FOUND', 'Staging fanart not found');
-  }
-
-  if (!['pending', 'on_hold'].includes(String(staging.get('status')))) {
-    throw new AppError(400, 'Only pending or on-hold fanarts can be rejected');
-  }
-
-  await staging.update({ status: 'rejected' });
-
-  res.json({ success: true, message: 'Rejected successfully' });
+  const result = await applyStagingReviewAction(id, 'reject');
+  res.json({ success: true, message: result.alreadyProcessed ? 'Already rejected' : 'Rejected successfully', data: result });
 };
 
 export const holdStagingFanart = async (req: Request, res: Response) => {
@@ -421,6 +424,11 @@ export const restoreStagingFanart = async (req: Request, res: Response) => {
 export const batchRestoreStagingFanarts = async (req: Request, res: Response) => {
   const rawIds = (req.body as any)?.ids;
   const ids = Array.isArray(rawIds) ? rawIds.filter((v: any) => typeof v === 'string' && v.trim()) : [];
+  const rawStatuses = (req.body as any)?.statuses;
+  const requestedStatuses = Array.isArray(rawStatuses)
+    ? rawStatuses.filter((v: any) => v === 'rejected' || v === 'on_hold')
+    : [];
+  const statuses = requestedStatuses.length > 0 ? requestedStatuses : ['rejected', 'on_hold'];
 
   if (ids.length === 0) {
     throw new AppError(400, 'ids is required');
@@ -428,7 +436,7 @@ export const batchRestoreStagingFanarts = async (req: Request, res: Response) =>
 
   const [updatedCount] = await StagingFanartModel.update(
     { status: 'pending' },
-    { where: { id: { [Op.in]: ids }, status: 'rejected' } }
+    { where: { id: { [Op.in]: ids }, status: { [Op.in]: statuses } } }
   );
 
   res.json({

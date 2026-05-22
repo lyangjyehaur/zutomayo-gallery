@@ -256,7 +256,7 @@
 | `updated_at` | `TIMESTAMP` | | 更新時間 |
 
 ### 4.5. `staging_fanarts` (二創圖暫存表)
-暫存從 Twitter RSS / crawler 等來源爬取的二創圖。批准前資料停留在此表，不建立正式 `media_groups` / `media`；Telegram inline review 與後台審核共用同一套 promote 流程。
+暫存從 Twitter RSS / crawler 等來源爬取的二創圖。批准前資料停留在此表，不建立正式 `media_groups` / `media`；Telegram inline review 與後台審核共用同一套 promote 流程。`on_hold` 代表暫存觀察，之後可還原為 `pending`、拒絕或批准。
 | 欄位名稱 | 型別 | 約束 | 說明 |
 | :--- | :--- | :--- | :--- |
 | `id` | `VARCHAR(36)` | `PRIMARY KEY` | 暫存資料唯一識別碼 (使用 NanoID) |
@@ -270,6 +270,24 @@
 | `source` | `VARCHAR(50)` | `NULL` | 資料來源 (crawler/rss) |
 | `created_at` | `TIMESTAMP` | | 建立時間 |
 | `updated_at` | `TIMESTAMP` | | 更新時間 |
+
+### 4.6. `monitor_targets` (Twitter 監聽目標表)
+儲存後台手動維護的 X/Twitter RSS 監聽目標。實際 RSS Monitor 來源會合併 `artists.twitter`、啟用的 `monitor_targets`、以及舊版 `TWITTER_RSS_URL` fallback；畫師來源不寫入此表。
+| 欄位名稱 | 型別 | 約束 | 說明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `VARCHAR(36)` | `PRIMARY KEY` | 監聽目標唯一識別碼 |
+| `type` | `VARCHAR(20)` | `NOT NULL` | 監聽類型，支援 `user` / `hashtag` |
+| `handle` | `VARCHAR(255)` | `NOT NULL` | 標準化後的帳號或 hashtag，不含 `@` / `#`；user 會轉小寫 |
+| `label` | `VARCHAR(255)` | `NULL` | 後台顯示名稱 |
+| `enabled` | `BOOLEAN` | `DEFAULT true` | 是否啟用監聽；停用項目仍保留在管理介面 |
+| `note` | `TEXT` | `NULL` | 管理備註 |
+| `created_at` | `TIMESTAMP` | | 建立時間 |
+| `updated_at` | `TIMESTAMP` | | 更新時間 |
+
+**索引：**
+- `type` — 按監聽類型查詢
+- `enabled` — 查詢啟用目標
+- `type, handle` (unique) — 避免同類型重複監聽目標
 
 ### 4.7. `push_subscriptions` (Web Push 訂閱表)
 儲存瀏覽器 Web Push 的訂閱資訊，用於向管理員發送 VAPID 加密的推播通知。

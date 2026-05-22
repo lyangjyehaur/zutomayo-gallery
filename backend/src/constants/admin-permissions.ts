@@ -5,6 +5,7 @@ export const ADMIN_PERMISSIONS = {
   FANARTS: 'admin:fanarts',
   ANNOTATIONS: 'admin:annotations',
   STAGING_FANARTS: 'admin:staging-fanarts',
+  MONITOR_TARGETS: 'admin:monitor-targets',
   SUBMISSIONS: 'admin:submissions',
   SYSTEM_USERS: 'admin:system:users',
   SYSTEM_ROLES: 'admin:system:roles',

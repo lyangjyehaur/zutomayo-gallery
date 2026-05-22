@@ -18,6 +18,7 @@ import {
   Megaphone,
   Settings2,
   SlidersHorizontal,
+  RadioTower,
   TriangleAlert,
   UserCog,
   Users,
@@ -66,6 +67,7 @@ const iconForPath = (path: string) => {
   if (p === "/admin/dicts") return BookOpen
   if (p === "/admin/fanart") return Image
   if (p === "/admin/staging-fanarts") return Images
+  if (p === "/admin/monitor-targets") return RadioTower
   if (p === "/admin/submissions") return Inbox
   if (p === "/admin/annotations") return Image
   if (p === "/admin/system/announcements") return Megaphone
@@ -179,6 +181,7 @@ export function AppSidebar({
       "/admin/dicts",
       "/admin/fanart",
       "/admin/staging-fanarts",
+      "/admin/monitor-targets",
       "/admin/submissions",
       "/admin/annotations",
     ])

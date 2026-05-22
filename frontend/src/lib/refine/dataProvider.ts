@@ -32,6 +32,7 @@ const getResourceBaseUrl = (resource: string) => {
     dicts: `${apiRoot}/system/dicts`,
     fanart: `${apiRoot}/fanarts`,
     stagingFanarts: `${apiRoot}/staging-fanarts`,
+    monitorTargets: `${apiRoot}/monitor-targets`,
     systemUsers: `${apiRoot}/admin/system/users`,
     systemRoles: `${apiRoot}/admin/system/roles`,
     systemMenus: `${apiRoot}/admin/system/menus`,

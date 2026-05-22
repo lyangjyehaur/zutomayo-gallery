@@ -9,6 +9,7 @@ export const adminResources: ResourceProps[] = [
   { name: "dicts", list: "/admin/dicts", create: "/admin/dicts", edit: "/admin/dicts" },
   { name: "fanart", list: "/admin/fanart", edit: "/admin/fanart" },
   { name: "stagingFanarts", list: "/admin/staging-fanarts", edit: "/admin/staging-fanarts" },
+  { name: "monitorTargets", list: "/admin/monitor-targets", create: "/admin/monitor-targets", edit: "/admin/monitor-targets" },
   { name: "submissions", list: "/admin/submissions" },
   { name: "annotations", list: "/admin/annotations", create: "/admin/annotations", edit: "/admin/annotations" },
   { name: "system", meta: { label: "系統管理" } },

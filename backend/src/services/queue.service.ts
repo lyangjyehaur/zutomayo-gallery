@@ -114,11 +114,6 @@ export const initQueues = async () => {
     await twitterQueue.removeRepeatableByKey(job.key);
   }
 
-  if (!process.env.TWITTER_RSS_URL) {
-    logger.info('[BullMQ] TWITTER_RSS_URL is not set. Scheduled monitor disabled.');
-    return;
-  }
-
   // 設定新的排程任務
   await twitterQueue.add('check-rss', {}, {
     repeat: {

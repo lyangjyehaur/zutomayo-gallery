@@ -84,10 +84,14 @@ export const storage = {
   // 檢查存儲空間
   getStorageInfo() {
     let used = 0;
-    for (const key in localStorage) {
-      if (localStorage.hasOwnProperty(key)) {
-        used += localStorage[key].length * 2; // UTF-16 編碼
+    try {
+      for (const key in localStorage) {
+        if (localStorage.hasOwnProperty(key)) {
+          used += localStorage[key].length * 2; // UTF-16 編碼
+        }
       }
+    } catch (error) {
+      console.warn('[Storage] Failed to inspect storage:', error);
     }
     return {
       used: (used / 1024 / 1024).toFixed(2) + ' MB',

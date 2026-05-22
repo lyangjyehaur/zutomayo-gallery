@@ -10,7 +10,8 @@
 資源的來源主要分為「自動監控」與「手動同步」兩種，最終皆統一無損備份至 Cloudflare R2。
 
 ### 1.1 自動化 Twitter 監控 (Twitter Monitor)
-- **觸發機制**：後端透過 `node-cron` 定時解析 Twitter RSS (由 `TWITTER_RSS_URL` 提供)。
+- **觸發機制**：後端定時執行 `TwitterMonitorService.checkRss()`，合併畫師 `twitter` 欄位、後台啟用的手動 user 監聽目標、後台啟用的 hashtag 監聽目標，以及舊版 `TWITTER_RSS_URL` fallback，產生去重後的 RSS feed 清單。
+- **來源管理**：`/admin/monitor-targets` 可管理手動 user / hashtag 來源；畫師 Twitter 來源來自 artists 資料，僅在此頁 read-only 顯示。RSSHub base 優先使用 `TWITTER_RSSHUB_BASE_URL` / `RSSHUB_BASE_URL`，未設定時使用 `https://rsshub.app`。
 - **處理流程**：
   1. **解析推文**：透過 `TwitterService.extractMediaFromTweet` 提取推文中的圖片/影片真實網址。
   2. **備份至 R2**：呼叫 `backupImageToR2` 下載最高畫質媒體 (`?name=orig`) 並上傳至 R2 crawler 暫存路徑。
@@ -159,7 +160,7 @@ localStorage.removeItem('is_china');
 
 ```mermaid
 graph TD
-    A[Twitter RSS / 手動觸發] --> B[Twitter Monitor / R2 Rebuild]
+    A[畫師 Twitter / 手動 user / hashtag / TWITTER_RSS_URL] --> B[Twitter Monitor / R2 Rebuild]
     B --> C[下載原圖並產生 MD5 Hash]
     C --> D[(Cloudflare R2 儲存)]
     C --> E[(PostgreSQL 資料庫)]

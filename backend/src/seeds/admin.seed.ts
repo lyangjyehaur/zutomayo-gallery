@@ -39,6 +39,7 @@ export const seedAdminRBAC = async (): Promise<void> => {
     { label: 'Apple Music', path: '/admin/apple-music-albums', sort: 40, permission: ADMIN_PERMISSIONS.ALBUMS },
     { label: 'FanArt 管理', path: '/admin/fanart', sort: 50, permission: ADMIN_PERMISSIONS.FANARTS },
     { label: 'Staging FanArt', path: '/admin/staging-fanarts', sort: 60, permission: ADMIN_PERMISSIONS.STAGING_FANARTS },
+    { label: '監聽目標管理', path: '/admin/monitor-targets', sort: 62, permission: ADMIN_PERMISSIONS.MONITOR_TARGETS },
     { label: '投稿審核', path: '/admin/submissions', sort: 65, permission: ADMIN_PERMISSIONS.SUBMISSIONS },
     { label: '標註管理', path: '/admin/annotations', sort: 66, permission: ADMIN_PERMISSIONS.ANNOTATIONS },
     { label: '字典管理', path: '/admin/dicts', sort: 70, permission: ADMIN_PERMISSIONS.SYSTEM_DICTS },

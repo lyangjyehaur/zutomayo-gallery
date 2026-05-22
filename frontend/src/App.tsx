@@ -92,6 +92,7 @@ const AdminAppleMusicAlbumsPage = React.lazy(() => import("@/pages/AdminAppleMus
 const AdminDictsPage = React.lazy(() => import("@/pages/AdminDictsPage").then((m) => ({ default: m.AdminDictsPage })));
 const AdminFanArtPage = React.lazy(() => import("@/pages/AdminFanArtPage").then((m) => ({ default: m.AdminFanArtPage })));
 const AdminStagingFanartPage = React.lazy(() => import("@/pages/AdminStagingFanartPage").then((m) => ({ default: m.AdminStagingFanartPage })));
+const AdminMonitorTargetsPage = React.lazy(() => import("@/pages/AdminMonitorTargetsPage").then((m) => ({ default: m.AdminMonitorTargetsPage })));
 const AdminSubmissionsPage = React.lazy(() => import("@/pages/AdminSubmissionsPage").then((m) => ({ default: m.AdminSubmissionsPage })));
 const AdminSystemUsersPage = React.lazy(() => import("@/pages/AdminSystemUsersPage").then((m) => ({ default: m.AdminSystemUsersPage })));
 const AdminSystemRolesPage = React.lazy(() => import("@/pages/AdminSystemRolesPage").then((m) => ({ default: m.AdminSystemRolesPage })));
@@ -398,13 +399,22 @@ function App({
   }, [selectedMvId, isFanartRoute]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && sessionStorage.getItem('umami_identify_sent') === 'true') return;
+    const hasSentIdentify = () => {
+      if (typeof window === 'undefined') return false;
+      try {
+        return sessionStorage.getItem('umami_identify_sent') === 'true';
+      } catch {
+        return false;
+      }
+    };
+
+    if (hasSentIdentify()) return;
 
     let cancelled = false;
     const timer = setTimeout(async () => {
       if (cancelled) return;
       if (window.umami && typeof window.umami.identify === 'function') {
-        if (sessionStorage.getItem('umami_identify_sent') === 'true') return;
+        if (hasSentIdentify()) return;
 
         const geoInfo = await getGeoInfo();
         if (cancelled) return;
@@ -437,7 +447,10 @@ function App({
           is_admin: isAdmin ? 'true' : 'false'
         });
 
-        sessionStorage.setItem('umami_identify_sent', 'true');
+        try {
+          sessionStorage.setItem('umami_identify_sent', 'true');
+        } catch {
+        }
       }
     }, 1500);
     
@@ -1009,6 +1022,7 @@ export default function RootApp() {
               <Route path="dicts" element={adminRoute("dicts", <AdminDictsPage />)} />
               <Route path="fanart" element={adminRoute("fanart", <AdminFanArtPage />)} />
               <Route path="staging-fanarts" element={adminRoute("stagingFanarts", <AdminStagingFanartPage />)} />
+              <Route path="monitor-targets" element={adminRoute("monitorTargets", <AdminMonitorTargetsPage />)} />
               <Route path="submissions" element={adminRoute("submissions", <AdminSubmissionsPage />)} />
               <Route path="annotations" element={adminRoute("annotations", <AdminAnnotationsPage />)} />
               <Route path="system" element={<AdminSystemRedirect />} />

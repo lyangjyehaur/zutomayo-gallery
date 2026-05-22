@@ -19,6 +19,7 @@ const resourcePermissionMap: Record<string, string> = {
   appleMusicAlbums: ADMIN_PERMISSIONS.ALBUMS,
   fanart: ADMIN_PERMISSIONS.FANARTS,
   stagingFanarts: ADMIN_PERMISSIONS.STAGING_FANARTS,
+  monitorTargets: ADMIN_PERMISSIONS.MONITOR_TARGETS,
   submissions: ADMIN_PERMISSIONS.SUBMISSIONS,
   dicts: ADMIN_PERMISSIONS.SYSTEM_DICTS,
 }

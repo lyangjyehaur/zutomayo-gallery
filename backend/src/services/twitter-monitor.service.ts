@@ -6,6 +6,12 @@ import { backupImageToR2 } from './r2.service.js';
 import { errorEventEmitter } from './error-events.service.js';
 import { TelegramBotService } from './telegram-bot.service.js';
 import { Op } from 'sequelize';
+import {
+  buildTwitterRssFeedUrl,
+  getMonitoredFeedTargets,
+  getRssHubBaseUrl,
+  inferRssHubBaseFromFeedUrl,
+} from './monitor-target.service.js';
 
 const parser = new Parser();
 
@@ -23,25 +29,48 @@ const safeDate = (value: string | Date | undefined) => {
 
 export const TwitterMonitorService = {
   checkRss: async () => {
-    // 讀取環境變數
-    const TWITTER_RSS_URL = process.env.TWITTER_RSS_URL;
+    const legacyFeedUrl = process.env.TWITTER_RSS_URL;
+    const targets = await getMonitoredFeedTargets();
+    const rssHubBase = inferRssHubBaseFromFeedUrl(legacyFeedUrl) || getRssHubBaseUrl();
+    const feedUrls = Array.from(new Set([
+      ...targets.map((target) => buildTwitterRssFeedUrl(rssHubBase, target)),
+      ...(legacyFeedUrl ? [legacyFeedUrl] : []),
+    ]));
 
-    if (!TWITTER_RSS_URL) {
-      console.log('[Twitter Monitor] TWITTER_RSS_URL is not set. Skipping.');
+    if (feedUrls.length === 0) {
+      console.log('[Twitter Monitor] No monitor targets or TWITTER_RSS_URL configured. Skipping.');
       return;
     }
 
-    console.log('[Twitter Monitor] Running check...');
+    console.log(`[Twitter Monitor] Running check for ${feedUrls.length} feed(s)...`);
     try {
-      const feed = await parser.parseURL(TWITTER_RSS_URL);
       let newCandidatesCount = 0;
+      let successfulFeeds = 0;
+      let failedFeeds = 0;
 
-      for (const item of feed.items) {
-        // 確保是推文網址
-        if (!item.link) continue;
-        const tweetLink = normalizeTweetUrl(item.link);
-        const tweetId = extractTweetId(tweetLink);
-        if (!tweetId) continue;
+      for (const feedUrl of feedUrls) {
+        let feed: Awaited<ReturnType<typeof parser.parseURL>>;
+        try {
+          feed = await parser.parseURL(feedUrl);
+          successfulFeeds++;
+        } catch (error: any) {
+          failedFeeds++;
+          console.error(`[Twitter Monitor] Failed to fetch or parse RSS feed ${feedUrl}:`, error);
+          errorEventEmitter.emitError({
+            source: 'cron',
+            message: `Twitter monitor: failed to fetch or parse RSS feed ${feedUrl}`,
+            stack: error instanceof Error ? error.stack : undefined,
+            details: { phase: 'twitter-monitor-feed', feedUrl },
+          });
+          continue;
+        }
+
+        for (const item of feed.items) {
+          // 確保是推文網址
+          if (!item.link) continue;
+          const tweetLink = normalizeTweetUrl(item.link);
+          const tweetId = extractTweetId(tweetLink);
+          if (!tweetId) continue;
 
           // 使用現有的 vxtwitter 解析真實媒體
           let mediaList: TwitterMedia[] = [];
@@ -160,6 +189,10 @@ export const TwitterMonitorService = {
             console.log(`[Twitter Monitor] Saved new fanart candidate(s): ${sourceTweetLink}`);
           }
         }
+      }
+      if (successfulFeeds === 0 && failedFeeds > 0) {
+        throw new Error('All configured Twitter RSS feeds failed');
+      }
       return { success: true, processedCount: newCandidatesCount, timestamp: new Date().toISOString() };
     } catch (error: any) {
       console.error('[Twitter Monitor] Error fetching or parsing RSS:', error);

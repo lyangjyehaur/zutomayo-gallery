@@ -236,11 +236,38 @@ interface MVItem {
 | **GET** | `/api/fanarts/gallery/summary` | 公開 | 取得 FanArt 畫廊的篩選統計資料（標籤計數、MV 計數）。 |
 | **GET** | `/api/fanarts/unorganized` | 管理員 | 取得爬蟲抓取但尚未被分類或整理的 Twitter 二創圖片 (Fanart) 列表。 |
 | **POST** | `/api/fanarts/:id/status` | 管理員 | 更新指定二創圖片的狀態 (例如標記為 `organized` 或 `rejected`)。<br>Body: `{ "status": "organized" }` |
+| **GET** | `/api/staging-fanarts` | 管理員 | 取得暫存二創審核清單。Query: `page`, `limit`, `status`，其中 `status` 支援 `pending` / `on_hold` / `approved` / `rejected`。 |
+| **GET** | `/api/staging-fanarts/progress` | 管理員 | 取得 crawler 進度與各狀態數量統計，包含 `pending` / `on_hold` / `approved` / `rejected`。 |
+| **POST** | `/api/staging-fanarts/:id/approve` | 管理員 | 將 `pending` 或 `on_hold` 暫存二創批准並 promote 至正式 `media_groups` / `media`。Body 可帶 `{ "mvs": ["mv_id", "tag:real"] }`。 |
 | **POST** | `/api/staging-fanarts/:id/hold` | 管理員 | 將待審核暫存二創標記為 `on_hold`，保留觀察，不升入正式媒體庫。 |
+| **POST** | `/api/staging-fanarts/:id/reject` | 管理員 | 將 `pending` 或 `on_hold` 暫存二創標記為 `rejected`。 |
+| **POST** | `/api/staging-fanarts/:id/restore` | 管理員 | 將 `rejected` 或 `on_hold` 暫存二創還原為 `pending`。 |
+| **POST** | `/api/staging-fanarts/batch-restore` | 管理員 | 批次將暫存二創還原為 `pending`。Body: `{ "ids": ["id1"], "statuses": ["rejected", "on_hold"] }`。 |
 | **POST** | `/api/webhook/telegram` | Telegram secret header | 接收 Telegram inline review callback。<br>Header: `X-Telegram-Bot-Api-Secret-Token: <TELEGRAM_WEBHOOK_SECRET>` |
 | **POST** | `/api/webhook/waline` | 公開 | 接收 Waline 留言系統的 Webhook 推播，可用於觸發網站快取更新或社群通知。 |
 
 ---
+
+### Monitor Targets 管理 (路徑: `/api/monitor-targets`)
+
+需 `admin:monitor-targets` 權限。此 API 只提供管理員 CRUD，沒有公開寫入端點。
+
+| 請求方法 | 端點路徑 | 權限 | 功能說明 |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/api/monitor-targets` | 管理員 | 列出手動監聽目標。Query: `type=user|hashtag`, `includeDisabled=true`。預設只回傳啟用項目。 |
+| **GET** | `/api/monitor-targets/sources` | 管理員 | 回傳監聽來源摘要：畫師 `twitter` 欄位、手動 user 目標、手動 hashtag 目標。Admin Monitor Targets 頁面使用此端點。 |
+| **POST** | `/api/monitor-targets` | 管理員 | 建立手動監聽目標。Body: `{ "type": "user"|"hashtag", "handle": "@user 或 #tag", "label": "...", "enabled": true, "note": "..." }`。 |
+| **PATCH** | `/api/monitor-targets/:id` | 管理員 | 更新手動監聽目標，可調整 `type`、`handle`、`label`、`enabled`、`note`。 |
+| **PATCH** | `/api/monitor-targets/:id/toggle` | 管理員 | 切換或指定啟用狀態。Body 可帶 `{ "enabled": false }`。 |
+| **DELETE** | `/api/monitor-targets/:id` | 管理員 | 刪除手動監聽目標。 |
+
+Twitter Monitor 實際檢查來源會合併：
+- `artists.twitter` 內的用戶來源。
+- 啟用的手動 `user` 監聽目標。
+- 啟用的手動 `hashtag` 監聽目標。
+- 舊版 `TWITTER_RSS_URL` feed 相容來源。
+
+系統會依 RSS URL 去重。手動與畫師來源使用 `TWITTER_RSSHUB_BASE_URL` / `RSSHUB_BASE_URL`，若未設定則使用 `https://rsshub.app`；若 `TWITTER_RSS_URL` 帶有 RSSHub path prefix，會沿用該 prefix 產生 DB 來源 RSS URL。
 
 ### POST `/api/webhook/telegram` - Telegram 二創審核回調
 

@@ -116,6 +116,9 @@ zutomayo-gallery/
   - 管理媒體分組、推文來源媒體與維護流程
 - `backend/src/controllers/staging-fanart.controller.ts`
   - 管理 crawler / RSS 二創暫存審核；批准前候選停留在 `staging_fanarts`，批准後才 promote 至正式 `media_groups` / `media`
+  - review queue 支援 `pending` / `on_hold` / `rejected`，並可將 `on_hold` / `rejected` 還原為 `pending`
+- `backend/src/controllers/monitor-target.controller.ts`
+  - 管理 Admin 維護的 X/Twitter RSS 監聽目標 CRUD，來源包含手動 user / hashtag；畫師 `artists.twitter` 由 service read-only 合併，不寫入 `monitor_targets`
 - `backend/src/controllers/webhook.controller.ts`
   - 接收 Waline webhook 與 backend-owned Telegram inline 審核 callback；Telegram 端點使用官方 `X-Telegram-Bot-Api-Secret-Token` 對比 `TELEGRAM_WEBHOOK_SECRET`
 - `backend/src/controllers/fanart.controller.ts`
@@ -176,6 +179,7 @@ zutomayo-gallery/
   - `sys_configs`
   - `sys_announcements`
   - `staging_fanarts`：crawler / RSS 二創候選暫存表，狀態包含 `pending` / `on_hold` / `approved` / `rejected`
+  - `monitor_targets`：Admin 維護的 X/Twitter RSS 監聽目標表，支援 `user` / `hashtag`、`enabled`、`label`、`note`；實際 monitor source 會合併 `artists.twitter`、啟用的手動目標與舊版 `TWITTER_RSS_URL` fallback
   - `public_users`
   - `auth_passkeys`
   - `backend_error_logs`

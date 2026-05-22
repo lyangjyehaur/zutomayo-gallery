@@ -356,6 +356,28 @@ export const CrawlerStateModel = sequelize.define('CrawlerState', {
   comment: '儲存爬蟲的進度狀態，避免重複爬取或中斷後可接續'
 });
 
+export const MonitorTargetModel = sequelize.define('MonitorTarget', {
+  id: { type: DataTypes.STRING(36), primaryKey: true, defaultValue: generateShortId, comment: '監聽目標唯一識別碼' },
+  type: { type: DataTypes.STRING(20), allowNull: false, comment: '監聽類型 (user/hashtag)' },
+  handle: { type: DataTypes.STRING, allowNull: false, comment: '標準化後的帳號或 hashtag，不含 @/#' },
+  label: { type: DataTypes.STRING, allowNull: true, comment: '管理介面顯示名稱' },
+  enabled: { type: DataTypes.BOOLEAN, defaultValue: true, comment: '是否啟用監聽' },
+  note: { type: DataTypes.TEXT, allowNull: true, comment: '管理備註' },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '建立時間' },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '更新時間' },
+}, {
+  tableName: 'monitor_targets',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+  comment: 'Admin 管理的 X/Twitter RSS 監聽目標',
+  indexes: [
+    { fields: ['type'] },
+    { fields: ['enabled'] },
+    { unique: true, fields: ['type', 'handle'] },
+  ],
+});
+
 // ==========================================
 // Many-to-Many Relationships
 // ⚠️ 警告：每次修改此檔案中的任何表結構 (新增/修改/刪除欄位或表)，
