@@ -68,6 +68,7 @@ const formatDate = (value: string) => {
 const getStatusBadgeColor = (status: StagingStatus) => {
   if (status === 'approved') return 'green'
   if (status === 'rejected') return 'red'
+  if (status === 'reviewed') return 'blue'
   return 'orange'
 }
 
@@ -510,8 +511,8 @@ export default function StagingPage({ f7router }: StagingPageProps) {
     const isBusy = busyIds.has(item.id)
     return {
       item,
-      onApprove: item.status === 'pending' ? () => openApproveSheet([item.id]) : undefined,
-      onReject: item.status === 'pending' && currentRouter ? () => requestReject([item.id], () => currentRouter.back()) : undefined,
+      onApprove: (item.status === 'pending' || item.status === 'reviewed') ? () => openApproveSheet([item.id]) : undefined,
+      onReject: (item.status === 'pending' || item.status === 'reviewed') && currentRouter ? () => requestReject([item.id], () => currentRouter.back()) : undefined,
       onRestore: item.status === 'rejected' && currentRouter ? () => requestRestore([item.id], () => currentRouter.back()) : undefined,
       busy: isBusy,
     }
@@ -589,6 +590,7 @@ export default function StagingPage({ f7router }: StagingPageProps) {
         )}
         metrics={[
           { label: '待審', value: progress?.statusCounts.pending || 0, color: 'orange' },
+          { label: '待關聯', value: progress?.statusCounts.reviewed || 0, color: 'blue' },
           { label: '已通過', value: progress?.statusCounts.approved || 0, color: 'green' },
           { label: '已拒絕', value: progress?.statusCounts.rejected || 0, color: 'red' },
         ]}
@@ -599,6 +601,9 @@ export default function StagingPage({ f7router }: StagingPageProps) {
         <Segmented strong>
           <Button active={status === 'pending'} onClick={() => handleStatusChange('pending')}>
             待審 {progress?.statusCounts.pending || 0}
+          </Button>
+          <Button active={status === 'reviewed'} onClick={() => handleStatusChange('reviewed')}>
+            待關聯 {progress?.statusCounts.reviewed || 0}
           </Button>
           <Button active={status === 'approved'} onClick={() => handleStatusChange('approved')}>
             已通過 {progress?.statusCounts.approved || 0}
@@ -692,7 +697,7 @@ export default function StagingPage({ f7router }: StagingPageProps) {
         )}
         actions={(
           <>
-            {status === 'pending' && (
+            {(status === 'pending' || status === 'reviewed') && (
               <>
                 <Button small fill disabled={selectedCount === 0 || mvSheetBusy} onClick={() => openApproveSheet(Array.from(selection))}>
                   關聯後批次通過
@@ -755,7 +760,7 @@ export default function StagingPage({ f7router }: StagingPageProps) {
               checked={selection.has(item.id)}
               onChange={(event) => toggleSelection(item.id, event.target.checked)}
               mediaItem
-              swipeout={status === 'pending'}
+              swipeout={status === 'pending' || status === 'reviewed'}
               title={item.author_name || item.author_handle}
               subtitle={subtitle}
               text={item.source_text || '（無推文文字）'}
@@ -786,7 +791,7 @@ export default function StagingPage({ f7router }: StagingPageProps) {
               >
                 詳情
               </Button>
-              {status === 'pending' && (
+              {(status === 'pending' || status === 'reviewed') && (
                 <>
                   <SwipeoutActions left>
                     <SwipeoutButton overswipe color="green" close onClick={() => { if (isBusy) return; openApproveSheet([item.id]) }}>

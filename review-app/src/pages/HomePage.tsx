@@ -19,6 +19,7 @@ import { WORKSPACE_MAP, type WorkspaceKey } from '../lib/workspaces'
 interface DashboardState {
   pendingSubmissions: number
   stagingPending: number
+  stagingReviewed: number
   stagingApproved: number
   stagingRejected: number
   syncStatus: string
@@ -37,6 +38,7 @@ interface DashboardState {
 const EMPTY_STATE: DashboardState = {
   pendingSubmissions: 0,
   stagingPending: 0,
+  stagingReviewed: 0,
   stagingApproved: 0,
   stagingRejected: 0,
   syncStatus: 'idle',
@@ -81,6 +83,7 @@ export default function HomePage() {
       setState({
         pendingSubmissions: submissionsData.meta?.total || 0,
         stagingPending: statusCounts?.pending || 0,
+        stagingReviewed: statusCounts?.reviewed || 0,
         stagingApproved: statusCounts?.approved || 0,
         stagingRejected: statusCounts?.rejected || 0,
         syncStatus: syncProgress?.status || 'idle',
@@ -103,7 +106,7 @@ export default function HomePage() {
     }
   }, [])
 
-  const totalStaging = state.stagingPending + state.stagingApproved + state.stagingRejected
+  const totalStaging = state.stagingPending + state.stagingReviewed + state.stagingApproved + state.stagingRejected
   const pendingRatio = totalStaging > 0 ? state.stagingPending / totalStaging : 0
   const syncProgress = state.syncTotal > 0 ? (state.syncProcessed / state.syncTotal) * 100 : 0
 
@@ -139,6 +142,7 @@ export default function HomePage() {
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
           <Badge color="orange">pending {state.stagingPending}</Badge>
+          <Badge color="blue">reviewed {state.stagingReviewed}</Badge>
           <Badge color="blue">submissions {state.pendingSubmissions}</Badge>
           <Badge color="red">repair {state.repairTotal}</Badge>
         </div>
@@ -193,11 +197,12 @@ export default function HomePage() {
             <div style={{ minWidth: 0 }}>
               <div style={{ fontWeight: 700 }}>暫存區</div>
               <div style={{ marginTop: 2, opacity: 0.75, fontSize: 13 }}>
-                待審 / 已通過 {state.stagingApproved} / 已拒絕 {state.stagingRejected}
+                待審 / 待關聯 {state.stagingReviewed} / 已通過 {state.stagingApproved} / 已拒絕 {state.stagingRejected}
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
               <Badge color="orange">{loading ? '...' : state.stagingPending}</Badge>
+              <Badge color="blue">{loading ? '...' : state.stagingReviewed}</Badge>
               <Button small fill onClick={() => handleOpenWorkspace('staging', () => setStagingFilter({ status: 'pending' }))}>前往</Button>
             </div>
           </div>

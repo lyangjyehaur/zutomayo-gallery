@@ -78,7 +78,7 @@ export interface StagingFanart {
   thumbnail_url: string | null
   original_url: string
   r2_url: string | null
-  status: 'pending' | 'approved' | 'rejected'
+  status: 'pending' | 'on_hold' | 'reviewed' | 'approved' | 'rejected'
   like_count: number
   retweet_count: number
   view_count: number
@@ -171,6 +171,7 @@ export interface StagingProgressData {
   } | null
   statusCounts: {
     pending: number
+    reviewed: number
     approved: number
     rejected: number
   }

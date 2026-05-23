@@ -1,7 +1,7 @@
 import { createContext } from 'react'
 import type { WorkspaceKey } from '../lib/workspaces'
 
-export type StagingStatus = 'pending' | 'approved' | 'rejected'
+export type StagingStatus = 'pending' | 'on_hold' | 'reviewed' | 'approved' | 'rejected'
 export type SubmissionStatus = 'pending' | 'approved' | 'rejected'
 export type FanartView = 'unorganized' | 'deleted' | 'legacy' | 'organized' | 'parse'
 export type FanartFocusKind = 'tag' | 'mv'

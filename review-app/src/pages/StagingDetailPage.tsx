@@ -26,6 +26,7 @@ const formatCount = (value: number) => {
 const getStatusBadgeColor = (status: StagingStatus) => {
   if (status === 'approved') return 'green'
   if (status === 'rejected') return 'red'
+  if (status === 'reviewed') return 'blue'
   return 'orange'
 }
 
@@ -110,7 +111,7 @@ export default function StagingDetailPage({
 
       <Block strong inset>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {item.status === 'pending' && (
+          {(item.status === 'pending' || item.status === 'reviewed') && (
             <>
               <Button fill onClick={onApprove} disabled={busy}>通過並關聯 MV</Button>
               <Button outline color="red" onClick={onReject} disabled={busy}>拒絕</Button>
