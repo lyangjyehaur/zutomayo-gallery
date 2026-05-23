@@ -41,6 +41,7 @@ export default function AdminLayout() {
   }, [permissions])
 
   const refresh = React.useCallback(async () => {
+    clearAdminMeCache()
     const next = await fetchAdminMe()
     if (next) {
       setMe(next)

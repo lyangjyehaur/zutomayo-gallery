@@ -728,6 +728,36 @@ export function AdminStagingFanartPage() {
                     <span>🔁 {f.retweet_count ?? 0}</span>
                     <span>👁 {f.view_count ?? 0}</span>
                   </div>
+                  <div className="flex items-center gap-1 text-[10px] sm:text-xs">
+                    <span className="font-bold">Type:</span>
+                    <select
+                      value={f.content_type || 'fanart'}
+                      onChange={async (e) => {
+                        const newType = e.target.value;
+                        try {
+                          const res = await adminFetch(`${baseApiUrl}/staging-fanarts/${f.id}/content-type`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ content_type: newType }),
+                          });
+                          const data = await res.json();
+                          if (data.success) {
+                            setFanarts(prev => prev.map(item => item.id === f.id ? { ...item, content_type: newType } : item));
+                            toast.success(`已改為 ${newType === 'fanart' ? 'Fanart' : newType === 'official' ? '官方' : 'Cosplay'}`);
+                          } else {
+                            toast.error(formatApiError(data, '更新類型失敗'));
+                          }
+                        } catch (err: any) {
+                          toast.error(formatApiError(err, '更新類型失敗'));
+                        }
+                      }}
+                      className="border border-black font-bold px-1 py-0.5 text-[10px] sm:text-xs bg-white"
+                    >
+                      <option value="fanart">Fanart</option>
+                      <option value="official">官方</option>
+                      <option value="cosplay">Cosplay</option>
+                    </select>
+                  </div>
                   {f.post_date && (
                     <div className="text-[10px] sm:text-xs font-mono opacity-60">
                       推文: {new Date(f.post_date).toLocaleDateString()}

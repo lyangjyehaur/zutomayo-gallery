@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getStagingFanarts, approveStagingFanart, rejectStagingFanart, getProgress, triggerCrawler, restoreStagingFanart, batchRestoreStagingFanarts, holdStagingFanart } from '../controllers/staging-fanart.controller.js';
+import { getStagingFanarts, approveStagingFanart, rejectStagingFanart, getProgress, triggerCrawler, restoreStagingFanart, batchRestoreStagingFanarts, holdStagingFanart, updateStagingContentType } from '../controllers/staging-fanart.controller.js';
 import { ADMIN_PERMISSIONS } from '../constants/admin-permissions.js';
 import { requirePermission } from '../middleware/auth.middleware.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
@@ -14,5 +14,6 @@ router.post('/:id/approve', requirePermission(ADMIN_PERMISSIONS.STAGING_FANARTS)
 router.post('/:id/hold', requirePermission(ADMIN_PERMISSIONS.STAGING_FANARTS), asyncHandler(holdStagingFanart));
 router.post('/:id/reject', requirePermission(ADMIN_PERMISSIONS.STAGING_FANARTS), asyncHandler(rejectStagingFanart));
 router.post('/:id/restore', requirePermission(ADMIN_PERMISSIONS.STAGING_FANARTS), asyncHandler(restoreStagingFanart));
+router.patch('/:id/content-type', requirePermission(ADMIN_PERMISSIONS.STAGING_FANARTS), asyncHandler(updateStagingContentType));
 
 export default router;

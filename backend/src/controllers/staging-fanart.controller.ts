@@ -510,3 +510,20 @@ export const batchRestoreStagingFanarts = async (req: Request, res: Response) =>
     data: { updatedCount }
   });
 };
+
+export const updateStagingContentType = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { content_type } = req.body;
+
+  if (!content_type || !['fanart', 'official', 'cosplay'].includes(content_type)) {
+    throw new AppError(400, 'INVALID_CONTENT_TYPE', 'content_type must be fanart, official, or cosplay');
+  }
+
+  const staging = await StagingFanartModel.findByPk(id);
+  if (!staging) {
+    throw new AppError(404, 'STAGING_FANART_NOT_FOUND', 'Staging fanart not found');
+  }
+
+  await staging.update({ content_type });
+  res.json({ success: true, data: { id, content_type } });
+};
