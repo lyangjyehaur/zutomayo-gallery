@@ -4,6 +4,7 @@ import { applyStagingReviewAction } from './staging-fanart.controller.js';
 import { errorEventEmitter } from '../services/error-events.service.js';
 import { NotificationService } from '../services/notification.service.js';
 import { parseFanartReviewCallbackData } from '../services/telegram-bot.service.js';
+import { getTelegramBot } from '../services/telegram-bot.service.js';
 import { logger } from '../utils/logger.js';
 
 const TELEGRAM_SECRET_HEADER = 'x-telegram-bot-api-secret-token';
@@ -59,6 +60,14 @@ export const handleTelegramWebhook = async (req: Request, res: Response) => {
     const actionLabel = parsed.action === 'approve' ? '批准' : parsed.action === 'hold' ? '暫存觀察' : '拒絕';
     const suffix = result.alreadyProcessed ? '（已處理過）' : '';
     await answerTelegramCallback(callbackQuery.id, `${actionLabel}完成${suffix}`);
+
+    // 移除 inline keyboard，避免審核按鈕殘留
+    const chatId = callbackQuery.message?.chat?.id;
+    const messageId = callbackQuery.message?.message_id;
+    if (chatId && messageId) {
+      await removeTelegramInlineKeyboard(chatId, messageId);
+    }
+
     return res.status(200).json({ success: true, data: result });
   } catch (err) {
     await answerTelegramCallback(callbackQuery.id, '審核動作無法套用');
@@ -68,21 +77,30 @@ export const handleTelegramWebhook = async (req: Request, res: Response) => {
 
 async function answerTelegramCallback(callbackQueryId: unknown, text: string): Promise<void> {
   if (typeof callbackQueryId !== 'string' || !callbackQueryId) return;
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  if (!token) return;
+  const currentBot = getTelegramBot();
+  if (!currentBot) return;
 
   try {
-    await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        callback_query_id: callbackQueryId,
-        text: text.substring(0, 200),
-        show_alert: false,
-      }),
+    await currentBot.answerCallbackQuery(callbackQueryId, {
+      text: text.substring(0, 200),
+      show_alert: false,
     });
   } catch (err) {
     logger.warn({ err }, 'Failed to answer Telegram callback query');
+  }
+}
+
+async function removeTelegramInlineKeyboard(chatId: number, messageId: number): Promise<void> {
+  const currentBot = getTelegramBot();
+  if (!currentBot) return;
+
+  try {
+    await currentBot.editMessageReplyMarkup(
+      { inline_keyboard: [] },
+      { chat_id: chatId, message_id: messageId }
+    );
+  } catch (err) {
+    logger.warn({ err }, 'Failed to remove Telegram inline keyboard');
   }
 }
 

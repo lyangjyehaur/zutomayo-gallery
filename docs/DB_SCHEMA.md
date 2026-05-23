@@ -91,6 +91,7 @@
 | `original_url`| `TEXT` | `UNIQUE`, `NOT NULL`| 媒體的原始來源網址 (例如 Twitter 原圖網址) |
 | `url` | `TEXT` | `NOT NULL` | 系統內實際使用的網址 (備份至 Cloudflare R2 後的網址) |
 | `thumbnail_url`| `TEXT`| `NULL` | 縮圖網址 (供影片使用) |
+| `original_thumbnail_url`| `TEXT`| `NULL` | 原始縮圖網址 (供影片使用) |
 | `caption` | `TEXT` | `NULL` | 描述或圖說 |
 | `group_id` | `VARCHAR(36)` | `FK`, `NULL` | 關聯至 `media_groups.id`，用於將來自同一個來源 (如推文) 的多張媒體分組 |
 | `created_at` | `TIMESTAMP` | | 建立時間 |
@@ -137,7 +138,7 @@
 | `author_name` | `VARCHAR(255)` | `NULL` | 來源作者顯示名稱 |
 | `author_handle`| `VARCHAR(255)` | `NULL` | 來源作者帳號 (如 `@username`) |
 | `post_date` | `TIMESTAMP` | `NULL` | 來源發布時間 |
-| `status` | `VARCHAR(50)` | `DEFAULT 'pending'` | 審核狀態：`'pending'`, `'organized'`, `'rejected'` (參考字典表) |
+| `status` | `VARCHAR(50)` | `DEFAULT 'pending'` | 審核狀態：`'pending'`, `'on_hold'`, `'organized'`, `'rejected'` (參考字典表) |
 
 ### 2.2. `media_annotations` (媒體標註表)
 儲存媒體上的文字標記與位置資訊，用於圖片標註功能。
@@ -263,6 +264,8 @@
 | `tweet_id` | `VARCHAR(255)` | `NULL` | 推文 ID |
 | `original_url` | `TEXT` | `NULL` | 原始來源網址 (如推文連結) |
 | `media_url` | `TEXT` | `NULL` | 原始媒體連結 |
+| `thumbnail_url` | `TEXT` | `NULL` | 影片縮圖或預覽圖網址 |
+| `original_thumbnail_url` | `TEXT` | `NULL` | 原始影片縮圖或預覽圖網址 |
 | `r2_url` | `TEXT` | `NULL` | R2 備份連結 (可為空) |
 | `media_type` | `VARCHAR(20)` | `NULL` | 媒體格式類型 (image/video) |
 | `crawled_at` | `TIMESTAMP` | `NULL` | 爬取時間 |

@@ -77,6 +77,7 @@ const iconForPath = (path: string) => {
   if (p === "/admin/system/orphans") return Link2
   if (p === "/admin/system/errors") return TriangleAlert
   if (p === "/admin/system/users") return UserCog
+  if (p === "/admin/system-config") return Settings2
   if (p.startsWith("/admin/system/")) return Settings2
   return FileText
 }
@@ -119,6 +120,7 @@ export function AppSidebar({
       { label: "推文修復", path: "/admin/system/group-repair", sort: 9981, permission: ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS },
       { label: "推文分組", path: "/admin/system/media-groups", sort: 9982, permission: ADMIN_PERMISSIONS.SYSTEM_MEDIA_GROUPS },
       { label: "未歸屬媒體", path: "/admin/system/orphans", sort: 9983, permission: ADMIN_PERMISSIONS.SYSTEM_MEDIA_ORPHANS },
+      { label: "系統配置", path: "/admin/system-config", sort: 9984, permission: ADMIN_PERMISSIONS.SYSTEM_CONFIG },
     ]
     const excluded = new Set(mediaTools.map((m) => m.path))
     const adminTools = base.filter((m) => {

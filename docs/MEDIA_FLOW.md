@@ -13,11 +13,10 @@
 - **觸發機制**：後端定時執行 `TwitterMonitorService.checkRss()`，合併畫師 `twitter` 欄位、後台啟用的手動 user 監聽目標、後台啟用的 hashtag 監聽目標，以及舊版 `TWITTER_RSS_URL` fallback，產生去重後的 RSS feed 清單。
 - **來源管理**：`/admin/monitor-targets` 可管理手動 user / hashtag 來源；畫師 Twitter 來源來自 artists 資料，僅在此頁 read-only 顯示。RSSHub base 優先使用 `TWITTER_RSSHUB_BASE_URL` / `RSSHUB_BASE_URL`，未設定時使用 `https://rsshub.app`。
 - **處理流程**：
-  1. **解析推文**：透過 `TwitterService.extractMediaFromTweet` 提取推文中的圖片/影片真實網址。
-  2. **備份至 R2**：呼叫 `backupImageToR2` 下載最高畫質媒體 (`?name=orig`) 並上傳至 R2 crawler 暫存路徑。
-  3. **寫入暫存資料庫**：將每個新候選媒體寫入 `staging_fanarts`，狀態為 `pending`；批准前不建立正式 `media_groups` / `media`。
-  4. **通知管理員**：透過 `TelegramBotService.sendFanartReviewNotification()` 發送 Telegram inline 審核按鈕。
-  5. **批准後入庫**：管理員或 Telegram callback 批准後，staging promotion 流程才建立/更新 `media_groups` 與 `media`。
+  1. **解析推文**：透過 `TwitterService.extractMediaFromTweet` 以 RSSHub item 為主提取推文中的圖片/影片真實網址；RSS description 會容錯處理雙重 HTML escape、多張圖片與影片 poster/source，圖片 URL 會正規化為 `name=orig`。服務會嘗試讀取 `https://x.com/i/status/{tweet_id}` 的頁面 JSON state 補強原推文/轉推 canonical ID、作者與互動數；若 x.com 補強失敗，仍以 RSS item 產生 staging 候選。手動 URL-only 解析則使用 x.com JSON state，必要時降級到 OpenGraph/Twitter card meta media。
+  2. **寫入暫存資料庫**：將每個新候選媒體以原始媒體 URL 寫入 `staging_fanarts`，狀態為 `pending`，`r2_url` 保持 `null`；監聽階段不寫入 R2，避免被拒絕或暫存觀察的無用媒體進入 R2。
+  3. **通知管理員**：透過 `TelegramBotService.sendFanartReviewNotification()` 發送 Telegram inline 審核按鈕；預覽圖使用原始圖片 URL 或影片 thumbnail。
+  4. **批准後入庫**：管理員或 Telegram callback 批准後，staging promotion 流程才下載媒體並上傳至 R2，再建立/更新 `media_groups` 與 `media`。
 - **程式碼參考**：[twitter-monitor.service.ts](file:///Users/lyangjyehaur/Projects/zutomayo-gallery/backend/src/services/twitter-monitor.service.ts)
 
 ### 1.2 管理員手動同步/重建 (R2 Rebuild)
@@ -34,6 +33,7 @@
 
 ### 2.1 Cloudflare R2 物件儲存
 - **命名規則**：根據原始網址計算 MD5 Hash，結合副檔名生成，例如 `fanarts/<hash>.jpg` 或 `mvs/<mv_id>/<hash>.mp4`。
+- **開發環境隔離**：`r2.service.ts` 會在非 production 環境自動把所有 R2 object key 加上 `dev/` 前綴，例如批准 staging fanart 時的 `dev/fanart/<hash>.jpg`；可用 `R2_DEV_KEY_PREFIX` 調整或設為空字串停用。production key 不加前綴，保持既有正式路徑不變。
 - **Metadata 附加**：上傳時會附帶 `original-url`, `mv-id`, `fanart-id` 等自訂 Metadata，作為未來的備用資料庫。
 - **程式碼參考**：[r2.service.ts](file:///Users/lyangjyehaur/Projects/zutomayo-gallery/backend/src/services/r2.service.ts)
 

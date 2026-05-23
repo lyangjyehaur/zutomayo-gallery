@@ -93,7 +93,7 @@ Admin 介面的「監聽目標管理」頁會呼叫 `/api/monitor-targets/source
 3. **審核通過 (`approveStagingFanart`)**
    - 系統會確保該筆資料狀態為 `pending` 或 `on_hold`。
    - 使用推文網址 (`original_url`) 查詢或建立對應的推文群組 (`MediaGroupModel`)，狀態標為 `unorganized`。
-   - 在正式媒體庫 (`MediaModel`) 建立該圖片/影片的紀錄，綁定 R2 備份網址並關聯至該推文群組。
+   - 在正式媒體庫 (`MediaModel`) 建立該圖片/影片的紀錄，綁定 R2 備份網址並關聯至該推文群組；若是影片，R2 也會一併備份 thumbnail，同時保留原始縮圖與 R2 網址。
    - 將 `StagingFanartModel` 的狀態更新為 `approved`。
 
 4. **審核拒絕 (`rejectStagingFanart`)**

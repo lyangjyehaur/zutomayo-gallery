@@ -1,8 +1,7 @@
 import Parser from 'rss-parser';
 import { MediaGroupModel, StagingFanartModel } from '../models/index.js';
-import type { TwitterMedia } from './twitter.service.js';
+import type { RssTweetItem, TwitterMedia } from './twitter.service.js';
 import { TwitterService, buildCanonicalTweetUrl, extractTweetId, normalizeTweetUrl } from './twitter.service.js';
-import { backupImageToR2 } from './r2.service.js';
 import { errorEventEmitter } from './error-events.service.js';
 import { TelegramBotService } from './telegram-bot.service.js';
 import { Op } from 'sequelize';
@@ -14,6 +13,36 @@ import {
 } from './monitor-target.service.js';
 
 const parser = new Parser();
+
+type TwitterMonitorDeps = {
+  parseURL: (feedUrl: string) => Promise<{ items: RssTweetItem[] }>;
+  getMonitoredFeedTargets: typeof getMonitoredFeedTargets;
+  extractMediaFromTweet: (tweetUrl: string, rssItem?: RssTweetItem) => Promise<TwitterMedia[]>;
+  findExistingMediaGroup: (options: any) => Promise<any>;
+  findExistingStagingFanart: (options: any) => Promise<any>;
+  createStagingFanart: (payload: any) => Promise<any>;
+  sendFanartReviewNotification: typeof TelegramBotService.sendFanartReviewNotification;
+};
+
+const defaultDeps: TwitterMonitorDeps = {
+  parseURL: (feedUrl) => parser.parseURL(feedUrl) as Promise<{ items: RssTweetItem[] }>,
+  getMonitoredFeedTargets,
+  extractMediaFromTweet: (tweetUrl, rssItem) => TwitterService.extractMediaFromTweet(tweetUrl, rssItem),
+  findExistingMediaGroup: (options) => MediaGroupModel.findOne(options),
+  findExistingStagingFanart: (options) => StagingFanartModel.findOne(options),
+  createStagingFanart: (payload) => StagingFanartModel.create(payload),
+  sendFanartReviewNotification: (payload) => TelegramBotService.sendFanartReviewNotification(payload),
+};
+
+let deps = defaultDeps;
+
+export const setTwitterMonitorServiceDepsForTest = (overrides: Partial<TwitterMonitorDeps>) => {
+  deps = { ...defaultDeps, ...overrides };
+};
+
+export const resetTwitterMonitorServiceDepsForTest = () => {
+  deps = defaultDeps;
+};
 
 const resolveMediaType = (media: TwitterMedia, url: string) => {
   if (media.type === 'video') return 'video';
@@ -30,7 +59,7 @@ const safeDate = (value: string | Date | undefined) => {
 export const TwitterMonitorService = {
   checkRss: async () => {
     const legacyFeedUrl = process.env.TWITTER_RSS_URL;
-    const targets = await getMonitoredFeedTargets();
+    const targets = await deps.getMonitoredFeedTargets();
     const rssHubBase = inferRssHubBaseFromFeedUrl(legacyFeedUrl) || getRssHubBaseUrl();
     const feedUrls = Array.from(new Set([
       ...targets.map((target) => buildTwitterRssFeedUrl(rssHubBase, target)),
@@ -49,9 +78,9 @@ export const TwitterMonitorService = {
       let failedFeeds = 0;
 
       for (const feedUrl of feedUrls) {
-        let feed: Awaited<ReturnType<typeof parser.parseURL>>;
+        let feed: { items: RssTweetItem[] };
         try {
-          feed = await parser.parseURL(feedUrl);
+          feed = await deps.parseURL(feedUrl);
           successfulFeeds++;
         } catch (error: any) {
           failedFeeds++;
@@ -72,10 +101,10 @@ export const TwitterMonitorService = {
           const tweetId = extractTweetId(tweetLink);
           if (!tweetId) continue;
 
-          // 使用現有的 vxtwitter 解析真實媒體
+          // 以 RSS item 為主解析媒體，必要時由 x.com 頁面狀態補強原推資訊。
           let mediaList: TwitterMedia[] = [];
           try {
-            mediaList = await TwitterService.extractMediaFromTweet(tweetLink);
+            mediaList = await deps.extractMediaFromTweet(tweetLink, item);
           } catch (e) {
             console.error(`[Twitter Monitor] Failed to extract media for ${tweetLink}:`, e);
             errorEventEmitter.emitError({
@@ -93,7 +122,7 @@ export const TwitterMonitorService = {
             const sourceTweetLink = mediaList[0].tweet_url || buildCanonicalTweetUrl(sourceTweetId);
 
             // 檢查真正的原推文是否已經升入正式媒體庫
-            const existing = await MediaGroupModel.findOne({
+            const existing = await deps.findExistingMediaGroup({
               where: { source_url: { [Op.regexp]: `/status/${sourceTweetId}([/?#]|$)` } }
             });
             if (existing) continue;
@@ -106,47 +135,11 @@ export const TwitterMonitorService = {
             const tweetHandle = firstMedia.user_screen_name || '';
             const tweetDate = firstMedia.date || item.isoDate || new Date().toISOString();
 
-            // 背景上傳到 R2 crawler 暫存區；approve 時既有 staging promotion 會搬到 fanart/。
-            const updatedMediaList = await Promise.all(mediaList.map(async (media) => {
-              if (media.type === 'image' && media.url.includes('pbs.twimg.com')) {
-                const r2Url = await backupImageToR2(media.url, 'crawler/fanarts', {
-                  metadata: {
-                    'tweet-id': sourceTweetId,
-                    'author-handle': tweetHandle || 'unknown',
-                    'source-tweet': sourceTweetLink || 'unknown'
-                  }
-                });
-                if (r2Url) {
-                  return { ...media, url: r2Url, original_url: media.url };
-                }
-              } else if (media.type === 'video' && media.url.includes('video.twimg.com')) {
-                const r2Url = await backupImageToR2(media.url, 'crawler/fanarts/videos', {
-                  metadata: {
-                    'tweet-id': sourceTweetId,
-                    'author-handle': tweetHandle || 'unknown',
-                    'source-tweet': sourceTweetLink || 'unknown'
-                  }
-                });
-                
-                // 同時備份影片的預覽圖 (thumbnail)
-                let r2ThumbnailUrl = media.thumbnail;
-                if (media.thumbnail && media.thumbnail.includes('pbs.twimg.com')) {
-                  const thumbRes = await backupImageToR2(media.thumbnail, 'crawler/fanarts/videos/thumbs', {
-                    metadata: { 'tweet-id': sourceTweetId }
-                  });
-                  if (thumbRes) r2ThumbnailUrl = thumbRes;
-                }
-
-                if (r2Url) {
-                  return { ...media, url: r2Url, original_url: media.url, thumbnail: r2ThumbnailUrl, original_thumbnail: media.thumbnail };
-                }
-              }
-              return media;
-            }));
-
-            for (const media of updatedMediaList) {
-              const originalMediaUrl = (media as any).original_url || media.url;
-              const existingStaging = await StagingFanartModel.findOne({
+            // 監聽階段只建立 staging candidate，不寫入 R2；避免 reject/hold 的無用媒體進入 R2。
+            // R2 上傳集中在 approve/promote flow，見 staging-fanart.controller.ts。
+            for (const media of mediaList) {
+              const originalMediaUrl = media.url;
+              const existingStaging = await deps.findExistingStagingFanart({
                 where: {
                   tweet_id: sourceTweetId,
                   media_url: originalMediaUrl,
@@ -155,14 +148,15 @@ export const TwitterMonitorService = {
               if (existingStaging) continue;
 
               const mediaType = resolveMediaType(media, originalMediaUrl);
-              const staging = await StagingFanartModel.create({
+              const staging = await deps.createStagingFanart({
                 tweet_id: sourceTweetId,
                 original_url: sourceTweetLink,
                 media_url: originalMediaUrl,
                 thumbnail_url: media.thumbnail || null,
+                original_thumbnail_url: media.thumbnail || null,
                 author_name: tweetAuthor,
                 author_handle: tweetHandle,
-                r2_url: media.url !== originalMediaUrl ? media.url : null,
+                r2_url: null,
                 media_type: mediaType,
                 crawled_at: new Date(),
                 post_date: safeDate(tweetDate),
@@ -177,12 +171,12 @@ export const TwitterMonitorService = {
 
               newCandidatesCount++;
 
-              await TelegramBotService.sendFanartReviewNotification({
+              await deps.sendFanartReviewNotification({
                 stagingId: String(staging.get('id')),
                 title: 'FanArt 審核通知',
                 body: `發現新推文！來自 ${tweetAuthor || tweetHandle || 'unknown'}\n包含 ${mediaList.length} 個媒體\n${tweetText}`,
                 sourceUrl: sourceTweetLink,
-                imageUrl: mediaType === 'image' ? (media.url || originalMediaUrl) : (media.thumbnail || undefined),
+                imageUrl: mediaType === 'image' ? originalMediaUrl : (media.thumbnail || undefined),
               });
             }
 

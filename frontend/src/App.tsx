@@ -106,6 +106,7 @@ const AdminMediaGroupsPage = React.lazy(() => import("@/pages/AdminMediaGroupsPa
 const AdminMediaGroupRepairPage = React.lazy(() => import("@/pages/AdminMediaGroupRepairPage").then((m) => ({ default: m.AdminMediaGroupRepairPage })));
 const AdminAccountPage = React.lazy(() => import("@/pages/AdminAccountPage").then((m) => ({ default: m.AdminAccountPage })));
 const AdminAnnotationsPage = React.lazy(() => import("@/pages/AdminAnnotationsPage").then((m) => ({ default: m.AdminAnnotationsPage })));
+const AdminSystemConfigPage = React.lazy(() => import("@/pages/AdminSystemConfigPage").then((m) => ({ default: m.AdminSystemConfigPage })));
 
 const adminFallback = <div className="p-6 font-mono text-sm">Loading...</div>;
 
@@ -1034,6 +1035,7 @@ export default function RootApp() {
               <Route path="system/group-repair" element={adminRoute("systemGroupRepair", <AdminMediaGroupRepairPage />)} />
               <Route path="system/orphans" element={adminRoute("systemOrphans", <AdminOrphanMediaPage />)} />
               <Route path="system/errors" element={adminRoute(undefined, <AdminErrorLogsPage />)} />
+              <Route path="system-config" element={adminRoute("systemConfig", <AdminSystemConfigPage />)} />
             </Route>
             <Route path="/debug/fb/:mvid?" element={<React.Suspense fallback={pageFallback}><DebugFancyboxMasonry /></React.Suspense>} />
             <Route path="/debug/modal" element={<React.Suspense fallback={pageFallback}><DebugMVModalLightbox /></React.Suspense>} />

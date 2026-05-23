@@ -21,4 +21,5 @@ export const adminResources: ResourceProps[] = [
   { name: "systemGroupRepair", list: "/admin/system/group-repair", meta: { parent: "system" } },
   { name: "systemOrphans", list: "/admin/system/orphans", meta: { parent: "system" } },
   { name: "systemPermissions", meta: { parent: "system" } },
+  { name: "systemConfig", list: "/admin/system-config", meta: { parent: "system" } },
 ]

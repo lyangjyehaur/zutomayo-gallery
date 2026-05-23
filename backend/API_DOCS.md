@@ -269,6 +269,8 @@ Twitter Monitor 實際檢查來源會合併：
 
 系統會依 RSS URL 去重。手動與畫師來源使用 `TWITTER_RSSHUB_BASE_URL` / `RSSHUB_BASE_URL`，若未設定則使用 `https://rsshub.app`；若 `TWITTER_RSS_URL` 帶有 RSSHub path prefix，會沿用該 prefix 產生 DB 來源 RSS URL。
 
+Twitter Monitor 解析策略為 RSS-first：`TwitterService.extractMediaFromTweet` 會接收 RSSHub item，從雙重 escape 的 RSS HTML 中提取圖片、影片 source/poster、hashtag、作者與發布時間，並將 `pbs.twimg.com` 圖片正規化為 `name=orig`。服務會嘗試讀取 `https://x.com/i/status/{tweet_id}` 的頁面 JSON state 補強轉推原文 canonical tweet id、作者與互動數；若 x.com 補強失敗，仍會使用 RSS item 建立 staging 候選。非 RSS 的手動 URL-only 解析則使用 x.com JSON state，必要時降級到 OpenGraph/Twitter card meta media。
+
 ### POST `/api/webhook/telegram` - Telegram 二創審核回調
 
 此端點由 Gallery backend 自己接收 Telegram Bot webhook。設定 Telegram `setWebhook` 時需提供 `secret_token`，Telegram 會在請求中帶上 `X-Telegram-Bot-Api-Secret-Token`，後端會與 `TELEGRAM_WEBHOOK_SECRET` 比對。

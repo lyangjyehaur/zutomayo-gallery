@@ -11,6 +11,24 @@ const SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || '';
 const BUCKET_NAME = process.env.R2_BUCKET_NAME || 'zutomayo-gallery-archive';
 export const R2_PUBLIC_DOMAIN = process.env.R2_PUBLIC_DOMAIN || 'https://r2.dan.tw';
 
+export const getR2DevKeyPrefix = (): string => {
+  if (process.env.NODE_ENV === 'production') return '';
+
+  const rawPrefix = process.env.R2_DEV_KEY_PREFIX ?? 'dev';
+  return rawPrefix.replace(/^\/+|\/+$/g, '');
+};
+
+export const getR2ObjectKey = (key: string): string => {
+  const normalizedKey = key.replace(/^\/+/, '');
+  const devPrefix = getR2DevKeyPrefix();
+
+  if (!devPrefix || normalizedKey === devPrefix || normalizedKey.startsWith(`${devPrefix}/`)) {
+    return normalizedKey;
+  }
+
+  return `${devPrefix}/${normalizedKey}`;
+};
+
 export const ALLOWED_VIDEO_FORMATS = ['mp4', 'webm', 'mov', 'm4v', 'avi'];
 export const MAX_VIDEO_FILE_SIZE = 500 * 1024 * 1024;
 
@@ -39,10 +57,11 @@ if (ACCOUNT_ID && ACCESS_KEY_ID && SECRET_ACCESS_KEY) {
  */
 export const checkImageExists = async (fileName: string): Promise<boolean> => {
   if (!s3Client) return false;
+  const objectKey = getR2ObjectKey(fileName);
   try {
     await s3Client.send(new HeadObjectCommand({
       Bucket: BUCKET_NAME,
-      Key: fileName,
+      Key: objectKey,
     }));
     return true;
   } catch (error: any) {
@@ -76,6 +95,7 @@ export const uploadBufferToR2 = async (
 ): Promise<string | null> => {
   if (!s3Client) return null;
 
+  const objectKey = getR2ObjectKey(fileName);
   const retryCount = options?.retryCount ?? 3;
   let attempt = 0;
   
@@ -83,10 +103,10 @@ export const uploadBufferToR2 = async (
     try {
       // 1. 檢查是否已經備份過 (除非設定 forceUpdate=true)
       if (!options?.forceUpdate) {
-        const exists = await checkImageExists(fileName);
+        const exists = await checkImageExists(objectKey);
         if (exists) {
-          logger.info({ fileName }, '[R2] File already exists');
-          return `${R2_PUBLIC_DOMAIN}/${fileName}`;
+          logger.info({ fileName: objectKey }, '[R2] File already exists');
+          return `${R2_PUBLIC_DOMAIN}/${objectKey}`;
         }
       }
 
@@ -101,10 +121,10 @@ export const uploadBufferToR2 = async (
       }
 
       // 3. 上傳到 R2
-      logger.info({ fileName, attempt: attempt + 1, retryCount, sizeKB: (buffer.length / 1024).toFixed(2) }, '[R2] Uploading buffer to R2');
+      logger.info({ fileName: objectKey, attempt: attempt + 1, retryCount, sizeKB: (buffer.length / 1024).toFixed(2) }, '[R2] Uploading buffer to R2');
       await s3Client.send(new PutObjectCommand({
         Bucket: BUCKET_NAME,
-        Key: fileName,
+        Key: objectKey,
         Body: buffer,
         ContentType: contentType,
         // 快取設定：讓 Cloudflare 邊緣節點快取 1 年
@@ -112,12 +132,12 @@ export const uploadBufferToR2 = async (
         Metadata: metadata
       }));
 
-      return `${R2_PUBLIC_DOMAIN}/${fileName}`;
+      return `${R2_PUBLIC_DOMAIN}/${objectKey}`;
     } catch (error) {
       attempt++;
-      logger.error({ err: error, fileName, attempt, retryCount }, '[R2] Error uploading buffer');
+      logger.error({ err: error, fileName: objectKey, attempt, retryCount }, '[R2] Error uploading buffer');
       if (attempt >= retryCount) {
-        logger.error({ fileName }, '[R2] Max retries reached, giving up');
+        logger.error({ fileName: objectKey }, '[R2] Max retries reached, giving up');
         return null;
       }
       // 等待一段時間後重試 (1s, 2s, 3s...)
@@ -135,16 +155,17 @@ export const uploadStreamToR2 = async (
 ): Promise<string | null> => {
   if (!s3Client) return null;
 
+  const objectKey = getR2ObjectKey(fileName);
   const retryCount = options?.retryCount ?? 3;
   let attempt = 0;
 
   while (attempt < retryCount) {
     try {
       if (!options?.forceUpdate) {
-        const exists = await checkImageExists(fileName);
+        const exists = await checkImageExists(objectKey);
         if (exists) {
-          logger.info({ fileName }, '[R2] File already exists');
-          return `${R2_PUBLIC_DOMAIN}/${fileName}`;
+          logger.info({ fileName: objectKey }, '[R2] File already exists');
+          return `${R2_PUBLIC_DOMAIN}/${objectKey}`;
         }
       }
 
@@ -154,22 +175,22 @@ export const uploadStreamToR2 = async (
       };
       if (options?.metadata) Object.assign(metadata, options.metadata);
 
-      logger.info({ fileName, attempt: attempt + 1, retryCount, sizeMB: options?.sizeBytes ? (options.sizeBytes / 1024 / 1024).toFixed(2) : 'unknown' }, '[R2] Uploading stream to R2');
+      logger.info({ fileName: objectKey, attempt: attempt + 1, retryCount, sizeMB: options?.sizeBytes ? (options.sizeBytes / 1024 / 1024).toFixed(2) : 'unknown' }, '[R2] Uploading stream to R2');
       await s3Client.send(new PutObjectCommand({
         Bucket: BUCKET_NAME,
-        Key: fileName,
+        Key: objectKey,
         Body: body,
         ContentType: contentType,
         CacheControl: 'public, max-age=31536000, immutable',
         Metadata: metadata
       }));
 
-      return `${R2_PUBLIC_DOMAIN}/${fileName}`;
+      return `${R2_PUBLIC_DOMAIN}/${objectKey}`;
     } catch (error) {
       attempt++;
-      logger.error({ err: error, fileName, attempt, retryCount }, '[R2] Error uploading stream');
+      logger.error({ err: error, fileName: objectKey, attempt, retryCount }, '[R2] Error uploading stream');
       if (attempt >= retryCount) {
-        logger.error({ fileName }, '[R2] Max retries reached, giving up');
+        logger.error({ fileName: objectKey }, '[R2] Max retries reached, giving up');
         return null;
       }
       await new Promise(resolve => setTimeout(resolve, attempt * 1000));
@@ -186,27 +207,30 @@ export const uploadStreamToR2 = async (
  */
 export const moveFileInR2 = async (oldKey: string, newKey: string): Promise<string | null> => {
   if (!s3Client) return null;
+
+  const sourceKey = getR2ObjectKey(oldKey);
+  const targetKey = getR2ObjectKey(newKey);
   
   try {
     // 1. 複製檔案
-    logger.info({ oldKey, newKey }, '[R2] Copying file...');
+    logger.info({ oldKey: sourceKey, newKey: targetKey }, '[R2] Copying file...');
     await s3Client.send(new CopyObjectCommand({
       Bucket: BUCKET_NAME,
-      CopySource: `${BUCKET_NAME}/${encodeURI(oldKey)}`,
-      Key: newKey,
+      CopySource: `${BUCKET_NAME}/${encodeURI(sourceKey)}`,
+      Key: targetKey,
     }));
 
     // 2. 刪除原檔案
-    logger.info({ oldKey }, '[R2] Deleting original file');
+    logger.info({ oldKey: sourceKey }, '[R2] Deleting original file');
     await s3Client.send(new DeleteObjectCommand({
       Bucket: BUCKET_NAME,
-      Key: oldKey,
+      Key: sourceKey,
     }));
 
-    logger.info({ newKey }, '[R2] Successfully moved file');
-    return `${R2_PUBLIC_DOMAIN}/${newKey}`;
+    logger.info({ newKey: targetKey }, '[R2] Successfully moved file');
+    return `${R2_PUBLIC_DOMAIN}/${targetKey}`;
   } catch (error) {
-    logger.error({ err: error, oldKey, newKey }, '[R2] Error moving file');
+    logger.error({ err: error, oldKey: sourceKey, newKey: targetKey }, '[R2] Error moving file');
     return null;
   }
 };
@@ -238,7 +262,7 @@ export const backupImageToR2 = async (
       if (url.includes('format=mp4')) ext = 'mp4';
 
       const hash = crypto.createHash('sha256').update(url).digest('hex').substring(0, 16);
-      const fileName = `${folder}/${hash}.${ext}`;
+      const fileName = getR2ObjectKey(`${folder}/${hash}.${ext}`);
 
       // 2. 檢查是否已經備份過 (除非設定 forceUpdate=true)
       if (!options?.forceUpdate) {
@@ -350,7 +374,7 @@ export const uploadVideoToR2 = async (
   }
 
   const videoFolder = `hero-videos/${mvId}`;
-  const uniqueFileName = `${videoFolder}/${Date.now()}-${crypto.randomBytes(4).toString('hex')}.${ext}`;
+  const uniqueFileName = getR2ObjectKey(`${videoFolder}/${Date.now()}-${crypto.randomBytes(4).toString('hex')}.${ext}`);
 
   const contentTypeMap: Record<string, string> = {
     'mp4': 'video/mp4',
@@ -416,7 +440,8 @@ export const deleteVideoFromR2 = async (videoUrl: string): Promise<boolean> => {
     const urlObj = new URL(videoUrl);
     const fileName = urlObj.pathname.replace(/^\//, '');
 
-    if (!fileName.startsWith('hero-videos/')) {
+    const expectedHeroPrefix = getR2ObjectKey('hero-videos/');
+    if (!fileName.startsWith(expectedHeroPrefix)) {
       logger.warn({ fileName }, '[R2] Refusing to delete non-hero-video file');
       return false;
     }
@@ -438,7 +463,8 @@ export const extractR2KeyFromUrl = (url: string): string | null => {
   try {
     const urlObj = new URL(url);
     const key = urlObj.pathname.replace(/^\//, '');
-    if (key && key.startsWith('hero-videos/')) {
+    const expectedHeroPrefix = getR2ObjectKey('hero-videos/');
+    if (key && key.startsWith(expectedHeroPrefix)) {
       return key;
     }
     return null;

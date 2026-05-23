@@ -17,6 +17,7 @@ export const ADMIN_PERMISSIONS = {
   SYSTEM_MAINTENANCE: 'admin:system:maintenance',
   SYSTEM_CACHE: 'admin:system:cache',
   SYSTEM_R2: 'admin:system:r2',
+  SYSTEM_CONFIG: 'admin:system-config',
 } as const;
 
 export const ADMIN_PERMISSION_CODES = Object.values(ADMIN_PERMISSIONS);
@@ -26,6 +27,7 @@ export const LEGACY_ADMIN_PERMISSION_ALIASES: Record<string, string[]> = {
   [ADMIN_PERMISSIONS.SYSTEM_MAINTENANCE]: ['admin.system.maintenance.update'],
   [ADMIN_PERMISSIONS.SYSTEM_CACHE]: ['admin.system.cache.clear'],
   [ADMIN_PERMISSIONS.SYSTEM_R2]: ['admin.system.r2.sync', 'admin.system.r2.rebuild'],
+  [ADMIN_PERMISSIONS.SYSTEM_CONFIG]: ['admin:telegram-config', 'admin:notification-settings'],
 };
 
 export const getAdminPermissionCandidates = (permission: string): string[] => {

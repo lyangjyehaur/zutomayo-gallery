@@ -21,6 +21,7 @@ lib-cov
 # Coverage directory used by tools like istanbul
 coverage
 *.lcov
+__snapshots__/
 
 # nyc test coverage
 .nyc_output
@@ -162,6 +163,9 @@ memory.md
 frontend-memory.md
 backend-memory.md
 .trae/
+.omh/
+.hermes/
+.merge-worktrees/
 
 # Web Scraper
 /scraper/
@@ -184,3 +188,5 @@ frontend/pnpm-lock.yaml
 .workbuddy/
 agents.md
 AGENTS.md
+docs-index.md
+CODE_WIKI.md

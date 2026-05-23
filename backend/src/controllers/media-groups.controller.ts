@@ -410,7 +410,7 @@ interface ParsedMediaMeta {
 }
 
 /**
- * 從 vxtwitter 回應中提取 group 層級的 meta 數據
+ * 從 Twitter 解析結果提取 group 層級的 meta 數據
  */
 const extractGroupMetaFromTweet = (mediaList: any[]): ParsedGroupMeta => {
   const first = mediaList[0] || {};
@@ -428,7 +428,7 @@ const extractGroupMetaFromTweet = (mediaList: any[]): ParsedGroupMeta => {
 };
 
 /**
- * 從 vxtwitter 回應中比對 media 記錄
+ * 從 Twitter 解析結果比對 media 記錄
  */
 const matchParsedMedia = (
   existingMedia: any[],
@@ -600,7 +600,7 @@ export const previewReparseTwitter = async (req: Request, res: Response) => {
         errors.push({ group_id: g.id, error: String(err?.message || err) });
       }
 
-      // vxtwitter API 限流間隔
+      // Twitter 解析 API 限流間隔
       await sleep(VXITTER_DELAY_MS);
     }
 
@@ -812,7 +812,7 @@ export const applyReparseTwitter = async (req: Request, res: Response) => {
         errors.push({ group_id: g.id, error: String(err?.message || err) });
       }
 
-      // vxtwitter API 限流間隔
+      // Twitter 解析 API 限流間隔
       await sleep(VXITTER_DELAY_MS);
     }
 

@@ -53,6 +53,7 @@ export const getStagingFanartsApiBase = () => joinApiPath("staging-fanarts")
 export const getMonitorTargetsApiBase = () => joinApiPath("monitor-targets")
 export const getSubmissionsApiBase = () => joinApiPath("submissions")
 export const getAnnotationsApiBase = () => joinApiPath("annotations")
+export const getSystemConfigApiBase = () => joinApiPath("system-config")
 export const getR2Domain = () => normalizeApiRoot((import.meta as any).env?.VITE_R2_DOMAIN || "https://r2.dan.tw")
 
 export const adminFetch = (input: RequestInfo | URL, init: RequestInit = {}) => {

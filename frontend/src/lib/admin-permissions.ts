@@ -17,6 +17,7 @@ export const ADMIN_PERMISSIONS = {
   SYSTEM_MAINTENANCE: "admin:system:maintenance",
   SYSTEM_CACHE: "admin:system:cache",
   SYSTEM_R2: "admin:system:r2",
+  SYSTEM_CONFIG: "admin:system-config",
 } as const
 
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[keyof typeof ADMIN_PERMISSIONS]

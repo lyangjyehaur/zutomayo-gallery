@@ -182,6 +182,7 @@ async function promoteStagingFanart(staging: any, mvs?: unknown) {
   const mediaHeight = staging.get('media_height') as number;
 
   let finalR2Url = r2Url;
+  let finalThumbnailR2Url = staging.get('thumbnail_url') as string | null;
   if (r2Url && r2Url.includes('crawler/')) {
     const crawlerIndex = r2Url.indexOf('crawler/');
     if (crawlerIndex !== -1) {
@@ -211,16 +212,50 @@ async function promoteStagingFanart(staging: any, mvs?: unknown) {
           }
         }
       );
-      if (newR2Url) {
-        finalR2Url = newR2Url;
-        await staging.update({ r2_url: newR2Url });
-      } else {
-        logger.error({ mediaUrl }, '[Approve] R2 upload failed');
+      if (!newR2Url) {
+        throw new AppError(409, 'STAGING_FANART_MEDIA_R2_FAILED', '媒體 R2 上傳失敗，請稍後重試');
       }
+      finalR2Url = newR2Url;
+      await staging.update({ r2_url: newR2Url });
     } else {
-      logger.error({ mediaUrl }, '[Approve] Media download failed');
+      throw new AppError(409, 'STAGING_FANART_MEDIA_DOWNLOAD_FAILED', '媒體下載失敗，請稍後重試');
     }
   }
+
+  if (mediaType === 'video') {
+    const originalThumbnailUrl = (staging.get('original_thumbnail_url') as string) || (staging.get('thumbnail_url') as string) || null;
+    if (originalThumbnailUrl) {
+      const fetchedThumb = await fetchMediaToBuffer(originalThumbnailUrl);
+      if (fetchedThumb) {
+        const thumbHash = crypto.createHash('sha256').update(originalThumbnailUrl).digest('hex').substring(0, 16);
+        const thumbFileName = `fanart/videos/thumbs/${thumbHash}.${fetchedThumb.ext}`;
+        const thumbR2Url = await uploadBufferToR2(
+          fetchedThumb.buffer,
+          thumbFileName,
+          fetchedThumb.contentType,
+          {
+            metadata: {
+              'original-url': originalThumbnailUrl,
+              'tweet-id': staging.get('tweet_id') as string,
+              source: 'approved_staging_thumb'
+            }
+          }
+        );
+        if (!thumbR2Url) {
+          throw new AppError(409, 'STAGING_FANART_THUMB_R2_FAILED', '影片縮圖 R2 上傳失敗，請稍後重試');
+        }
+        finalThumbnailR2Url = thumbR2Url;
+        await staging.update({
+          thumbnail_url: thumbR2Url,
+          original_thumbnail_url: originalThumbnailUrl,
+        });
+      } else {
+        throw new AppError(409, 'STAGING_FANART_THUMB_DOWNLOAD_FAILED', '影片縮圖下載失敗，請稍後重試');
+      }
+    }
+  }
+
+  const stagingThumbnailUrl = staging.get('thumbnail_url') as any;
 
   let [group] = await MediaGroupModel.findOrCreate({
     where: { source_url: originalUrl },
@@ -257,8 +292,6 @@ async function promoteStagingFanart(staging: any, mvs?: unknown) {
     )
   );
 
-  const stagingThumbnailUrl = staging.get('thumbnail_url') as any;
-
   let existingMedia = await MediaModel.findOne({ where: { original_url: mediaUrl } });
   if (!existingMedia) {
     existingMedia = await MediaModel.create({
@@ -267,7 +300,8 @@ async function promoteStagingFanart(staging: any, mvs?: unknown) {
       media_type: mediaType || 'image',
       url: finalR2Url || mediaUrl,
       original_url: mediaUrl,
-      thumbnail_url: mediaType === 'video' ? (stagingThumbnailUrl || null) : null,
+      thumbnail_url: mediaType === 'video' ? (finalThumbnailR2Url || null) : null,
+      original_thumbnail_url: mediaType === 'video' ? (staging.get('original_thumbnail_url') as string || stagingThumbnailUrl || null) : null,
       width: mediaWidth || null,
       height: mediaHeight || null,
       tags,
@@ -281,6 +315,9 @@ async function promoteStagingFanart(staging: any, mvs?: unknown) {
     const updateData: any = { tags: nextTags };
     if (mediaType === 'video' && stagingThumbnailUrl && !existingMedia.get('thumbnail_url')) {
       updateData.thumbnail_url = stagingThumbnailUrl;
+    }
+    if (mediaType === 'video' && (staging.get('original_thumbnail_url') as string) && !existingMedia.get('original_thumbnail_url')) {
+      updateData.original_thumbnail_url = staging.get('original_thumbnail_url') as string;
     }
     await existingMedia.update(updateData);
   }

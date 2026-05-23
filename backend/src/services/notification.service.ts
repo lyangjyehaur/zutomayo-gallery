@@ -1,6 +1,22 @@
 import fetch from 'node-fetch';
+import { SysConfigModel } from '../models/index.js';
 import { errorEventEmitter } from './error-events.service.js';
 import { logger } from '../utils/logger.js';
+
+// 動態配置：DB 優先，env fallback
+let cachedBarkUrl = process.env.BARK_URL || '';
+let cachedBarkKey = process.env.BARK_KEY || '';
+
+export async function refreshNotificationConfig(): Promise<void> {
+  try {
+    const row = await SysConfigModel.findByPk('bark_config');
+    const db = (row?.get('value') as any) || {};
+    cachedBarkUrl = db.bark_url || process.env.BARK_URL || '';
+    cachedBarkKey = db.bark_key || process.env.BARK_KEY || '';
+  } catch (err) {
+    logger.warn({ err }, 'Failed to refresh notification config from DB, using cached values');
+  }
+}
 
 const NOTIFICATION_TYPE_TO_PREF: Record<string, string> = {
   'new-fanart': 'staging',
@@ -21,7 +37,7 @@ export const NotificationService = {
     url?: string;
     extraParams?: string;
   }): Promise<boolean> => {
-    const BARK_URL = process.env.BARK_URL || process.env.BARK_KEY;
+    const BARK_URL = cachedBarkUrl || cachedBarkKey;
     if (!BARK_URL) {
       logger.warn('BARK_URL / BARK_KEY not configured, skipping Bark notification');
       return false;
