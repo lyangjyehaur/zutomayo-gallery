@@ -58,14 +58,24 @@ export const testBark = async (_req: Request, res: Response) => {
     throw new AppError(400, 'BARK_NOT_CONFIGURED', '尚未設定 Bark URL 或 Key');
   }
 
-  const baseUrl = barkUrl || `https://api.day.app/${barkKey}`;
-  const url = `${baseUrl.replace(/\/$/, '')}/${encodeURIComponent('ZUTOMAYO Gallery')}/${encodeURIComponent('Bark 通知測試成功！')}`;
+  const baseUrl = barkUrl || `https://api.day.app`;
+  const deviceKey = barkKey || '';
+  // Bark URL: {base}/{device_key}/{title}/{body}
+  const title = 'ZUTOMAYO Gallery';
+  const body = 'Bark 通知測試成功！';
+  const url = `${baseUrl.replace(/\/$/, '')}/${deviceKey}/${encodeURIComponent(title)}/${encodeURIComponent(body)}`;
 
   try {
     const response = await fetch(url);
-    const text = await response.text();
     if (!response.ok) {
-      throw new AppError(409, 'BARK_TEST_FAILED', `Bark API 錯誤 (${response.status}): ${text.substring(0, 200)}`);
+      const text = await response.text().catch(() => '');
+      // 嘗試解析 Bark 回傳的 JSON 錯誤
+      let detail = text;
+      try {
+        const parsed = JSON.parse(text);
+        detail = parsed.message || text;
+      } catch {}
+      throw new AppError(409, 'BARK_TEST_FAILED', `Bark API 錯誤 (${response.status}): ${detail.substring(0, 200)}`);
     }
     res.json({ success: true, message: '測試推播已發送，請檢查 Bark App' });
   } catch (err: any) {

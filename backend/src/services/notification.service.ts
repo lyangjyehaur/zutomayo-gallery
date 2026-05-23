@@ -7,6 +7,9 @@ import { logger } from '../utils/logger.js';
 let cachedBarkUrl = process.env.BARK_URL || '';
 let cachedBarkKey = process.env.BARK_KEY || '';
 
+// 啟動時異步從 DB 載入
+refreshNotificationConfig().catch(() => {});
+
 export async function refreshNotificationConfig(): Promise<void> {
   try {
     const row = await SysConfigModel.findByPk('bark_config');
@@ -37,8 +40,7 @@ export const NotificationService = {
     url?: string;
     extraParams?: string;
   }): Promise<boolean> => {
-    const BARK_URL = cachedBarkUrl || cachedBarkKey;
-    if (!BARK_URL) {
+    if (!cachedBarkUrl && !cachedBarkKey) {
       logger.warn('BARK_URL / BARK_KEY not configured, skipping Bark notification');
       return false;
     }
@@ -46,12 +48,10 @@ export const NotificationService = {
     const encodedTitle = encodeURIComponent(title);
     const encodedBody = encodeURIComponent(body);
 
-    let barkUrl: string;
-    if (BARK_URL.startsWith('http')) {
-      barkUrl = `${BARK_URL}/${encodedTitle}/${encodedBody}`;
-    } else {
-      barkUrl = `https://api.day.app/${BARK_URL}/${encodedTitle}/${encodedBody}`;
-    }
+    // Bark URL 格式: {base_url}/{device_key}/{title}/{body}
+    const baseUrl = cachedBarkUrl || 'https://api.day.app';
+    const deviceKey = cachedBarkKey || '';
+    let barkUrl = `${baseUrl.replace(/\/$/, '')}${deviceKey ? `/${deviceKey}` : ''}/${encodedTitle}/${encodedBody}`;
 
     if (url) {
       barkUrl += `?url=${encodeURIComponent(url)}`;

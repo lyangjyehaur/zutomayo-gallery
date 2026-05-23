@@ -20,6 +20,9 @@ export interface BackendErrorEvent {
 let cachedErrorThreshold = parseInt(process.env.ERROR_NOTIFICATION_THRESHOLD || '10', 10);
 let cachedErrorWindowMs = parseInt(process.env.ERROR_NOTIFICATION_WINDOW_MS || String(5 * 60 * 1000), 10);
 
+// 啟動時異步從 DB 載入
+refreshErrorNotificationConfig().catch(() => {});
+
 export async function refreshErrorNotificationConfig(): Promise<void> {
   try {
     const row = await SysConfigModel.findByPk('error_notification_config');
