@@ -7,6 +7,7 @@ import { ExpressAdapter } from '@bull-board/express';
 import { runR2Sync } from './r2-sync.service.js';
 import { errorEventEmitter } from './error-events.service.js';
 import { logger } from '../utils/logger.js';
+import { SysConfigModel } from '../models/index.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const hasRedisUrl = !!process.env.REDIS_URL;
@@ -114,13 +115,31 @@ if (isProduction || hasRedisUrl) {
   });
 }
 
+let cachedCronSchedule = process.env.TWITTER_MONITOR_CRON || '0 * * * *';
+
+/**
+ * 從 DB 載入 twitter_monitor_config，更新 cron schedule。
+ */
+export const refreshQueueConfig = async () => {
+  try {
+    const row = await SysConfigModel.findByPk('twitter_monitor_config');
+    const db = row?.get('value') as any;
+    if (db && db.monitor_cron) {
+      cachedCronSchedule = db.monitor_cron;
+    }
+  } catch (err) {
+    logger.warn({ err }, '[Queue] Failed to load twitter_monitor_config from DB, using defaults');
+  }
+};
+
 export const initQueues = async () => {
   if (!twitterQueue) {
     logger.info('[BullMQ] Skipped initialization in development environment without Redis');
     return;
   }
 
-  const CRON_SCHEDULE = process.env.TWITTER_MONITOR_CRON || '0 * * * *';
+  await refreshQueueConfig();
+  const CRON_SCHEDULE = cachedCronSchedule;
   
   // 清除舊的重複任務
   const repeatableJobs = await twitterQueue.getRepeatableJobs();

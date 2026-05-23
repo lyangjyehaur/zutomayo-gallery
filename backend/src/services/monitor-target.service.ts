@@ -1,6 +1,7 @@
 import { Op, Sequelize } from 'sequelize';
-import { ArtistModel, MonitorTargetModel } from '../models/index.js';
+import { ArtistModel, MonitorTargetModel, SysConfigModel } from '../models/index.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { logger } from '../utils/logger.js';
 
 export type MonitorTargetType = 'user' | 'hashtag';
 
@@ -51,9 +52,25 @@ export const buildTwitterRssFeedUrl = (baseUrl: string, target: Pick<MonitorFeed
   return `${normalizedBase}/twitter/user/${encodeURIComponent(target.handle)}`;
 };
 
+let cachedRssHubBaseUrl = (process.env.TWITTER_RSSHUB_BASE_URL || process.env.RSSHUB_BASE_URL || 'https://rsshub.app').replace(/\/+$/, '');
+
+/**
+ * 從 DB 載入 twitter_monitor_config，更新 RSSHub base URL。
+ */
+export const refreshMonitorTargetConfig = async () => {
+  try {
+    const row = await SysConfigModel.findByPk('twitter_monitor_config');
+    const db = row?.get('value') as any;
+    if (db && db.rsshub_base_url) {
+      cachedRssHubBaseUrl = db.rsshub_base_url.replace(/\/+$/, '');
+    }
+  } catch (err) {
+    logger.warn({ err }, '[MonitorTarget] Failed to load twitter_monitor_config from DB, using env defaults');
+  }
+};
+
 export const getRssHubBaseUrl = (): string => {
-  const configured = process.env.TWITTER_RSSHUB_BASE_URL || process.env.RSSHUB_BASE_URL;
-  return (configured || 'https://rsshub.app').replace(/\/+$/, '');
+  return cachedRssHubBaseUrl;
 };
 
 export const inferRssHubBaseFromFeedUrl = (feedUrl: string | undefined): string | null => {

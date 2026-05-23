@@ -32,6 +32,7 @@ import { initGeoService } from './services/geo.service.js';
 import { initRedis, redisClient, deleteKeysByPattern } from './services/redis.service.js';
 import { initMeiliSearch, syncDataToMeili } from './services/meili.service.js';
 import { initQueues, bullBoardAdapter } from './services/queue.service.js';
+import { refreshMonitorTargetConfig } from './services/monitor-target.service.js';
 import { getSessionCookieOptions, getSessionMaxAgeMs, sessionCookieName } from './config/session.js';
 import { httpLogger, logger } from './utils/logger.js';
 
@@ -334,6 +335,7 @@ const initServices = async () => {
     initGeoService();
     logger.info('IP2Region DB initialized');
 
+    await refreshMonitorTargetConfig();
     await initQueues();
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);

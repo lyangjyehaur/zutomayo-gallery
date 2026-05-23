@@ -6,6 +6,8 @@ import { refreshNotificationConfig } from '../services/notification.service.js';
 import { refreshErrorNotificationConfig } from '../services/error-events.service.js';
 import { refreshTelegramConfig } from '../services/telegram-bot.service.js';
 import { twitterQueue } from '../services/queue.service.js';
+import { refreshQueueConfig } from '../services/queue.service.js';
+import { refreshMonitorTargetConfig } from '../services/monitor-target.service.js';
 import { TwitterMonitorService } from '../services/twitter-monitor.service.js';
 
 // ── Bark ──
@@ -118,6 +120,13 @@ export const updateTwitterMonitorConfig = async (req: Request, res: Response) =>
   } as any);
 
   logger.info('Twitter monitor config updated via admin');
+
+  // 立即生效：刷新 RSSHub base URL 和 cron schedule
+  await Promise.all([
+    refreshMonitorTargetConfig(),
+    refreshQueueConfig(),
+  ]);
+
   res.json({ success: true, message: 'Twitter 監聽配置已更新' });
 };
 
