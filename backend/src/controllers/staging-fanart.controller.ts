@@ -149,13 +149,32 @@ export const getStagingFanarts = async (req: Request, res: Response) => {
     where.content_type = contentType;
   }
 
+  const sort = (req.query.sort as string) || 'newest';
+  let order: any[];
+  switch (sort) {
+    case 'oldest':
+      order = [['crawled_at', 'ASC']];
+      break;
+    case 'likes_desc':
+      order = [['like_count', 'DESC']];
+      break;
+    case 'likes_asc':
+      order = [['like_count', 'ASC']];
+      break;
+    case 'views_desc':
+      order = [['view_count', 'DESC']];
+      break;
+    default:
+      order = [['crawled_at', 'DESC']];
+  }
+
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 50;
   const offset = (page - 1) * limit;
 
   const { count, rows } = await StagingFanartModel.findAndCountAll({
     where,
-    order: [['crawled_at', 'DESC'], ['created_at', 'DESC']],
+    order,
     limit,
     offset
   });

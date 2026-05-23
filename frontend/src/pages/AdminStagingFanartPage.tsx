@@ -125,6 +125,9 @@ export function AdminStagingFanartPage() {
   const [contentTypeFilter, setContentTypeFilter] = useState<string>(() => {
     return initialSettings?.contentTypeFilter || '';
   });
+  const [sortBy, setSortBy] = useState<string>(() => {
+    return initialSettings?.sortBy || 'newest';
+  });
   const gotoPage = (p: number) => setPage(() => Math.min(Math.max(1, p), totalPages || 1));
 
   const baseApiUrl = useMemo(() => getApiRoot(), []);
@@ -141,14 +144,15 @@ export function AdminStagingFanartPage() {
       endDate: endDateStr,
       maxItems,
       crawlerContentType,
-      contentTypeFilter
+      contentTypeFilter,
+      sortBy
     };
     try {
       localStorage.setItem(settingsKey, JSON.stringify(next));
     } catch {
       toast.error('篩選設定保存失敗，請檢查瀏覽器隱私模式或存儲空間');
     }
-  }, [page, viewStatus, searchTerms, startDate, endDate, maxItems, crawlerContentType, contentTypeFilter]);
+  }, [page, viewStatus, searchTerms, startDate, endDate, maxItems, crawlerContentType, contentTypeFilter, sortBy]);
 
   const fetchMvs = useCallback(async () => {
     try {
@@ -183,7 +187,8 @@ export function AdminStagingFanartPage() {
     setIsLoading(true);
     try {
       const ctParam = contentTypeFilter ? `&contentType=${contentTypeFilter}` : '';
-      const res = await adminFetch(`${baseApiUrl}/staging-fanarts?page=${p}&limit=60&status=${status}${ctParam}`);
+      const sortParam = sortBy !== 'newest' ? `&sort=${sortBy}` : '';
+      const res = await adminFetch(`${baseApiUrl}/staging-fanarts?page=${p}&limit=60&status=${status}${ctParam}${sortParam}`);
       const data = await res.json();
       if (data.success) {
         setFanarts(data.data);
@@ -196,7 +201,7 @@ export function AdminStagingFanartPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [baseApiUrl, contentTypeFilter]);
+  }, [baseApiUrl, contentTypeFilter, sortBy]);
 
   useEffect(() => {
     fetchFanarts(page, viewStatus);
@@ -276,6 +281,15 @@ export function AdminStagingFanartPage() {
     try {
       const isApprove = action === 'approve';
       const isRestore = action === 'restore';
+
+      if (isApprove) {
+        const mvs = selectedMvs[id] || [];
+        if (mvs.length === 0) {
+          toast.error('請先選擇至少一個 MV 或標籤再核准');
+          return;
+        }
+      }
+
       const payload = isApprove ? { mvs: selectedMvs[id] || [] } : undefined;
       const endpointAction = isRestore ? 'restore' : action;
 
@@ -309,6 +323,20 @@ export function AdminStagingFanartPage() {
 
   const handleBatchAction = async (action: 'approve' | 'hold' | 'reject') => {
     if (selectedCards.size === 0) return;
+
+    if (action === 'approve') {
+      // 檢查是否所有選中的卡片都有 MV 關聯（卡片自選 + 批次共用）
+      const idsToCheck = Array.from(selectedCards);
+      const missingMvs = idsToCheck.filter(id => {
+        const cardMvs = selectedMvs[id] || [];
+        const combined = Array.from(new Set([...cardMvs, ...batchSelectedMvs]));
+        return combined.length === 0;
+      });
+      if (missingMvs.length > 0) {
+        toast.error(`${missingMvs.length} 張卡片尚未選擇 MV 或標籤，請先選擇再批次核准`);
+        return;
+      }
+    }
 
     const ok = await confirm({
       title: action === 'approve' ? '批次核准' : action === 'hold' ? '批次暫存觀察' : '批次拒絕',
@@ -443,6 +471,22 @@ export function AdminStagingFanartPage() {
               <option value="">全部分類</option>
               <option value="fanart">Fanart</option>
               <option value="official">官方</option>
+            </select>
+            <select
+              value={sortBy}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setPage(1);
+                setSelectedCards(new Set());
+                setBatchSelectedMvs([]);
+              }}
+              className="border-2 border-black font-bold shadow-neo-sm h-8 px-2 bg-white"
+            >
+              <option value="newest">最新</option>
+              <option value="oldest">最舊</option>
+              <option value="likes_desc">最多讚</option>
+              <option value="likes_asc">最少讚</option>
+              <option value="views_desc">最多瀏覽</option>
             </select>
           </div>
           <Pagination className="w-auto">
@@ -616,7 +660,7 @@ export function AdminStagingFanartPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            <div className="sticky top-0 z-30 flex flex-wrap items-center justify-between p-3 border-2 border-black bg-white shadow-neo-sm">
+            <div className="sticky bottom-0 z-30 flex flex-wrap items-center justify-between p-3 border-t-2 border-black bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.1)]">
               <label className="flex items-center gap-2 cursor-pointer font-bold select-none">
                 <input
                   type="checkbox"

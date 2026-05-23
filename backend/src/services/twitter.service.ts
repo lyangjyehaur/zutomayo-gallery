@@ -257,6 +257,18 @@ const extractRssMediaElements = (item: RssTweetItem) => {
   return media;
 };
 
+/**
+ * 嘗試從 RSS 內容中提取原推 ID（用於轉推去重）。
+ * 轉推的 RSS description/content 通常包含原推連結。
+ */
+const extractOriginalTweetIdFromRss = (item: RssTweetItem): string | null => {
+  const html = [item.description, item.content].filter(Boolean).join(' ');
+  if (!html) return null;
+  // 從 HTML 中找 Twitter status 連結，取第一個（通常是原推）
+  const linkMatch = html.match(/(?:twitter\.com|x\.com)\/\w+\/status\/(\d+)/i);
+  return linkMatch ? linkMatch[1] : null;
+};
+
 const buildMediaFromRssItem = (item: RssTweetItem, requestedTweetId: string, sourceTweetId = requestedTweetId): TwitterMedia[] => {
   const text = parseRssText(item);
   const author = parseRssAuthor(item);
@@ -596,7 +608,10 @@ export const TwitterService = {
     const requestedTweetId = extractTweetId(tweetUrl);
     if (!requestedTweetId) throw new Error('無效的推文網址格式');
 
-    const fallbackMedia = rssItem ? buildMediaFromRssItem(rssItem, requestedTweetId) : [];
+    // 嘗試從 RSS 內容解析原推 ID（轉推去重用）
+    const rssOriginalId = rssItem ? extractOriginalTweetIdFromRss(rssItem) : null;
+    const effectiveSourceId = rssOriginalId || requestedTweetId;
+    const fallbackMedia = rssItem ? buildMediaFromRssItem(rssItem, requestedTweetId, effectiveSourceId) : [];
     const fetchFn = options.fetch || fetch;
     const html = await fetchXTweetHtml(requestedTweetId, fetchFn);
     if (!html) return fallbackMedia;
