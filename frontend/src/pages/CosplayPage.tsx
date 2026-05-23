@@ -1,0 +1,566 @@
+import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { formatApiError } from '@/lib/api-error';
+import { MVItem } from '@/lib/types';
+import { Label } from '@/components/ui/label';
+import { WalineComments } from '@/components/WalineComments';
+import FancyboxViewer from '@/components/FancyboxViewer';
+import { getApiRoot } from '@/lib/admin-api';
+
+interface CosplayPageProps {
+  mvData: MVItem[];
+}
+
+export function CosplayPage({ mvData }: CosplayPageProps) {
+  const { t } = useTranslation();
+
+  const normalizeTag = (tag: any) => {
+    if (!tag) return '';
+    const str = String(tag);
+    if (str.startsWith('tag:')) return str;
+    return `tag:${str}`;
+  };
+
+  const baseApiUrl = useMemo(() => getApiRoot(), []);
+  const [galleryFanarts, setGalleryFanarts] = useState<any[]>([]);
+  const [galleryMeta, setGalleryMeta] = useState<{ limit: number; offset: number; total: number | null; hasMore: boolean }>({
+    limit: 48,
+    offset: 0,
+    total: null,
+    hasMore: false
+  });
+  const [summary, setSummary] = useState<{ tagCounts: Record<string, number>; mvCounts: Record<string, number> } | null>(null);
+  const [isLoadingGallery, setIsLoadingGallery] = useState(false);
+  const randomSeedRef = useRef(Math.random().toString(36).substring(2, 10));
+  
+  // 提取所有有圖片的 MV 作為篩選選項
+  const availableMVs = useMemo(() => {
+    return mvData
+      .filter(mv => Array.isArray(mv.images) && mv.images.some(img => img.type === 'fanart'))
+      .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  }, [mvData]);
+
+  // 提取所有年份
+  const availableYears = useMemo(() => {
+    const years = new Set<string>();
+    availableMVs.forEach(mv => {
+      if (mv.date) years.add(mv.date.substring(0, 4));
+    });
+    return Array.from(years).sort((a, b) => b.localeCompare(a));
+  }, [availableMVs]);
+
+  const yearCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    availableMVs.forEach(mv => {
+      const year = mv.date?.substring(0, 4);
+      if (!year) return;
+      map.set(year, (map.get(year) || 0) + 1);
+    });
+    return map;
+  }, [availableMVs]);
+
+  // 提取所有專輯
+  const availableAlbums = useMemo(() => {
+    const albums = new Set<string>();
+    availableMVs.forEach(mv => {
+      if (mv.albums && Array.isArray(mv.albums)) {
+        mv.albums.forEach(a => {
+          const name = typeof a === 'object' ? (a as any).name : a;
+          if (name) albums.add(name.trim());
+        });
+      } else if (mv.albums && typeof mv.albums === 'string') {
+        (mv.albums as string).split(',').map(a => a.trim()).filter(Boolean).forEach(a => albums.add(a));
+      }
+    });
+    return Array.from(albums).sort();
+  }, [availableMVs]);
+
+  const albumCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    availableMVs.forEach(mv => {
+      const albumNames: string[] = [];
+      if (mv.albums && Array.isArray(mv.albums)) {
+        mv.albums.forEach(a => {
+          const name = typeof a === 'object' ? (a as any).name : a;
+          if (name) albumNames.push(String(name).trim());
+        });
+      } else if (mv.albums && typeof mv.albums === 'string') {
+        (mv.albums as string)
+          .split(',')
+          .map(a => a.trim())
+          .filter(Boolean)
+          .forEach(a => albumNames.push(a));
+      }
+
+      Array.from(new Set(albumNames)).forEach(name => {
+        if (!name) return;
+        map.set(name, (map.get(name) || 0) + 1);
+      });
+    });
+    return map;
+  }, [availableMVs]);
+
+  // 狀態：選中的 MV IDs
+  const [selectedMvs, setSelectedMvs] = useState<string[]>([]);
+  const [onlyCollab, setOnlyCollab] = useState<boolean>(false);
+  const [onlySubmitted, setOnlySubmitted] = useState<boolean>(false);
+  const [onlyAcaNe, setOnlyAcaNe] = useState<boolean>(false);
+  const [onlyReal, setOnlyReal] = useState<boolean>(false);
+  const [onlyUniguri, setOnlyUniguri] = useState<boolean>(false);
+  const [onlyOther, setOnlyOther] = useState<boolean>(false);
+  
+  // 狀態：初篩用的年份和專輯
+  const [filterYear, setFilterYear] = useState<string>('all');
+  const [filterAlbum, setFilterAlbum] = useState<string>('all');
+
+  // 提取所有 Cosplay 圖片並去重
+  const allFanArts = useMemo(() => {
+    const list = galleryFanarts.map((img: any) => {
+      const group = img.group || null;
+      const rawTags = Array.isArray(img.tags) ? img.tags : [];
+      const tags = rawTags.map(normalizeTag).filter(Boolean);
+      const mvs = Array.isArray(img.mvs) ? img.mvs : [];
+      const mvIds = mvs.map((m: any) => m.id).filter(Boolean);
+      const mvTitles = mvs.map((m: any) => m.title).filter(Boolean);
+      const like_count = group?.like_count ?? 0;
+      return {
+        ...img,
+        tags,
+        mvIds,
+        mvTitles,
+        tweetUrl: group?.source_url,
+        tweetAuthor: group?.author_name,
+        tweetHandle: group?.author_handle,
+        tweetDate: group?.post_date,
+        tweetText: group?.source_text,
+        like_count
+      };
+    });
+
+    return list;
+  }, [galleryFanarts]);
+
+  // 根據初篩條件過濾顯示的 MV 選項
+  const filteredMVs = useMemo(() => {
+    return availableMVs.filter(mv => {
+      const matchYear = filterYear === 'all' || mv.date?.substring(0, 4) === filterYear;
+      
+      // 處理多專輯匹配邏輯
+      let matchAlbum = true;
+      if (filterAlbum !== 'all') {
+        if (!mv.albums) {
+          matchAlbum = false;
+        } else if (Array.isArray(mv.albums)) {
+          matchAlbum = mv.albums.map((a: any) => typeof a === 'object' ? String(a?.name ?? '').trim() : String(a).trim()).includes(filterAlbum);
+        } else if (typeof mv.albums === 'string') {
+          const albumList = (mv.albums as string).split(',').map(a => a.trim());
+          matchAlbum = albumList.includes(filterAlbum);
+        }
+      }
+      
+      return matchYear && matchAlbum;
+    });
+  }, [availableMVs, filterYear, filterAlbum]);
+
+  const [isFilterExpanded, setIsFilterExpanded] = useState<boolean>(false);
+  const [sortBy, setSortBy] = useState<'random' | 'date_desc' | 'date_asc' | 'likes'>('random');
+
+  const selectedSpecialTags = useMemo(() => {
+    const tags: string[] = [];
+    if (onlyAcaNe) tags.push('tag:acane');
+    if (onlyReal) tags.push('tag:real');
+    if (onlyUniguri) tags.push('tag:uniguri');
+    if (onlyOther) tags.push('tag:other');
+    return tags;
+  }, [onlyAcaNe, onlyReal, onlyUniguri, onlyOther]);
+
+  const filterKey = useMemo(() => {
+    const mvIds = [...selectedMvs].sort();
+    const tags = [...selectedSpecialTags].sort();
+    return JSON.stringify({ mvIds, tags, onlyCollab, onlySubmitted, sortBy });
+  }, [selectedMvs, selectedSpecialTags, onlyCollab, onlySubmitted, sortBy]);
+
+  const mvFanArtCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    const src = summary?.mvCounts || {};
+    Object.keys(src).forEach((mvId) => map.set(mvId, src[mvId] || 0));
+    return map;
+  }, [summary]);
+
+  const specialTagCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    const src = summary?.tagCounts || {};
+    (['tag:acane', 'tag:real', 'tag:uniguri', 'tag:other'] as const).forEach(tag => {
+      map.set(tag, src[tag] || 0);
+    });
+    return map;
+  }, [summary]);
+
+  const collabCount = useMemo(() => summary?.tagCounts?.['tag:collab'] || 0, [summary]);
+
+  const fetchSummary = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (onlySubmitted) params.set('source', 'submission');
+      if (onlyCollab) params.set('onlyCollab', '1');
+      if (selectedSpecialTags.length > 0) params.set('tags', selectedSpecialTags.join(','));
+      const res = await fetch(`${baseApiUrl}/cosplay/gallery/summary?${params.toString()}`);
+      const data = await res.json();
+      if (res.ok && data?.success && data?.data) {
+        setSummary(data.data);
+      }
+    } catch (err: any) {
+      toast.error(formatApiError(err, '載入摘要失敗'));
+    }
+  }, [baseApiUrl, onlyCollab, onlySubmitted, selectedSpecialTags]);
+
+  const fetchGalleryPage = useCallback(
+    async (nextOffset: number, append: boolean, withTotal: boolean) => {
+      setIsLoadingGallery(true);
+      try {
+        const params = new URLSearchParams();
+        params.set('limit', String(galleryMeta.limit));
+        params.set('offset', String(nextOffset));
+        if (withTotal) params.set('withTotal', '1');
+        if (onlySubmitted) params.set('source', 'submission');
+        if (onlyCollab) params.set('onlyCollab', '1');
+        if (selectedSpecialTags.length > 0) params.set('tags', selectedSpecialTags.join(','));
+        if (selectedMvs.length > 0) params.set('mvIds', selectedMvs.join(','));
+        if (sortBy === 'random') params.set('seed', randomSeedRef.current);
+        params.set('sort', sortBy);
+        params.set('type', 'cosplay');
+
+        const res = await fetch(`${baseApiUrl}/cosplay/gallery?${params.toString()}`);
+        const data = await res.json();
+        if (!res.ok || !data?.success || !Array.isArray(data.data)) {
+          const errMsg = data?.error || data?.code || `REQUEST_FAILED (${res.status})`;
+          throw new Error(errMsg);
+        }
+
+        const meta = data.meta || {};
+        setGalleryFanarts((prev) => (append ? [...prev, ...data.data] : data.data));
+        setGalleryMeta((prev) => ({
+          ...prev,
+          offset: meta.offset ?? nextOffset,
+          total: meta.total ?? prev.total,
+          hasMore: !!meta.hasMore
+        }));
+      } catch (err: any) {
+        toast.error(formatApiError(err, '載入失敗'));
+        if (!append) setGalleryFanarts([]);
+        setGalleryMeta((prev) => ({ ...prev, hasMore: false }));
+      } finally {
+        setIsLoadingGallery(false);
+      }
+    },
+    [baseApiUrl, galleryMeta.limit, onlyCollab, onlySubmitted, selectedMvs, selectedSpecialTags, sortBy]
+  );
+
+  const loadMoreFromServer = useCallback(async () => {
+    if (isLoadingGallery || !galleryMeta.hasMore) return;
+    await fetchGalleryPage(galleryMeta.offset + galleryMeta.limit, true, false);
+  }, [fetchGalleryPage, galleryMeta.offset, galleryMeta.limit, galleryMeta.hasMore, isLoadingGallery]);
+
+  useEffect(() => {
+    void fetchSummary();
+  }, [fetchSummary]);
+
+  useEffect(() => {
+    randomSeedRef.current = Math.random().toString(36).substring(2, 10);
+    setGalleryFanarts([]);
+    setGalleryMeta((prev) => ({ ...prev, offset: 0, total: null, hasMore: false }));
+    void fetchGalleryPage(0, false, true);
+  }, [fetchGalleryPage, filterKey]);
+
+  // 切換 MV 選擇
+  const toggleMvSelection = (id: string) => {
+    setSelectedMvs(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  // 全選 / 取消全選 (僅針對當前過濾後的 MV)
+  const toggleAllMvs = () => {
+    const currentFilteredIds = filteredMVs.map(mv => mv.id);
+    const allSelected = currentFilteredIds.every(id => selectedMvs.includes(id));
+    
+    if (allSelected) {
+      // 取消全選：從 selectedMvs 中移除當前過濾出來的 ID
+      setSelectedMvs(prev => prev.filter(id => !currentFilteredIds.includes(id)));
+    } else {
+      // 全選：將當前過濾出來的 ID 加入 selectedMvs，並確保不重複
+      setSelectedMvs(prev => {
+        const next = new Set([...prev, ...currentFilteredIds]);
+        return Array.from(next);
+      });
+    }
+  };
+
+  const fancyboxImages = useMemo(() => {
+    return allFanArts.map(art => {
+      const authorText = art.tweetAuthor ? `@${art.tweetHandle || art.tweetAuthor}` : '';
+      const baseCaption = art.caption || (authorText ? `Cosplay by ${authorText}` : 'Cosplay');
+      
+      let richText = art.richText || '';
+      if (!richText) {
+        const postContent = art.caption ? art.caption.replace(/\n/g, '<br/>') : '';
+        const submittedBadge = art.source === 'submission' ? `<div class="badge" style="display:inline-block;margin-bottom:6px;padding:2px 6px;border:2px solid #000;font-weight:800;letter-spacing:0.08em;background:#ffd400;color:#000;">SUBMITTED</div>` : '';
+        const linkHtml = art.tweetUrl ? `<br/><br/><a href="${art.tweetUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">View Original Tweet <i class="hn hn-external-link"></i></a>` : '';
+        richText = `${submittedBadge}<div class="author">${authorText || 'Cosplay'}</div><div class="post">${postContent}${linkHtml}</div>`;
+      }
+
+      return {
+        ...art,
+        caption: baseCaption,
+        richText
+      };
+    });
+  }, [allFanArts]);
+
+  return (
+    <div className="w-full pb-16">
+      {/* 標題區塊 */}
+      <div className="flex flex-col items-center justify-center my-12 md:my-16 text-center">
+        <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter mb-4">
+          <span className="bg-black text-main px-4 py-2 inline-block shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rotate-1">
+            COSPLAY GALLERY
+          </span>
+        </h2>
+        <p className="text-sm md:text-base opacity-70 font-bold max-w-2xl px-4">
+          {t('cosplay.desc', '來自社群的Cosplay作品大賞。')}
+        </p>
+        <div className="mt-4 border-2 border-dashed border-yellow-500 text-yellow-600 dark:text-yellow-400 bg-yellow-500/10 px-4 py-2 text-sm font-bold flex items-center gap-2">
+          <i className="hn hn-exclamation-triangle text-lg"></i>
+          <span>{t('cosplay.under_construction', '頁面施工中，歡迎在最下方留言建言獻策！')}</span>
+        </div>
+      </div>
+
+      {/* 篩選器面板 */}
+      <div className="max-w-4xl mx-auto px-4 mb-12">
+        <div className={`border-4 border-black bg-card shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative mt-4 transition-all duration-300 ${isFilterExpanded ? 'p-6' : 'px-4 py-0'}`}>
+          <div className="absolute -top-4 -left-4 bg-main border-2 border-black px-4 py-1 text-sm font-black rotate-[-2deg] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-10 text-black">
+            FILTERS
+          </div>
+          
+          <div className="flex justify-between items-center cursor-pointer select-none h-14 px-4 py-0" onClick={() => setIsFilterExpanded(!isFilterExpanded)}>
+            <h3 className="text-xl font-black uppercase m-0 flex items-center h-full pt-[2px] leading-none">
+              {t('cosplay.filter_title', '篩選作品')}
+            </h3>
+            <div className="flex items-center gap-4">
+              {/* 篩選狀態摘要 (收起時顯示) */}
+              {!isFilterExpanded && (
+                <div className="text-xs font-bold opacity-60 hidden md:block">
+                  {selectedMvs.length > 0 ? `已選 ${selectedMvs.length} 個 MV` : '所有作品'} 
+                  {onlyCollab ? ' (只看大合繪)' : ''}
+                  {onlySubmitted ? ' (只看投稿)' : ''}
+                  {onlyAcaNe ? ' (ACAね)' : ''}
+                  {onlyReal ? ' (實物)' : ''}
+                  {onlyUniguri ? ' (海膽栗子/生薑)' : ''}
+                  {onlyOther ? ' (其他)' : ''}
+                  {filterYear !== 'all' || filterAlbum !== 'all' ? ' · 有啟用初篩' : ''}
+                </div>
+              )}
+              <button 
+                className="bg-black text-white w-8 h-8 flex items-center justify-center border-2 border-black hover:bg-main hover:text-black transition-colors"
+                aria-label={isFilterExpanded ? t('cosplay.collapse_filter', '收起篩選器') : t('cosplay.expand_filter', '展開篩選器')}
+              >
+                <i className={`hn ${isFilterExpanded ? 'hn-minus' : 'hn-plus'} text-sm`}></i>
+              </button>
+            </div>
+          </div>
+          
+          <div className={`space-y-6 overflow-hidden transition-all duration-500 origin-top ${isFilterExpanded ? 'max-h-[2000px] opacity-100 mt-6' : 'max-h-0 opacity-0 mt-0'}`}>
+            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" role="checkbox" aria-checked={onlyCollab} tabIndex={0} onClick={() => setOnlyCollab(!onlyCollab)} onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setOnlyCollab(!onlyCollab); } }}>
+              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyCollab ? 'bg-main' : 'bg-card'}`} aria-hidden="true">
+                {onlyCollab && <i className="hn hn-check text-xs font-black"></i>}
+              </div>
+              <Label className="font-bold cursor-pointer">{t('cosplay.only_collab', '只看 綜合插畫 (多角色 / 大合繪)')} ({collabCount})</Label>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" role="checkbox" aria-checked={onlySubmitted} tabIndex={0} onClick={() => setOnlySubmitted(!onlySubmitted)} onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setOnlySubmitted(!onlySubmitted); } }}>
+              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlySubmitted ? 'bg-main' : 'bg-card'}`} aria-hidden="true">
+                {onlySubmitted && <i className="hn hn-check text-xs font-black"></i>}
+              </div>
+              <Label className="font-bold cursor-pointer">只看 主動投稿</Label>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" role="checkbox" aria-checked={onlyAcaNe} tabIndex={0} onClick={() => setOnlyAcaNe(!onlyAcaNe)} onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setOnlyAcaNe(!onlyAcaNe); } }}>
+              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyAcaNe ? 'bg-main' : 'bg-card'}`} aria-hidden="true">
+                {onlyAcaNe && <i className="hn hn-check text-xs font-black"></i>}
+              </div>
+              <Label className="font-bold cursor-pointer">{t('cosplay.only_aca_ne', '只看 ACAね')} ({specialTagCounts.get('tag:acane') || 0})</Label>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" role="checkbox" aria-checked={onlyReal} tabIndex={0} onClick={() => setOnlyReal(!onlyReal)} onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setOnlyReal(!onlyReal); } }}>
+              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyReal ? 'bg-main' : 'bg-card'}`} aria-hidden="true">
+                {onlyReal && <i className="hn hn-check text-xs font-black"></i>}
+              </div>
+              <Label className="font-bold cursor-pointer">只看 實物 ({specialTagCounts.get('tag:real') || 0})</Label>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" role="checkbox" aria-checked={onlyUniguri} tabIndex={0} onClick={() => setOnlyUniguri(!onlyUniguri)} onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setOnlyUniguri(!onlyUniguri); } }}>
+              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyUniguri ? 'bg-main' : 'bg-card'}`} aria-hidden="true">
+                {onlyUniguri && <i className="hn hn-check text-xs font-black"></i>}
+              </div>
+              <Label className="font-bold cursor-pointer">只看 海膽栗子/生薑 ({specialTagCounts.get('tag:uniguri') || 0})</Label>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 border-2 border-black bg-black/5 cursor-pointer hover:bg-black/10 transition-colors" role="checkbox" aria-checked={onlyOther} tabIndex={0} onClick={() => setOnlyOther(!onlyOther)} onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setOnlyOther(!onlyOther); } }}>
+              <div className={`w-5 h-5 border-2 border-black flex items-center justify-center ${onlyOther ? 'bg-main' : 'bg-card'}`} aria-hidden="true">
+                {onlyOther && <i className="hn hn-check text-xs font-black"></i>}
+              </div>
+              <Label className="font-bold cursor-pointer">只看 其他 ({specialTagCounts.get('tag:other') || 0})</Label>
+            </div>
+
+            {/* MV 單曲初篩 (年份/專輯) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border-2 border-black bg-card">
+              <div className="space-y-2">
+                <Label className="font-bold text-xs uppercase opacity-70">按年份初篩</Label>
+                <select 
+                  value={filterYear}
+                  onChange={(e) => setFilterYear(e.target.value)}
+                  className="w-full border-2 border-black bg-background px-3 py-2 font-bold font-mono outline-none focus:border-main shadow-neo-sm"
+                >
+                  <option value="all">所有年份 (ALL YEARS) ({availableMVs.length})</option>
+                  {availableYears.map(year => (
+                    <option key={year} value={year}>{year} ({yearCounts.get(year) || 0})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-bold text-xs uppercase opacity-70">按專輯初篩</Label>
+                <select 
+                  value={filterAlbum}
+                  onChange={(e) => setFilterAlbum(e.target.value)}
+                  className="w-full border-2 border-black bg-background px-3 py-2 font-bold font-mono outline-none focus:border-main shadow-neo-sm"
+                >
+                  <option value="all">所有專輯 (ALL ALBUMS) ({availableMVs.length})</option>
+                  {availableAlbums.map(album => (
+                    <option key={album} value={album}>{album} ({albumCounts.get(album) || 0})</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* MV 單曲選項 */}
+            <div>
+              <div className="flex items-center justify-between mb-3 border-b-2 border-black pb-2">
+                <Label className="font-bold uppercase tracking-widest">{t('cosplay.filter_by_mv', '按 MV 篩選角色')}</Label>
+                <button 
+                  onClick={toggleAllMvs}
+                  className="text-xs font-bold underline hover:text-main"
+                >
+                  {filteredMVs.every(mv => selectedMvs.includes(mv.id)) ? t('common.deselect_all', '取消全選') : t('common.select_all', '全選')}
+                </button>
+              </div>
+              
+              {filteredMVs.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-[300px] overflow-y-auto custom-scrollbar p-2 border-2 border-dashed border-black/20 bg-black/5">
+                  {filteredMVs.map(mv => (
+                    <div 
+                      key={mv.id}
+                      onClick={() => toggleMvSelection(mv.id)}
+                      className={`flex items-center gap-2 p-2 border-2 border-black transition-all cursor-pointer truncate ${selectedMvs.includes(mv.id) ? 'bg-black text-main shadow-[2px_2px_0_0_rgba(0,0,0,1)] -translate-y-[1px]' : 'bg-card hover:bg-black/5 hover:-translate-y-[1px] hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)]'}`}
+                    >
+                      <div className={`w-3 h-3 border-2 shrink-0 flex items-center justify-center ${selectedMvs.includes(mv.id) ? 'border-main bg-main' : 'border-black bg-card'}`}>
+                      </div>
+                      <span className="text-xs font-bold truncate flex-1" title={mv.title} lang="ja">{mv.title}</span>
+                      <span className="text-[10px] font-black opacity-70 shrink-0">{mvFanArtCounts.get(mv.id) || 0}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="w-full py-8 text-center border-2 border-dashed border-black/20 bg-black/5">
+                  <p className="text-xs font-bold opacity-50">沒有符合此年份或專輯的 MV</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className={`mt-8 flex justify-end transition-opacity duration-300 ${isFilterExpanded ? 'opacity-100' : 'opacity-0 h-0 mt-0 overflow-hidden'}`}>
+            <button 
+              onClick={() => setIsFilterExpanded(false)}
+              className="bg-black text-white px-6 py-2 font-black uppercase tracking-widest border-2 border-black hover:bg-main hover:text-black transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-y-1 hover:translate-x-1"
+            >
+              {t('cosplay.apply_filters', '套用並收起 ({{count}} 張作品)', { count: galleryMeta.total ?? allFanArts.length })}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 排序選擇 */}
+      {fancyboxImages.length > 0 && (
+        <div className="max-w-[1600px] mx-auto px-4 md:px-8 mb-6 flex items-center gap-2 md:gap-3 flex-wrap">
+          <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.15em] opacity-40 mr-0.5">{t('cosplay.sort_by', '排序')}</span>
+          {([
+            { key: 'random' as const, label: t('cosplay.sort_random', '隨機'), icon: 'hn-shuffle' },
+            { key: 'date_desc' as const, label: t('cosplay.sort_newest', '最新'), icon: 'hn-arrow-down' },
+            { key: 'date_asc' as const, label: t('cosplay.sort_oldest', '最舊'), icon: 'hn-arrow-up' },
+            { key: 'likes' as const, label: t('cosplay.sort_likes', '按讚'), icon: 'hn-heart' },
+          ]).map(opt => (
+            <button
+              key={opt.key}
+              onClick={() => setSortBy(opt.key)}
+              className={`px-2.5 md:px-3 py-1 md:py-1.5 text-[10px] md:text-xs font-black uppercase tracking-wider border-2 transition-all flex items-center gap-1 md:gap-1.5 ${
+                sortBy === opt.key
+                  ? 'bg-foreground text-main border-foreground shadow-[3px_3px_0px_0px_var(--color-border)]'
+                  : 'bg-card text-foreground border-border/20 hover:border-foreground hover:shadow-[2px_2px_0px_0px_var(--color-border)] hover:-translate-y-[1px]'
+              }`}
+            >
+              <i className={`hn ${opt.icon} text-[10px]`}></i>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Cosplay 畫廊區塊 */}
+      {fancyboxImages.length > 0 ? (
+        <div className="max-w-[1600px] mx-auto px-4 md:px-8 pb-12">
+          <FancyboxViewer
+            key={filterKey}
+            images={fancyboxImages}
+            itemsPerPage={20}
+            autoLoadMore={false}
+            enablePagination={true}
+            externalHasMore={galleryMeta.hasMore}
+            onExternalLoadMore={loadMoreFromServer}
+            resetKey={filterKey}
+            showHeader={false}
+            total={galleryMeta.total ?? undefined}
+            breakpointColumns={{ default: 1, 640: 2, 1024: 3, 1280: 4 }}
+            className="!p-0 !min-h-0"
+          />
+        </div>
+      ) : (
+        <div className="w-full py-10 flex flex-col items-center justify-center opacity-30 text-center px-4">
+          <i className="hn hn-image text-5xl mb-4"></i>
+          <p className="text-sm font-bold font-mono">NO_MATCHING_ARTWORKS</p>
+          <p className="text-xs mt-2">{t('cosplay.no_artworks_yet', '暫無符合篩選條件的作品。')}</p>
+        </div>
+      )}
+
+      {/* 留言區塊 */}
+      <div className="max-w-4xl mx-auto px-4 mt-16 md:mt-24">
+        <div className="p-6 border-4 border-black bg-card shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative mt-4">
+          <div className="absolute -top-4 -left-4 bg-main border-2 border-black px-4 py-1 text-sm font-black rotate-[-2deg] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-10 text-black">
+            FEEDBACK
+          </div>
+          <h3 className="text-xl font-black uppercase mb-4 mt-2">
+            {t('cosplay.feedback_title', 'Cosplay專欄・建言獻策')}
+          </h3>
+          <p className="text-sm opacity-70 mb-6">
+            {t('cosplay.feedback_desc', '您覺得 Cosplay 畫廊還需要如何改進？歡迎在這裡留言討論！')}
+          </p>
+          <WalineComments 
+            path="/cosplay-feedback" 
+            className="waline-wrapper" 
+            reactionTitle={t("waline.reactionTitleFeature", "您期待這個功能嗎？")} 
+          />
+        </div>
+      </div>
+
+    </div>
+  );
+}

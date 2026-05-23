@@ -50,6 +50,7 @@ const DemoCDCasePage = React.lazy(() => import("@/pages/DemoCDCasePage").then((m
 const DemoTraeFooterHoverPage = React.lazy(() => import("@/pages/DemoTraeFooterHoverPage").then((m) => ({ default: m.DemoTraeFooterHoverPage })));
 const IllustratorsPage = React.lazy(() => import("@/pages/IllustratorsPage").then((m) => ({ default: m.IllustratorsPage })));
 const FanArtPage = React.lazy(() => import("@/pages/FanArtPage").then((m) => ({ default: m.FanArtPage })));
+const CosplayPage = React.lazy(() => import("@/pages/CosplayPage").then((m) => ({ default: m.CosplayPage })));
 const MaintenancePage = React.lazy(() => import("@/pages/MaintenancePage").then((m) => ({ default: m.MaintenancePage })));
 const DebugFancyboxMasonry = React.lazy(() => import("@/debug/DebugFancyboxMasonry"));
 const DebugMVModalLightbox = React.lazy(() => import("@/debug/DebugMVModalLightbox"));
@@ -312,6 +313,7 @@ function App({
   const isDemo3DCard = pathnameWithoutLang === "/demo/3d-card";
   const isIllustratorsRoute = pathnameWithoutLang === "/illustrators" || pathnameWithoutLang.startsWith("/illustrators/");
   const isFanArtRoute = pathnameWithoutLang === "/fanart" || pathnameWithoutLang === "/fanart/submit";
+  const isCosplayRoute = pathnameWithoutLang === "/cosplay";
   const isFanArtSubmitRoute = pathnameWithoutLang === "/fanart/submit";
   const isAppleMusicGalleryRoute = pathnameWithoutLang === "/albums";
   const isSubmitRoute = pathnameWithoutLang === "/submit";
@@ -319,7 +321,7 @@ function App({
   const isRegisterRoute = pathnameWithoutLang === "/register";
   const isForgotRoute = pathnameWithoutLang === "/forgot";
   const isMeSubmissionsRoute = pathnameWithoutLang === "/me/submissions";
-  const isNotFound = pathnameWithoutLang !== "/" && pathnameWithoutLang !== "/favorites" && !isIllustratorsRoute && !isFanArtRoute && !isAppleMusicGalleryRoute && !isSubmitRoute && !isLoginRoute && !isRegisterRoute && !isForgotRoute && !isMeSubmissionsRoute && !is404Route && !isDemo3DCard && !mvIdMatch;
+  const isNotFound = pathnameWithoutLang !== "/" && pathnameWithoutLang !== "/favorites" && !isIllustratorsRoute && !isFanArtRoute && !isCosplayRoute && !isAppleMusicGalleryRoute && !isSubmitRoute && !isLoginRoute && !isRegisterRoute && !isForgotRoute && !isMeSubmissionsRoute && !is404Route && !isDemo3DCard && !mvIdMatch;
 
   useEffect(() => {
     const isAdminRoute = pathnameWithoutLang.startsWith("/admin");
@@ -574,6 +576,8 @@ function App({
           <React.Suspense fallback={pageFallback}><IllustratorsPage mvData={mvData} metadata={metadata} /></React.Suspense>
         ) : isFanArtRoute ? (
           <React.Suspense fallback={pageFallback}><FanArtPage mvData={mvData} /></React.Suspense>
+        ) : isCosplayRoute ? (
+          <React.Suspense fallback={pageFallback}><CosplayPage mvData={mvData} /></React.Suspense>
         ) : isAppleMusicGalleryRoute ? (
           <React.Suspense fallback={pageFallback}><AppleMusicGalleryPage /></React.Suspense>
         ) : isSubmitRoute ? (
@@ -976,6 +980,7 @@ export default function RootApp() {
               <Route path="illustrators/:artistId" element={<IllustratorRouteBoundary />} />
               <Route path="fanart" element={null} />
               <Route path="fanart/submit" element={null} />
+              <Route path="cosplay" element={null} />
               <Route path="submit" element={null} />
               <Route path="login" element={null} />
               <Route path="register" element={null} />

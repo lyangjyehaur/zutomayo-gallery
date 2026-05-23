@@ -150,7 +150,8 @@ export const getFanartGallery = async (req: Request, res: Response) => {
   const onlyCollab = String(q.onlyCollab || '').toLowerCase() === '1' || String(q.onlyCollab || '').toLowerCase() === 'true';
   const source = String(q.source || '').trim();
 
-  const andConditions: any[] = [{ type: 'fanart' }];
+  const mediaType = (q.type as string) || 'fanart';
+  const andConditions: any[] = [{ type: mediaType }];
   andConditions.push({
     [Op.not]: {
       [Op.or]: [
@@ -334,6 +335,7 @@ export const getFanartGallery = async (req: Request, res: Response) => {
 export const getFanartGallerySummary = async (req: Request, res: Response) => {
   const tags = FANART_ALLOWED_TAGS;
   const source = String(req.query.source || '').trim();
+  const mediaType = (req.query.type as string) || 'fanart';
 
   // 合併 5 次 count() 為單條 SQL，避免 N+1 查詢
   const sourceFilter = source ? `AND m.source = :source` : '';
@@ -341,7 +343,7 @@ export const getFanartGallerySummary = async (req: Request, res: Response) => {
     `
     SELECT t.tag, COUNT(DISTINCT m.id)::int AS count
     FROM unnest(ARRAY[:tags]::text[]) AS t(tag)
-    JOIN media m ON m.type = 'fanart'
+    JOIN media m ON m.type = :mediaType
       AND m.tags @> to_jsonb(t.tag::text)
       AND NOT (
         m.url ILIKE '%ytimg.com%' OR m.url ILIKE '%youtube.com%' OR m.url ILIKE '%youtu.be%'
@@ -352,7 +354,7 @@ export const getFanartGallerySummary = async (req: Request, res: Response) => {
     GROUP BY t.tag
     `,
     {
-      replacements: { tags: [...tags], ...(source ? { source_for_tag: source } : {}) },
+      replacements: { tags: [...tags], mediaType, ...(source ? { source_for_tag: source } : {}) },
       type: QueryTypes.SELECT,
     }
   );
@@ -367,10 +369,10 @@ export const getFanartGallerySummary = async (req: Request, res: Response) => {
   const onlyCollab = String(req.query.onlyCollab || '').toLowerCase() === '1' || String(req.query.onlyCollab || '').toLowerCase() === 'true';
 
   const whereParts: string[] = [
-    `m.type = 'fanart'`,
+    `m.type = :mediaType`,
     `g.status = 'organized'`
   ];
-  const replacements: Record<string, any> = {};
+  const replacements: Record<string, any> = { mediaType };
   if (source) {
     whereParts.push(`m.source = :source`);
     replacements.source = source;
@@ -419,6 +421,7 @@ export const getFanartGallerySummary = async (req: Request, res: Response) => {
 export const getFanartsByTag = async (req: Request, res: Response) => {
   const rawTag = String(req.params.tagId || '').trim();
   if (!rawTag) throw new AppError(400, 'Missing tagId');
+  const mediaType = (req.query.type as string) || 'fanart';
 
   const tagId = rawTag;
   const legacyTag = tagId.startsWith('tag:') ? tagId.slice(4) : tagId;
@@ -426,7 +429,7 @@ export const getFanartsByTag = async (req: Request, res: Response) => {
   const rows = await MediaModel.findAll({
     where: {
       [Op.and]: [
-        { type: 'fanart' },
+        { type: mediaType },
         {
           [Op.not]: {
             [Op.or]: [
@@ -456,6 +459,7 @@ export const getFanartsByTag = async (req: Request, res: Response) => {
 
 export const getFanartTagSummary = async (req: Request, res: Response) => {
   const tags = FANART_ALLOWED_TAGS;
+  const mediaType = (req.query.type as string) || 'fanart';
 
   // 合併 5 次 count() 為單條 SQL
   const tagSummaryRows = await sequelize.query(
@@ -467,7 +471,7 @@ export const getFanartTagSummary = async (req: Request, res: Response) => {
       SELECT tag, CASE WHEN tag LIKE 'tag:%' THEN substring(tag FROM 5) ELSE tag END AS legacy_tag
       FROM unnest(ARRAY[:tags]::text[]) AS tag
     ) t
-    JOIN media m ON m.type = 'fanart'
+    JOIN media m ON m.type = :mediaType
       AND (m.tags @> to_jsonb(t.tag::text) OR m.tags @> to_jsonb(t.legacy_tag::text))
       AND NOT (
         m.url ILIKE '%ytimg.com%' OR m.url ILIKE '%youtube.com%' OR m.url ILIKE '%youtu.be%'
@@ -476,7 +480,7 @@ export const getFanartTagSummary = async (req: Request, res: Response) => {
     GROUP BY t.tag, t.legacy_tag
     `,
     {
-      replacements: { tags: [...tags] },
+      replacements: { tags: [...tags], mediaType },
       type: QueryTypes.SELECT,
     }
   );
