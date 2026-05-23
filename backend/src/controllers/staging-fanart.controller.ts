@@ -145,7 +145,7 @@ export const getStagingFanarts = async (req: Request, res: Response) => {
 
   const contentType = req.query.contentType as string | undefined;
   const where: any = { status };
-  if (contentType && (contentType === 'fanart' || contentType === 'official')) {
+  if (contentType && (contentType === 'fanart' || contentType === 'official' || contentType === 'cosplay')) {
     where.content_type = contentType;
   }
 

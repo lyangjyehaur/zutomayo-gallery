@@ -291,6 +291,7 @@ export function AdminMonitorTargetsPage() {
             >
               <option value="fanart">Fanart</option>
               <option value="official">官方</option>
+              <option value="cosplay">Cosplay</option>
             </select>
             <Input
               value={form.note}
@@ -340,6 +341,7 @@ export function AdminMonitorTargetsPage() {
                         >
                           <option value="fanart">Fanart</option>
                           <option value="official">官方</option>
+                          <option value="cosplay">Cosplay</option>
                         </select>
                         <Textarea
                           value={editForm.note}
@@ -362,8 +364,8 @@ export function AdminMonitorTargetsPage() {
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-black break-all">{displayHandle(target.type, target.handle)}</span>
                             {target.label ? <span className="text-xs font-mono border-2 border-black bg-white px-2 py-0.5">{target.label}</span> : null}
-                            <span className={`text-xs font-mono border-2 border-black px-2 py-0.5 ${target.content_type === 'official' ? 'bg-blue-100' : 'bg-orange-100'}`}>
-                              {target.content_type === 'official' ? '官方' : 'Fanart'}
+                            <span className={`text-xs font-mono border-2 border-black px-2 py-0.5 ${target.content_type === 'official' ? 'bg-blue-100' : target.content_type === 'cosplay' ? 'bg-purple-100' : 'bg-orange-100'}`}>
+                              {target.content_type === 'official' ? '官方' : target.content_type === 'cosplay' ? 'Cosplay' : 'Fanart'}
                             </span>
                             <span className={`text-xs font-mono border-2 border-black px-2 py-0.5 ${target.enabled ? "bg-ztmy-green/60" : "bg-red-100"}`}>
                               {target.enabled ? "啟用" : "停用"}

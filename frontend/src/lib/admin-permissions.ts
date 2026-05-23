@@ -3,6 +3,7 @@ export const ADMIN_PERMISSIONS = {
   ARTISTS: "admin:artists",
   ALBUMS: "admin:albums",
   FANARTS: "admin:fanarts",
+  COSPLAY: "admin:cosplay",
   ANNOTATIONS: "admin:annotations",
   STAGING_FANARTS: "admin:staging-fanarts",
   MONITOR_TARGETS: "admin:monitor-targets",

@@ -91,6 +91,7 @@ const AdminAlbumsPage = React.lazy(() => import("@/pages/AdminAlbumsPage").then(
 const AdminAppleMusicAlbumsPage = React.lazy(() => import("@/pages/AdminAppleMusicAlbumsPage").then((m) => ({ default: m.AdminAppleMusicAlbumsPage })));
 const AdminDictsPage = React.lazy(() => import("@/pages/AdminDictsPage").then((m) => ({ default: m.AdminDictsPage })));
 const AdminFanArtPage = React.lazy(() => import("@/pages/AdminFanArtPage").then((m) => ({ default: m.AdminFanArtPage })));
+const AdminCosplayPage = React.lazy(() => import("@/pages/AdminCosplayPage").then((m) => ({ default: m.AdminCosplayPage })));
 const AdminStagingFanartPage = React.lazy(() => import("@/pages/AdminStagingFanartPage").then((m) => ({ default: m.AdminStagingFanartPage })));
 const AdminMonitorTargetsPage = React.lazy(() => import("@/pages/AdminMonitorTargetsPage").then((m) => ({ default: m.AdminMonitorTargetsPage })));
 const AdminSubmissionsPage = React.lazy(() => import("@/pages/AdminSubmissionsPage").then((m) => ({ default: m.AdminSubmissionsPage })));
@@ -1022,6 +1023,7 @@ export default function RootApp() {
               <Route path="apple-music-albums" element={adminRoute("appleMusicAlbums", <AdminAppleMusicAlbumsPage />)} />
               <Route path="dicts" element={adminRoute("dicts", <AdminDictsPage />)} />
               <Route path="fanart" element={adminRoute("fanart", <AdminFanArtPage />)} />
+              <Route path="cosplay" element={adminRoute("cosplay", <AdminCosplayPage />)} />
               <Route path="staging-fanarts" element={adminRoute("stagingFanarts", <AdminStagingFanartPage />)} />
               <Route path="monitor-targets" element={adminRoute("monitorTargets", <AdminMonitorTargetsPage />)} />
               <Route path="submissions" element={adminRoute("submissions", <AdminSubmissionsPage />)} />

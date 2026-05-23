@@ -471,6 +471,7 @@ export function AdminStagingFanartPage() {
               <option value="">全部分類</option>
               <option value="fanart">Fanart</option>
               <option value="official">官方</option>
+              <option value="cosplay">Cosplay</option>
             </select>
             <select
               value={sortBy}
@@ -570,6 +571,7 @@ export function AdminStagingFanartPage() {
                     >
                       <option value="fanart">Fanart</option>
                       <option value="official">官方</option>
+                      <option value="cosplay">Cosplay</option>
                     </select>
                   </div>
                 </div>

@@ -8,6 +8,7 @@ export const adminResources: ResourceProps[] = [
   { name: "appleMusicAlbums", list: "/admin/apple-music-albums", edit: "/admin/apple-music-albums" },
   { name: "dicts", list: "/admin/dicts", create: "/admin/dicts", edit: "/admin/dicts" },
   { name: "fanart", list: "/admin/fanart", edit: "/admin/fanart" },
+  { name: "cosplay", list: "/admin/cosplay", edit: "/admin/cosplay" },
   { name: "stagingFanarts", list: "/admin/staging-fanarts", edit: "/admin/staging-fanarts" },
   { name: "monitorTargets", list: "/admin/monitor-targets", create: "/admin/monitor-targets", edit: "/admin/monitor-targets" },
   { name: "submissions", list: "/admin/submissions" },

@@ -35,9 +35,18 @@ const isFanartYoutubeMedia = (media: any): boolean => {
 };
 
 export const getUnorganizedFanarts = async (req: Request, res: Response) => {
+  const mediaType = (req.query.type as string) || undefined;
+  
+  const groupWhere: any = { status: 'unorganized' };
+  const includeOptions: any[] = [{
+    model: MediaModel,
+    as: 'images',
+    ...(mediaType ? { where: { type: mediaType }, required: true } : {}),
+  }];
+  
   const rows = await MediaGroupModel.findAll({
-    where: { status: 'unorganized' },
-    include: [{ model: MediaModel, as: 'images' }],
+    where: groupWhere,
+    include: includeOptions,
     order: [['post_date', 'DESC'], ['id', 'DESC']]
   });
 
@@ -81,9 +90,17 @@ export const getUnorganizedFanarts = async (req: Request, res: Response) => {
 };
 
 export const getDeletedFanarts = async (req: Request, res: Response) => {
+  const mediaType = (req.query.type as string) || undefined;
+  
+  const includeOptions: any[] = [{
+    model: MediaModel,
+    as: 'images',
+    ...(mediaType ? { where: { type: mediaType } } : {}),
+  }];
+  
   const rows = await MediaGroupModel.findAll({
     where: { status: 'deleted' },
-    include: [{ model: MediaModel, as: 'images' }],
+    include: includeOptions,
     order: [['post_date', 'DESC'], ['id', 'DESC']]
   });
 
@@ -99,8 +116,10 @@ export const getDeletedFanarts = async (req: Request, res: Response) => {
 };
 
 export const getLegacyFanarts = async (req: Request, res: Response) => {
+  const mediaType = (req.query.type as string) || 'fanart';
+  
   const rows = await MediaModel.findAll({
-    where: { type: 'fanart' },
+    where: { type: mediaType },
     include: [{ model: MediaGroupModel, as: 'group' }],
     order: [['created_at', 'DESC']],
     limit: 500

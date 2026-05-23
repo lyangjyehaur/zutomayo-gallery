@@ -4,7 +4,7 @@ import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
 
 export type MonitorTargetType = 'user' | 'hashtag';
-export type ContentType = 'fanart' | 'official';
+export type ContentType = 'fanart' | 'official' | 'cosplay';
 
 export type MonitorFeedTarget = {
   type: MonitorTargetType;
@@ -23,7 +23,7 @@ export type ArtistTwitterSource = {
 
 const validTypes = new Set<MonitorTargetType>(['user', 'hashtag']);
 
-const validContentTypes = new Set<ContentType>(['fanart', 'official']);
+const validContentTypes = new Set<ContentType>(['fanart', 'official', 'cosplay']);
 
 export const isContentType = (value: unknown): value is ContentType => {
   return typeof value === 'string' && validContentTypes.has(value as ContentType);
