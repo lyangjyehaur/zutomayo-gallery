@@ -170,7 +170,8 @@ const createRateLimitStore = (prefix?: string) => {
 
 const apiRateLimitStore = createRateLimitStore();
 const writeRateLimitStore = createRateLimitStore('rl:write:');
-const authRateLimitStore = createRateLimitStore('rl:auth:');
+const loginRateLimitStore = createRateLimitStore('rl:login:');
+const webauthnRateLimitStore = createRateLimitStore('rl:webauthn:');
 
 // 請求限流 - 一般 API
 const apiLimiter = rateLimit({
@@ -210,7 +211,7 @@ const loginLimiter = rateLimit({
   max: isProduction ? 10 : 200,
   standardHeaders: true,
   legacyHeaders: false,
-  ...(authRateLimitStore ? { store: authRateLimitStore } : {}),
+  ...(loginRateLimitStore ? { store: loginRateLimitStore } : {}),
   message: {
     success: false,
     error: '登入嘗試過於頻繁，請稍後再試',
@@ -223,7 +224,7 @@ const webauthnLimiter = rateLimit({
   max: isProduction ? 30 : 200,
   standardHeaders: true,
   legacyHeaders: false,
-  ...(authRateLimitStore ? { store: authRateLimitStore } : {}),
+  ...(webauthnRateLimitStore ? { store: webauthnRateLimitStore } : {}),
   message: {
     success: false,
     error: '認證嘗試過於頻繁，請稍後再試',
