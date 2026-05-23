@@ -660,80 +660,6 @@ export function AdminStagingFanartPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            <div className="sticky bottom-0 z-30 flex flex-wrap items-center justify-between p-3 border-t-2 border-black bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.1)]">
-              <label className="flex items-center gap-2 cursor-pointer font-bold select-none">
-                <input
-                  type="checkbox"
-                  className="w-5 h-5 accent-black border-2 border-black cursor-pointer"
-                  checked={selectedCards.size === fanarts.length && fanarts.length > 0}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedCards(new Set(fanarts.map(f => f.id)));
-                    } else {
-                      setSelectedCards(new Set());
-                    }
-                  }}
-                />
-                <span className="uppercase tracking-wider">全選 ({selectedCards.size})</span>
-              </label>
-
-              <div className="flex items-center gap-2 mt-2 sm:mt-0">
-                {viewStatus === 'pending' || viewStatus === 'on_hold' || viewStatus === 'reviewed' ? (
-                  <>
-                    <div className="w-[200px]">
-                      <MultiSelect
-                        options={mvs}
-                        selected={batchSelectedMvs}
-                        onChange={setBatchSelectedMvs}
-                        placeholder="批次選擇 MV..."
-                      />
-                    </div>
-                    {viewStatus === 'pending' || viewStatus === 'reviewed' ? (
-                      <Button
-                        variant="outline"
-                        className="border-2 border-black bg-blue-500 text-white font-black uppercase tracking-wider hover:bg-blue-600 h-8"
-                        disabled={selectedCards.size === 0 || isLoading}
-                        onClick={() => handleBatchAction('hold')}
-                      >
-                        <i className="hn hn-pause mr-2" /> 批次暫存
-                      </Button>
-                    ) : (
-                      <Button
-                        className="border-2 border-black bg-yellow-200 font-black text-black uppercase tracking-wider hover:bg-yellow-300 h-8"
-                        disabled={selectedCards.size === 0 || isLoading}
-                        onClick={handleBatchRestore}
-                      >
-                        <i className="hn hn-refresh mr-2" /> 批次還原
-                      </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      className="border-2 border-black bg-red-500 text-white font-black uppercase tracking-wider hover:bg-red-600 h-8"
-                      disabled={selectedCards.size === 0 || isLoading}
-                      onClick={() => handleBatchAction('reject')}
-                    >
-                      <i className="hn hn-trash mr-2" /> 批次拒絕
-                    </Button>
-                    <Button
-                      className="border-2 border-black bg-ztmy-green font-black text-black uppercase tracking-wider hover:bg-[#8aff8a] h-8"
-                      disabled={selectedCards.size === 0 || isLoading}
-                      onClick={() => handleBatchAction('approve')}
-                    >
-                      <i className="hn hn-check mr-2" /> 批次核准 (含已選MV)
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    className="border-2 border-black bg-yellow-200 font-black text-black uppercase tracking-wider hover:bg-yellow-300 h-8"
-                    disabled={selectedCards.size === 0 || isLoading}
-                    onClick={handleBatchRestore}
-                  >
-                    <i className="hn hn-refresh mr-2" /> 批次還原為待審核
-                  </Button>
-                )}
-              </div>
-            </div>
-
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 pb-16">
               {fanarts.map(f => (
                 <div
@@ -874,6 +800,79 @@ export function AdminStagingFanartPage() {
               </div>
             ))}
           </div>
+            <div className="sticky bottom-0 z-30 flex flex-wrap items-center justify-between p-3 border-t-2 border-black bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.1)]">
+              <label className="flex items-center gap-2 cursor-pointer font-bold select-none">
+                <input
+                  type="checkbox"
+                  className="w-5 h-5 accent-black border-2 border-black cursor-pointer"
+                  checked={selectedCards.size === fanarts.length && fanarts.length > 0}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedCards(new Set(fanarts.map(f => f.id)));
+                    } else {
+                      setSelectedCards(new Set());
+                    }
+                  }}
+                />
+                <span className="uppercase tracking-wider">全選 ({selectedCards.size})</span>
+              </label>
+
+              <div className="flex items-center gap-2 mt-2 sm:mt-0">
+                {viewStatus === 'pending' || viewStatus === 'on_hold' || viewStatus === 'reviewed' ? (
+                  <>
+                    <div className="w-[200px]">
+                      <MultiSelect
+                        options={mvs}
+                        selected={batchSelectedMvs}
+                        onChange={setBatchSelectedMvs}
+                        placeholder="批次選擇 MV..."
+                      />
+                    </div>
+                    {viewStatus === 'pending' || viewStatus === 'reviewed' ? (
+                      <Button
+                        variant="outline"
+                        className="border-2 border-black bg-blue-500 text-white font-black uppercase tracking-wider hover:bg-blue-600 h-8"
+                        disabled={selectedCards.size === 0 || isLoading}
+                        onClick={() => handleBatchAction('hold')}
+                      >
+                        <i className="hn hn-pause mr-2" /> 批次暫存
+                      </Button>
+                    ) : (
+                      <Button
+                        className="border-2 border-black bg-yellow-200 font-black text-black uppercase tracking-wider hover:bg-yellow-300 h-8"
+                        disabled={selectedCards.size === 0 || isLoading}
+                        onClick={handleBatchRestore}
+                      >
+                        <i className="hn hn-refresh mr-2" /> 批次還原
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      className="border-2 border-black bg-red-500 text-white font-black uppercase tracking-wider hover:bg-red-600 h-8"
+                      disabled={selectedCards.size === 0 || isLoading}
+                      onClick={() => handleBatchAction('reject')}
+                    >
+                      <i className="hn hn-trash mr-2" /> 批次拒絕
+                    </Button>
+                    <Button
+                      className="border-2 border-black bg-ztmy-green font-black text-black uppercase tracking-wider hover:bg-[#8aff8a] h-8"
+                      disabled={selectedCards.size === 0 || isLoading}
+                      onClick={() => handleBatchAction('approve')}
+                    >
+                      <i className="hn hn-check mr-2" /> 批次核准 (含已選MV)
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    className="border-2 border-black bg-yellow-200 font-black text-black uppercase tracking-wider hover:bg-yellow-300 h-8"
+                    disabled={selectedCards.size === 0 || isLoading}
+                    onClick={handleBatchRestore}
+                  >
+                    <i className="hn hn-refresh mr-2" /> 批次還原為待審核
+                  </Button>
+                )}
+              </div>
+            </div>
         </div>
         )}
         </div>
