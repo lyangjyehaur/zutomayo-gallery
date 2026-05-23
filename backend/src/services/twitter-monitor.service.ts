@@ -56,147 +56,156 @@ const safeDate = (value: string | Date | undefined) => {
   return Number.isNaN(date.getTime()) ? new Date() : date;
 };
 
+/**
+ * 取得所有監聽 feed URL（去重）。
+ * 供 queue 層拆分成獨立 job 使用。
+ */
+export const collectFeedUrls = async (): Promise<string[]> => {
+  const legacyFeedUrl = process.env.TWITTER_RSS_URL;
+  const targets = await deps.getMonitoredFeedTargets();
+  const rssHubBase = inferRssHubBaseFromFeedUrl(legacyFeedUrl) || getRssHubBaseUrl();
+  return Array.from(new Set([
+    ...targets.map((target) => buildTwitterRssFeedUrl(rssHubBase, target)),
+    ...(legacyFeedUrl ? [legacyFeedUrl] : []),
+  ]));
+};
+
+/**
+ * 處理單一 RSS feed：fetch → parse → extract media → 寫 staging → 發通知。
+ * 回傳該 feed 產生的新候選數量。
+ */
+export const processFeed = async (feedUrl: string): Promise<{ feedUrl: string; newCandidates: number }> => {
+  let feed: { items: RssTweetItem[] };
+  try {
+    feed = await deps.parseURL(feedUrl);
+  } catch (error: any) {
+    console.error(`[Twitter Monitor] Failed to fetch or parse RSS feed ${feedUrl}:`, error);
+    errorEventEmitter.emitError({
+      source: 'cron',
+      message: `Twitter monitor: failed to fetch or parse RSS feed ${feedUrl}`,
+      stack: error instanceof Error ? error.stack : undefined,
+      details: { phase: 'twitter-monitor-feed', feedUrl },
+    });
+    return { feedUrl, newCandidates: 0 };
+  }
+
+  let newCandidates = 0;
+
+  for (const item of feed.items) {
+    if (!item.link) continue;
+    const tweetLink = normalizeTweetUrl(item.link);
+    const tweetId = extractTweetId(tweetLink);
+    if (!tweetId) continue;
+
+    let mediaList: TwitterMedia[] = [];
+    try {
+      mediaList = await deps.extractMediaFromTweet(tweetLink, item);
+    } catch (e) {
+      console.error(`[Twitter Monitor] Failed to extract media for ${tweetLink}:`, e);
+      errorEventEmitter.emitError({
+        source: 'cron',
+        message: `Twitter monitor: failed to extract media for ${tweetLink}`,
+        stack: e instanceof Error ? e.stack : undefined,
+        details: { phase: 'twitter-monitor-extract', tweetLink },
+      });
+      continue;
+    }
+
+    if (mediaList && mediaList.length > 0) {
+      const sourceTweetId = mediaList[0].tweet_id || tweetId;
+      const sourceTweetLink = mediaList[0].tweet_url || buildCanonicalTweetUrl(sourceTweetId);
+
+      const existing = await deps.findExistingMediaGroup({
+        where: { source_url: { [Op.regexp]: `/status/${sourceTweetId}([/?#]|$)` } }
+      });
+      if (existing) continue;
+
+      console.log(`[Twitter Monitor] New tweet candidate found: ${sourceTweetLink}`);
+
+      const firstMedia = mediaList[0];
+      const tweetText = firstMedia.text || item.title || '';
+      const tweetAuthor = firstMedia.user_name || item.creator || '';
+      const tweetHandle = firstMedia.user_screen_name || '';
+      const tweetDate = firstMedia.date || item.isoDate || new Date().toISOString();
+
+      for (const media of mediaList) {
+        const originalMediaUrl = media.url;
+        const existingStaging = await deps.findExistingStagingFanart({
+          where: {
+            tweet_id: sourceTweetId,
+            media_url: originalMediaUrl,
+          }
+        });
+        if (existingStaging) continue;
+
+        const mediaType = resolveMediaType(media, originalMediaUrl);
+        const staging = await deps.createStagingFanart({
+          tweet_id: sourceTweetId,
+          original_url: sourceTweetLink,
+          media_url: originalMediaUrl,
+          thumbnail_url: media.thumbnail || null,
+          original_thumbnail_url: media.thumbnail || null,
+          author_name: tweetAuthor,
+          author_handle: tweetHandle,
+          r2_url: null,
+          media_type: mediaType,
+          crawled_at: new Date(),
+          post_date: safeDate(tweetDate),
+          source_text: tweetText,
+          status: 'pending',
+          source: 'rss',
+          like_count: firstMedia.like_count || 0,
+          retweet_count: firstMedia.retweet_count || 0,
+          view_count: firstMedia.view_count || 0,
+          hashtags: firstMedia.hashtags || [],
+        });
+
+        newCandidates++;
+
+        await deps.sendFanartReviewNotification({
+          stagingId: String(staging.get('id')),
+          title: 'FanArt 審核通知',
+          body: `發現新推文！來自 ${tweetAuthor || tweetHandle || 'unknown'}\n包含 ${mediaList.length} 個媒體\n${tweetText}`,
+          sourceUrl: sourceTweetLink,
+          imageUrl: mediaType === 'image' ? originalMediaUrl : (media.thumbnail || undefined),
+        });
+      }
+
+      console.log(`[Twitter Monitor] Saved new fanart candidate(s): ${sourceTweetLink}`);
+    }
+  }
+
+  return { feedUrl, newCandidates };
+};
+
 export const TwitterMonitorService = {
+  /**
+   * 收集所有 feed URL 並順序處理（相容舊呼叫 / 無 queue 環境）。
+   * 生產環境應改用 queue 層的 enqueueFeeds + processFeed。
+   */
   checkRss: async () => {
-    const legacyFeedUrl = process.env.TWITTER_RSS_URL;
-    const targets = await deps.getMonitoredFeedTargets();
-    const rssHubBase = inferRssHubBaseFromFeedUrl(legacyFeedUrl) || getRssHubBaseUrl();
-    const feedUrls = Array.from(new Set([
-      ...targets.map((target) => buildTwitterRssFeedUrl(rssHubBase, target)),
-      ...(legacyFeedUrl ? [legacyFeedUrl] : []),
-    ]));
+    const feedUrls = await collectFeedUrls();
 
     if (feedUrls.length === 0) {
       console.log('[Twitter Monitor] No monitor targets or TWITTER_RSS_URL configured. Skipping.');
-      return;
+      return { success: true, processedCount: 0, timestamp: new Date().toISOString() };
     }
 
     console.log(`[Twitter Monitor] Running check for ${feedUrls.length} feed(s)...`);
-    try {
-      let newCandidatesCount = 0;
-      let successfulFeeds = 0;
-      let failedFeeds = 0;
+    let totalNewCandidates = 0;
+    let failedFeeds = 0;
 
-      for (const feedUrl of feedUrls) {
-        let feed: { items: RssTweetItem[] };
-        try {
-          feed = await deps.parseURL(feedUrl);
-          successfulFeeds++;
-        } catch (error: any) {
-          failedFeeds++;
-          console.error(`[Twitter Monitor] Failed to fetch or parse RSS feed ${feedUrl}:`, error);
-          errorEventEmitter.emitError({
-            source: 'cron',
-            message: `Twitter monitor: failed to fetch or parse RSS feed ${feedUrl}`,
-            stack: error instanceof Error ? error.stack : undefined,
-            details: { phase: 'twitter-monitor-feed', feedUrl },
-          });
-          continue;
-        }
-
-        for (const item of feed.items) {
-          // 確保是推文網址
-          if (!item.link) continue;
-          const tweetLink = normalizeTweetUrl(item.link);
-          const tweetId = extractTweetId(tweetLink);
-          if (!tweetId) continue;
-
-          // 以 RSS item 為主解析媒體，必要時由 x.com 頁面狀態補強原推資訊。
-          let mediaList: TwitterMedia[] = [];
-          try {
-            mediaList = await deps.extractMediaFromTweet(tweetLink, item);
-          } catch (e) {
-            console.error(`[Twitter Monitor] Failed to extract media for ${tweetLink}:`, e);
-            errorEventEmitter.emitError({
-              source: 'cron',
-              message: `Twitter monitor: failed to extract media for ${tweetLink}`,
-              stack: e instanceof Error ? e.stack : undefined,
-              details: { phase: 'twitter-monitor-extract', tweetLink },
-            });
-            continue;
-          }
-
-          // 如果有媒體（圖片、影片等），先存入 staging 等待審核。
-          if (mediaList && mediaList.length > 0) {
-            const sourceTweetId = mediaList[0].tweet_id || tweetId;
-            const sourceTweetLink = mediaList[0].tweet_url || buildCanonicalTweetUrl(sourceTweetId);
-
-            // 檢查真正的原推文是否已經升入正式媒體庫
-            const existing = await deps.findExistingMediaGroup({
-              where: { source_url: { [Op.regexp]: `/status/${sourceTweetId}([/?#]|$)` } }
-            });
-            if (existing) continue;
-
-            console.log(`[Twitter Monitor] New tweet candidate found: ${sourceTweetLink}`);
-
-            const firstMedia = mediaList[0];
-            const tweetText = firstMedia.text || item.title || '';
-            const tweetAuthor = firstMedia.user_name || item.creator || '';
-            const tweetHandle = firstMedia.user_screen_name || '';
-            const tweetDate = firstMedia.date || item.isoDate || new Date().toISOString();
-
-            // 監聽階段只建立 staging candidate，不寫入 R2；避免 reject/hold 的無用媒體進入 R2。
-            // R2 上傳集中在 approve/promote flow，見 staging-fanart.controller.ts。
-            for (const media of mediaList) {
-              const originalMediaUrl = media.url;
-              const existingStaging = await deps.findExistingStagingFanart({
-                where: {
-                  tweet_id: sourceTweetId,
-                  media_url: originalMediaUrl,
-                }
-              });
-              if (existingStaging) continue;
-
-              const mediaType = resolveMediaType(media, originalMediaUrl);
-              const staging = await deps.createStagingFanart({
-                tweet_id: sourceTweetId,
-                original_url: sourceTweetLink,
-                media_url: originalMediaUrl,
-                thumbnail_url: media.thumbnail || null,
-                original_thumbnail_url: media.thumbnail || null,
-                author_name: tweetAuthor,
-                author_handle: tweetHandle,
-                r2_url: null,
-                media_type: mediaType,
-                crawled_at: new Date(),
-                post_date: safeDate(tweetDate),
-                source_text: tweetText,
-                status: 'pending',
-                source: 'rss',
-                like_count: firstMedia.like_count || 0,
-                retweet_count: firstMedia.retweet_count || 0,
-                view_count: firstMedia.view_count || 0,
-                hashtags: firstMedia.hashtags || [],
-              });
-
-              newCandidatesCount++;
-
-              await deps.sendFanartReviewNotification({
-                stagingId: String(staging.get('id')),
-                title: 'FanArt 審核通知',
-                body: `發現新推文！來自 ${tweetAuthor || tweetHandle || 'unknown'}\n包含 ${mediaList.length} 個媒體\n${tweetText}`,
-                sourceUrl: sourceTweetLink,
-                imageUrl: mediaType === 'image' ? originalMediaUrl : (media.thumbnail || undefined),
-              });
-            }
-
-            console.log(`[Twitter Monitor] Saved new fanart candidate(s): ${sourceTweetLink}`);
-          }
-        }
+    for (const feedUrl of feedUrls) {
+      const result = await processFeed(feedUrl);
+      if (result.newCandidates === 0) {
+        // 可能是正常（無新推文）或失敗（parseURL 已 emitError）
       }
-      if (successfulFeeds === 0 && failedFeeds > 0) {
-        throw new Error('All configured Twitter RSS feeds failed');
-      }
-      return { success: true, processedCount: newCandidatesCount, timestamp: new Date().toISOString() };
-    } catch (error: any) {
-      console.error('[Twitter Monitor] Error fetching or parsing RSS:', error);
-      errorEventEmitter.emitError({
-        source: 'cron',
-        message: `Twitter monitor RSS check failed: ${error.message}`,
-        stack: error.stack,
-        details: { phase: 'twitter-monitor-rss' },
-      });
-      throw new Error(`Failed to check RSS: ${error.message}`);
+      totalNewCandidates += result.newCandidates;
     }
-  }
+
+    return { success: true, processedCount: totalNewCandidates, timestamp: new Date().toISOString() };
+  },
+
+  collectFeedUrls,
+  processFeed,
 };

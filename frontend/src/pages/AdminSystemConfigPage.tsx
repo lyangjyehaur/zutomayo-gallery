@@ -59,6 +59,7 @@ type ErrorConfig = {
 
 type ApifyConfig = {
   has_api_token: boolean
+  api_token: string
 }
 
 type AllSystemSettings = {
@@ -229,8 +230,8 @@ function LockableInput({
       </label>
       <div className="relative">
         <Input
-          type={locked && isSecret ? "password" : type}
-          value={locked ? (isSecret ? "••••••••" : (value || placeholder || "")) : value}
+          type={locked ? "text" : type}
+          value={value || ""}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           disabled={locked}
@@ -246,11 +247,8 @@ function LockableInput({
           {locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4 text-green-600" />}
         </button>
       </div>
-      {locked && configuredDisplay && !isSecret && (
-        <p className="text-xs font-mono opacity-60">目前: {configuredDisplay}</p>
-      )}
-      {locked && isSecret && (
-        <p className="text-xs font-mono opacity-60">已設定（點擊鎖頭解鎖以修改）</p>
+      {locked && !value && (
+        <p className="text-xs font-mono opacity-60">尚未設定</p>
       )}
       {!locked && children}
     </div>
@@ -288,6 +286,7 @@ export function AdminSystemConfigPage() {
   const [rsshubBaseUrl, setRsshubBaseUrl] = React.useState("")
   const [monitorCron, setMonitorCron] = React.useState("")
   const [isSavingTwitter, setIsSavingTwitter] = React.useState(false)
+  const [isTriggering, setIsTriggering] = React.useState(false)
 
   // Cron visual editor state
   const cronParts = splitCron(monitorCron)
@@ -340,9 +339,13 @@ export function AdminSystemConfigPage() {
 
       // Telegram
       setTgConfig(data.telegram || null)
+      setBotToken(data.telegram?.bot_token || "")
       setChatId(data.telegram?.chat_id || "")
+      setWebhookSecret(data.telegram?.webhook_secret || "")
 
       // Bark
+      setBarkUrl(data.bark?.bark_url || "")
+      setBarkKey(data.bark?.bark_key || "")
       setBarkHasUrl(data.bark?.has_bark_url ?? false)
       setBarkHasKey(data.bark?.has_bark_key ?? false)
 
@@ -355,6 +358,7 @@ export function AdminSystemConfigPage() {
       setWindowMs(String(data.error?.window_ms ? data.error.window_ms / 60000 : ""))
 
       // Apify
+      setApifyToken(data.apify?.api_token || "")
       setApifyHasToken(data.apify?.has_api_token ?? false)
     } catch (error: any) {
       toast.error(formatApiError(error, "載入系統配置失敗"))
@@ -509,6 +513,22 @@ export function AdminSystemConfigPage() {
       toast.error(formatApiError(error, "儲存 Twitter 監聽設定失敗"))
     } finally {
       setIsSavingTwitter(false)
+    }
+  }
+
+  const handleTriggerMonitor = async () => {
+    setIsTriggering(true)
+    try {
+      const res = await adminFetch(`${SYSTEM_CONFIG_API}/twitter/trigger`, {
+        method: "POST",
+      })
+      const json = await res.json()
+      if (!res.ok) throw json
+      toast.success(json.message || "監聽已觸發")
+    } catch (error: any) {
+      toast.error(formatApiError(error, "觸發監聽失敗"))
+    } finally {
+      setIsTriggering(false)
     }
   }
 
@@ -816,6 +836,10 @@ export function AdminSystemConfigPage() {
             <Button onClick={handleSaveTwitter} disabled={isSavingTwitter}>
               {isSavingTwitter ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
               儲存設定
+            </Button>
+            <Button variant="neutral" onClick={handleTriggerMonitor} disabled={isTriggering}>
+              {isTriggering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RadioTower className="mr-2 h-4 w-4" />}
+              手動觸發
             </Button>
           </div>
         </SectionCard>

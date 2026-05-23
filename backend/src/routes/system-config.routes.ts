@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import {
   getBarkConfig, updateBarkConfig, testBark,
-  getTwitterMonitorConfig, updateTwitterMonitorConfig,
+  getTwitterMonitorConfig, updateTwitterMonitorConfig, triggerTwitterMonitor,
   getErrorNotificationConfig, updateErrorNotificationConfig,
   getApifyConfig, updateApifyConfig,
   getAllSystemConfig,
@@ -34,6 +34,7 @@ router.post('/bark/test', asyncHandler(testBark));
 // Twitter Monitor
 router.get('/twitter', asyncHandler(getTwitterMonitorConfig));
 router.put('/twitter', asyncHandler(updateTwitterMonitorConfig));
+router.post('/twitter/trigger', asyncHandler(triggerTwitterMonitor));
 
 // Error Notification
 router.get('/error', asyncHandler(getErrorNotificationConfig));

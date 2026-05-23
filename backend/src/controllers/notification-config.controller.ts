@@ -5,6 +5,8 @@ import { logger } from '../utils/logger.js';
 import { refreshNotificationConfig } from '../services/notification.service.js';
 import { refreshErrorNotificationConfig } from '../services/error-events.service.js';
 import { refreshTelegramConfig } from '../services/telegram-bot.service.js';
+import { twitterQueue } from '../services/queue.service.js';
+import { TwitterMonitorService } from '../services/twitter-monitor.service.js';
 
 // ── Bark ──
 
@@ -107,6 +109,31 @@ export const updateTwitterMonitorConfig = async (req: Request, res: Response) =>
 
   logger.info('Twitter monitor config updated via admin');
   res.json({ success: true, message: 'Twitter 監聽配置已更新' });
+};
+
+export const triggerTwitterMonitor = async (_req: Request, res: Response) => {
+  if (twitterQueue) {
+    // 生產環境：enqueue check-rss job，BullMQ 會拆成 per-feed jobs
+    const job = await twitterQueue.add('check-rss', {}, {
+      attempts: 1,
+      removeOnComplete: 20,
+    });
+    logger.info({ jobId: job.id }, 'Twitter monitor manually triggered via BullMQ');
+    res.json({
+      success: true,
+      message: '已排入監聽佇列，將在數秒內開始處理',
+      data: { jobId: job.id, mode: 'queue' },
+    });
+  } else {
+    // 開發環境（無 Redis）：直接執行
+    logger.info('Twitter monitor manually triggered (direct, no Redis)');
+    const result = await TwitterMonitorService.checkRss();
+    res.json({
+      success: true,
+      message: `監聽完成，新增 ${result?.processedCount ?? 0} 筆候選`,
+      data: { ...result, mode: 'direct' },
+    });
+  }
 };
 
 // ── Error Notification ──
@@ -224,7 +251,7 @@ export const getTelegramConfig = async (_req: Request, res: Response) => {
   res.json({
     success: true,
     data: {
-      bot_token: config.bot_token ? maskToken(config.bot_token) : '',
+      bot_token: config.bot_token || '',
       has_bot_token: !!config.bot_token,
       chat_id: config.chat_id,
       has_chat_id: !!config.chat_id,
@@ -425,7 +452,7 @@ export const getAllSystemConfig = async (_req: Request, res: Response) => {
     success: true,
     data: {
       telegram: {
-        bot_token: tgToken ? maskToken(tgToken) : '',
+        bot_token: tgToken || '',
         has_bot_token: !!tgToken,
         chat_id: tg.chat_id || process.env.TELEGRAM_CHAT_ID || '',
         has_chat_id: !!(tg.chat_id || process.env.TELEGRAM_CHAT_ID),
@@ -453,6 +480,7 @@ export const getAllSystemConfig = async (_req: Request, res: Response) => {
       },
       apify: {
         has_api_token: !!(apify.api_token || process.env.APIFY_API_TOKEN),
+        api_token: apify.api_token || process.env.APIFY_API_TOKEN || '',
       },
     },
   });
@@ -492,6 +520,7 @@ export const getAllNotificationSettings = async (_req: Request, res: Response) =
       },
       apify: {
         has_api_token: !!(apify.api_token || process.env.APIFY_API_TOKEN),
+        api_token: apify.api_token || process.env.APIFY_API_TOKEN || '',
       },
     },
   });

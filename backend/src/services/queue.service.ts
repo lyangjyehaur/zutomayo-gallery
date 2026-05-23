@@ -1,6 +1,6 @@
 import { Queue, Worker, Job } from 'bullmq';
 import { Redis } from 'ioredis';
-import { TwitterMonitorService } from './twitter-monitor.service.js';
+import { TwitterMonitorService, collectFeedUrls, processFeed } from './twitter-monitor.service.js';
 import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
@@ -47,19 +47,33 @@ if (isProduction || hasRedisUrl) {
     serverAdapter: bullBoardAdapter,
   });
 
+  // Twitter monitor worker：支援 check-rss（協調）和 check-feed（單 feed 處理）
   const worker = new Worker('twitter-monitor', async (job: Job) => {
     logger.info({ jobId: job.id, jobName: job.name }, '[BullMQ] Processing job');
+
     if (job.name === 'check-rss') {
-      // 呼叫原本的檢查邏輯
-      const result = await TwitterMonitorService.checkRss();
-      
-      // 更新任務進度（可選）
+      // 協調 job：收集所有 feed URL，拆成獨立的 check-feed job
+      const feedUrls = await collectFeedUrls();
+      logger.info({ feedCount: feedUrls.length }, '[Twitter Monitor] Enqueuing feed jobs');
+
+      for (const feedUrl of feedUrls) {
+        await twitterQueue!.add('check-feed', { feedUrl }, {
+          attempts: 2,
+          backoff: { type: 'exponential', delay: 3000 },
+        });
+      }
+
       await job.updateProgress(100);
-      
-      // 回傳結果，這會顯示在 Bull-Board 的「returnValue」中
+      return { enqueuedFeeds: feedUrls.length };
+    }
+
+    if (job.name === 'check-feed') {
+      const { feedUrl } = job.data as { feedUrl: string };
+      const result = await processFeed(feedUrl);
+      await job.updateProgress(100);
       return result;
     }
-  }, { connection, concurrency: 1 });
+  }, { connection, concurrency: 3 });
 
   worker.on('completed', (job, returnvalue) => {
     logger.info({ jobId: job.id, result: returnvalue }, '[BullMQ] Job completed');
@@ -114,12 +128,12 @@ export const initQueues = async () => {
     await twitterQueue.removeRepeatableByKey(job.key);
   }
 
-  // 設定新的排程任務
+  // 設定新的排程任務：check-rss 作為協調 job，實際 feed 處理拆成獨立 job
   await twitterQueue.add('check-rss', {}, {
     repeat: {
       pattern: CRON_SCHEDULE
     }
   });
 
-  logger.info({ pattern: CRON_SCHEDULE }, '[BullMQ] Twitter Monitor scheduled');
+  logger.info({ pattern: CRON_SCHEDULE }, '[BullMQ] Twitter Monitor scheduled (check-rss → per-feed jobs, concurrency=3)');
 };
