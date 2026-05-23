@@ -229,6 +229,7 @@ export const StagingFanartModel = sequelize.define('StagingFanart', {
   media_width: { type: DataTypes.INTEGER, allowNull: true, comment: '媒體寬度' },
   media_height: { type: DataTypes.INTEGER, allowNull: true, comment: '媒體高度' },
   hashtags: { type: DataTypes.JSONB, defaultValue: [], comment: '推文標籤' },
+  content_type: { type: DataTypes.STRING(20), defaultValue: 'fanart', comment: '內容分類 (fanart/official)' },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '建立時間' },
   updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '更新時間' },
 }, { 
@@ -365,6 +366,7 @@ export const MonitorTargetModel = sequelize.define('MonitorTarget', {
   label: { type: DataTypes.STRING, allowNull: true, comment: '管理介面顯示名稱' },
   enabled: { type: DataTypes.BOOLEAN, defaultValue: true, comment: '是否啟用監聽' },
   note: { type: DataTypes.TEXT, allowNull: true, comment: '管理備註' },
+  content_type: { type: DataTypes.STRING(20), defaultValue: 'fanart', comment: '內容分類 (fanart/official)' },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '建立時間' },
   updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '更新時間' },
 }, {
