@@ -35,6 +35,7 @@ function initBot(token: string) {
 // 啟動時從 env 初始化，然後異步從 DB 載入（如有）
 initBot(cachedBotToken);
 refreshTelegramConfig().catch(() => {});
+import('../controllers/webhook.controller.js').then(m => m.refreshWebhookSecret()).catch(() => {});
 
 /**
  * 從 DB 重新載入 Telegram 配置（admin 頁面更新後呼叫）

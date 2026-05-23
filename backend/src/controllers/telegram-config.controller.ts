@@ -71,6 +71,8 @@ export const updateTelegramConfig = async (req: Request, res: Response) => {
 
   // 重新載入 bot service 的配置
   await refreshTelegramConfig();
+  const { refreshWebhookSecret } = await import('./webhook.controller.js');
+  await refreshWebhookSecret();
 
   logger.info('Telegram config updated via admin');
 
@@ -162,10 +164,19 @@ export const setTelegramWebhook = async (req: Request, res: Response) => {
   const row = await SysConfigModel.findByPk(CONFIG_KEY);
   const dbConfig = (row?.get('value') as any) || {};
   const botToken = dbConfig.bot_token || process.env.TELEGRAM_BOT_TOKEN || '';
-  const webhookSecret = dbConfig.webhook_secret || process.env.TELEGRAM_WEBHOOK_SECRET || '';
+  let webhookSecret = dbConfig.webhook_secret || process.env.TELEGRAM_WEBHOOK_SECRET || '';
 
   if (!botToken) {
     throw new AppError(400, 'TELEGRAM_BOT_NOT_CONFIGURED', '尚未設定 Telegram Bot Token');
+  }
+
+  // Telegram secret_token 只允許 A-Z a-z 0-9 _ -，長度 1-256
+  if (webhookSecret && !/^[A-Za-z0-9_-]{1,256}$/.test(webhookSecret)) {
+    const crypto = await import('crypto');
+    webhookSecret = 'whk_' + crypto.default.randomBytes(16).toString('hex');
+    dbConfig.webhook_secret = webhookSecret;
+    await SysConfigModel.upsert({ key: CONFIG_KEY, value: dbConfig, description: 'Telegram Bot 審核配置' } as any);
+    logger.warn('Telegram webhook_secret contained invalid characters, auto-generated a new one');
   }
 
   const params: Record<string, string> = { url: webhook_url };

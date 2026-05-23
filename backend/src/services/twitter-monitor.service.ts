@@ -56,25 +56,41 @@ const safeDate = (value: string | Date | undefined) => {
   return Number.isNaN(date.getTime()) ? new Date() : date;
 };
 
+export type FeedTarget = {
+  feedUrl: string;
+  contentType: string;
+};
+
 /**
  * 取得所有監聽 feed URL（去重）。
  * 供 queue 層拆分成獨立 job 使用。
  */
-export const collectFeedUrls = async (): Promise<string[]> => {
+export const collectFeedTargets = async (): Promise<FeedTarget[]> => {
   const legacyFeedUrl = process.env.TWITTER_RSS_URL;
   const targets = await deps.getMonitoredFeedTargets();
   const rssHubBase = inferRssHubBaseFromFeedUrl(legacyFeedUrl) || getRssHubBaseUrl();
-  return Array.from(new Set([
-    ...targets.map((target) => buildTwitterRssFeedUrl(rssHubBase, target)),
-    ...(legacyFeedUrl ? [legacyFeedUrl] : []),
-  ]));
+  const seen = new Set<string>();
+  const result: FeedTarget[] = [];
+
+  for (const target of targets) {
+    const url = buildTwitterRssFeedUrl(rssHubBase, target);
+    if (seen.has(url)) continue;
+    seen.add(url);
+    result.push({ feedUrl: url, contentType: target.content_type || 'fanart' });
+  }
+
+  if (legacyFeedUrl && !seen.has(legacyFeedUrl)) {
+    result.push({ feedUrl: legacyFeedUrl, contentType: 'fanart' });
+  }
+
+  return result;
 };
 
 /**
  * 處理單一 RSS feed：fetch → parse → extract media → 寫 staging → 發通知。
  * 回傳該 feed 產生的新候選數量。
  */
-export const processFeed = async (feedUrl: string): Promise<{ feedUrl: string; newCandidates: number }> => {
+export const processFeed = async (feedUrl: string, contentType: string = 'fanart'): Promise<{ feedUrl: string; newCandidates: number }> => {
   let feed: { items: RssTweetItem[] };
   try {
     feed = await deps.parseURL(feedUrl);
@@ -158,14 +174,21 @@ export const processFeed = async (feedUrl: string): Promise<{ feedUrl: string; n
           retweet_count: firstMedia.retweet_count || 0,
           view_count: firstMedia.view_count || 0,
           hashtags: firstMedia.hashtags || [],
+          content_type: contentType,
         });
 
         newCandidates++;
 
+        const contentTypeLabel = contentType === 'official' ? '📋 官方' : '🎨 Fanart';
+        const likeCount = firstMedia.like_count || 0;
+        const rtCount = firstMedia.retweet_count || 0;
+        const viewCount = firstMedia.view_count || 0;
+        const stats = [`❤️ ${likeCount}`, `🔁 ${rtCount}`, `👁 ${viewCount}`].join(' · ');
+
         await deps.sendFanartReviewNotification({
           stagingId: String(staging.get('id')),
-          title: 'FanArt 審核通知',
-          body: `發現新推文！來自 ${tweetAuthor || tweetHandle || 'unknown'}\n包含 ${mediaList.length} 個媒體\n${tweetText}`,
+          title: `${contentTypeLabel} 審核通知`,
+          body: `來自 ${tweetAuthor || tweetHandle || 'unknown'}\n${stats}\n包含 ${mediaList.length} 個媒體\n${tweetText}`,
           sourceUrl: sourceTweetLink,
           imageUrl: mediaType === 'image' ? originalMediaUrl : (media.thumbnail || undefined),
         });
@@ -184,19 +207,19 @@ export const TwitterMonitorService = {
    * 生產環境應改用 queue 層的 enqueueFeeds + processFeed。
    */
   checkRss: async () => {
-    const feedUrls = await collectFeedUrls();
+    const feedTargets = await collectFeedTargets();
 
-    if (feedUrls.length === 0) {
+    if (feedTargets.length === 0) {
       console.log('[Twitter Monitor] No monitor targets or TWITTER_RSS_URL configured. Skipping.');
       return { success: true, processedCount: 0, timestamp: new Date().toISOString() };
     }
 
-    console.log(`[Twitter Monitor] Running check for ${feedUrls.length} feed(s)...`);
+    console.log(`[Twitter Monitor] Running check for ${feedTargets.length} feed(s)...`);
     let totalNewCandidates = 0;
     let failedFeeds = 0;
 
-    for (const feedUrl of feedUrls) {
-      const result = await processFeed(feedUrl);
+    for (const target of feedTargets) {
+      const result = await processFeed(target.feedUrl, target.contentType);
       if (result.newCandidates === 0) {
         // 可能是正常（無新推文）或失敗（parseURL 已 emitError）
       }
@@ -206,6 +229,6 @@ export const TwitterMonitorService = {
     return { success: true, processedCount: totalNewCandidates, timestamp: new Date().toISOString() };
   },
 
-  collectFeedUrls,
+  collectFeedTargets,
   processFeed,
 };

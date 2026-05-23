@@ -300,6 +300,8 @@ export const updateTelegramConfig = async (req: Request, res: Response) => {
   } as any);
 
   await refreshTelegramConfig();
+  const { refreshWebhookSecret } = await import('./webhook.controller.js');
+  await refreshWebhookSecret();
 
   // 自動註冊 Webhook（如果有 bot token 和 webhook secret）
   const finalBotToken = updated.bot_token || process.env.TELEGRAM_BOT_TOKEN || '';
@@ -307,9 +309,20 @@ export const updateTelegramConfig = async (req: Request, res: Response) => {
   if (finalBotToken) {
     try {
       const webhookUrl = `${webhookBase}/api/webhook/telegram`;
+      let webhookSecret = updated.webhook_secret || '';
+
+      // Telegram secret_token 只允許 A-Z a-z 0-9 _ -，長度 1-256
+      if (webhookSecret && !/^[A-Za-z0-9_-]{1,256}$/.test(webhookSecret)) {
+        const crypto = await import('crypto');
+        webhookSecret = 'whk_' + crypto.default.randomBytes(16).toString('hex');
+        updated.webhook_secret = webhookSecret;
+        await SysConfigModel.upsert({ key: TG_CONFIG_KEY, value: updated, description: 'Telegram Bot 審核配置' } as any);
+        logger.warn('Telegram webhook_secret contained invalid characters, auto-generated a new one');
+      }
+
       const params: Record<string, string> = { url: webhookUrl };
-      if (updated.webhook_secret) {
-        params.secret_token = updated.webhook_secret;
+      if (webhookSecret) {
+        params.secret_token = webhookSecret;
       }
       const response = await fetch(`https://api.telegram.org/bot${finalBotToken}/setWebhook`, {
         method: 'POST',

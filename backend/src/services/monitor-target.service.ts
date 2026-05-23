@@ -4,12 +4,14 @@ import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
 
 export type MonitorTargetType = 'user' | 'hashtag';
+export type ContentType = 'fanart' | 'official';
 
 export type MonitorFeedTarget = {
   type: MonitorTargetType;
   handle: string;
   label?: string | null;
   source: 'artist' | 'manual' | 'env';
+  content_type: ContentType;
 };
 
 type ArtistTwitterSource = {
@@ -19,6 +21,12 @@ type ArtistTwitterSource = {
 };
 
 const validTypes = new Set<MonitorTargetType>(['user', 'hashtag']);
+
+const validContentTypes = new Set<ContentType>(['fanart', 'official']);
+
+export const isContentType = (value: unknown): value is ContentType => {
+  return typeof value === 'string' && validContentTypes.has(value as ContentType);
+};
 
 export const isMonitorTargetType = (value: unknown): value is MonitorTargetType => {
   return typeof value === 'string' && validTypes.has(value as MonitorTargetType);
@@ -141,12 +149,15 @@ export const createMonitorTarget = async (payload: any) => {
 
   await ensureNoDuplicate(payload.type, handle);
 
+  const contentType: ContentType = isContentType(payload?.content_type) ? payload.content_type : 'fanart';
+
   return MonitorTargetModel.create({
     type: payload.type,
     handle,
     label: typeof payload.label === 'string' && payload.label.trim() ? payload.label.trim() : null,
     enabled: typeof payload.enabled === 'boolean' ? payload.enabled : true,
     note: typeof payload.note === 'string' && payload.note.trim() ? payload.note.trim() : null,
+    content_type: contentType,
   } as any);
 };
 
@@ -169,6 +180,7 @@ export const updateMonitorTarget = async (id: string, payload: any) => {
   if ('label' in payload) updateData.label = typeof payload.label === 'string' && payload.label.trim() ? payload.label.trim() : null;
   if ('note' in payload) updateData.note = typeof payload.note === 'string' && payload.note.trim() ? payload.note.trim() : null;
   if ('enabled' in payload) updateData.enabled = Boolean(payload.enabled);
+  if ('content_type' in payload && isContentType(payload.content_type)) updateData.content_type = payload.content_type;
 
   await target.update(updateData);
   return target;
@@ -204,14 +216,14 @@ export const getMonitoredFeedTargets = async (): Promise<MonitorFeedTarget[]> =>
     targets.push(target);
   };
 
-  artistUsers.forEach((artist) => push({ type: 'user', handle: artist.handle, label: artist.name, source: 'artist' }));
+  artistUsers.forEach((artist) => push({ type: 'user', handle: artist.handle, label: artist.name, source: 'artist', content_type: 'official' }));
   manualRows.forEach((row: any) => {
     const data = row.toJSON();
-    push({ type: 'user', handle: data.handle, label: data.label, source: 'manual' });
+    push({ type: 'user', handle: data.handle, label: data.label, source: 'manual', content_type: data.content_type || 'fanart' });
   });
   hashtagRows.forEach((row: any) => {
     const data = row.toJSON();
-    push({ type: 'hashtag', handle: data.handle, label: data.label, source: 'manual' });
+    push({ type: 'hashtag', handle: data.handle, label: data.label, source: 'manual', content_type: data.content_type || 'fanart' });
   });
 
   return targets;

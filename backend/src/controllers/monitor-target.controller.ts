@@ -4,6 +4,7 @@ import { AppError } from '../middleware/errorHandler.js';
 import {
   createMonitorTarget,
   getMonitorSources,
+  isContentType,
   isMonitorTargetType,
   listMonitorTargets,
   type MonitorTargetType,

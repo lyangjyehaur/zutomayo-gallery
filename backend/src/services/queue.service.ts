@@ -1,6 +1,6 @@
 import { Queue, Worker, Job } from 'bullmq';
 import { Redis } from 'ioredis';
-import { TwitterMonitorService, collectFeedUrls, processFeed } from './twitter-monitor.service.js';
+import { TwitterMonitorService, collectFeedTargets, processFeed } from './twitter-monitor.service.js';
 import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
@@ -54,23 +54,23 @@ if (isProduction || hasRedisUrl) {
 
     if (job.name === 'check-rss') {
       // 協調 job：收集所有 feed URL，拆成獨立的 check-feed job
-      const feedUrls = await collectFeedUrls();
-      logger.info({ feedCount: feedUrls.length }, '[Twitter Monitor] Enqueuing feed jobs');
+      const feedTargets = await collectFeedTargets();
+      logger.info({ feedCount: feedTargets.length }, '[Twitter Monitor] Enqueuing feed jobs');
 
-      for (const feedUrl of feedUrls) {
-        await twitterQueue!.add('check-feed', { feedUrl }, {
+      for (const target of feedTargets) {
+        await twitterQueue!.add('check-feed', { feedUrl: target.feedUrl, contentType: target.contentType }, {
           attempts: 2,
           backoff: { type: 'exponential', delay: 3000 },
         });
       }
 
       await job.updateProgress(100);
-      return { enqueuedFeeds: feedUrls.length };
+      return { enqueuedFeeds: feedTargets.length };
     }
 
     if (job.name === 'check-feed') {
-      const { feedUrl } = job.data as { feedUrl: string };
-      const result = await processFeed(feedUrl);
+      const { feedUrl, contentType } = job.data as { feedUrl: string; contentType?: string };
+      const result = await processFeed(feedUrl, contentType || 'fanart');
       await job.updateProgress(100);
       return result;
     }

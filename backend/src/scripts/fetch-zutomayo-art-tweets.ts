@@ -21,7 +21,7 @@ function addDaysUtc(dateStr: string, days: number) {
   return formatUtcDate(dt);
 }
 
-export async function runCrawler(searchTerms: string, startDate?: string, endDate?: string, customMaxItems?: number, stateKey: string = 'staging-fanart') {
+export async function runCrawler(searchTerms: string, startDate?: string, endDate?: string, customMaxItems?: number, stateKey: string = 'staging-fanart', contentType: string = 'fanart') {
   if (!APIFY_API_TOKEN) {
     console.warn('[Crawler] 警告: 未設定 APIFY_API_TOKEN 環境變數。');
     console.warn('[Crawler] 請在 .env 檔案中新增憑證資訊。');
@@ -263,7 +263,8 @@ export async function runCrawler(searchTerms: string, startDate?: string, endDat
           media_height: media.height,
           hashtags,
           status: 'pending',
-          source: 'crawler'
+          source: 'crawler',
+          content_type: contentType,
         });
 
         progress.total_crawled++;

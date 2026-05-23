@@ -14,7 +14,7 @@ const mvService = new MVService();
 
 const generateShortId = () => nanoid(16);
 export type StagingReviewAction = 'approve' | 'hold' | 'reject';
-type StagingStatus = 'pending' | 'on_hold' | 'approved' | 'rejected';
+type StagingStatus = 'pending' | 'on_hold' | 'reviewed' | 'approved' | 'rejected';
 
 async function fetchMediaToBuffer(url: string): Promise<{ buffer: Buffer; contentType: string; ext: string } | null> {
   let fetchUrl = url;
@@ -49,6 +49,7 @@ export const triggerCrawler = async (req: Request, res: Response) => {
   const startDate = req.body.startDate as string | undefined;
   const endDate = req.body.endDate as string | undefined;
   const maxItems = req.body.maxItems ? parseInt(req.body.maxItems as string, 10) : undefined;
+  const contentType = (req.body.contentType as string) || 'fanart';
 
   if (!searchTerms || typeof searchTerms !== 'string' || !searchTerms.trim()) {
     throw new AppError(400, 'searchTerms is required');
@@ -58,7 +59,7 @@ export const triggerCrawler = async (req: Request, res: Response) => {
     throw new AppError(400, 'startDate and endDate are required');
   }
   
-  runCrawler(searchTerms, startDate, endDate, maxItems).then(async () => {
+  runCrawler(searchTerms, startDate, endDate, maxItems, undefined, contentType).then(async () => {
     try {
       const { NotificationService } = await import('../services/notification.service.js');
       await NotificationService.send({
@@ -113,6 +114,7 @@ export const getProgress = async (req: Request, res: Response) => {
   const statusCounts = {
     pending: 0,
     on_hold: 0,
+    reviewed: 0,
     approved: 0,
     rejected: 0,
   };
@@ -136,9 +138,15 @@ export const getProgress = async (req: Request, res: Response) => {
 
 export const getStagingFanarts = async (req: Request, res: Response) => {
   const status = (req.query.status as string) || 'pending';
-  const allowedStatuses = new Set(['pending', 'on_hold', 'approved', 'rejected']);
+  const allowedStatuses = new Set(['pending', 'on_hold', 'reviewed', 'approved', 'rejected']);
   if (!allowedStatuses.has(status)) {
     throw new AppError(400, 'Invalid status');
+  }
+
+  const contentType = req.query.contentType as string | undefined;
+  const where: any = { status };
+  if (contentType && (contentType === 'fanart' || contentType === 'official')) {
+    where.content_type = contentType;
   }
 
   const page = parseInt(req.query.page as string) || 1;
@@ -146,7 +154,7 @@ export const getStagingFanarts = async (req: Request, res: Response) => {
   const offset = (page - 1) * limit;
 
   const { count, rows } = await StagingFanartModel.findAndCountAll({
-    where: { status },
+    where,
     order: [['crawled_at', 'DESC'], ['created_at', 'DESC']],
     limit,
     offset
@@ -180,6 +188,7 @@ async function promoteStagingFanart(staging: any, mvs?: unknown) {
   const authorHandle = staging.get('author_handle') as any;
   const mediaWidth = staging.get('media_width') as number;
   const mediaHeight = staging.get('media_height') as number;
+  const contentType = (staging.get('content_type') as string) || 'fanart';
 
   let finalR2Url = r2Url;
   let finalThumbnailR2Url = staging.get('thumbnail_url') as string | null;
@@ -296,7 +305,7 @@ async function promoteStagingFanart(staging: any, mvs?: unknown) {
   if (!existingMedia) {
     existingMedia = await MediaModel.create({
       id: generateShortId(),
-      type: 'fanart',
+      type: contentType,
       media_type: mediaType || 'image',
       url: finalR2Url || mediaUrl,
       original_url: mediaUrl,
@@ -364,8 +373,8 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
     return;
   }
 
-  if (!['pending', 'on_hold'].includes(currentStatus)) {
-    throw new AppError(400, 'Only pending or on-hold fanarts can be approved');
+  if (!['pending', 'on_hold', 'reviewed'].includes(currentStatus)) {
+    throw new AppError(400, 'Only pending, on-hold, or reviewed fanarts can be approved');
   }
 
   await promoteStagingFanart(staging, mvs);
@@ -403,7 +412,7 @@ export async function applyStagingReviewAction(id: string, action: StagingReview
   if (action === 'hold') {
     if (currentStatus === 'on_hold') {
       alreadyProcessed = true;
-    } else if (currentStatus === 'pending') {
+    } else if (currentStatus === 'pending' || currentStatus === 'reviewed') {
       await staging.update({ status: 'on_hold' });
       changed = true;
     } else {
@@ -412,17 +421,17 @@ export async function applyStagingReviewAction(id: string, action: StagingReview
   } else if (action === 'reject') {
     if (currentStatus === 'rejected') {
       alreadyProcessed = true;
-    } else if (currentStatus === 'pending' || currentStatus === 'on_hold') {
+    } else if (currentStatus === 'pending' || currentStatus === 'on_hold' || currentStatus === 'reviewed') {
       await staging.update({ status: 'rejected' });
       changed = true;
     } else {
       throw new AppError(409, 'INVALID_REVIEW_STATE_TRANSITION', 'Invalid review state transition');
     }
   } else if (action === 'approve') {
-    if (currentStatus === 'approved') {
+    if (currentStatus === 'approved' || currentStatus === 'reviewed') {
       alreadyProcessed = true;
     } else if (currentStatus === 'pending' || currentStatus === 'on_hold') {
-      await promoteStagingFanart(staging);
+      await staging.update({ status: 'reviewed' });
       changed = true;
     } else {
       throw new AppError(409, 'INVALID_REVIEW_STATE_TRANSITION', 'Invalid review state transition');

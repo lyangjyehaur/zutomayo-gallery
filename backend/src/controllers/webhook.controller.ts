@@ -5,12 +5,29 @@ import { errorEventEmitter } from '../services/error-events.service.js';
 import { NotificationService } from '../services/notification.service.js';
 import { parseFanartReviewCallbackData } from '../services/telegram-bot.service.js';
 import { getTelegramBot } from '../services/telegram-bot.service.js';
+import { SysConfigModel } from '../models/index.js';
 import { logger } from '../utils/logger.js';
 
 const TELEGRAM_SECRET_HEADER = 'x-telegram-bot-api-secret-token';
+const CONFIG_KEY = 'telegram_config';
+
+let cachedWebhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET || '';
+
+/**
+ * 從 DB 重新載入 webhook secret（供 admin 更新後呼叫）
+ */
+export async function refreshWebhookSecret(): Promise<void> {
+  try {
+    const row = await SysConfigModel.findByPk(CONFIG_KEY);
+    const dbConfig = (row?.get('value') as any) || {};
+    cachedWebhookSecret = dbConfig.webhook_secret || process.env.TELEGRAM_WEBHOOK_SECRET || '';
+  } catch (err) {
+    logger.warn({ err }, 'Failed to refresh webhook secret from DB');
+  }
+}
 
 function isValidSecret(provided: string | undefined, expected: string): boolean {
-  if (!provided) return false;
+  if (!provided || !expected) return false;
   const providedBuffer = Buffer.from(provided);
   const expectedBuffer = Buffer.from(expected);
   if (providedBuffer.length !== expectedBuffer.length) return false;
@@ -18,7 +35,7 @@ function isValidSecret(provided: string | undefined, expected: string): boolean 
 }
 
 export const verifyTelegramWebhook = (req: Request, res: Response, next: NextFunction): void => {
-  const expectedToken = process.env.TELEGRAM_WEBHOOK_SECRET;
+  const expectedToken = cachedWebhookSecret;
   if (!expectedToken) {
     logger.warn('Telegram webhook rejected: TELEGRAM_WEBHOOK_SECRET not configured');
     res.status(403).json({
