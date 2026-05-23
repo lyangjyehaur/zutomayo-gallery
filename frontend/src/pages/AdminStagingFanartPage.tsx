@@ -660,7 +660,7 @@ export function AdminStagingFanartPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            <div className="sticky bottom-0 z-30 flex flex-wrap items-center justify-between p-3 border-t-2 border-black bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.1)]">
+            <div className="fixed bottom-0 left-0 right-0 z-30 flex flex-wrap items-center justify-between p-3 border-t-2 border-black bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.1)]">
               <label className="flex items-center gap-2 cursor-pointer font-bold select-none">
                 <input
                   type="checkbox"
@@ -734,7 +734,7 @@ export function AdminStagingFanartPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 pb-16">
               {fanarts.map(f => (
                 <div
                   key={f.id}
