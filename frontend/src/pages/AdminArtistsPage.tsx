@@ -28,10 +28,9 @@ export function AdminArtistsPage() {
   const deleteOne = useDelete()
 
   const [artists, setArtists] = useState<ArtistRow[]>([])
-  const [deletedIds, setDeletedIds] = useState<string[]>([])
   const [selectedId, setSelectedId] = useState<string>("")
   const [query, setQuery] = useState("")
-  const [isDirty, setIsDirty] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
   const hydrateArtists = useCallback((rows: ArtistRow[]) => {
     setArtists(rows)
@@ -40,15 +39,13 @@ export function AdminArtistsPage() {
 
   useEffect(() => {
     const rows = listQuery.data?.data || []
-    if (isDirty) return
     hydrateArtists(rows)
-  }, [hydrateArtists, isDirty, listQuery.data])
+  }, [hydrateArtists, listQuery.data])
 
   const selected = useMemo(() => artists.find((a) => a.id === selectedId) || null, [artists, selectedId])
 
   const updateSelected = (patch: Partial<ArtistRow>) => {
     if (!selected) return
-    setIsDirty(true)
     setArtists((prev) => prev.map((a) => (a.id === selected.id ? { ...a, ...patch } : a)))
   }
 
@@ -86,9 +83,10 @@ export function AdminArtistsPage() {
       }))
   }, [filtered])
 
+  const isNew = (id: string) => String(id).startsWith("artist-")
+
   const handleAdd = () => {
     const newId = `artist-${Date.now()}`
-    setIsDirty(true)
     setArtists((prev) => [
       ...prev,
       {
@@ -108,90 +106,75 @@ export function AdminArtistsPage() {
     setQuery("")
   }
 
-  const handleDeleteSelected = () => {
+  const handleSaveSelected = async () => {
     if (!selected) return
-    setIsDirty(true)
-    if (!String(selected.id).startsWith("artist-")) {
-      setDeletedIds((prev) => [...prev, String(selected.id)])
-    }
-    setArtists((prev) => prev.filter((a) => a.id !== selected.id))
-    setSelectedId("")
-  }
-
-  const handleSave = async () => {
-    const invalid = artists.filter((a) => !String(a.name || "").trim())
-    if (invalid.length > 0) {
-      toast.error(`有 ${invalid.length} 位畫師缺少名稱`)
+    if (!String(selected.name || "").trim()) {
+      toast.error("請輸入畫師名稱")
       return
     }
 
-    const dup = new Set<string>()
-    for (const a of artists) {
-      const key = String(a.name).trim()
-      if (dup.has(key)) {
-        toast.error(`畫師名稱重複：${key}`)
-        return
-      }
-      dup.add(key)
+    // Check duplicate name
+    const dup = artists.find((a) => a.id !== selected.id && String(a.name).trim() === String(selected.name).trim())
+    if (dup) {
+      toast.error(`畫師名稱重複：${dup.name}`)
+      return
     }
 
-    const toCreate = artists.filter((a) => String(a.id).startsWith("artist-"))
-    const toUpdate = artists.filter((a) => !String(a.id).startsWith("artist-"))
-    const toDelete = deletedIds.filter((id) => !String(id).startsWith("artist-"))
+    const values = {
+      name: selected.name,
+      twitter: selected.twitter,
+      profile_url: selected.profile_url,
+      bio: selected.bio,
+      instagram: selected.instagram,
+      youtube: selected.youtube,
+      pixiv: selected.pixiv,
+      tiktok: selected.tiktok,
+      website: selected.website,
+    }
 
-    await toast.promise(
-      (async () => {
-        for (const id of toDelete) {
-          await deleteOne.mutateAsync({ resource: "artists", id })
-        }
-        for (const row of toUpdate) {
-          await updateOne.mutateAsync({
-            resource: "artists",
-            id: row.id,
-            values: {
-              name: row.name,
-              twitter: row.twitter,
-              profile_url: row.profile_url,
-              bio: row.bio,
-              instagram: row.instagram,
-              youtube: row.youtube,
-              pixiv: row.pixiv,
-              tiktok: row.tiktok,
-              website: row.website,
-            },
-          })
-        }
-        for (const row of toCreate) {
-          await createOne.mutateAsync({
-            resource: "artists",
-            values: {
-              name: row.name,
-              twitter: row.twitter,
-              profile_url: row.profile_url,
-              bio: row.bio,
-              instagram: row.instagram,
-              youtube: row.youtube,
-              pixiv: row.pixiv,
-              tiktok: row.tiktok,
-              website: row.website,
-            },
-          })
-        }
+    setIsSaving(true)
+    try {
+      if (isNew(selected.id)) {
+        const result = await createOne.mutateAsync({ resource: "artists", values })
+        toast.success("新增成功")
         await invalidate({ resource: "artists", invalidates: ["list"] })
         const refreshed = await listQuery.refetch()
-        return refreshed.data?.data || []
-      })(),
-      {
-        loading: "儲存中...",
-        success: (rows) => {
-          setDeletedIds([])
-          setIsDirty(false)
-          hydrateArtists(rows as ArtistRow[])
-          return "儲存成功！"
-        },
-        error: (e) => `儲存失敗：${String((e as any)?.message || e)}`,
-      },
-    )
+        const rows = (refreshed.data?.data || []) as ArtistRow[]
+        setArtists(rows)
+        // Select the newly created artist
+        const newId = (result?.data as any)?.id
+        if (newId) setSelectedId(String(newId))
+      } else {
+        await updateOne.mutateAsync({ resource: "artists", id: selected.id, values })
+        toast.success("儲存成功")
+        await invalidate({ resource: "artists", invalidates: ["list"] })
+        const refreshed = await listQuery.refetch()
+        setArtists((refreshed.data?.data || []) as ArtistRow[])
+      }
+    } catch (e: any) {
+      toast.error(`儲存失敗：${e?.message || String(e)}`)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleDeleteSelected = async () => {
+    if (!selected) return
+    if (!confirm(`確定要刪除「${selected.name || "(未命名)"}」嗎？`)) return
+
+    if (!isNew(selected.id)) {
+      try {
+        await deleteOne.mutateAsync({ resource: "artists", id: selected.id })
+        toast.success("已刪除")
+      } catch (e: any) {
+        toast.error(`刪除失敗：${e?.message || String(e)}`)
+        return
+      }
+    }
+
+    setArtists((prev) => prev.filter((a) => a.id !== selected.id))
+    setSelectedId("")
+    await invalidate({ resource: "artists", invalidates: ["list"] })
   }
 
   return (
@@ -199,14 +182,9 @@ export function AdminArtistsPage() {
       title="畫師管理"
       description="左側列表（搜尋+分組），右側維護畫師資料。"
       actions={
-        <>
-          <Button variant="neutral" onClick={handleAdd} className="border-2 border-black">
-            新增
-          </Button>
-          <Button onClick={() => void handleSave()} className="border-2 border-black" disabled={listQuery.isLoading}>
-            儲存
-          </Button>
-        </>
+        <Button variant="neutral" onClick={handleAdd} className="border-2 border-black">
+          新增
+        </Button>
       }
       leftSearchValue={query}
       onLeftSearchValueChange={setQuery}
@@ -227,9 +205,14 @@ export function AdminArtistsPage() {
                 <div className="text-lg font-black break-words">{selected.name || "(未命名)"}</div>
                 <div className="text-[10px] font-mono opacity-60 break-all">ID: {selected.id}</div>
               </div>
-              <Button variant="destructive" onClick={handleDeleteSelected} className="border-2 border-black">
-                刪除
-              </Button>
+              <div className="flex gap-2 shrink-0">
+                <Button variant="destructive" onClick={() => void handleDeleteSelected()} className="border-2 border-black">
+                  刪除
+                </Button>
+                <Button onClick={() => void handleSaveSelected()} className="border-2 border-black" disabled={isSaving}>
+                  {isSaving ? "儲存中..." : isNew(selected.id) ? "新增" : "儲存"}
+                </Button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
