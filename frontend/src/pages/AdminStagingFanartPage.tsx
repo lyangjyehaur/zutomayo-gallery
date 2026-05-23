@@ -800,7 +800,7 @@ export function AdminStagingFanartPage() {
               </div>
             ))}
           </div>
-            <div className="sticky bottom-0 z-30 flex flex-wrap items-center justify-between p-3 border-t-2 border-black bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.1)]">
+            <div className="fixed bottom-0 right-0 z-30 flex flex-wrap items-center justify-between p-3 border-t-2 border-black bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.1)]" style={{ left: "var(--sidebar-width, 16rem)" }}>
               <label className="flex items-center gap-2 cursor-pointer font-bold select-none">
                 <input
                   type="checkbox"
