@@ -9,7 +9,8 @@ const ACCOUNT_ID = process.env.R2_ACCOUNT_ID || '';
 const ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || '';
 const SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || '';
 const BUCKET_NAME = process.env.R2_BUCKET_NAME || 'zutomayo-gallery-archive';
-export const R2_PUBLIC_DOMAIN = process.env.R2_PUBLIC_DOMAIN || 'https://r2.dan.tw';
+const rawR2Domain = process.env.R2_PUBLIC_DOMAIN || 'https://r2.dan.tw';
+export const R2_PUBLIC_DOMAIN = rawR2Domain.startsWith('http') ? rawR2Domain : `https://${rawR2Domain}`;
 
 export const getR2DevKeyPrefix = (): string => {
   if (process.env.NODE_ENV === 'production') return '';

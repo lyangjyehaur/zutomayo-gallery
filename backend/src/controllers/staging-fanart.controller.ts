@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { StagingFanartModel, MediaGroupModel, MediaModel, CrawlerStateModel, MVMediaModel } from '../models/index.js';
+import { StagingFanartModel, MediaGroupModel, MediaModel, CrawlerStateModel, MVMediaModel, ArtistModel, ArtistMediaModel } from '../models/index.js';
 import { MVService } from '../services/mv.service.js';
 import { nanoid } from 'nanoid';
 import { Op, Sequelize } from 'sequelize';
@@ -191,7 +191,7 @@ export const getStagingFanarts = async (req: Request, res: Response) => {
   });
 };
 
-async function promoteStagingFanart(staging: any, mvs?: unknown) {
+async function promoteStagingFanart(staging: any, options?: { mvs?: unknown; mvId?: string; artistId?: string }) {
   const originalUrl = staging.get('original_url') as string;
   const mediaUrl = staging.get('media_url') as string;
   const r2Url = staging.get('r2_url') as string;
@@ -208,14 +208,35 @@ async function promoteStagingFanart(staging: any, mvs?: unknown) {
   const mediaWidth = staging.get('media_width') as number;
   const mediaHeight = staging.get('media_height') as number;
   const contentType = (staging.get('content_type') as string) || 'fanart';
+  const { mvId, artistId, mvs } = options || {};
+
+  // ── 前置驗證：official 類型必須有 mvId ──
+  if (contentType === 'official' && (!mvId || typeof mvId !== 'string')) {
+    throw new AppError(400, 'MV_REQUIRED', 'Official 內容必須選擇一個 MV');
+  }
+
+  // ── 根據 content_type 決定 R2 路徑 ──
+  let r2Folder = 'fanart';
+  if (contentType === 'official' && mvId) {
+    r2Folder = `mvs/${mvId}`;
+  } else if (contentType === 'collaboration') {
+    r2Folder = 'collaboration';
+  } else if (contentType === 'cosplay') {
+    r2Folder = 'cosplay';
+  }
 
   let finalR2Url = r2Url;
+  // 確保 R2 URL 有協議頭
+  if (finalR2Url && !finalR2Url.startsWith('http')) {
+    finalR2Url = `https://${finalR2Url}`;
+  }
+
   let finalThumbnailR2Url = staging.get('thumbnail_url') as string | null;
   if (r2Url && r2Url.includes('crawler/')) {
     const crawlerIndex = r2Url.indexOf('crawler/');
     if (crawlerIndex !== -1) {
       const oldKey = r2Url.substring(crawlerIndex);
-      const newKey = `fanart/${oldKey.split('/').pop()}`;
+      const newKey = `${r2Folder}/${oldKey.split('/').pop()}`;
       const newR2Url = await moveFileInR2(oldKey, newKey);
       
       if (newR2Url) {
@@ -227,7 +248,7 @@ async function promoteStagingFanart(staging: any, mvs?: unknown) {
     const fetchedMedia = await fetchMediaToBuffer(mediaUrl);
     if (fetchedMedia) {
       const hash = crypto.createHash('sha256').update(mediaUrl).digest('hex').substring(0, 16);
-      const fileName = `fanart/${hash}.${fetchedMedia.ext}`;
+      const fileName = `${r2Folder}/${hash}.${fetchedMedia.ext}`;
       const newR2Url = await uploadBufferToR2(
         fetchedMedia.buffer,
         fileName,
@@ -256,7 +277,7 @@ async function promoteStagingFanart(staging: any, mvs?: unknown) {
       const fetchedThumb = await fetchMediaToBuffer(originalThumbnailUrl);
       if (fetchedThumb) {
         const thumbHash = crypto.createHash('sha256').update(originalThumbnailUrl).digest('hex').substring(0, 16);
-        const thumbFileName = `fanart/videos/thumbs/${thumbHash}.${fetchedThumb.ext}`;
+        const thumbFileName = `${r2Folder}/videos/thumbs/${thumbHash}.${fetchedThumb.ext}`;
         const thumbR2Url = await uploadBufferToR2(
           fetchedThumb.buffer,
           thumbFileName,
@@ -326,7 +347,7 @@ async function promoteStagingFanart(staging: any, mvs?: unknown) {
       id: generateShortId(),
       type: contentType,
       media_type: mediaType || 'image',
-      url: finalR2Url || mediaUrl,
+      url: contentType === 'collaboration' ? mediaUrl : (finalR2Url || mediaUrl),
       original_url: mediaUrl,
       thumbnail_url: mediaType === 'video' ? (finalThumbnailR2Url || null) : null,
       original_thumbnail_url: mediaType === 'video' ? (staging.get('original_thumbnail_url') as string || stagingThumbnailUrl || null) : null,
@@ -340,7 +361,7 @@ async function promoteStagingFanart(staging: any, mvs?: unknown) {
     const nextTags = Array.from(
       new Set([...(Array.isArray(currentTags) ? currentTags : []), ...tags])
     );
-    const updateData: any = { tags: nextTags };
+    const updateData: any = { tags: nextTags, type: contentType };
     if (mediaType === 'video' && stagingThumbnailUrl && !existingMedia.get('thumbnail_url')) {
       updateData.thumbnail_url = stagingThumbnailUrl;
     }
@@ -350,23 +371,54 @@ async function promoteStagingFanart(staging: any, mvs?: unknown) {
     await existingMedia.update(updateData);
   }
 
-  if (mvIds.length > 0) {
-    for (const mvId of mvIds) {
-      await MVMediaModel.findOrCreate({
-        where: { mv_id: mvId, media_id: existingMedia.get('id') },
-        defaults: {
-          mv_id: mvId,
-          media_id: existingMedia.get('id'),
-          usage: 'gallery',
-          order_index: 0
-        }
-      });
-    }
-    
+  const mediaId = existingMedia.get('id') as string;
+
+  // ── 依 content_type 分流關聯邏輯 ──
+  if (contentType === 'official') {
+    // official：單選 MV（已於函數開頭驗證 mvId 必填）
+    await MVMediaModel.findOrCreate({
+      where: { mv_id: mvId, media_id: mediaId },
+      defaults: { mv_id: mvId, media_id: mediaId, usage: 'gallery', order_index: 0 }
+    });
     mvService.clearCache();
+
+  } else if (contentType === 'collaboration') {
+    // collaboration：優先用手動選擇的 artistId，否則自動匹配
+    let artist: any = null;
+    if (artistId) {
+      artist = await ArtistModel.findByPk(artistId);
+    }
+    if (!artist) {
+      const handle = (authorHandle as string || '').toLowerCase();
+      if (handle) {
+        artist = await ArtistModel.findOne({ where: { twitter: { [Op.iLike]: handle } } });
+      }
+    }
+    if (artist) {
+      const aId = artist.get('id') as string;
+      await ArtistMediaModel.findOrCreate({
+        where: { artist_id: aId, media_id: mediaId },
+        defaults: { artist_id: aId, media_id: mediaId }
+      });
+      logger.info(`[promote] collaboration linked artist "${artist.get('name')}" → media ${mediaId}`);
+    } else {
+      logger.warn(`[promote] collaboration: no artist found, media ${mediaId} created without artist link`);
+    }
+
+  } else {
+    // fanart / cosplay：多選 MV（可選）
+    if (mvIds.length > 0) {
+      for (const id of mvIds) {
+        await MVMediaModel.findOrCreate({
+          where: { mv_id: id, media_id: mediaId },
+          defaults: { mv_id: id, media_id: mediaId, usage: 'gallery', order_index: 0 }
+        });
+      }
+      mvService.clearCache();
+    }
   }
 
-  if ((mvIds.length > 0 || tags.length > 0) && group.get('status') === 'unorganized') {
+  if ((contentType === 'official' || mvIds.length > 0 || tags.length > 0) && group.get('status') === 'unorganized') {
     await group.update({ status: 'organized' });
   }
 
@@ -375,7 +427,7 @@ async function promoteStagingFanart(staging: any, mvs?: unknown) {
 
 export const approveStagingFanart = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { mvs } = req.body;
+  const { mvs, mvId, artistId } = req.body;
   const staging = await StagingFanartModel.findByPk(id);
 
   if (!staging) {
@@ -396,7 +448,7 @@ export const approveStagingFanart = async (req: Request, res: Response) => {
     throw new AppError(400, 'Only pending, on-hold, or reviewed fanarts can be approved');
   }
 
-  await promoteStagingFanart(staging, mvs);
+  await promoteStagingFanart(staging, { mvs, mvId, artistId });
 
   res.json({
     success: true,
@@ -515,8 +567,8 @@ export const updateStagingContentType = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { content_type } = req.body;
 
-  if (!content_type || !['fanart', 'official', 'cosplay'].includes(content_type)) {
-    throw new AppError(400, 'INVALID_CONTENT_TYPE', 'content_type must be fanart, official, or cosplay');
+  if (!content_type || !['fanart', 'official', 'collaboration', 'cosplay'].includes(content_type)) {
+    throw new AppError(400, 'INVALID_CONTENT_TYPE', 'content_type must be fanart, official, collaboration, or cosplay');
   }
 
   const staging = await StagingFanartModel.findByPk(id);
@@ -526,4 +578,30 @@ export const updateStagingContentType = async (req: Request, res: Response) => {
 
   await staging.update({ content_type });
   res.json({ success: true, data: { id, content_type } });
+};
+
+export const lookupArtistByHandle = async (req: Request, res: Response) => {
+  const handle = (req.query.handle as string || '').toLowerCase().replace(/^@/, '');
+  if (!handle) {
+    res.json({ success: true, data: null });
+    return;
+  }
+
+  const artist = await ArtistModel.findOne({ where: { twitter: { [Op.iLike]: handle } } });
+  if (artist) {
+    res.json({
+      success: true,
+      data: { id: artist.get('id'), name: artist.get('name'), twitter: artist.get('twitter') }
+    });
+  } else {
+    res.json({ success: true, data: null });
+  }
+};
+
+export const listArtists = async (req: Request, res: Response) => {
+  const artists = await ArtistModel.findAll({ order: [['name', 'ASC']] });
+  res.json({
+    success: true,
+    data: artists.map(a => ({ id: a.get('id'), name: a.get('name'), twitter: a.get('twitter') }))
+  });
 };

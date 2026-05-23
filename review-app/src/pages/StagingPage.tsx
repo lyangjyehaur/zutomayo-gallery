@@ -371,18 +371,76 @@ export default function StagingPage({ f7router }: StagingPageProps) {
 
   const openApproveSheet = useCallback((ids: string[]) => {
     if (ids.length === 0) return
-    if (mvs.length === 0) {
-      void loadMvs()
+
+    // 檢查是否有 collaboration 類型，直接 approve 不需 MV
+    const targetItems = ids.map(id => items.find(i => i.id === id)).filter(Boolean) as StagingFanart[]
+    const collaborationIds = targetItems.filter(i => i.content_type === 'collaboration').map(i => i.id)
+    const nonCollaborationIds = ids.filter(id => !collaborationIds.includes(id))
+
+    // collaboration 直接 approve
+    if (collaborationIds.length > 0) {
+      void handleDirectApprove(collaborationIds)
     }
-    setMvSheetTargets(ids)
-    setMvSheetOpened(true)
-  }, [loadMvs, mvs.length])
+
+    // 其他類型開 MV sheet
+    if (nonCollaborationIds.length > 0) {
+      if (mvs.length === 0) {
+        void loadMvs()
+      }
+      setMvSheetTargets(nonCollaborationIds)
+      setMvSheetOpened(true)
+    }
+  }, [loadMvs, mvs.length, items])
+
+  const handleDirectApprove = async (ids: string[]) => {
+    if (ids.length === 0) return
+
+    f7.dialog.preloader('正在處理...')
+    setBusyForIds(ids, true)
+
+    let successCount = 0
+    let failCount = 0
+    const successfulIds: string[] = []
+
+    try {
+      for (const id of ids) {
+        try {
+          const result = await approveStagingFanart(id)
+          if (!result?.success) throw new Error('APPROVE_FAILED')
+          successCount += 1
+          successfulIds.push(id)
+        } catch {
+          failCount += 1
+        }
+      }
+    } finally {
+      setBusyForIds(ids, false)
+      f7.dialog.close()
+    }
+
+    await finalizeMutations(
+      successfulIds,
+      successCount,
+      failCount,
+      ids.length === 1 ? '已通過（自動關聯畫師）' : `已批次通過 ${successCount} 筆（自動關聯畫師）`,
+    )
+  }
 
   const handleMvConfirm = async (mvIds: string[], tags: string[]) => {
     if (mvSheetTargets.length === 0) return
     const payload = [...mvIds, ...tags]
     if (payload.length === 0) {
       f7.dialog.alert('請至少選擇一個 MV 或標籤，再保存關聯')
+      return
+    }
+
+    // official 類型必須選至少一個非 tag 的 MV
+    const hasOfficial = mvSheetTargets.some(id => {
+      const item = items.find(i => i.id === id)
+      return item?.content_type === 'official'
+    })
+    if (hasOfficial && mvIds.length === 0) {
+      f7.dialog.alert('Official 內容必須選擇至少一個 MV（不能只有標籤）')
       return
     }
 
@@ -397,7 +455,15 @@ export default function StagingPage({ f7router }: StagingPageProps) {
     try {
       for (const id of mvSheetTargets) {
         try {
-          const result = await approveStagingFanart(id, payload)
+          const targetItem = items.find(i => i.id === id)
+          const ct = targetItem?.content_type || 'fanart'
+          let result: any
+          if (ct === 'official' && mvIds.length > 0) {
+            // official 類型：單選 MV
+            result = await approveStagingFanart(id, [], mvIds[0])
+          } else {
+            result = await approveStagingFanart(id, payload)
+          }
           if (!result?.success) throw new Error('APPROVE_FAILED')
           successCount += 1
           successfulIds.push(id)

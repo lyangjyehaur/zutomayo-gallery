@@ -87,6 +87,7 @@ export interface StagingFanart {
   post_date: string
   media_width: number | null
   media_height: number | null
+  content_type?: 'fanart' | 'official' | 'collaboration' | 'cosplay'
 }
 
 export interface SubmissionMedia {
@@ -330,12 +331,16 @@ export async function fetchStagingProgress() {
   return res.json() as Promise<ReviewResponse<StagingProgressData>>
 }
 
-export async function approveStagingFanart(id: string, mvs: string[] = []) {
+export async function approveStagingFanart(id: string, mvs: string[] = [], mvId?: string, artistId?: string) {
   const base = getApiBase()
+  const body: any = {}
+  if (mvId) body.mvId = mvId
+  else if (artistId) body.artistId = artistId
+  else if (mvs.length > 0) body.mvs = mvs
   const res = await adminFetch(`${base}/staging-fanarts/${id}/approve`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mvs }),
+    body: JSON.stringify(body),
   })
   return res.json() as Promise<ReviewResponse<unknown>>
 }

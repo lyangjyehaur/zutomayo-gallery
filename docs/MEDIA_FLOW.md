@@ -16,7 +16,12 @@
   1. **解析推文**：透過 `TwitterService.extractMediaFromTweet` 以 RSSHub item 為主提取推文中的圖片/影片真實網址；RSS description 會容錯處理雙重 HTML escape、多張圖片與影片 poster/source，圖片 URL 會正規化為 `name=orig`。服務會嘗試讀取 `https://x.com/i/status/{tweet_id}` 的頁面 JSON state 補強原推文/轉推 canonical ID、作者與互動數；若 x.com 補強失敗，仍以 RSS item 產生 staging 候選。手動 URL-only 解析則使用 x.com JSON state，必要時降級到 OpenGraph/Twitter card meta media。
   2. **寫入暫存資料庫**：將每個新候選媒體以原始媒體 URL 寫入 `staging_fanarts`，狀態為 `pending`，`r2_url` 保持 `null`；監聽階段不寫入 R2，避免被拒絕或暫存觀察的無用媒體進入 R2。
   3. **通知管理員**：透過 `TelegramBotService.sendFanartReviewNotification()` 發送 Telegram inline 審核按鈕；預覽圖使用原始圖片 URL 或影片 thumbnail。
-  4. **批准後入庫**：管理員或 Telegram callback 批准後，staging promotion 流程才下載媒體並上傳至 R2，再建立/更新 `media_groups` 與 `media`。
+  4. **Telegram 初審**：Telegram callback 將狀態改為 `reviewed`（而非直接批准），進入 review-app 待關聯。
+  5. **Review-app 關聯與批准**：在 review-app 中根據 `content_type` 進行不同操作：
+     - `fanart`/`cosplay`：多選 MV 關聯後核准
+     - `official`：單選一個 MV 後核准
+     - `collaboration`：直接核准（自動從 `author_handle` 匹配畫師，或手動選擇）
+  6. **Promote 入庫**：staging promotion 流程下載媒體並上傳至 R2（`collaboration` 類型的 Media.url 保留原始 URL），建立 `media_groups`、`media` 及對應的 `mv_media`（official/fanart/cosplay）或 `artist_media`（collaboration）關聯。
 - **程式碼參考**：[twitter-monitor.service.ts](file:///Users/lyangjyehaur/Projects/zutomayo-gallery/backend/src/services/twitter-monitor.service.ts)
 
 ### 1.2 管理員手動同步/重建 (R2 Rebuild)
@@ -33,7 +38,7 @@
 
 ### 2.1 Cloudflare R2 物件儲存
 - **命名規則**：根據原始網址計算 MD5 Hash，結合副檔名生成，例如 `fanarts/<hash>.jpg` 或 `mvs/<mv_id>/<hash>.mp4`。
-- **開發環境隔離**：`r2.service.ts` 會在非 production 環境自動把所有 R2 object key 加上 `dev/` 前綴，例如批准 staging fanart 時的 `dev/fanart/<hash>.jpg`；可用 `R2_DEV_KEY_PREFIX` 調整或設為空字串停用。production key 不加前綴，保持既有正式路徑不變。
+- **開發環境隔離**：`r2.service.ts` 會在非 production 環境自動把所有 R2 object key 加上 `dev/` 前綴，例如批准 staging fanart 時的 `dev/fanart/<hash>.jpg`；可用 `R2_DEV_KEY_PREFIX` 調整或設為空字串停用。production key 不加前綴，保持既有正式路徑不變。R2 路徑依 content_type 分流：`fanart/`、`cosplay/`、`collaboration/`、`mvs/{mvId}/`（official）。`R2_PUBLIC_DOMAIN` 會自動補上 `https://` 協議頭（若缺少）。
 - **Metadata 附加**：上傳時會附帶 `original-url`, `mv-id`, `fanart-id` 等自訂 Metadata，作為未來的備用資料庫。
 - **程式碼參考**：[r2.service.ts](file:///Users/lyangjyehaur/Projects/zutomayo-gallery/backend/src/services/r2.service.ts)
 
@@ -41,7 +46,7 @@
 - **`mvs`**：MV 核心資料表。
 - **`media`**：統一媒體表，儲存所有圖片/影片的 `url` (R2 網址) 與 `original_url` (原始網址)。
 - **`media_groups`**：媒體分組，用於綁定同一篇推文來源的多張圖片，紀錄作者與來源連結。
-- **`staging_fanarts`**：自動監聽與爬蟲的二創候選暫存表，狀態包含 `pending` / `on_hold` / `approved` / `rejected`；只有批准後才 promote 至正式媒體表。
+- **`staging_fanarts`**：自動監聽與爬蟲的候選暫存表，狀態包含 `pending` / `reviewed`（Telegram 初審通過）/ `on_hold` / `approved` / `rejected`；只有批准後才 promote 至正式媒體表。`content_type` 欄位決定 promote 行為與 R2 路徑。
 - **`mv_media`**：中繼表 (Junction Table)，定義特定圖片在特定 MV 中的角色 (`usage`: cover/gallery) 與排序 (`order_index`)。
 - **程式碼參考**：[DB_SCHEMA.md](file:///Users/lyangjyehaur/Projects/zutomayo-gallery/docs/DB_SCHEMA.md)
 

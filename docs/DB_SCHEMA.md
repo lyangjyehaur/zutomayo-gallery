@@ -257,7 +257,14 @@
 | `updated_at` | `TIMESTAMP` | | 更新時間 |
 
 ### 4.5. `staging_fanarts` (二創圖暫存表)
-暫存從 Twitter RSS / crawler 等來源爬取的二創圖。批准前資料停留在此表，不建立正式 `media_groups` / `media`；Telegram inline review 與後台審核共用同一套 promote 流程。`on_hold` 代表暫存觀察，之後可還原為 `pending`、拒絕或批准。
+暫存從 Twitter RSS / crawler 等來源爬取的二創圖。批准前資料停留在此表，不建立正式 `media_groups` / `media`；Telegram inline review 與後台審核共用同一套 promote 流程。`on_hold` 代表暫存觀察，之後可還原為 `pending`、拒絕或批准。`reviewed` 代表 Telegram 初審通過，等待 review-app 進行 MV 關聯後核准。
+
+**content_type 分類與 promote 行為：**
+- `fanart`：二創，多選 MV（可選），R2 備份到 `fanart/`
+- `official`：官方素材，單選 MV（必填），R2 備份到 `mvs/{mvId}/`，建 MVMedia 關聯
+- `collaboration`：畫師綜合，自動從 `author_handle` 匹配畫師（可手動選擇），R2 備份到 `collaboration/`，建 ArtistMedia 關聯，Media.url 存原始 URL
+- `cosplay`：Cosplay，多選 MV（可選），R2 備份到 `cosplay/`
+
 | 欄位名稱 | 型別 | 約束 | 說明 |
 | :--- | :--- | :--- | :--- |
 | `id` | `VARCHAR(36)` | `PRIMARY KEY` | 暫存資料唯一識別碼 (使用 NanoID) |
@@ -269,8 +276,17 @@
 | `r2_url` | `TEXT` | `NULL` | R2 備份連結 (可為空) |
 | `media_type` | `VARCHAR(20)` | `NULL` | 媒體格式類型 (image/video) |
 | `crawled_at` | `TIMESTAMP` | `NULL` | 爬取時間 |
-| `status` | `VARCHAR(50)` | `DEFAULT 'pending'` | 處理狀態 (`pending`/`on_hold`/`approved`/`rejected`) |
+| `post_date` | `TIMESTAMP` | `NULL` | 推文發布時間 |
+| `source_text` | `TEXT` | `NULL` | 推文文字內容 |
+| `status` | `VARCHAR(50)` | `DEFAULT 'pending'` | 處理狀態 (`pending`/`reviewed`/`on_hold`/`approved`/`rejected`) |
 | `source` | `VARCHAR(50)` | `NULL` | 資料來源 (crawler/rss) |
+| `like_count` | `INTEGER` | `DEFAULT 0` | 愛心數 |
+| `retweet_count` | `INTEGER` | `DEFAULT 0` | 轉推數 |
+| `view_count` | `INTEGER` | `DEFAULT 0` | 觀看數 |
+| `media_width` | `INTEGER` | `NULL` | 媒體寬度 |
+| `media_height` | `INTEGER` | `NULL` | 媒體高度 |
+| `hashtags` | `JSONB` | `DEFAULT []` | 推文標籤 |
+| `content_type` | `VARCHAR(20)` | `DEFAULT 'fanart'` | 內容分類 (`fanart`/`official`/`collaboration`/`cosplay`) |
 | `created_at` | `TIMESTAMP` | | 建立時間 |
 | `updated_at` | `TIMESTAMP` | | 更新時間 |
 
@@ -284,6 +300,7 @@
 | `label` | `VARCHAR(255)` | `NULL` | 後台顯示名稱 |
 | `enabled` | `BOOLEAN` | `DEFAULT true` | 是否啟用監聽；停用項目仍保留在管理介面 |
 | `note` | `TEXT` | `NULL` | 管理備註 |
+| `content_type` | `VARCHAR(20)` | `DEFAULT 'fanart'` | 內容分類 (`fanart`/`official`/`collaboration`/`cosplay`)，爬取時繼承到 staging |
 | `created_at` | `TIMESTAMP` | | 建立時間 |
 | `updated_at` | `TIMESTAMP` | | 更新時間 |
 

@@ -130,6 +130,7 @@ export const getMetadata = async (): Promise<MetadataResponse> => {
         return {
           id: media.id,
           url: media.url,
+          original_url: media.original_url || undefined,
           thumbnail_url: media.thumbnail_url || undefined,
           thumbnail: media.thumbnail_url || undefined, // keep for backward compatibility
           width: media.width,

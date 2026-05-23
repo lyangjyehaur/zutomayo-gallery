@@ -120,6 +120,10 @@ export function AdminStagingFanartPage() {
 
   const [mvs, setMvs] = useState<Option[]>([]);
   const [selectedMvs, setSelectedMvs] = useState<Record<string, string[]>>({});
+  const [selectedSingleMv, setSelectedSingleMv] = useState<Record<string, string>>({});
+  const [artists, setArtists] = useState<{ id: string; name: string; twitter?: string }[]>([]);
+  const [selectedArtists, setSelectedArtists] = useState<Record<string, string>>({});
+  const [suggestedArtists, setSuggestedArtists] = useState<Record<string, string>>({});
   const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
   const [batchSelectedMvs, setBatchSelectedMvs] = useState<string[]>([]);
   const [contentTypeFilter, setContentTypeFilter] = useState<string>(() => {
@@ -166,6 +170,16 @@ export function AdminStagingFanartPage() {
     }
   }, [baseApiUrl]);
 
+  const fetchArtists = useCallback(async () => {
+    try {
+      const res = await adminFetch(`${baseApiUrl}/staging-fanarts/artists`);
+      const data = await res.json();
+      if (data.success) {
+        setArtists(data.data || []);
+      }
+    } catch { /* silent */ }
+  }, [baseApiUrl]);
+
   const fetchProgress = useCallback(async () => {
     setIsProgressLoading(true);
     try {
@@ -193,6 +207,18 @@ export function AdminStagingFanartPage() {
       if (data.success) {
         setFanarts(data.data);
         setTotalPages(data.meta.totalPages);
+        // 自動為 collaboration 卡片查找建議畫師
+        const collabCards = (data.data as StagingFanart[]).filter(f => f.content_type === 'collaboration' && f.author_handle);
+        for (const card of collabCards) {
+          try {
+            const r = await adminFetch(`${baseApiUrl}/staging-fanarts/lookup-artist?handle=${encodeURIComponent(card.author_handle!)}`);
+            const d = await r.json();
+            if (d.success && d.data?.id) {
+              setSuggestedArtists(prev => ({ ...prev, [card.id]: d.data.id }));
+              setSelectedArtists(prev => prev[card.id] ? prev : { ...prev, [card.id]: d.data.id });
+            }
+          } catch { /* silent */ }
+        }
       } else {
         toast.error(formatApiError(data, '載入待審 FanArt 失敗'));
       }
@@ -213,7 +239,8 @@ export function AdminStagingFanartPage() {
 
   useEffect(() => {
     fetchMvs();
-  }, [fetchMvs]);
+    fetchArtists();
+  }, [fetchMvs, fetchArtists]);
 
   useEffect(() => {
     const status = progress?.syncProgress?.status;
@@ -281,16 +308,42 @@ export function AdminStagingFanartPage() {
     try {
       const isApprove = action === 'approve';
       const isRestore = action === 'restore';
+      const fanart = fanarts.find(f => f.id === id);
+      const ct = fanart?.content_type || 'fanart';
 
       if (isApprove) {
-        const mvs = selectedMvs[id] || [];
-        if (mvs.length === 0) {
-          toast.error('請先選擇至少一個 MV 或標籤再核准');
-          return;
+        if (ct === 'official') {
+          const mvId = selectedSingleMv[id];
+          if (!mvId) {
+            toast.error('Official 內容必須選擇一個 MV');
+            return;
+          }
+        } else if (ct === 'collaboration') {
+          // collaboration：需要選擇畫師
+          if (!selectedArtists[id]) {
+            toast.error('請選擇關聯畫師');
+            return;
+          }
+        } else {
+          // fanart / cosplay
+          const mvs = selectedMvs[id] || [];
+          if (mvs.length === 0) {
+            toast.error('請先選擇至少一個 MV 或標籤再核准');
+            return;
+          }
         }
       }
 
-      const payload = isApprove ? { mvs: selectedMvs[id] || [] } : undefined;
+      let payload: any = undefined;
+      if (isApprove) {
+        if (ct === 'official') {
+          payload = { mvId: selectedSingleMv[id] };
+        } else if (ct === 'collaboration') {
+          payload = { artistId: selectedArtists[id] };
+        } else {
+          payload = { mvs: selectedMvs[id] || [] };
+        }
+      }
       const endpointAction = isRestore ? 'restore' : action;
 
       const res = await adminFetch(`${baseApiUrl}/staging-fanarts/${id}/${endpointAction}`, {
@@ -328,6 +381,10 @@ export function AdminStagingFanartPage() {
       // 檢查是否所有選中的卡片都有 MV 關聯（卡片自選 + 批次共用）
       const idsToCheck = Array.from(selectedCards);
       const missingMvs = idsToCheck.filter(id => {
+        const f = fanarts.find(f => f.id === id);
+        const ct = f?.content_type || 'fanart';
+        if (ct === 'collaboration') return !selectedArtists[id]; // collaboration 需要畫師
+        if (ct === 'official') return !selectedSingleMv[id]; // official 需要單選 MV
         const cardMvs = selectedMvs[id] || [];
         const combined = Array.from(new Set([...cardMvs, ...batchSelectedMvs]));
         return combined.length === 0;
@@ -354,9 +411,20 @@ export function AdminStagingFanartPage() {
 
     for (const id of idsToProcess) {
       try {
-        const cardMvs = selectedMvs[id] || [];
-        const combinedMvs = Array.from(new Set([...cardMvs, ...batchSelectedMvs]));
-        const payload = action === 'approve' ? { mvs: combinedMvs } : {};
+        const f = fanarts.find(f => f.id === id);
+        const ct = f?.content_type || 'fanart';
+        let payload: any = {};
+        if (action === 'approve') {
+          if (ct === 'official') {
+            payload = { mvId: selectedSingleMv[id] };
+          } else if (ct === 'collaboration') {
+            payload = { artistId: selectedArtists[id] };
+          } else {
+            const cardMvs = selectedMvs[id] || [];
+            const combinedMvs = Array.from(new Set([...cardMvs, ...batchSelectedMvs]));
+            payload = { mvs: combinedMvs };
+          }
+        }
         const res = await adminFetch(`${baseApiUrl}/staging-fanarts/${id}/${action}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -471,6 +539,7 @@ export function AdminStagingFanartPage() {
               <option value="">全部分類</option>
               <option value="fanart">Fanart</option>
               <option value="official">官方</option>
+              <option value="collaboration">畫師綜合</option>
               <option value="cosplay">Cosplay</option>
             </select>
             <select
@@ -571,6 +640,7 @@ export function AdminStagingFanartPage() {
                     >
                       <option value="fanart">Fanart</option>
                       <option value="official">官方</option>
+                      <option value="collaboration">畫師綜合</option>
                       <option value="cosplay">Cosplay</option>
                     </select>
                   </div>
@@ -743,7 +813,7 @@ export function AdminStagingFanartPage() {
                           const data = await res.json();
                           if (data.success) {
                             setFanarts(prev => prev.map(item => item.id === f.id ? { ...item, content_type: newType } : item));
-                            toast.success(`已改為 ${newType === 'fanart' ? 'Fanart' : newType === 'official' ? '官方' : 'Cosplay'}`);
+                      toast.success(`已改為 ${newType === 'fanart' ? 'Fanart' : newType === 'official' ? '官方' : newType === 'collaboration' ? '畫師綜合' : 'Cosplay'}`);
                           } else {
                             toast.error(formatApiError(data, '更新類型失敗'));
                           }
@@ -755,10 +825,11 @@ export function AdminStagingFanartPage() {
                     >
                       <option value="fanart">Fanart</option>
                       <option value="official">官方</option>
+                      <option value="collaboration">畫師綜合</option>
                       <option value="cosplay">Cosplay</option>
                     </select>
                   </div>
-                  {f.post_date && (
+                {f.post_date && (
                     <div className="text-[10px] sm:text-xs font-mono opacity-60">
                       推文: {new Date(f.post_date).toLocaleDateString()}
                     </div>
@@ -766,13 +837,50 @@ export function AdminStagingFanartPage() {
 
                 {viewStatus === 'pending' || viewStatus === 'on_hold' || viewStatus === 'reviewed' ? (
                     <div className="flex flex-col gap-1 mt-1">
-                      <span className="text-[10px] sm:text-xs font-bold uppercase">Associated MVs:</span>
-                      <MultiSelect
-                        options={mvs}
-                        selected={selectedMvs[f.id] || []}
-                        onChange={(selected) => setSelectedMvs(prev => ({ ...prev, [f.id]: selected }))}
-                        placeholder="Select MVs..."
-                      />
+                      {(f.content_type === 'official') ? (
+                        <>
+                          <span className="text-[10px] sm:text-xs font-bold uppercase">關聯 MV（單選必填）:</span>
+                          <select
+                            value={selectedSingleMv[f.id] || ''}
+                            onChange={(e) => setSelectedSingleMv(prev => ({ ...prev, [f.id]: e.target.value }))}
+                            className="border border-black font-bold px-1 py-0.5 text-[10px] sm:text-xs bg-white"
+                          >
+                            <option value="">選擇 MV...</option>
+                            {mvs.filter(o => !o.value.startsWith('tag:')).map(o => (
+                              <option key={o.value} value={o.value}>{o.label}</option>
+                            ))}
+                          </select>
+                        </>
+                      ) : (f.content_type === 'collaboration') ? (
+                        <>
+                          <span className="text-[10px] sm:text-xs font-bold uppercase">關聯畫師:</span>
+                          <select
+                            value={selectedArtists[f.id] || ''}
+                            onChange={(e) => setSelectedArtists(prev => ({ ...prev, [f.id]: e.target.value }))}
+                            className="border border-black font-bold px-1 py-0.5 text-[10px] sm:text-xs bg-white"
+                          >
+                            <option value="">選擇畫師...</option>
+                            {artists.map(a => (
+                              <option key={a.id} value={a.id}>
+                                {a.name}{a.twitter ? ` (@${a.twitter})` : ''}{suggestedArtists[f.id] === a.id ? ' ★' : ''}
+                              </option>
+                            ))}
+                          </select>
+                          {suggestedArtists[f.id] && (
+                            <span className="text-[9px] text-blue-500">★ = 依 @handle 自動匹配</span>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-[10px] sm:text-xs font-bold uppercase">Associated MVs:</span>
+                          <MultiSelect
+                            options={mvs}
+                            selected={selectedMvs[f.id] || []}
+                            onChange={(selected) => setSelectedMvs(prev => ({ ...prev, [f.id]: selected }))}
+                            placeholder="Select MVs..."
+                          />
+                        </>
+                      )}
                     </div>
                   ) : null}
 
