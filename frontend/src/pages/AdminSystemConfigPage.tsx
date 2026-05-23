@@ -2,7 +2,7 @@ import React from "react"
 import { toast } from "sonner"
 import {
   Bell, ChevronDown, ChevronRight, Eye, EyeOff, Globe, Loader2,
-  RadioTower, RefreshCw, Save, Send, Settings, TestTube2,
+  Lock, RadioTower, RefreshCw, Save, Send, Settings, TestTube2, Unlock,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -69,6 +69,84 @@ type AllSystemSettings = {
   apify: ApifyConfig
 }
 
+// ── Cron parser ──
+
+function parseCronToHuman(cron: string): string {
+  if (!cron || cron.trim().split(/\s+/).length !== 5) return ""
+  const [min, hour, dom, month, dow] = cron.trim().split(/\s+/)
+
+  const parts: string[] = []
+
+  // Day of week
+  const dowNames = ["日", "一", "二", "三", "四", "五", "六"]
+  if (dow !== "*" && dow !== "0-7") {
+    const dows = dow.split(",").map(d => {
+      const n = parseInt(d, 10)
+      return isNaN(n) ? d : `星期${dowNames[n] || n}`
+    })
+    parts.push(dows.join("、"))
+  }
+
+  // Month
+  if (month !== "*") {
+    parts.push(`${month} 月`)
+  }
+
+  // Day of month
+  if (dom !== "*") {
+    parts.push(`${dom} 日`)
+  }
+
+  // Time
+  if (hour === "*" && min === "*") {
+    parts.push("每分鐘")
+  } else if (hour === "*") {
+    parts.push(`每小時的第 ${min} 分鐘`)
+  } else if (min === "*") {
+    parts.push(`${hour} 時的每分鐘`)
+  } else {
+    const hList = hour.split(",").join(":00, ") + ":00"
+    const mList = min.split(",").join(" 分, ") + " 分"
+    if (hour.includes(",")) {
+      parts.push(`${hList} 的第 ${mList}`)
+    } else if (min.includes(",")) {
+      parts.push(`${hour}:00 的第 ${mList}`)
+    } else {
+      parts.push(`${hour.padStart(2, "0")}:${min.padStart(2, "0")}`)
+    }
+  }
+
+  // Step values
+  if (min.includes("/")) {
+    const step = min.split("/")[1]
+    parts.splice(parts.length - 1, 1, `每隔 ${step} 分鐘`)
+  }
+  if (hour.includes("/")) {
+    const step = hour.split("/")[1]
+    parts.splice(parts.length - 1, 1, `每隔 ${step} 小時`)
+  }
+
+  return parts.join("，") || "每個時間單位"
+}
+
+const CRON_PRESETS: { label: string; cron: string }[] = [
+  { label: "每小時", cron: "0 * * * *" },
+  { label: "每30分鐘", cron: "*/30 * * * *" },
+  { label: "每天凌晨", cron: "0 0 * * *" },
+  { label: "每天中午", cron: "0 12 * * *" },
+]
+
+function splitCron(cron: string): [string, string, string, string, string] {
+  if (!cron) return ["*", "*", "*", "*", "*"]
+  const parts = cron.trim().split(/\s+/)
+  if (parts.length === 5) return parts as [string, string, string, string, string]
+  return ["*", "*", "*", "*", "*"]
+}
+
+function joinCron(parts: [string, string, string, string, string]): string {
+  return parts.map(p => p.trim() || "*").join(" ")
+}
+
 // ── Reusable components ──
 
 function SectionCard({
@@ -107,6 +185,78 @@ function EnvBadge() {
   )
 }
 
+// ── Lockable Field Component ──
+
+type LockableInputProps = {
+  label: string
+  value: string
+  onChange: (val: string) => void
+  placeholder?: string
+  isSecret?: boolean
+  hasConfiguredValue?: boolean
+  configuredDisplay?: string | null
+  type?: string
+  min?: number
+  extra?: React.ReactNode
+  children?: React.ReactNode
+}
+
+function LockableInput({
+  label,
+  value,
+  onChange,
+  placeholder,
+  isSecret = false,
+  hasConfiguredValue = false,
+  configuredDisplay,
+  type = "text",
+  min,
+  extra,
+  children,
+}: LockableInputProps) {
+  const [locked, setLocked] = React.useState(hasConfiguredValue)
+
+  // Re-lock when data reloads and field gets a configured value
+  React.useEffect(() => {
+    setLocked(hasConfiguredValue)
+  }, [hasConfiguredValue])
+
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-mono font-medium flex items-center">
+        {label}
+        {extra}
+      </label>
+      <div className="relative">
+        <Input
+          type={locked && isSecret ? "password" : type}
+          value={locked ? (isSecret ? "••••••••" : (value || placeholder || "")) : value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          disabled={locked}
+          min={min}
+          className={`border-2 border-black pr-10 ${locked ? "opacity-70 cursor-not-allowed" : ""}`}
+        />
+        <button
+          type="button"
+          onClick={() => setLocked(!locked)}
+          className="absolute right-2 top-1/2 -translate-y-1/2 opacity-60 hover:opacity-100"
+          title={locked ? "解鎖編輯" : "鎖定"}
+        >
+          {locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4 text-green-600" />}
+        </button>
+      </div>
+      {locked && configuredDisplay && !isSecret && (
+        <p className="text-xs font-mono opacity-60">目前: {configuredDisplay}</p>
+      )}
+      {locked && isSecret && (
+        <p className="text-xs font-mono opacity-60">已設定（點擊鎖頭解鎖以修改）</p>
+      )}
+      {!locked && children}
+    </div>
+  )
+}
+
 // ── Main page ──
 
 export function AdminSystemConfigPage() {
@@ -138,6 +288,33 @@ export function AdminSystemConfigPage() {
   const [rsshubBaseUrl, setRsshubBaseUrl] = React.useState("")
   const [monitorCron, setMonitorCron] = React.useState("")
   const [isSavingTwitter, setIsSavingTwitter] = React.useState(false)
+
+  // Cron visual editor state
+  const cronParts = splitCron(monitorCron)
+  const [cronMin, setCronMin] = React.useState(cronParts[0])
+  const [cronHour, setCronHour] = React.useState(cronParts[1])
+  const [cronDom, setCronDom] = React.useState(cronParts[2])
+  const [cronMonth, setCronMonth] = React.useState(cronParts[3])
+  const [cronDow, setCronDow] = React.useState(cronParts[4])
+
+  // Sync cron parts from monitorCron
+  React.useEffect(() => {
+    const p = splitCron(monitorCron)
+    setCronMin(p[0])
+    setCronHour(p[1])
+    setCronDom(p[2])
+    setCronMonth(p[3])
+    setCronDow(p[4])
+  }, [monitorCron])
+
+  const updateCron = (min: string, hour: string, dom: string, month: string, dow: string) => {
+    setCronMin(min)
+    setCronHour(hour)
+    setCronDom(dom)
+    setCronMonth(month)
+    setCronDow(dow)
+    setMonitorCron(joinCron([min, hour, dom, month, dow]))
+  }
 
   // Error state
   const [threshold, setThreshold] = React.useState("")
@@ -425,75 +602,38 @@ export function AdminSystemConfigPage() {
 
         {/* ===== Telegram 機器人 ===== */}
         <SectionCard title="Telegram 機器人" icon={<Send className="h-5 w-5" />}>
-          {/* Config fields */}
-          <div className="space-y-2">
-            <label className="text-sm font-mono font-medium flex items-center">
-              Bot Token
-              {envBadge("bot_token")}
-            </label>
-            <div className="relative">
-              <Input
-                type={showBotToken ? "text" : "password"}
-                value={botToken}
-                onChange={(e) => setBotToken(e.target.value)}
-                placeholder={tgConfig?.has_bot_token ? "••••••••（已設定，留空則保留）" : "輸入 Bot Token"}
-                className="border-2 border-black pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowBotToken(!showBotToken)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 opacity-60 hover:opacity-100"
-              >
-                {showBotToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-            {tgConfig?.bot_token && (
-              <p className="text-xs font-mono opacity-60">目前: {tgConfig.bot_token}</p>
-            )}
-          </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-mono font-medium flex items-center">
-              Chat ID
-              {envBadge("chat_id")}
-            </label>
-            <Input
-              type="text"
-              value={chatId}
-              onChange={(e) => setChatId(e.target.value)}
-              placeholder={tgConfig?.has_chat_id ? "已設定，留空則保留" : "輸入 Chat ID"}
-              className="border-2 border-black"
-            />
-            {tgConfig?.chat_id && (
-              <p className="text-xs font-mono opacity-60">目前: {tgConfig.chat_id}</p>
-            )}
-          </div>
+          <LockableInput
+            label="Bot Token"
+            value={botToken}
+            onChange={setBotToken}
+            placeholder={tgConfig?.has_bot_token ? "••••••••（已設定，留空則保留）" : "輸入 Bot Token"}
+            isSecret={true}
+            hasConfiguredValue={!!tgConfig?.has_bot_token}
+            configuredDisplay={tgConfig?.bot_token}
+            extra={<>{envBadge("bot_token")}</>}
+          />
 
-          <div className="space-y-2">
-            <label className="text-sm font-mono font-medium flex items-center">
-              Webhook Secret
-              {envBadge("webhook_secret")}
-            </label>
-            <div className="relative">
-              <Input
-                type={showWebhookSecret ? "text" : "password"}
-                value={webhookSecret}
-                onChange={(e) => setWebhookSecret(e.target.value)}
-                placeholder={tgConfig?.has_webhook_secret ? "••••••••（已設定，留空則保留）" : "輸入 Webhook Secret"}
-                className="border-2 border-black pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowWebhookSecret(!showWebhookSecret)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 opacity-60 hover:opacity-100"
-              >
-                {showWebhookSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-            {tgConfig?.webhook_secret && (
-              <p className="text-xs font-mono opacity-60">目前: {tgConfig.webhook_secret}</p>
-            )}
-          </div>
+          <LockableInput
+            label="Chat ID"
+            value={chatId}
+            onChange={setChatId}
+            placeholder={tgConfig?.has_chat_id ? "已設定，留空則保留" : "輸入 Chat ID"}
+            hasConfiguredValue={!!tgConfig?.has_chat_id}
+            configuredDisplay={tgConfig?.chat_id}
+            extra={<>{envBadge("chat_id")}</>}
+          />
+
+          <LockableInput
+            label="Webhook Secret"
+            value={webhookSecret}
+            onChange={setWebhookSecret}
+            placeholder={tgConfig?.has_webhook_secret ? "••••••••（已設定，留空則保留）" : "輸入 Webhook Secret"}
+            isSecret={true}
+            hasConfiguredValue={!!tgConfig?.has_webhook_secret}
+            configuredDisplay={tgConfig?.webhook_secret}
+            extra={<>{envBadge("webhook_secret")}</>}
+          />
 
           <div className="flex gap-3 pt-2">
             <Button onClick={handleSaveTelegram} disabled={isSavingTg}>
@@ -566,33 +706,22 @@ export function AdminSystemConfigPage() {
 
         {/* ===== Bark 通知 ===== */}
         <SectionCard title="Bark 通知" icon={<Bell className="h-5 w-5" />}>
-          <div className="space-y-2">
-            <label className="text-sm font-mono font-medium flex items-center">
-              Bark URL
-              {!barkUrl.trim() && barkHasUrl && <EnvBadge />}
-            </label>
-            <Input
-              type="text"
-              value={barkUrl}
-              onChange={(e) => setBarkUrl(e.target.value)}
-              placeholder={barkHasUrl ? "已設定，留空則保留" : "https://api.day.app/your-server-key"}
-              className="border-2 border-black"
-            />
-          </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-mono font-medium flex items-center">
-              Bark Key
-              {!barkKey.trim() && barkHasKey && <EnvBadge />}
-            </label>
-            <Input
-              type="text"
-              value={barkKey}
-              onChange={(e) => setBarkKey(e.target.value)}
-              placeholder={barkHasKey ? "已設定，留空則保留" : "輸入 Device Key"}
-              className="border-2 border-black"
-            />
-          </div>
+          <LockableInput
+            label="Bark URL"
+            value={barkUrl}
+            onChange={setBarkUrl}
+            placeholder={barkHasUrl ? "已設定，留空則保留" : "https://api.day.app/your-server-key"}
+            hasConfiguredValue={barkHasUrl}
+          />
+
+          <LockableInput
+            label="Bark Key"
+            value={barkKey}
+            onChange={setBarkKey}
+            placeholder={barkHasKey ? "已設定，留空則保留" : "輸入 Device Key"}
+            hasConfiguredValue={barkHasKey}
+          />
 
           <div className="flex gap-3 pt-2">
             <Button onClick={handleSaveBark} disabled={isSavingBark}>
@@ -612,27 +741,75 @@ export function AdminSystemConfigPage() {
 
         {/* ===== Twitter 監聽 ===== */}
         <SectionCard title="Twitter 監聽" icon={<RadioTower className="h-5 w-5" />}>
-          <div className="space-y-2">
-            <label className="text-sm font-mono font-medium">RSSHub Base URL</label>
-            <Input
-              type="text"
-              value={rsshubBaseUrl}
-              onChange={(e) => setRsshubBaseUrl(e.target.value)}
-              placeholder="https://rsshub.app"
-              className="border-2 border-black"
-            />
-          </div>
 
+          <LockableInput
+            label="RSSHub Base URL"
+            value={rsshubBaseUrl}
+            onChange={setRsshubBaseUrl}
+            placeholder="https://rsshub.app"
+            hasConfiguredValue={!!rsshubBaseUrl}
+            configuredDisplay={rsshubBaseUrl}
+          />
+
+          {/* Cron Visual Editor */}
           <div className="space-y-2">
-            <label className="text-sm font-mono font-medium">Cron 表達式</label>
-            <Input
-              type="text"
-              value={monitorCron}
-              onChange={(e) => setMonitorCron(e.target.value)}
-              placeholder="*/10 * * * *"
-              className="border-2 border-black"
-            />
-            <p className="text-xs font-mono opacity-60">監聽排程的 cron 表達式，例如: */10 * * * *</p>
+            <label className="text-sm font-mono font-medium">Cron 排程表達式</label>
+
+            {/* Preset buttons */}
+            <div className="flex flex-wrap gap-2">
+              {CRON_PRESETS.map(preset => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => {
+                    const p = splitCron(preset.cron)
+                    updateCron(p[0], p[1], p[2], p[3], p[4])
+                  }}
+                  className={`px-3 py-1 text-xs font-mono border-2 border-black rounded transition-colors ${
+                    monitorCron === preset.cron
+                      ? "bg-black text-white"
+                      : "bg-background hover:bg-secondary/40"
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+
+            {/* 5-field visual editor */}
+            <div className="grid grid-cols-5 gap-2">
+              {[
+                { label: "分鐘", val: cronMin, set: (v: string) => updateCron(v, cronHour, cronDom, cronMonth, cronDow), ph: "*" },
+                { label: "小時", val: cronHour, set: (v: string) => updateCron(cronMin, v, cronDom, cronMonth, cronDow), ph: "*" },
+                { label: "日", val: cronDom, set: (v: string) => updateCron(cronMin, cronHour, v, cronMonth, cronDow), ph: "*" },
+                { label: "月", val: cronMonth, set: (v: string) => updateCron(cronMin, cronHour, cronDom, v, cronDow), ph: "*" },
+                { label: "星期", val: cronDow, set: (v: string) => updateCron(cronMin, cronHour, cronDom, cronMonth, v), ph: "*" },
+              ].map(field => (
+                <div key={field.label} className="space-y-1">
+                  <span className="text-[10px] font-mono opacity-60">{field.label}</span>
+                  <Input
+                    type="text"
+                    value={field.val}
+                    onChange={(e) => field.set(e.target.value)}
+                    placeholder={field.ph}
+                    className="border-2 border-black text-center text-sm font-mono h-9"
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Raw expression + human-readable description */}
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-mono px-2 py-1 bg-secondary/60 border border-black/20 rounded">
+                {monitorCron || "* * * * *"}
+              </span>
+              {monitorCron && (
+                <span className="text-xs text-muted-foreground">
+                  {parseCronToHuman(monitorCron)}
+                </span>
+              )}
+            </div>
+            <p className="text-xs font-mono opacity-60">自定義排程：直接修改下方五個欄位或選擇預設</p>
           </div>
 
           <div className="flex gap-3 pt-2">
@@ -645,31 +822,32 @@ export function AdminSystemConfigPage() {
 
         {/* ===== 錯誤監控 ===== */}
         <SectionCard title="錯誤監控" icon={<Settings className="h-5 w-5" />}>
-          <div className="space-y-2">
-            <label className="text-sm font-mono font-medium">錯誤閾值 (Threshold)</label>
-            <Input
-              type="number"
-              value={threshold}
-              onChange={(e) => setThreshold(e.target.value)}
-              placeholder="3"
-              min={0}
-              className="border-2 border-black"
-            />
-            <p className="text-xs font-mono opacity-60">在時間窗口內累積多少次錯誤後觸發通知</p>
-          </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-mono font-medium">時間窗口 (分鐘)</label>
-            <Input
-              type="number"
-              value={windowMs}
-              onChange={(e) => setWindowMs(e.target.value)}
-              placeholder="5"
-              min={0}
-              className="border-2 border-black"
-            />
+          <LockableInput
+            label="錯誤閾值 (Threshold)"
+            value={threshold}
+            onChange={setThreshold}
+            placeholder="3"
+            type="number"
+            min={0}
+            hasConfiguredValue={!!threshold}
+            configuredDisplay={threshold}
+          >
+            <p className="text-xs font-mono opacity-60">在時間窗口內累積多少次錯誤後觸發通知</p>
+          </LockableInput>
+
+          <LockableInput
+            label="時間窗口 (分鐘)"
+            value={windowMs}
+            onChange={setWindowMs}
+            placeholder="5"
+            type="number"
+            min={0}
+            hasConfiguredValue={!!windowMs}
+            configuredDisplay={windowMs}
+          >
             <p className="text-xs font-mono opacity-60">統計錯誤的時間範圍（分鐘）</p>
-          </div>
+          </LockableInput>
 
           <div className="flex gap-3 pt-2">
             <Button onClick={handleSaveError} disabled={isSavingError}>
@@ -681,28 +859,16 @@ export function AdminSystemConfigPage() {
 
         {/* ===== Apify ===== */}
         <SectionCard title="Apify" icon={<Globe className="h-5 w-5" />} defaultOpen={false}>
-          <div className="space-y-2">
-            <label className="text-sm font-mono font-medium flex items-center">
-              API Token
-              {!apifyToken.trim() && apifyHasToken && <EnvBadge />}
-            </label>
-            <div className="relative">
-              <Input
-                type={showApifyToken ? "text" : "password"}
-                value={apifyToken}
-                onChange={(e) => setApifyToken(e.target.value)}
-                placeholder={apifyHasToken ? "••••••••（已設定，留空則保留）" : "輸入 Apify API Token"}
-                className="border-2 border-black pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowApifyToken(!showApifyToken)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 opacity-60 hover:opacity-100"
-              >
-                {showApifyToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-          </div>
+
+          <LockableInput
+            label="API Token"
+            value={apifyToken}
+            onChange={setApifyToken}
+            placeholder={apifyHasToken ? "••••••••（已設定，留空則保留）" : "輸入 Apify API Token"}
+            isSecret={true}
+            hasConfiguredValue={apifyHasToken}
+            extra={<>{!apifyToken.trim() && apifyHasToken && <EnvBadge />}</>}
+          />
 
           <div className="flex gap-3 pt-2">
             <Button onClick={handleSaveApify} disabled={isSavingApify}>
