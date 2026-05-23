@@ -14,10 +14,11 @@ export type MonitorFeedTarget = {
   content_type: ContentType;
 };
 
-type ArtistTwitterSource = {
+export type ArtistTwitterSource = {
   id: string;
   name?: string | null;
   handle: string;
+  twitter_monitor_enabled?: boolean;
 };
 
 const validTypes = new Set<MonitorTargetType>(['user', 'hashtag']);
@@ -95,12 +96,13 @@ export const inferRssHubBaseFromFeedUrl = (feedUrl: string | undefined): string 
   }
 };
 
-export const listArtistTwitterSources = async (): Promise<ArtistTwitterSource[]> => {
+export const listArtistTwitterSources = async (options: { enabledOnly?: boolean } = {}): Promise<ArtistTwitterSource[]> => {
+  const where: any = { twitter: { [Op.ne]: null } };
+  if (options.enabledOnly) where.twitter_monitor_enabled = true;
+
   const rows = await ArtistModel.findAll({
-    attributes: ['id', 'name', 'twitter'],
-    where: {
-      twitter: { [Op.ne]: null },
-    } as any,
+    attributes: ['id', 'name', 'twitter', 'twitter_monitor_enabled'],
+    where,
     order: [['name', 'ASC']],
   });
 
@@ -108,7 +110,7 @@ export const listArtistTwitterSources = async (): Promise<ArtistTwitterSource[]>
   const mapped = rows.map((row: any): ArtistTwitterSource | null => {
     const data = row.toJSON();
     const handle = normalizeMonitorHandle('user', data.twitter);
-    return handle ? { id: data.id, name: data.name, handle } : null;
+    return handle ? { id: data.id, name: data.name, handle, twitter_monitor_enabled: data.twitter_monitor_enabled !== false } : null;
   });
 
   return mapped.filter((item: ArtistTwitterSource | null): item is ArtistTwitterSource => {
@@ -188,7 +190,7 @@ export const updateMonitorTarget = async (id: string, payload: any) => {
 
 export const getMonitorSources = async () => {
   const [artistUsers, manualRows, hashtagRows] = await Promise.all([
-    listArtistTwitterSources(),
+    listArtistTwitterSources(),  // 不帶 enabledOnly，返回全部
     listMonitorTargets({ type: 'user', includeDisabled: true }),
     listMonitorTargets({ type: 'hashtag', includeDisabled: true }),
   ]);
@@ -202,7 +204,7 @@ export const getMonitorSources = async () => {
 
 export const getMonitoredFeedTargets = async (): Promise<MonitorFeedTarget[]> => {
   const [artistUsers, manualRows, hashtagRows] = await Promise.all([
-    listArtistTwitterSources(),
+    listArtistTwitterSources({ enabledOnly: true }),
     listMonitorTargets({ type: 'user' }),
     listMonitorTargets({ type: 'hashtag' }),
   ]);

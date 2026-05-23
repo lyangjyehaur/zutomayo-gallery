@@ -5,6 +5,7 @@ import {
   getMonitorTargets,
   patchMonitorTarget,
   postMonitorTarget,
+  toggleArtistMonitor,
   toggleMonitorTarget,
 } from '../controllers/monitor-target.controller.js';
 import { ADMIN_PERMISSIONS } from '../constants/admin-permissions.js';
@@ -19,6 +20,7 @@ router.get('/', asyncHandler(getMonitorTargets));
 router.post('/', asyncHandler(postMonitorTarget));
 router.patch('/:id', asyncHandler(patchMonitorTarget));
 router.patch('/:id/toggle', asyncHandler(toggleMonitorTarget));
+router.patch('/artist/:id/toggle', asyncHandler(toggleArtistMonitor));
 router.delete('/:id', asyncHandler(deleteMonitorTarget));
 
 export default router;

@@ -55,6 +55,7 @@ export const ArtistModel = sequelize.define('Artist', {
   pixiv: { type: DataTypes.STRING, comment: 'Pixiv ID' },
   tiktok: { type: DataTypes.STRING, comment: 'TikTok 帳號' },
   website: { type: DataTypes.STRING, comment: '個人網站' },
+  twitter_monitor_enabled: { type: DataTypes.BOOLEAN, defaultValue: true, comment: '是否監聽該畫師的 Twitter 推文' },
 }, { tableName: 'artists', timestamps: false, comment: '儲存參與 MV 製作或繪製二創圖的創作者資訊' });
 
 export const AlbumModel = sequelize.define('Album', {

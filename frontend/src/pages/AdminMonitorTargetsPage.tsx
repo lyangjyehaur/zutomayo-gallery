@@ -27,6 +27,7 @@ type ArtistSource = {
   id: string
   name?: string | null
   handle: string
+  twitter_monitor_enabled?: boolean
 }
 
 type SourcesResponse = {
@@ -146,6 +147,21 @@ export function AdminMonitorTargetsPage() {
     }
   }
 
+  const toggleArtist = async (artist: ArtistSource) => {
+    try {
+      const res = await adminFetch(`${apiBase}/artist/${encodeURIComponent(artist.id)}/toggle`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: !(artist.twitter_monitor_enabled !== false) }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) throw json
+      await loadSources()
+    } catch (error: any) {
+      toast.error(formatApiError(error, "切換畫師監聽狀態失敗"))
+    }
+  }
+
   const deleteTarget = async (target: MonitorTarget) => {
     const ok = await confirm({
       title: "刪除監聽目標",
@@ -228,12 +244,24 @@ export function AdminMonitorTargetsPage() {
               <div className="border-2 border-dashed border-black/30 p-4 text-sm font-bold opacity-60">目前沒有畫師 Twitter 資料</div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
-                {sources.artistUsers.map((artist) => (
-                  <div key={`${artist.id}-${artist.handle}`} className="border-2 border-black bg-secondary-background p-3 min-w-0">
-                    <div className="font-black truncate">{artist.name || artist.handle}</div>
-                    <div className="text-xs font-mono opacity-70 truncate">@{artist.handle}</div>
-                  </div>
-                ))}
+                {sources.artistUsers.map((artist) => {
+                  const isEnabled = artist.twitter_monitor_enabled !== false
+                  return (
+                    <div key={`${artist.id}-${artist.handle}`} className={`border-2 border-black p-3 min-w-0 flex items-center justify-between gap-2 ${isEnabled ? 'bg-secondary-background' : 'bg-gray-100 opacity-60'}`}>
+                      <div className="min-w-0">
+                        <div className="font-black truncate">{artist.name || artist.handle}</div>
+                        <div className="text-xs font-mono opacity-70 truncate">@{artist.handle}</div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        className={`border-2 border-black font-bold shrink-0 ${isEnabled ? 'bg-ztmy-green/60' : 'bg-red-100'}`}
+                        onClick={() => toggleArtist(artist)}
+                      >
+                        {isEnabled ? '啟用' : '停用'}
+                      </Button>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </section>

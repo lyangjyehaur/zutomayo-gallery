@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { MonitorTargetModel } from '../models/index.js';
+import { ArtistModel, MonitorTargetModel } from '../models/index.js';
 import { AppError } from '../middleware/errorHandler.js';
 import {
   createMonitorTarget,
@@ -53,4 +53,12 @@ export const toggleMonitorTarget = async (req: Request, res: Response) => {
   const enabled = typeof req.body?.enabled === 'boolean' ? req.body.enabled : !target.get('enabled');
   await target.update({ enabled } as any);
   res.json({ success: true, data: target });
+};
+
+export const toggleArtistMonitor = async (req: Request, res: Response) => {
+  const artist = await ArtistModel.findByPk(req.params.id);
+  if (!artist) throw new AppError(404, 'ARTIST_NOT_FOUND', '找不到畫師');
+  const enabled = typeof req.body?.enabled === 'boolean' ? req.body.enabled : !artist.get('twitter_monitor_enabled');
+  await artist.update({ twitter_monitor_enabled: enabled } as any);
+  res.json({ success: true, data: { id: artist.get('id'), twitter_monitor_enabled: enabled } });
 };
