@@ -317,9 +317,10 @@ export interface ResolvedTwitterMedia {
   type?: string | null
 }
 
-export async function fetchStagingFanarts(status: string, page: number, limit: number) {
+export async function fetchStagingFanarts(status: string, page: number, limit: number, sort: string = 'newest') {
   const base = getApiBase()
-  const res = await adminFetch(`${base}/staging-fanarts?status=${status}&page=${page}&limit=${limit}`)
+  const sortParam = sort !== 'newest' ? `&sort=${sort}` : ''
+  const res = await adminFetch(`${base}/staging-fanarts?status=${status}&page=${page}&limit=${limit}${sortParam}`)
   return res.json() as Promise<StagingFanartListResponse>
 }
 

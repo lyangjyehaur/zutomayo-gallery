@@ -125,6 +125,7 @@ export default function StagingPage({ f7router }: StagingPageProps) {
   const [triggeringCrawler, setTriggeringCrawler] = useState(false)
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set())
   const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null)
+  const [sortBy, setSortBy] = useState('newest')
   const [isSticky, setIsSticky] = useState(false)
   const [totalPages, setTotalPages] = useState(1)
   const [pageInputValue, setPageInputValue] = useState(String(pagination.currentPage))
@@ -171,7 +172,7 @@ export default function StagingPage({ f7router }: StagingPageProps) {
     setLoading(true)
     setLoadError('')
     try {
-      const response = await fetchStagingFanarts(nextStatus, pageNum, PAGE_SIZE)
+      const response = await fetchStagingFanarts(nextStatus, pageNum, PAGE_SIZE, sortBy)
       const newItems = Array.isArray(response.data) ? response.data : []
       setItems((prev) => (reset ? newItems : [...prev, ...newItems]))
 
@@ -186,7 +187,7 @@ export default function StagingPage({ f7router }: StagingPageProps) {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [sortBy])
 
   const resetPagination = useCallback(() => {
     pageRef.current = 1
@@ -612,6 +613,22 @@ export default function StagingPage({ f7router }: StagingPageProps) {
             已拒絕 {progress?.statusCounts.rejected || 0}
           </Button>
         </Segmented>
+        <div style={{ marginTop: 8 }}>
+          <select
+            value={sortBy}
+            onChange={(e) => {
+              setSortBy(e.target.value)
+              resetPagination()
+            }}
+            style={{ border: '2px solid #000', fontWeight: 700, padding: '4px 8px', fontSize: 13, borderRadius: 6 }}
+          >
+            <option value="newest">最新</option>
+            <option value="oldest">最舊</option>
+            <option value="likes_desc">最多讚</option>
+            <option value="likes_asc">最少讚</option>
+            <option value="views_desc">最多瀏覽</option>
+          </select>
+        </div>
       </Block>
 
       <ReviewToolbarCard
