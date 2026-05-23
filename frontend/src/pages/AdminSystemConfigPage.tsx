@@ -396,7 +396,15 @@ export function AdminSystemConfigPage() {
       const body: Record<string, string | undefined> = {}
       if (botToken.trim()) body.bot_token = botToken.trim()
       if (chatId.trim()) body.chat_id = chatId.trim()
-      if (webhookSecret.trim()) body.webhook_secret = webhookSecret.trim()
+      if (webhookSecret.trim()) {
+        // Telegram secret_token 只允許 A-Z a-z 0-9 _ -
+        if (!/^[A-Za-z0-9_-]{1,256}$/.test(webhookSecret.trim())) {
+          toast.error("Webhook Secret 只能包含英文字母、數字、底線 (_) 和連字號 (-)")
+          setIsSavingTg(false)
+          return
+        }
+        body.webhook_secret = webhookSecret.trim()
+      }
 
       if (Object.keys(body).length === 0) {
         toast.error("請輸入至少一個欄位")
@@ -654,6 +662,7 @@ export function AdminSystemConfigPage() {
             configuredDisplay={tgConfig?.webhook_secret}
             extra={<>{envBadge("webhook_secret")}</>}
           />
+          <p className="text-xs opacity-50 -mt-3">只允許英文字母、數字、底線 (_) 和連字號 (-)，1-256 字元</p>
 
           <div className="flex gap-3 pt-2">
             <Button onClick={handleSaveTelegram} disabled={isSavingTg}>

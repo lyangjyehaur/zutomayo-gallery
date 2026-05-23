@@ -97,7 +97,14 @@ export function AdminTelegramConfigPage() {
       const body: Record<string, string | undefined> = {}
       if (botToken.trim()) body.bot_token = botToken.trim()
       if (chatId.trim()) body.chat_id = chatId.trim()
-      if (webhookSecret.trim()) body.webhook_secret = webhookSecret.trim()
+      if (webhookSecret.trim()) {
+        if (!/^[A-Za-z0-9_-]{1,256}$/.test(webhookSecret.trim())) {
+          toast.error("Webhook Secret 只能包含英文字母、數字、底線 (_) 和連字號 (-)")
+          setIsSaving(false)
+          return
+        }
+        body.webhook_secret = webhookSecret.trim()
+      }
       if (webhookUrl.trim()) body.webhook_url = webhookUrl.trim()
 
       if (Object.keys(body).length === 0) {

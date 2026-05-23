@@ -18,6 +18,7 @@ type MonitorTarget = {
   label?: string | null
   enabled: boolean
   note?: string | null
+  content_type?: string
   created_at?: string
   updated_at?: string
 }
@@ -34,7 +35,7 @@ type SourcesResponse = {
   hashtags: MonitorTarget[]
 }
 
-const emptyForm = { handle: "", label: "", note: "" }
+const emptyForm = { handle: "", label: "", note: "", content_type: "fanart" }
 
 const displayHandle = (type: MonitorTargetType, handle: string) => {
   return type === "hashtag" ? `#${handle}` : `@${handle}`
@@ -171,6 +172,7 @@ export function AdminMonitorTargetsPage() {
       handle: target.handle || "",
       label: target.label || "",
       note: target.note || "",
+      content_type: target.content_type || "fanart",
     })
   }
 
@@ -241,7 +243,7 @@ export function AdminMonitorTargetsPage() {
           <h2 className="font-black tracking-wider mb-4">
             {activeTab === "user" ? "手動用戶監聽" : "手動 Hashtag 監聽"}
           </h2>
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_minmax(220px,2fr)_auto] gap-2 items-start mb-4">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_minmax(120px,auto)_minmax(220px,2fr)_auto] gap-2 items-start mb-4">
             <Input
               value={form.handle}
               onChange={(e) => setForm((prev) => ({ ...prev, handle: e.target.value }))}
@@ -254,6 +256,14 @@ export function AdminMonitorTargetsPage() {
               className="border-2 border-black font-bold"
               placeholder="顯示名稱"
             />
+            <select
+              value={form.content_type}
+              onChange={(e) => setForm((prev) => ({ ...prev, content_type: e.target.value }))}
+              className="border-2 border-black font-bold h-10 px-3 bg-white"
+            >
+              <option value="fanart">Fanart</option>
+              <option value="official">官方</option>
+            </select>
             <Input
               value={form.note}
               onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
@@ -283,7 +293,7 @@ export function AdminMonitorTargetsPage() {
                 return (
                   <div key={target.id} className="border-2 border-black bg-secondary-background p-3">
                     {isEditing ? (
-                      <div className="grid grid-cols-1 lg:grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_minmax(220px,2fr)_auto] gap-2 items-start">
+                      <div className="grid grid-cols-1 lg:grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_minmax(100px,auto)_minmax(220px,2fr)_auto] gap-2 items-start">
                         <Input
                           value={editForm.handle}
                           onChange={(e) => setEditForm((prev) => ({ ...prev, handle: e.target.value }))}
@@ -295,6 +305,14 @@ export function AdminMonitorTargetsPage() {
                           className="border-2 border-black font-bold bg-white"
                           placeholder="顯示名稱"
                         />
+                        <select
+                          value={editForm.content_type}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, content_type: e.target.value }))}
+                          className="border-2 border-black font-bold h-10 px-3 bg-white"
+                        >
+                          <option value="fanart">Fanart</option>
+                          <option value="official">官方</option>
+                        </select>
                         <Textarea
                           value={editForm.note}
                           onChange={(e) => setEditForm((prev) => ({ ...prev, note: e.target.value }))}
@@ -316,6 +334,9 @@ export function AdminMonitorTargetsPage() {
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-black break-all">{displayHandle(target.type, target.handle)}</span>
                             {target.label ? <span className="text-xs font-mono border-2 border-black bg-white px-2 py-0.5">{target.label}</span> : null}
+                            <span className={`text-xs font-mono border-2 border-black px-2 py-0.5 ${target.content_type === 'official' ? 'bg-blue-100' : 'bg-orange-100'}`}>
+                              {target.content_type === 'official' ? '官方' : 'Fanart'}
+                            </span>
                             <span className={`text-xs font-mono border-2 border-black px-2 py-0.5 ${target.enabled ? "bg-ztmy-green/60" : "bg-red-100"}`}>
                               {target.enabled ? "啟用" : "停用"}
                             </span>

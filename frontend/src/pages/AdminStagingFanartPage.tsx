@@ -26,8 +26,15 @@ interface StagingFanart {
   r2_url: string | null;
   media_type: string;
   crawled_at: string;
+  post_date?: string;
   status: string;
   source: string;
+  content_type?: string;
+  like_count?: number;
+  retweet_count?: number;
+  view_count?: number;
+  author_name?: string;
+  author_handle?: string;
 }
 
 interface ProgressData {
@@ -45,12 +52,13 @@ interface ProgressData {
   statusCounts: {
     pending: number;
     on_hold: number;
+    reviewed: number;
     approved: number;
     rejected: number;
   };
 }
 
-type ReviewQueueStatus = 'pending' | 'on_hold' | 'rejected';
+type ReviewQueueStatus = 'pending' | 'on_hold' | 'reviewed' | 'rejected';
 
 export function AdminStagingFanartPage() {
   const settingsKey = 'ztmy_admin_staging_fanart_settings';
@@ -86,7 +94,7 @@ export function AdminStagingFanartPage() {
   });
   const [totalPages, setTotalPages] = useState(1);
   const [viewStatus, setViewStatus] = useState<ReviewQueueStatus>(() => {
-    return ['pending', 'on_hold', 'rejected'].includes(initialSettings?.viewStatus)
+    return ['pending', 'on_hold', 'reviewed', 'rejected'].includes(initialSettings?.viewStatus)
       ? initialSettings.viewStatus
       : 'pending';
   });
@@ -106,11 +114,17 @@ export function AdminStagingFanartPage() {
     const n = Number(initialSettings?.maxItems);
     return Number.isFinite(n) && n > 0 ? n : 1000;
   });
+  const [crawlerContentType, setCrawlerContentType] = useState<string>(() => {
+    return initialSettings?.crawlerContentType || 'fanart';
+  });
 
   const [mvs, setMvs] = useState<Option[]>([]);
   const [selectedMvs, setSelectedMvs] = useState<Record<string, string[]>>({});
   const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
   const [batchSelectedMvs, setBatchSelectedMvs] = useState<string[]>([]);
+  const [contentTypeFilter, setContentTypeFilter] = useState<string>(() => {
+    return initialSettings?.contentTypeFilter || '';
+  });
   const gotoPage = (p: number) => setPage(() => Math.min(Math.max(1, p), totalPages || 1));
 
   const baseApiUrl = useMemo(() => getApiRoot(), []);
@@ -125,14 +139,16 @@ export function AdminStagingFanartPage() {
       searchTerms,
       startDate: startDateStr,
       endDate: endDateStr,
-      maxItems
+      maxItems,
+      crawlerContentType,
+      contentTypeFilter
     };
     try {
       localStorage.setItem(settingsKey, JSON.stringify(next));
     } catch {
       toast.error('篩選設定保存失敗，請檢查瀏覽器隱私模式或存儲空間');
     }
-  }, [page, viewStatus, searchTerms, startDate, endDate, maxItems]);
+  }, [page, viewStatus, searchTerms, startDate, endDate, maxItems, crawlerContentType, contentTypeFilter]);
 
   const fetchMvs = useCallback(async () => {
     try {
@@ -166,7 +182,8 @@ export function AdminStagingFanartPage() {
   const fetchFanarts = useCallback(async (p: number, status: ReviewQueueStatus) => {
     setIsLoading(true);
     try {
-      const res = await adminFetch(`${baseApiUrl}/staging-fanarts?page=${p}&limit=60&status=${status}`);
+      const ctParam = contentTypeFilter ? `&contentType=${contentTypeFilter}` : '';
+      const res = await adminFetch(`${baseApiUrl}/staging-fanarts?page=${p}&limit=60&status=${status}${ctParam}`);
       const data = await res.json();
       if (data.success) {
         setFanarts(data.data);
@@ -179,7 +196,7 @@ export function AdminStagingFanartPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [baseApiUrl]);
+  }, [baseApiUrl, contentTypeFilter]);
 
   useEffect(() => {
     fetchFanarts(page, viewStatus);
@@ -237,7 +254,8 @@ export function AdminStagingFanartPage() {
           searchTerms,
           startDate: startDateStr,
           endDate: endDateStr,
-          maxItems
+          maxItems,
+          contentType: crawlerContentType
         })
       });
       const data = await res.json();
@@ -398,11 +416,34 @@ export function AdminStagingFanartPage() {
             </Button>
             <Button
               variant="outline"
+              className={`border-2 border-black font-bold shadow-neo-sm h-8 ${viewStatus === 'reviewed' ? 'bg-blue-200' : 'bg-white'}`}
+              onClick={() => switchViewStatus('reviewed')}
+            >
+              待關聯 ({progress?.statusCounts?.reviewed || 0})
+            </Button>
+            <Button
+              variant="outline"
               className={`border-2 border-black font-bold shadow-neo-sm h-8 ${viewStatus === 'rejected' ? 'bg-red-200' : 'bg-white'}`}
               onClick={() => switchViewStatus('rejected')}
             >
               已拒絕 ({progress?.statusCounts?.rejected || 0})
             </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              value={contentTypeFilter}
+              onChange={(e) => {
+                setContentTypeFilter(e.target.value);
+                setPage(1);
+                setSelectedCards(new Set());
+                setBatchSelectedMvs([]);
+              }}
+              className="border-2 border-black font-bold shadow-neo-sm h-8 px-2 bg-white"
+            >
+              <option value="">全部分類</option>
+              <option value="fanart">Fanart</option>
+              <option value="official">官方</option>
+            </select>
           </div>
           <Pagination className="w-auto">
             <PaginationContent>
@@ -476,6 +517,17 @@ export function AdminStagingFanartPage() {
                       min={1}
                     />
                   </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold uppercase shrink-0">內容分類:</span>
+                    <select
+                      value={crawlerContentType}
+                      onChange={(e) => setCrawlerContentType(e.target.value)}
+                      className="border-2 border-black font-bold shadow-neo-sm h-8 px-2 bg-background"
+                    >
+                      <option value="fanart">Fanart</option>
+                      <option value="official">官方</option>
+                    </select>
+                  </div>
                 </div>
                 <Button
                   variant="default"
@@ -515,7 +567,7 @@ export function AdminStagingFanartPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
               <div className="border-2 border-black p-3 bg-secondary-background">
                 <div className="text-xs font-bold uppercase opacity-70 mb-1">X/Twitter 抓取進度</div>
                 <div className="text-2xl font-black">
@@ -532,6 +584,11 @@ export function AdminStagingFanartPage() {
               <div className="border-2 border-black p-3 bg-blue-200">
                 <div className="text-xs font-bold uppercase opacity-70 mb-1">暫存觀察 (On Hold)</div>
                 <div className="text-2xl font-black">{progress?.statusCounts?.on_hold || 0}</div>
+              </div>
+
+              <div className="border-2 border-black p-3 bg-blue-100">
+                <div className="text-xs font-bold uppercase opacity-70 mb-1">待關聯 (Reviewed)</div>
+                <div className="text-2xl font-black">{progress?.statusCounts?.reviewed || 0}</div>
               </div>
 
               <div className="border-2 border-black p-3 bg-ztmy-green/50">
@@ -555,7 +612,7 @@ export function AdminStagingFanartPage() {
         ) : fanarts.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 border-4 border-dashed border-black/20 text-black/50 font-bold text-lg uppercase tracking-widest">
             <i className="hn hn-inbox text-4xl mb-4" />
-            {viewStatus === 'pending' ? 'No pending fanarts' : viewStatus === 'on_hold' ? 'No on-hold fanarts' : 'No rejected fanarts'}
+            {viewStatus === 'pending' ? 'No pending fanarts' : viewStatus === 'on_hold' ? 'No on-hold fanarts' : viewStatus === 'reviewed' ? 'No reviewed fanarts' : 'No rejected fanarts'}
           </div>
         ) : (
           <div className="flex flex-col gap-4">
@@ -577,7 +634,7 @@ export function AdminStagingFanartPage() {
               </label>
 
               <div className="flex items-center gap-2 mt-2 sm:mt-0">
-                {viewStatus === 'pending' || viewStatus === 'on_hold' ? (
+                {viewStatus === 'pending' || viewStatus === 'on_hold' || viewStatus === 'reviewed' ? (
                   <>
                     <div className="w-[200px]">
                       <MultiSelect
@@ -587,7 +644,7 @@ export function AdminStagingFanartPage() {
                         placeholder="批次選擇 MV..."
                       />
                     </div>
-                    {viewStatus === 'pending' ? (
+                    {viewStatus === 'pending' || viewStatus === 'reviewed' ? (
                       <Button
                         variant="outline"
                         className="border-2 border-black bg-blue-500 text-white font-black uppercase tracking-wider hover:bg-blue-600 h-8"
@@ -685,12 +742,27 @@ export function AdminStagingFanartPage() {
 
                 <div className="p-2 flex flex-col gap-2 flex-1">
                   <div className="flex flex-col gap-1 text-[10px] sm:text-xs font-mono font-bold opacity-70">
+                    {(f.author_name || f.author_handle) && (
+                      <span className="text-black font-black text-xs not-mono truncate">
+                        {f.author_name || ''}{f.author_handle ? ` @${f.author_handle}` : ''}
+                      </span>
+                    )}
                     <span className="truncate" title={f.tweet_id}>ID: {f.tweet_id}</span>
                     <span>Type: {f.media_type}</span>
                     <span className="truncate" title={new Date(f.crawled_at).toLocaleString()}>Date: {new Date(f.crawled_at).toLocaleDateString()}</span>
                   </div>
+                  <div className="flex flex-wrap gap-2 text-[10px] sm:text-xs font-bold">
+                    <span>❤️ {f.like_count ?? 0}</span>
+                    <span>🔁 {f.retweet_count ?? 0}</span>
+                    <span>👁 {f.view_count ?? 0}</span>
+                  </div>
+                  {f.post_date && (
+                    <div className="text-[10px] sm:text-xs font-mono opacity-60">
+                      推文: {new Date(f.post_date).toLocaleDateString()}
+                    </div>
+                  )}
 
-                {viewStatus === 'pending' || viewStatus === 'on_hold' ? (
+                {viewStatus === 'pending' || viewStatus === 'on_hold' || viewStatus === 'reviewed' ? (
                     <div className="flex flex-col gap-1 mt-1">
                       <span className="text-[10px] sm:text-xs font-bold uppercase">Associated MVs:</span>
                       <MultiSelect
@@ -702,7 +774,7 @@ export function AdminStagingFanartPage() {
                     </div>
                   ) : null}
 
-                  {viewStatus === 'pending' ? (
+                  {viewStatus === 'pending' || viewStatus === 'reviewed' ? (
                     <div className="mt-auto grid grid-cols-3 gap-2 pt-2">
                       <Button
                         className="w-full bg-red-500 text-white hover:bg-red-600 border-2 border-black shadow-neo-sm font-black uppercase tracking-wider text-xs h-8"
