@@ -45,7 +45,7 @@ export function AdminCosplayPage() {
 
   const fetchUnorganized = async () => {
     try {
-      const res = await adminFetch(`${baseApiUrl}/fanarts/unorganized?type=cosplay`);
+      const res = await adminFetch(`${baseApiUrl}/cosplay/unorganized?type=cosplay`);
       const data = await res.json();
       if (data.success) {
         setUnorganizedGroups(data.data);
@@ -59,7 +59,7 @@ export function AdminCosplayPage() {
 
   const fetchDeleted = async () => {
     try {
-      const res = await adminFetch(`${baseApiUrl}/fanarts/deleted?type=cosplay`);
+      const res = await adminFetch(`${baseApiUrl}/cosplay/deleted?type=cosplay`);
       const data = await res.json();
       if (data.success) {
         setDeletedGroups(data.data);
@@ -73,7 +73,7 @@ export function AdminCosplayPage() {
 
   const fetchLegacy = async () => {
     try {
-      const res = await adminFetch(`${baseApiUrl}/fanarts/legacy?type=cosplay`);
+      const res = await adminFetch(`${baseApiUrl}/cosplay/legacy?type=cosplay`);
       const data = await res.json();
       if (data.success) {
         setLegacyMedia(data.data);
@@ -87,7 +87,7 @@ export function AdminCosplayPage() {
 
   const fetchTagSummary = async () => {
     try {
-      const res = await adminFetch(`${baseApiUrl}/fanarts/tag-summary`);
+      const res = await adminFetch(`${baseApiUrl}/cosplay/tag-summary`);
       const data = await res.json();
       if (data.success) {
         setTagSummary(data.data || {});
@@ -101,7 +101,7 @@ export function AdminCosplayPage() {
 
   const fetchFanartsByTag = async (tagId: string) => {
     try {
-      const res = await adminFetch(`${baseApiUrl}/fanarts/by-tag/${encodeURIComponent(tagId)}`);
+      const res = await adminFetch(`${baseApiUrl}/cosplay/by-tag/${encodeURIComponent(tagId)}`);
       const data = await res.json();
       if (data.success) {
         setTagMedia(Array.isArray(data.data) ? data.data : []);
@@ -236,7 +236,7 @@ export function AdminCosplayPage() {
     if (mvs.length === 0) return toast.error('請至少選擇一個關聯的 MV 或標籤');
     
     try {
-      const res = await adminFetch(`${baseApiUrl}/fanarts/media/${mediaId}/assign`, {
+      const res = await adminFetch(`${baseApiUrl}/cosplay/media/${mediaId}/assign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mvs, groupId })
@@ -264,7 +264,7 @@ export function AdminCosplayPage() {
     });
     if (!ok) return;
     try {
-      const res = await adminFetch(`${baseApiUrl}/fanarts/${groupId}/status`, {
+      const res = await adminFetch(`${baseApiUrl}/cosplay/${groupId}/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'deleted' })
@@ -281,7 +281,7 @@ export function AdminCosplayPage() {
 
   const handleRestoreGroup = async (groupId: string) => {
     try {
-      const res = await adminFetch(`${baseApiUrl}/fanarts/${groupId}/status`, {
+      const res = await adminFetch(`${baseApiUrl}/cosplay/${groupId}/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'unorganized' })
@@ -299,7 +299,7 @@ export function AdminCosplayPage() {
   const handleUpdateAssociations = async (mediaId: string, mvs: string[]) => {
     if (mvs.length === 0) return toast.error('請至少選擇一個 MV 或標籤');
     try {
-      const res = await adminFetch(`${baseApiUrl}/fanarts/media/${mediaId}/sync`, {
+      const res = await adminFetch(`${baseApiUrl}/cosplay/media/${mediaId}/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mvs })
