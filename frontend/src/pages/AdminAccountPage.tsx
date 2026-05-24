@@ -40,6 +40,13 @@ export function AdminAccountPage() {
   const [displayName, setDisplayName] = React.useState("")
   const [avatarUrl, setAvatarUrl] = React.useState("")
 
+  // ── API Token state ──
+  const [tokenLoading, setTokenLoading] = React.useState(false)
+  const [hasToken, setHasToken] = React.useState(false)
+  const [maskedToken, setMaskedToken] = React.useState<string | null>(null)
+  const [newToken, setNewToken] = React.useState<string | null>(null)
+  const [revokeDialogOpen, setRevokeDialogOpen] = React.useState(false)
+
   const load = React.useCallback(async () => {
     setLoading(true)
     try {
@@ -71,6 +78,20 @@ export function AdminAccountPage() {
     }
   }, [authApiBase])
 
+  const loadToken = React.useCallback(async () => {
+    setTokenLoading(true)
+    try {
+      const r = await adminFetch(`${authApiBase}/token`)
+      const json = await r.json().catch(() => null)
+      if (json?.success && json.data) {
+        setHasToken(!!json.data.has_token)
+        setMaskedToken(json.data.masked_token || null)
+      }
+    } finally {
+      setTokenLoading(false)
+    }
+  }, [authApiBase])
+
   React.useEffect(() => {
     void load()
   }, [load])
@@ -78,6 +99,10 @@ export function AdminAccountPage() {
   React.useEffect(() => {
     void loadProfile()
   }, [loadProfile])
+
+  React.useEffect(() => {
+    void loadToken()
+  }, [loadToken])
 
   const saveProfile = React.useCallback(async () => {
     setProfileLoading(true)
@@ -147,9 +172,52 @@ export function AdminAccountPage() {
     }
   }, [authApiBase, load, removeId])
 
+  const handleGenerateToken = React.useCallback(async () => {
+    setTokenLoading(true)
+    setNewToken(null)
+    try {
+      const res = await adminFetch(`${authApiBase}/token/generate`, { method: "POST" })
+      const json = await res.json().catch(() => null)
+      if (!res.ok || !json?.success) throw new Error(String(json?.error || "GENERATE_FAILED"))
+      setNewToken(json.data.token)
+      setHasToken(true)
+      toast.success("API Token 已產生")
+      await loadToken()
+    } catch (e: any) {
+      toast.error(formatApiError(e, '產生失敗'))
+    } finally {
+      setTokenLoading(false)
+    }
+  }, [authApiBase, loadToken])
+
+  const handleRevokeToken = React.useCallback(async () => {
+    setTokenLoading(true)
+    try {
+      const res = await adminFetch(`${authApiBase}/token`, { method: "DELETE" })
+      const json = await res.json().catch(() => null)
+      if (!res.ok || !json?.success) throw new Error(String(json?.error || "REVOKE_FAILED"))
+      setHasToken(false)
+      setMaskedToken(null)
+      setNewToken(null)
+      toast.success("API Token 已撤銷")
+    } catch (e: any) {
+      toast.error(formatApiError(e, '撤銷失敗'))
+    } finally {
+      setTokenLoading(false)
+      setRevokeDialogOpen(false)
+    }
+  }, [authApiBase])
+
+  const copyToken = React.useCallback(() => {
+    if (newToken) {
+      void navigator.clipboard.writeText(newToken)
+      toast.success("已複製到剪貼簿")
+    }
+  }, [newToken])
+
   return (
     <div className="p-6 flex flex-col gap-4">
-      <AdminPageHeader title="帳戶設定" description="管理本帳戶的基本資料與登入方式（Passkeys）。" />
+      <AdminPageHeader title="帳戶設定" description="管理本帳戶的基本資料、登入方式（Passkeys）與 API Token。" />
 
       <AdminPanel className="flex flex-col gap-3 max-w-2xl">
         <div className="flex items-center justify-between gap-3">
@@ -169,6 +237,51 @@ export function AdminAccountPage() {
         <div className="flex justify-end">
           <Button onClick={() => void saveProfile()} disabled={profileLoading} className="border-2 border-black">
             保存
+          </Button>
+        </div>
+      </AdminPanel>
+
+      {/* ── API Token ── */}
+      <AdminPanel className="flex flex-col gap-3 max-w-2xl">
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-sm font-black uppercase tracking-widest">API Token</div>
+          <Button variant="neutral" onClick={() => void loadToken()} disabled={tokenLoading} className="border-2 border-black">
+            {tokenLoading ? "Loading..." : "Refresh"}
+          </Button>
+        </div>
+
+        <div className="text-xs opacity-60">
+          用於 Apple Shortcut 等外部工具認證。每個帳號僅可持有一組 Token。
+        </div>
+
+        {newToken ? (
+          <div className="flex flex-col gap-2">
+            <div className="text-xs font-bold text-green-600">✓ Token 已產生，請立即複製（僅顯示一次）：</div>
+            <div className="flex gap-2 items-center">
+              <Input value={newToken} readOnly className="font-mono text-xs" />
+              <Button variant="neutral" onClick={copyToken} className="border-2 border-black whitespace-nowrap">
+                複製
+              </Button>
+            </div>
+          </div>
+        ) : hasToken && maskedToken ? (
+          <div className="flex flex-col gap-2">
+            <div className="text-xs">
+              當前 Token：<code className="font-mono bg-muted px-1 py-0.5 rounded">{maskedToken}</code>
+            </div>
+          </div>
+        ) : (
+          <div className="text-xs font-mono opacity-60">尚未產生 API Token。</div>
+        )}
+
+        <div className="flex gap-2 justify-end">
+          {hasToken && (
+            <Button variant="outline" onClick={() => setRevokeDialogOpen(true)} disabled={tokenLoading} className="border-2 border-black">
+              撤銷 Token
+            </Button>
+          )}
+          <Button onClick={() => void handleGenerateToken()} disabled={tokenLoading} className="border-2 border-black">
+            {hasToken ? "重新產生" : "產生 Token"}
           </Button>
         </div>
       </AdminPanel>
@@ -223,6 +336,19 @@ export function AdminAccountPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction onClick={() => void confirmRemove()}>刪除</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={revokeDialogOpen} onOpenChange={setRevokeDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>撤銷 API Token</AlertDialogTitle>
+            <AlertDialogDescription>確定要撤銷當前的 API Token 嗎？撤銷後所有使用此 Token 的外部工具將無法存取 API。</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void handleRevokeToken()}>撤銷</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

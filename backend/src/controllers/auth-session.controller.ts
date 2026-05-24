@@ -197,3 +197,72 @@ export const updateNotificationPreferences = async (req: Request, res: Response)
   const payload = await buildMePayload(username);
   res.json({ success: true, data: payload });
 };
+
+/**
+ * 產生 API Token（每次產生會覆蓋舊的）
+ */
+export const generateApiToken = async (req: Request, res: Response) => {
+  const userId = req.session.userId;
+  const username = req.session.username;
+  if (typeof userId !== 'string' || typeof username !== 'string') {
+    res.status(401).json({ success: false, error: '請先登入後再操作', code: 'Unauthorized' });
+    return;
+  }
+
+  const user = await AdminUserModel.findOne({ where: { id: userId, username } as any });
+  if (!user) {
+    res.status(401).json({ success: false, error: '請先登入後再操作', code: 'Unauthorized' });
+    return;
+  }
+
+  const { randomBytes } = await import('crypto');
+  const token = randomBytes(32).toString('hex');
+  await user.update({ api_token: token } as any);
+
+  res.json({ success: true, data: { token } });
+};
+
+/**
+ * 查詢當前 API Token（遮罩版，只顯示前 8 字元 + 後 4 字元）
+ */
+export const getApiToken = async (req: Request, res: Response) => {
+  const userId = req.session.userId;
+  const username = req.session.username;
+  if (typeof userId !== 'string' || typeof username !== 'string') {
+    res.status(401).json({ success: false, error: '請先登入後再操作', code: 'Unauthorized' });
+    return;
+  }
+
+  const user = await AdminUserModel.findOne({ where: { id: userId, username } as any });
+  if (!user) {
+    res.status(401).json({ success: false, error: '請先登入後再操作', code: 'Unauthorized' });
+    return;
+  }
+
+  const data = user.toJSON() as any;
+  const token: string | null = data.api_token || null;
+  const masked = token ? `${token.slice(0, 8)}${'*'.repeat(20)}${token.slice(-4)}` : null;
+
+  res.json({ success: true, data: { has_token: !!token, masked_token: masked } });
+};
+
+/**
+ * 撤銷 API Token
+ */
+export const revokeApiToken = async (req: Request, res: Response) => {
+  const userId = req.session.userId;
+  const username = req.session.username;
+  if (typeof userId !== 'string' || typeof username !== 'string') {
+    res.status(401).json({ success: false, error: '請先登入後再操作', code: 'Unauthorized' });
+    return;
+  }
+
+  const user = await AdminUserModel.findOne({ where: { id: userId, username } as any });
+  if (!user) {
+    res.status(401).json({ success: false, error: '請先登入後再操作', code: 'Unauthorized' });
+    return;
+  }
+
+  await user.update({ api_token: null } as any);
+  res.json({ success: true, data: { revoked: true } });
+};

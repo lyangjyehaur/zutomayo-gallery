@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { generateRegOptions, verifyReg, generateAuthOptions, verifyAuth, listPasskeys, removePasskey } from '../controllers/auth.controller.js';
-import { login, logout, me, updateMeProfile, updateNotificationPreferences } from '../controllers/auth-session.controller.js';
+import { login, logout, me, updateMeProfile, updateNotificationPreferences, generateApiToken, getApiToken, revokeApiToken } from '../controllers/auth-session.controller.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 
@@ -11,6 +11,11 @@ router.post('/logout', asyncHandler(logout));
 router.get('/me', asyncHandler(me));
 router.put('/me/profile', requireAuth, asyncHandler(updateMeProfile));
 router.put('/me/notification-preferences', requireAuth, asyncHandler(updateNotificationPreferences));
+
+// API Token management (per-user, session auth required)
+router.get('/token', requireAuth, asyncHandler(getApiToken));
+router.post('/token/generate', requireAuth, asyncHandler(generateApiToken));
+router.delete('/token', requireAuth, asyncHandler(revokeApiToken));
 
 // Passkey authentication (public)
 router.post('/generate-auth-options', asyncHandler(generateAuthOptions));

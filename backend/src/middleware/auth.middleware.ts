@@ -148,3 +148,36 @@ export const requireAnyPermission = (perms: string | string[]) => {
     }
   };
 };
+
+/**
+ * API Token 認證中間件：驗證 Bearer token 並將對應用戶掛到 req.user
+ * 與 requireAuth 並列，供 Apple Shortcut 等外部工具使用
+ */
+export const requireApiToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    res.status(401).json({ success: false, error: '缺少 API Token', code: 'MISSING_TOKEN' });
+    return;
+  }
+
+  const token = authHeader.slice(7).trim();
+  if (!token) {
+    res.status(401).json({ success: false, error: '缺少 API Token', code: 'MISSING_TOKEN' });
+    return;
+  }
+
+  const user = await AdminUserModel.findOne({ where: { api_token: token } as any });
+  if (!user) {
+    res.status(401).json({ success: false, error: 'API Token 無效', code: 'INVALID_TOKEN' });
+    return;
+  }
+
+  const data = user.toJSON() as any;
+  if (!data.is_active) {
+    res.status(401).json({ success: false, error: '此帳號已被停用', code: 'ACCOUNT_DISABLED' });
+    return;
+  }
+
+  setReqUser(req, { id: String(data.id), username: String(data.username) });
+  next();
+};

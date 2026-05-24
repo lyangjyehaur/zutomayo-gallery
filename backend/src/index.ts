@@ -26,6 +26,7 @@ import submissionRoutes from './routes/submissions.routes.js';
 import adminSubmissionRoutes from './routes/admin-submissions.routes.js';
 import annotationRoutes from './routes/annotation.routes.js';
 import pushSubscriptionRoutes from './controllers/push-subscription.controller.js';
+import shortcutRoutes from './routes/shortcut.routes.js';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { errorEventEmitter } from './services/error-events.service.js';
 import { sequelize, AuthPasskey, AuthSetting } from './services/pg.service.js';
@@ -273,6 +274,7 @@ app.use('/api/admin/system', adminSystemRoutes);
 app.use('/api/admin/submissions', adminSubmissionRoutes);
 app.use('/api/annotations', annotationRoutes);
 app.use('/api/push', pushSubscriptionRoutes);
+app.use('/api/shortcut', shortcutRoutes);
 
 // 如果 bull-board 初始化成功，掛載可視化介面路由
 if (bullBoardAdapter) {
