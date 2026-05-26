@@ -1,7 +1,7 @@
 {
   "name": "ztmy-mv-gallery",
   "private": true,
-  "version": "3.7.7",
+  "version": "3.7.8",
   "type": "module",
   "scripts": {
     "dev": "vite --host",

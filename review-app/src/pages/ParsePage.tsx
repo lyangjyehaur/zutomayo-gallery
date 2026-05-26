@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Page,
   List,
@@ -44,6 +44,7 @@ export default function ParsePage() {
   })
   const [url, setUrl] = useState(initialUrl)
   const [isFromShare] = useState(initialFromShare)
+  const autoParseDone = useRef(false)
   const [clipboardUrl, setClipboardUrl] = useState<string | null>(null)
 
   // Parse state
@@ -95,17 +96,22 @@ export default function ParsePage() {
     }
   }, [])
 
-  // Auto-parse when URL is pre-filled from share target
+  // Auto-parse when URL is pre-filled from share target (only once per mount)
   useEffect(() => {
-    // Debug: show what we got
-    if (isFromShare && url) {
-      f7.toast.create({ text: `收到分享 URL: ${url.substring(0, 60)}...`, closeTimeout: 5000 }).open()
-    }
-    if (url && isFromShare && !parseResult && !parsing) {
+    if (url && isFromShare && !parseResult && !parsing && !autoParseDone.current) {
+      autoParseDone.current = true
+      f7.toast.create({ text: '自動解析中...', closeTimeout: 2000 }).open()
       handleParse()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url, isFromShare])
+
+  // Dismiss any stuck preloader when ParsePage mounts with data
+  useEffect(() => {
+    try {
+      f7.dialog?.close?.()
+    } catch { /* ignore */ }
+  }, [])
 
   // Parse tweet
   const handleParse = useCallback(async () => {
