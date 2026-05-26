@@ -3,6 +3,7 @@ import { StagingFanartModel, MediaGroupModel, MediaModel, MVMediaModel, ArtistMo
 import { TwitterService } from '../services/twitter.service.js';
 import { MVService } from '../services/mv.service.js';
 import { moveFileInR2, uploadBufferToR2 } from '../services/r2.service.js';
+import { deleteKeysByPattern } from '../services/redis.service.js';
 import { extractTweetId } from '../services/twitter.service.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
@@ -285,6 +286,21 @@ export const submitFromShortcut = async (req: Request, res: Response) => {
   }
 
   const hasErrors = results.some(r => r.error);
+
+  // Clear gallery caches so frontend/admin sees new data immediately
+  if (createdMediaIds.length > 0) {
+    const cachePatterns = [
+      'api-cache:/api/fanart*',
+      'api-cache:/api/cosplay*',
+      'api-cache:/api/mvs*',
+    ];
+    for (const pattern of cachePatterns) {
+      deleteKeysByPattern(pattern).catch((err: unknown) => {
+        logger.error({ err, pattern }, '[Shortcut] cache clear failed');
+      });
+    }
+  }
+
   res.status(hasErrors && createdMediaIds.length === 0 ? 500 : 200).json({
     success: createdMediaIds.length > 0,
     data: {
