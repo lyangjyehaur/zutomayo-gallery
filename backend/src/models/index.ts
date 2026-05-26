@@ -474,7 +474,7 @@ export const AdminUserModel = sequelize.define('AdminUser', {
   avatar_url: { type: DataTypes.TEXT, allowNull: true },
   password_hash: { type: DataTypes.TEXT, allowNull: false },
   is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
-  api_token: { type: DataTypes.STRING(64), allowNull: true, unique: true, comment: 'API Token（供外部工具認證）' },
+  api_token: { type: DataTypes.STRING(64), allowNull: true, comment: 'API Token（供外部工具認證）' },
   notification_preferences: {
     type: DataTypes.JSONB,
     defaultValue: { staging: true, submission: true, error: true, crawler: true },
