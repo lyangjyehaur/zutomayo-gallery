@@ -11,8 +11,10 @@ const isAbsoluteUrl = (value: string) => /^https?:\/\//i.test(value)
 
 const getApiOrigin = () => {
   const env = import.meta.env as unknown as ImportMetaEnv
-  const fallback = env.DEV ? '' : 'https://api.ztmr.club'
-  return trimTrailingSlash(env.VITE_API_ORIGIN || fallback)
+  if (!env.DEV && !env.VITE_API_ORIGIN) {
+    throw new Error('VITE_API_ORIGIN is required in production')
+  }
+  return trimTrailingSlash(env.VITE_API_ORIGIN || '')
 }
 
 const getApiRoot = () => {
@@ -733,4 +735,80 @@ export const updateNotificationPreferences = async (prefs: Partial<NotificationP
     body: JSON.stringify(prefs),
   })
   return res.json()
+}
+
+// ── Shortcut API (Bearer token auth) ──
+
+export interface ShortcutParseResult {
+  tweet_id: string
+  author_name: string | null
+  author_handle: string | null
+  text: string | null
+  date: string | null
+  hashtags: string[]
+  like_count: number
+  retweet_count: number
+  view_count: number
+  media: Array<{
+    url: string
+    type: 'image' | 'video'
+    thumbnail: string | null
+    width: number | null
+    height: number | null
+    tweet_id: string
+    already_exists: boolean
+    existing_status: string | null
+  }>
+}
+
+export interface ShortcutSubmitPayload {
+  url: string
+  content_type: 'fanart' | 'official' | 'cosplay' | 'collaboration'
+  assignments: Array<{
+    media_url: string
+    mv_id?: string
+    tag?: string
+    skip?: boolean
+  }>
+}
+
+async function tokenFetch(input: string, token: string, init?: RequestInit) {
+  return fetch(input, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      ...init?.headers,
+    },
+  })
+}
+
+export async function shortcutParseTweet(url: string, token: string) {
+  const base = getApiBase()
+  const res = await tokenFetch(`${base}/shortcut/parse-tweet`, token, {
+    method: 'POST',
+    body: JSON.stringify({ url }),
+  })
+  return res.json() as Promise<{ success: boolean; data?: ShortcutParseResult; error?: string }>
+}
+
+export async function shortcutSubmit(payload: ShortcutSubmitPayload, token: string) {
+  const base = getApiBase()
+  const res = await tokenFetch(`${base}/shortcut/submit`, token, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return res.json() as Promise<{ success: boolean; data?: { group_id: string; media_ids: string[]; results: Array<{ media_url: string; media_id?: string; error?: string }> }; error?: string }>
+}
+
+export async function shortcutFetchMVs(token: string) {
+  const base = getApiBase()
+  const res = await tokenFetch(`${base}/shortcut/mvs`, token)
+  return res.json() as Promise<{ success: boolean; data: Array<{ id: string; title: string; cover_image_url: string | null }> }>
+}
+
+export async function shortcutFetchArtists(token: string) {
+  const base = getApiBase()
+  const res = await tokenFetch(`${base}/shortcut/artists`, token)
+  return res.json() as Promise<{ success: boolean; data: Array<{ id: string; name: string; twitter: string | null }> }>
 }

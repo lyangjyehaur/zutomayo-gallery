@@ -7,6 +7,7 @@ import FanartPage from './pages/FanartPage'
 import FanartMediaDetailPage from './pages/FanartMediaDetailPage'
 import FanartGroupDetailPage from './pages/FanartGroupDetailPage'
 import RepairPage from './pages/RepairPage'
+import ParsePage from './pages/ParsePage'
 import SettingsPage from './pages/SettingsPage'
 import SettingsBoundariesPage from './pages/SettingsBoundariesPage'
 import { checkAuth } from './lib/api'
@@ -71,6 +72,11 @@ const routes = [
   {
     path: '/repair/',
     component: RepairPage,
+    beforeEnter: authGuard,
+  },
+  {
+    path: '/parse/',
+    component: ParsePage,
     beforeEnter: authGuard,
   },
   {

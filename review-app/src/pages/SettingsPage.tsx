@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { Block, BlockTitle, Card, CardContent, CardHeader, List, ListItem, Page, Toggle, f7 } from 'framework7-react'
+import { useEffect, useState } from 'react'
+import { Block, BlockTitle, BlockFooter, Card, CardContent, CardHeader, List, ListInput, ListButton, ListItem, Page, Toggle, f7 } from 'framework7-react'
 import AppNavbar from '../components/AppNavbar'
 import Button from '../components/Button'
 import ReviewStateBlock from '../components/ReviewStateBlock'
@@ -19,6 +19,7 @@ export default function SettingsPage() {
   const { user, logout, setUser } = useAuth()
   const { visitWorkspace, pagination, setPagination } = useWorkspace()
   const push = usePushSubscription()
+  const [apiToken, setApiToken] = useState(() => localStorage.getItem('ztmr_api_token') || '')
   const prefs: NotificationPreferences = user?.notification_preferences || DEFAULT_PREFS
 
   useEffect(() => {
@@ -49,6 +50,11 @@ export default function SettingsPage() {
     } catch {
       f7.toast.create({ text: '更新偏好失敗', closeTimeout: 2000 }).open()
     }
+  }
+
+  const handleSaveToken = () => {
+    localStorage.setItem('ztmr_api_token', apiToken)
+    f7.toast.create({ text: 'Token 已儲存', closeTimeout: 2000 }).open()
   }
 
   const handleLogout = async () => {
@@ -128,6 +134,21 @@ export default function SettingsPage() {
           view="#view-settings"
         />
       </List>
+
+      <BlockTitle>Shortcut API Token</BlockTitle>
+      <List inset strong>
+        <ListInput
+          label="API Token"
+          type="text"
+          placeholder="從 /admin/account 頁面取得"
+          value={apiToken}
+          onInput={(e: React.ChangeEvent<HTMLInputElement>) => setApiToken(e.target.value)}
+        />
+        <ListButton onClick={handleSaveToken}>儲存 Token</ListButton>
+      </List>
+      <BlockFooter>
+        <p>用於解析推文功能。從 gallery 後台的帳號設定頁面取得。</p>
+      </BlockFooter>
     </Page>
   )
 }

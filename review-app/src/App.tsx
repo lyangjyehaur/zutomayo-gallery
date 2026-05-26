@@ -92,6 +92,7 @@ function AppShell() {
           <View id="view-fanart" tab url="/fanart/" />
           <View id="view-submissions" tab url="/submissions/" />
           <View id="view-repair" tab url="/repair/" />
+          <View id="view-parse" tab url="/parse/" />
           <View id="view-settings" tab url="/settings/" />
         </Views>
       )}

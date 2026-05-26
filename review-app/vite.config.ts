@@ -37,6 +37,15 @@ export default defineConfig({
             purpose: 'any maskable',
           },
         ],
+        share_target: {
+          action: '/parse/',
+          method: 'GET',
+          params: {
+            url: 'url',
+            title: 'title',
+            text: 'text',
+          },
+        },
       },
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],

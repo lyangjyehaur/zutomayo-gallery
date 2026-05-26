@@ -4,6 +4,7 @@ export type WorkspaceKey =
   | 'submissions'
   | 'fanart'
   | 'repair'
+  | 'parse'
   | 'settings'
 
 export interface WorkspaceDefinition {
@@ -67,6 +68,16 @@ export const WORKSPACES: WorkspaceDefinition[] = [
     iconIos: 'f7:wrench_fill',
     iconMd: 'material:build',
     description: '盤點待修復 group 與 reparse 入口',
+  },
+  {
+    key: 'parse',
+    title: '解析推文',
+    shortTitle: '解析',
+    path: '/parse/',
+    viewId: 'view-parse',
+    iconIos: 'f7:search',
+    iconMd: 'material:search',
+    description: '解析孤兒推文並保存到 Gallery',
   },
   {
     key: 'settings',
