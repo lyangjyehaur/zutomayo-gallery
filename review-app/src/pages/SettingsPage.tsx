@@ -3,6 +3,7 @@ import { Block, BlockTitle, BlockFooter, Card, CardContent, CardHeader, List, Li
 import AppNavbar from '../components/AppNavbar'
 import Button from '../components/Button'
 import ReviewStateBlock from '../components/ReviewStateBlock'
+import { BUILD_INFO } from '../build-info'
 import { useAuth } from '../hooks/useAuth'
 import { usePushSubscription } from '../hooks/usePushSubscription'
 import { useWorkspace } from '../hooks/useWorkspace'
@@ -149,6 +150,39 @@ export default function SettingsPage() {
       <BlockFooter>
         <p>用於解析推文功能。從 gallery 後台的帳號設定頁面取得。</p>
       </BlockFooter>
+
+      <BlockFooter style={{ textAlign: 'center', marginTop: 24, marginBottom: 24, padding: '0 16px' }}>
+        v{BUILD_INFO.version} ({BUILD_INFO.buildNumber}) · {new Date(BUILD_INFO.buildTime).toLocaleString()}
+      </BlockFooter>
+
+      <List inset>
+        <ListButton onClick={async () => {
+          if (!('serviceWorker' in navigator)) {
+            f7.toast.create({ text: '此瀏覽器不支援 Service Worker', closeTimeout: 2000 }).open()
+            return
+          }
+          f7.toast.create({ text: '檢查更新中...', closeTimeout: 1500 }).open()
+          try {
+            const reg = await navigator.serviceWorker.ready
+            await reg.update()
+            const newWorker = reg.installing || reg.waiting
+            if (newWorker) {
+              newWorker.postMessage({ type: 'SKIP_WAITING' })
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'activated') {
+                  window.location.reload()
+                }
+              })
+            } else {
+              f7.toast.create({ text: '已是最新版本', closeTimeout: 2000 }).open()
+            }
+          } catch {
+            f7.toast.create({ text: '更新檢查失敗', closeTimeout: 2000 }).open()
+          }
+        }}>
+          檢查更新
+        </ListButton>
+      </List>
     </Page>
   )
 }

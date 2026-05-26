@@ -51,6 +51,25 @@ function AppShell() {
     }
   }, [])
 
+  // If navigated to /parse/ (e.g. from Share Target), activate parse tab
+  // and persist the shared URL so ParsePage can read it even if router strips query params
+  useEffect(() => {
+    if (!loading && user && window.location.pathname.startsWith('/parse/')) {
+      const params = new URLSearchParams(window.location.search)
+      const sharedUrl = params.get('url') || params.get('text') || ''
+      if (sharedUrl) {
+        sessionStorage.setItem('ztmr_shared_url', sharedUrl)
+        console.log('[ShareTarget] AppShell got URL:', sharedUrl)
+      } else {
+        console.log('[ShareTarget] AppShell: no url/text param in', window.location.href)
+      }
+      f7ready((app) => {
+        app.tab.show('#view-parse')
+        visitWorkspace('parse')
+      })
+    }
+  }, [loading, user, visitWorkspace])
+
   return (
     <F7App
       name="ZTMR Review"

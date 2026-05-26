@@ -45,7 +45,7 @@ export function AdminFanArtPage() {
 
   const fetchUnorganized = async () => {
     try {
-      const res = await adminFetch(`${baseApiUrl}/fanarts/unorganized`);
+      const res = await adminFetch(`${baseApiUrl}/fanarts/unorganized?type=fanart`);
       const data = await res.json();
       if (data.success) {
         setUnorganizedGroups(data.data);
@@ -59,7 +59,7 @@ export function AdminFanArtPage() {
 
   const fetchDeleted = async () => {
     try {
-      const res = await adminFetch(`${baseApiUrl}/fanarts/deleted`);
+      const res = await adminFetch(`${baseApiUrl}/fanarts/deleted?type=fanart`);
       const data = await res.json();
       if (data.success) {
         setDeletedGroups(data.data);
@@ -73,7 +73,7 @@ export function AdminFanArtPage() {
 
   const fetchLegacy = async () => {
     try {
-      const res = await adminFetch(`${baseApiUrl}/fanarts/legacy`);
+      const res = await adminFetch(`${baseApiUrl}/fanarts/legacy?type=fanart`);
       const data = await res.json();
       if (data.success) {
         setLegacyMedia(data.data);

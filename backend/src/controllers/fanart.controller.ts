@@ -68,7 +68,10 @@ export const getUnorganizedFanarts = async (req: Request, res: Response) => {
   const toOrganizeGroupIds: string[] = [];
 
   for (const group of groups) {
-    const images = (group.images || []).filter((m: any) => !isFanartYoutubeMedia(m));
+    const images = (group.images || [])
+      .filter((m: any) => !isFanartYoutubeMedia(m))
+      .filter((m: any) => !mediaType || m.type === mediaType);
+    if (images.length === 0) continue;
     const hasAnyUnorganizedMedia = images.some((m: any) => !isMediaOrganized(m));
     if (hasAnyUnorganizedMedia) {
       keepGroups.push({
@@ -108,9 +111,11 @@ export const getDeletedFanarts = async (req: Request, res: Response) => {
     const group = row.toJSON() as any;
     return {
       ...group,
-      media: (group.images || []).filter((m: any) => !isFanartYoutubeMedia(m))
+      media: (group.images || [])
+        .filter((m: any) => !isFanartYoutubeMedia(m))
+        .filter((m: any) => !mediaType || m.type === mediaType),
     };
-  });
+  }).filter((g: any) => g.media.length > 0);
 
   res.json({ success: true, data });
 };

@@ -33,8 +33,17 @@ interface MediaAssignment {
 }
 
 export default function ParsePage() {
-  // URL input
-  const [url, setUrl] = useState('')
+  // URL input — check sessionStorage first (set by AppShell on share target redirect)
+  const [{ url: initialUrl, fromShare: initialFromShare }] = useState(() => {
+    const params = new URLSearchParams(window.location.search)
+    const fromQuery = params.get('url') || params.get('text')
+    const fromStorage = sessionStorage.getItem('ztmr_shared_url')
+    sessionStorage.removeItem('ztmr_shared_url')
+    console.log('[ShareTarget] ParsePage init:', { fromQuery, fromStorage, href: window.location.href })
+    return { url: fromQuery || fromStorage || '', fromShare: !!(fromQuery || fromStorage) }
+  })
+  const [url, setUrl] = useState(initialUrl)
+  const [isFromShare] = useState(initialFromShare)
   const [clipboardUrl, setClipboardUrl] = useState<string | null>(null)
 
   // Parse state
@@ -59,15 +68,24 @@ export default function ParsePage() {
 
   const getToken = useCallback(() => localStorage.getItem('ztmr_api_token') || '', [])
 
-  // On mount: check URL params or clipboard
+  // On mount: check URL params, sessionStorage (from AppShell), or clipboard
   useEffect(() => {
+    // 1. Check query param (direct navigation or share target)
     const params = new URLSearchParams(window.location.search)
     const urlParam = params.get('url')
     if (urlParam) {
       setUrl(urlParam)
+      sessionStorage.removeItem('ztmr_shared_url')
       return
     }
-    // Try clipboard
+    // 2. Check sessionStorage (set by AppShell when share target redirects to /parse/)
+    const sharedUrl = sessionStorage.getItem('ztmr_shared_url')
+    if (sharedUrl) {
+      setUrl(sharedUrl)
+      sessionStorage.removeItem('ztmr_shared_url')
+      return
+    }
+    // 3. Try clipboard
     if (navigator.clipboard?.readText) {
       navigator.clipboard.readText().then((text) => {
         if (text && (text.includes('x.com/') || text.includes('twitter.com/'))) {
@@ -76,6 +94,18 @@ export default function ParsePage() {
       }).catch(() => { /* clipboard permission denied */ })
     }
   }, [])
+
+  // Auto-parse when URL is pre-filled from share target
+  useEffect(() => {
+    // Debug: show what we got
+    if (isFromShare && url) {
+      f7.toast.create({ text: `收到分享 URL: ${url.substring(0, 60)}...`, closeTimeout: 5000 }).open()
+    }
+    if (url && isFromShare && !parseResult && !parsing) {
+      handleParse()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [url, isFromShare])
 
   // Parse tweet
   const handleParse = useCallback(async () => {
@@ -202,6 +232,14 @@ export default function ParsePage() {
   return (
     <Page>
       <AppNavbar title="解析推文" subtitle="孤兒推文保存" />
+
+      {/* Debug info */}
+      <Block inset style={{ background: 'var(--f7-card-bg-color)', fontSize: '12px', padding: '8px', borderRadius: '8px' }}>
+        <div>url: {url || '(empty)'}</div>
+        <div>isFromShare: {String(isFromShare)}</div>
+        <div>pathname: {window.location.pathname}</div>
+        <div>search: {window.location.search || '(empty)'}</div>
+      </Block>
 
       {/* URL Input */}
       <BlockTitle>推文網址</BlockTitle>

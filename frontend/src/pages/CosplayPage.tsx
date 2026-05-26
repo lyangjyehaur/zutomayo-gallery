@@ -202,6 +202,7 @@ export function CosplayPage({ mvData }: CosplayPageProps) {
   const fetchSummary = useCallback(async () => {
     try {
       const params = new URLSearchParams();
+      params.set('type', 'cosplay');
       if (onlySubmitted) params.set('source', 'submission');
       if (onlyCollab) params.set('onlyCollab', '1');
       if (selectedSpecialTags.length > 0) params.set('tags', selectedSpecialTags.join(','));
