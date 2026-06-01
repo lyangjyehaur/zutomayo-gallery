@@ -1,5 +1,5 @@
 import Parser from 'rss-parser';
-import { MediaGroupModel, StagingFanartModel } from '../models/index.js';
+import { MediaGroupModel, MediaModel, StagingFanartModel } from '../models/index.js';
 import type { RssTweetItem, TwitterMedia } from './twitter.service.js';
 import { TwitterService, buildCanonicalTweetUrl, extractTweetId, normalizeTweetUrl } from './twitter.service.js';
 import { errorEventEmitter } from './error-events.service.js';
@@ -19,6 +19,7 @@ type TwitterMonitorDeps = {
   getMonitoredFeedTargets: typeof getMonitoredFeedTargets;
   extractMediaFromTweet: (tweetUrl: string, rssItem?: RssTweetItem) => Promise<TwitterMedia[]>;
   findExistingMediaGroup: (options: any) => Promise<any>;
+  findExistingMedia: (options: any) => Promise<any>;
   findExistingStagingFanart: (options: any) => Promise<any>;
   createStagingFanart: (payload: any) => Promise<any>;
   sendFanartReviewNotification: typeof TelegramBotService.sendFanartReviewNotification;
@@ -29,6 +30,7 @@ const defaultDeps: TwitterMonitorDeps = {
   getMonitoredFeedTargets,
   extractMediaFromTweet: (tweetUrl, rssItem) => TwitterService.extractMediaFromTweet(tweetUrl, rssItem),
   findExistingMediaGroup: (options) => MediaGroupModel.findOne(options),
+  findExistingMedia: (options) => MediaModel.findOne(options),
   findExistingStagingFanart: (options) => StagingFanartModel.findOne(options),
   createStagingFanart: (payload) => StagingFanartModel.create(payload),
   sendFanartReviewNotification: (payload) => TelegramBotService.sendFanartReviewNotification(payload),
@@ -237,7 +239,7 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
           continue;
         }
 
-        const existingMediaByUrl = await deps.findExistingMediaGroup({
+        const existingMediaByUrl = await deps.findExistingMedia({
           where: { url: originalMediaUrl }
         });
         if (existingMediaByUrl) {
