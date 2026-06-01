@@ -229,7 +229,7 @@ async function findArtistForTopic({
   const normalizedName = (artistName || '').trim();
   if (!normalizedHandle && !normalizedName) return null;
 
-  // 1. 精確匹配 handle
+  // 1. 精確匹配 handle（最可靠）
   if (normalizedHandle) {
     const artist = await ArtistModel.findOne({ where: { twitter: { [Op.iLike]: normalizedHandle } } as any });
     if (artist) {
@@ -250,23 +250,6 @@ async function findArtistForTopic({
         name: String(artist.get('name') || '').trim(),
         twitter: artist.get('twitter') as string | null | undefined,
       };
-    }
-
-    // 3. 部分名稱匹配（處理 "をか / Nowoka" → "をか" 的情況）
-    // 從 author_name 中提取第一個部分（按 / 分隔）
-    const nameParts = normalizedName.split(/\s*\/\s*/);
-    for (const part of nameParts) {
-      const trimmedPart = part.trim();
-      if (trimmedPart && trimmedPart.length >= 2) {  // 至少 2 個字元
-        const artist = await ArtistModel.findOne({ where: { name: { [Op.iLike]: trimmedPart } } as any });
-        if (artist) {
-          return {
-            id: String(artist.get('id')),
-            name: String(artist.get('name') || '').trim(),
-            twitter: artist.get('twitter') as string | null | undefined,
-          };
-        }
-      }
     }
   }
 
