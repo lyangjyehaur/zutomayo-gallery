@@ -114,7 +114,7 @@ export async function initializeTopics(): Promise<void> {
     return;
   }
 
-  if (cachedTopicIds.notification && cachedTopicIds.fanart) {
+  if (cachedTopicIds.notification && cachedTopicIds.fanart && cachedTopicIds.fallback) {
     logger.info('All static Telegram topics already initialized');
     return;
   }
