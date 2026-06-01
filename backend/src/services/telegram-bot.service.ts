@@ -1,5 +1,6 @@
 import TelegramBot from 'node-telegram-bot-api';
-import { SysConfigModel } from '../models/index.js';
+import { Op } from 'sequelize';
+import { ArtistModel, SysConfigModel } from '../models/index.js';
 import { logger } from '../utils/logger.js';
 import { errorEventEmitter } from './error-events.service.js';
 
@@ -19,21 +20,21 @@ const FANART_REVIEW_CALLBACK_PREFIX: Record<FanartReviewAction, string> = {
 };
 
 // Topic 分類定義
-export type TopicCategory = 'official' | 'notification' | 'fanart';
+export type TopicCategory = 'notification' | 'fanart';
+export type ArtistTopicIds = Record<string, number>;
 
 // Topic 配置：每個分類對應的 topic 名稱和顏色
 const TOPIC_DEFINITIONS: Record<TopicCategory, { name: string; iconColor: number }> = {
-  official: { name: '官方消息', iconColor: 0x6FB1E4 },      // 藍色
   notification: { name: '系統通知', iconColor: 0xFFD700 },  // 金色
   fanart: { name: '二創相關', iconColor: 0xFF69B4 },        // 粉色
 };
 
 // topic ID 緩存
 let cachedTopicIds: Record<TopicCategory, number | null> = {
-  official: null,
   notification: null,
   fanart: null,
 };
+let cachedArtistTopicIds = new Map<string, number>();
 
 function initBot(token: string) {
   if (!token) {
@@ -73,11 +74,14 @@ export async function refreshTelegramConfig(): Promise<void> {
     // 載入 topic IDs
     if (dbConfig.topic_ids) {
       cachedTopicIds = {
-        official: dbConfig.topic_ids.official || null,
         notification: dbConfig.topic_ids.notification || null,
         fanart: dbConfig.topic_ids.fanart || null,
       };
     }
+    cachedArtistTopicIds = new Map(
+      Object.entries((dbConfig.artist_topic_ids || {}) as ArtistTopicIds)
+        .filter((entry): entry is [string, number] => typeof entry[0] === 'string' && typeof entry[1] === 'number')
+    );
 
     if (tokenChanged) {
       initBot(cachedBotToken);
@@ -89,7 +93,7 @@ export async function refreshTelegramConfig(): Promise<void> {
 }
 
 /**
- * 初始化所有 topics（如果尚未建立）
+ * 初始化靜態 topics（如果尚未建立）
  * 需要在 bot 啟動且 chat_id 有設定時呼叫
  */
 export async function initializeTopics(): Promise<void> {
@@ -104,13 +108,12 @@ export async function initializeTopics(): Promise<void> {
     return;
   }
 
-  // 如果所有 topic 都已經有 ID，跳過
-  if (cachedTopicIds.official && cachedTopicIds.notification && cachedTopicIds.fanart) {
-    logger.info('All Telegram topics already initialized');
+  if (cachedTopicIds.notification && cachedTopicIds.fanart) {
+    logger.info('All static Telegram topics already initialized');
     return;
   }
 
-  logger.info('Initializing Telegram topics...');
+  logger.info('Initializing static Telegram topics...');
 
   for (const [category, definition] of Object.entries(TOPIC_DEFINITIONS)) {
     const cat = category as TopicCategory;
@@ -126,7 +129,7 @@ export async function initializeTopics(): Promise<void> {
       }) as any;
       const threadId = topic.message_thread_id;
       cachedTopicIds[cat] = threadId;
-      logger.info(`Created topic '${cat}' (name: ${definition.name}, thread_id: ${threadId})`);
+      logger.info(`Created static topic '${cat}' (name: ${definition.name}, thread_id: ${threadId})`);
     } catch (err: any) {
       const errorText = String(err?.message || err).toLowerCase();
       if (errorText.includes('topic_name_duplicate') || errorText.includes('already')) {
@@ -156,6 +159,7 @@ async function saveTopicIds(): Promise<void> {
     const dbConfig = (row?.get('value') as any) || {};
 
     dbConfig.topic_ids = cachedTopicIds;
+    dbConfig.artist_topic_ids = Object.fromEntries(cachedArtistTopicIds);
 
     await SysConfigModel.upsert({
       key: CONFIG_KEY,
@@ -183,6 +187,10 @@ export function getTelegramTopicIds(): Record<TopicCategory, number | null> {
   return { ...cachedTopicIds };
 }
 
+export function getTelegramArtistTopicIds(): ArtistTopicIds {
+  return Object.fromEntries(cachedArtistTopicIds);
+}
+
 /**
  * 根據通知類型取得對應的 topic ID
  */
@@ -191,8 +199,8 @@ function getTopicIdForNotificationType(type?: string): number | undefined {
 
   // 根據 type 映射到 category
   const typeToCategory: Record<string, TopicCategory> = {
-    'new-submission': 'official',
-    'crawler-complete': 'official',
+    'new-submission': 'fanart',
+    'crawler-complete': 'fanart',
     'new-fanart': 'fanart',
     'error-threshold': 'notification',
   };
@@ -201,6 +209,87 @@ function getTopicIdForNotificationType(type?: string): number | undefined {
   if (!category) return undefined;
 
   return cachedTopicIds[category] || undefined;
+}
+
+function normalizeTwitterHandle(handle?: string): string {
+  return (handle || '').trim().replace(/^@/, '');
+}
+
+async function findArtistForTopic({
+  artistName,
+  artistHandle,
+}: {
+  artistName?: string;
+  artistHandle?: string;
+}): Promise<{ name: string; twitter?: string | null } | null> {
+  const normalizedHandle = normalizeTwitterHandle(artistHandle);
+  const normalizedName = (artistName || '').trim();
+  if (!normalizedHandle && !normalizedName) return null;
+
+  const conditions: any[] = [];
+  if (normalizedHandle) conditions.push({ twitter: { [Op.iLike]: normalizedHandle } });
+  if (normalizedName) conditions.push({ name: { [Op.iLike]: normalizedName } });
+
+  const artist = await ArtistModel.findOne({ where: { [Op.or]: conditions } as any });
+  if (!artist) return null;
+
+  return {
+    name: String(artist.get('name') || '').trim(),
+    twitter: artist.get('twitter') as string | null | undefined,
+  };
+}
+
+async function ensureArtistTopic(artistName: string): Promise<number | undefined> {
+  const topicName = artistName.trim();
+  if (!topicName) return undefined;
+
+  const cached = cachedArtistTopicIds.get(topicName);
+  if (cached) return cached;
+
+  if (!bot || !cachedChatId) return undefined;
+  const chatId = parseInt(cachedChatId, 10);
+  if (isNaN(chatId)) return undefined;
+
+  try {
+    const topic = await bot.createForumTopic(chatId, topicName, {
+      icon_color: 0x6FB1E4,
+    }) as any;
+    const threadId = topic.message_thread_id;
+    if (typeof threadId !== 'number') return undefined;
+
+    cachedArtistTopicIds.set(topicName, threadId);
+    await saveTopicIds();
+    logger.info({ artistName: topicName, threadId }, 'Created Telegram artist topic');
+    return threadId;
+  } catch (err) {
+    logger.warn({ err, artistName: topicName }, 'Failed to create Telegram artist topic; falling back to fanart topic');
+    return undefined;
+  }
+}
+
+async function getTopicIdForFanartReview({
+  contentType,
+  artistName,
+  artistHandle,
+}: {
+  contentType?: string;
+  artistName?: string;
+  artistHandle?: string;
+}): Promise<number | undefined> {
+  if (contentType !== 'official') {
+    return cachedTopicIds.fanart || undefined;
+  }
+
+  try {
+    const artist = await findArtistForTopic({ artistName, artistHandle });
+    if (!artist?.name) return cachedTopicIds.fanart || undefined;
+
+    const artistTopicId = await ensureArtistTopic(artist.name);
+    return artistTopicId || cachedTopicIds.fanart || undefined;
+  } catch (err) {
+    logger.warn({ err, artistName, artistHandle }, 'Failed to resolve Telegram artist topic; falling back to fanart topic');
+    return cachedTopicIds.fanart || undefined;
+  }
 }
 
 /**
@@ -288,12 +377,18 @@ export const TelegramBotService = {
     body,
     sourceUrl,
     imageUrl,
+    contentType,
+    artistName,
+    artistHandle,
   }: {
     stagingId: string;
     title: string;
     body: string;
     sourceUrl?: string;
     imageUrl?: string;
+    contentType?: string;
+    artistName?: string;
+    artistHandle?: string;
   }): Promise<boolean> => {
     if (!bot || !cachedChatId) {
       logger.warn('Telegram Bot not configured, skipping fanart review notification');
@@ -315,8 +410,7 @@ export const TelegramBotService = {
       ]]
     };
 
-    // 二創相關通知發送到 fanart topic
-    const threadId = cachedTopicIds.fanart || undefined;
+    const threadId = await getTopicIdForFanartReview({ contentType, artistName, artistHandle });
 
     try {
       const options: any = {
@@ -359,8 +453,8 @@ export const TelegramBotService = {
    * 重新建立 topics（admin 手動觸發）
    */
   reinitializeTopics: async (): Promise<Record<TopicCategory, number | null>> => {
-    // 清除緩存，強制重建
-    cachedTopicIds = { official: null, notification: null, fanart: null };
+    // 清除靜態 topic 緩存，強制重建。畫師 topics 會按需建立。
+    cachedTopicIds = { notification: null, fanart: null };
     await initializeTopics();
     return getTelegramTopicIds();
   },

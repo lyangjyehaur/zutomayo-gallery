@@ -191,6 +191,9 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
           body: `來自 ${tweetAuthor || tweetHandle || 'unknown'}\n${stats}\n包含 ${mediaList.length} 個媒體\n${tweetText}`,
           sourceUrl: sourceTweetLink,
           imageUrl: mediaType === 'image' ? originalMediaUrl : (media.thumbnail || undefined),
+          contentType,
+          artistName: tweetAuthor,
+          artistHandle: tweetHandle,
         });
       }
 

@@ -6,6 +6,7 @@ import {
   refreshTelegramConfig,
   initializeTopics,
   getTelegramTopicIds,
+  getTelegramArtistTopicIds,
   reinitializeTopics,
   type TopicCategory,
 } from '../services/telegram-bot.service.js';
@@ -26,7 +27,6 @@ function maskToken(token: string): string {
 
 // Topic 分類定義（與 service 保持一致）
 const TOPIC_LABELS: Record<TopicCategory, string> = {
-  official: '官方消息',
   notification: '系統通知',
   fanart: '二創相關',
 };
@@ -60,6 +60,7 @@ export const getTelegramConfig = async (_req: Request, res: Response) => {
     };
   }
   const allTopicsInitialized = Object.values(topicStatus).every(t => t.initialized);
+  const artistTopicIds = getTelegramArtistTopicIds();
 
   res.json({
     success: true,
@@ -73,6 +74,7 @@ export const getTelegramConfig = async (_req: Request, res: Response) => {
       webhook_url: config.webhook_url,
       from_env: fromEnv,
       topic_status: topicStatus,
+      artist_topic_ids: artistTopicIds,
       all_topics_initialized: allTopicsInitialized,
     },
   });
@@ -84,12 +86,13 @@ export const updateTelegramConfig = async (req: Request, res: Response) => {
   const existing = await SysConfigModel.findByPk(CONFIG_KEY);
   const current = (existing?.get('value') as any) || {};
 
-  const updated: TelegramConfig = {
+  const updated = {
+    ...current,
     bot_token: bot_token !== undefined ? bot_token : current.bot_token || '',
     chat_id: chat_id !== undefined ? String(chat_id) : current.chat_id || '',
     webhook_secret: webhook_secret !== undefined ? webhook_secret : current.webhook_secret || '',
     webhook_url: webhook_url !== undefined ? webhook_url : current.webhook_url || '',
-  };
+  } satisfies TelegramConfig & Record<string, unknown>;
 
   await SysConfigModel.upsert({
     key: CONFIG_KEY,
@@ -169,11 +172,13 @@ export const getTopicStatus = async (_req: Request, res: Response) => {
   }
 
   const allTopicsInitialized = Object.values(topicStatus).every(t => t.initialized);
+  const artistTopicIds = getTelegramArtistTopicIds();
 
   res.json({
     success: true,
     data: {
       topics: topicStatus,
+      artist_topics: artistTopicIds,
       all_initialized: allTopicsInitialized,
     },
   });

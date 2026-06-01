@@ -25,6 +25,7 @@ type TelegramConfig = {
     thread_id: number | null
     initialized: boolean
   }>
+  artist_topic_ids?: Record<string, number>
   all_topics_initialized: boolean
 }
 
@@ -355,12 +356,13 @@ export function AdminTelegramConfigPage() {
           </h2>
 
           <p className="text-sm font-mono opacity-70">
-            啟用 Topics 功能後，不同類型的通知會自動分類到對應的 topic 中。
+            啟用 Topics 功能後，系統通知與二創通知會進入固定 topic，官方畫師通知會按畫師自動建立 topic。
           </p>
 
           {/* Topic Status */}
           {config?.topic_status && (
             <div className="space-y-2">
+              <p className="text-xs font-mono font-bold opacity-70">固定 Topics</p>
               {Object.entries(config.topic_status).map(([key, topic]) => (
                 <div key={key} className="flex items-center justify-between p-3 border-2 border-black rounded-lg">
                   <div>
@@ -383,6 +385,30 @@ export function AdminTelegramConfigPage() {
             </div>
           )}
 
+          {/* Artist Topics */}
+          <div className="space-y-2">
+            <p className="text-xs font-mono font-bold opacity-70">畫師 Topics</p>
+            {config?.artist_topic_ids && Object.keys(config.artist_topic_ids).length > 0 ? (
+              Object.entries(config.artist_topic_ids)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([artistName, threadId]) => (
+                  <div key={artistName} className="flex items-center justify-between p-3 border-2 border-black rounded-lg">
+                    <div>
+                      <span className="font-mono font-medium">{artistName}</span>
+                      <span className="text-xs font-mono opacity-60 ml-2">(official)</span>
+                    </div>
+                    <span className="px-2 py-0.5 text-xs font-mono border-2 border-blue-500 bg-blue-100 text-blue-700 rounded">
+                      ID: {threadId}
+                    </span>
+                  </div>
+                ))
+            ) : (
+              <div className="p-3 border-2 border-black rounded-lg text-sm font-mono opacity-60">
+                尚未建立畫師 topic，第一則官方畫師通知送出時會自動建立。
+              </div>
+            )}
+          </div>
+
           {/* Warning if not all topics initialized */}
           {config?.all_topics_initialized === false && (
             <div className="flex items-start gap-2 p-3 border-2 border-yellow-500 bg-yellow-50 rounded-lg">
@@ -404,7 +430,7 @@ export function AdminTelegramConfigPage() {
               disabled={isInitializingTopics || !config?.has_bot_token || !config?.has_chat_id}
             >
               {isInitializingTopics ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MessageSquare className="mr-2 h-4 w-4" />}
-              初始化 Topics
+              初始化固定 Topics
             </Button>
             <Button
               variant="neutral"
@@ -412,15 +438,15 @@ export function AdminTelegramConfigPage() {
               disabled={isReinitializingTopics || !config?.has_bot_token || !config?.has_chat_id}
             >
               {isReinitializingTopics ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-              重新建立 Topics
+              重新建立固定 Topics
             </Button>
           </div>
 
           {/* Help text */}
           <div className="text-xs font-mono opacity-60 space-y-1">
-            <p>• 「初始化 Topics」：只建立尚未存在的 topic</p>
-            <p>• 「重新建立 Topics」：刪除舊的並重新建立所有 topic（thread ID 會變更）</p>
-            <p>• 建立後的通知會自動發送到對應的 topic</p>
+            <p>• 「初始化固定 Topics」：只建立尚未存在的系統通知與二創相關 topic</p>
+            <p>• 「重新建立固定 Topics」：清除固定 topic ID 並重新建立，畫師 topics 不會被清除</p>
+            <p>• 畫師 topics 會在官方內容通知送出時按需建立</p>
           </div>
         </div>
 
