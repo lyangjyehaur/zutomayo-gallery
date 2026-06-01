@@ -13,6 +13,11 @@ export const cacheMiddleware = (duration: number) => {
       return next();
     }
 
+    const userId = (req as any).session?.userId;
+    if (typeof userId === 'string' ? userId.length > 0 : Boolean(userId)) {
+      return next();
+    }
+
     // 如果 Redis 沒有連線（例如開發環境），直接放行
     if (!redisClient.isOpen) {
       return next();
@@ -20,7 +25,6 @@ export const cacheMiddleware = (duration: number) => {
 
     const langHeader = req.headers['accept-language'];
     const lang = typeof langHeader === 'string' ? langHeader.split(',')[0]?.trim() : '';
-    const userId = (req as any).session?.userId;
     const userKey = typeof userId === 'string' && userId.length > 0 ? userId : 'anon';
     const key = `api-cache:${req.originalUrl || req.url}:lng=${lang}:u=${userKey}`;
 

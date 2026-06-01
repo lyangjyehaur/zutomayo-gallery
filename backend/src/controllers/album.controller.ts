@@ -1,5 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import { AlbumModel, AppleMusicAlbumModel, sequelize } from '../models/index.js';
+import { deleteKeysByPattern } from '../services/redis.service.js';
+import { logger } from '../utils/logger.js';
+
+const clearAlbumCache = () => {
+  deleteKeysByPattern('api-cache:/api/album*').catch(err => {
+    logger.warn({ err }, '[Redis Cache] Failed to clear album cache');
+  });
+};
 
 export const getAppleMusicAlbums = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -78,6 +86,7 @@ export const updateAppleMusicAlbums = async (req: Request, res: Response, next: 
       ]
     });
     
+    clearAlbumCache();
     res.json({ success: true, data: updatedAlbums });
   } catch (error) {
     next(error);
@@ -100,6 +109,7 @@ export const patchAppleMusicAlbum = async (req: Request, res: Response, next: Ne
       return;
     }
     await row.update(update);
+    clearAlbumCache();
     res.json({ success: true, data: row });
   } catch (error) {
     next(error);
@@ -135,6 +145,7 @@ export const updateAlbums = async (req: Request, res: Response, next: NextFuncti
       order: [['name', 'ASC']]
     });
     
+    clearAlbumCache();
     res.json({ success: true, data: updatedAlbums });
   } catch (error) {
     next(error);
@@ -158,6 +169,7 @@ export const createAlbum = async (req: Request, res: Response, next: NextFunctio
       hide_date: !!req.body?.hide_date,
     };
     const row = await AlbumModel.create(payload);
+    clearAlbumCache();
     res.json({ success: true, data: row });
   } catch (error) {
     next(error);
@@ -191,6 +203,7 @@ export const patchAlbum = async (req: Request, res: Response, next: NextFunction
       return;
     }
     await row.update(update);
+    clearAlbumCache();
     res.json({ success: true, data: row });
   } catch (error) {
     next(error);
@@ -206,6 +219,7 @@ export const deleteAlbum = async (req: Request, res: Response, next: NextFunctio
       return;
     }
     await row.destroy();
+    clearAlbumCache();
     res.json({ success: true, data: { id } });
   } catch (error) {
     next(error);

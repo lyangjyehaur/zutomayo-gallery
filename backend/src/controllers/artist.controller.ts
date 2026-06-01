@@ -1,6 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import { ArtistModel } from '../models/index.js';
+import { deleteKeysByPattern } from '../services/redis.service.js';
 import { logger } from '../utils/logger.js';
+
+const clearArtistCache = () => {
+  deleteKeysByPattern('api-cache:/api/artist*').catch(err => {
+    logger.warn({ err }, '[Redis Cache] Failed to clear artist cache');
+  });
+};
 
 export const getArtists = async (_req: Request, res: Response, next: NextFunction) => {
   try {
@@ -53,6 +60,7 @@ export const createArtist = async (req: Request, res: Response, next: NextFuncti
       website: typeof req.body?.website === 'string' ? req.body.website.trim() : '',
     };
     const row = await ArtistModel.create(payload);
+    clearArtistCache();
     res.json({ success: true, data: row });
   } catch (error) {
     next(error);
@@ -97,6 +105,7 @@ export const patchArtist = async (req: Request, res: Response, next: NextFunctio
     const currentName = String(row.get('name') || '').trim();
     const nameChanged = 'name' in update && currentName !== update.name;
     await row.update(update);
+    clearArtistCache();
     if (nameChanged) {
       const { syncArtistTopicName } = await import('../services/telegram-bot.service.js');
       await syncArtistTopicName(id, update.name).catch(err => {
@@ -118,6 +127,7 @@ export const deleteArtist = async (req: Request, res: Response, next: NextFuncti
       return;
     }
     await row.destroy();
+    clearArtistCache();
     res.json({ success: true, data: { id } });
   } catch (error) {
     next(error);

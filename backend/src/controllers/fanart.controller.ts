@@ -2,9 +2,11 @@ import { Request, Response } from 'express';
 import { Op, QueryTypes } from 'sequelize';
 import { MediaGroupModel, MediaModel, MVMediaModel, MVModel, sequelize } from '../models/index.js';
 import { MVService } from '../services/mv.service.js';
+import { deleteKeysByPattern } from '../services/redis.service.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { FANART_ALLOWED_TAGS } from '../constants/fanart-tags.js';
 import { isYoutubeMediaUrl } from '../utils/media-source.js';
+import { logger } from '../utils/logger.js';
 import {
   assignFanartMediaSchema,
   syncFanartMediaSchema,
@@ -14,6 +16,15 @@ import {
 } from '../validators/fanart.validator.js';
 
 const mvService = new MVService();
+
+const clearFanartCache = () => {
+  deleteKeysByPattern('api-cache:/api/fanarts*').catch(err => {
+    logger.warn({ err }, '[Redis Cache] Failed to clear fanart cache');
+  });
+  deleteKeysByPattern('api-cache:/api/cosplay*').catch(err => {
+    logger.warn({ err }, '[Redis Cache] Failed to clear cosplay cache');
+  });
+};
 
 const parseCsv = (value: unknown): string[] => {
   if (!value) return [];
@@ -534,6 +545,7 @@ export const assignFanartMedia = async (req: Request, res: Response) => {
   }
 
   mvService.clearCache();
+  clearFanartCache();
 
   res.json({ success: true });
 };
@@ -583,6 +595,7 @@ export const syncFanartMedia = async (req: Request, res: Response) => {
   }
 
   mvService.clearCache();
+  clearFanartCache();
 
   res.json({ success: true });
 };
@@ -604,6 +617,7 @@ export const removeFanartMediaFromMv = async (req: Request, res: Response) => {
   }
 
   mvService.clearCache();
+  clearFanartCache();
 
   res.json({ success: true });
 };
@@ -614,6 +628,7 @@ export const updateFanartStatus = async (req: Request, res: Response) => {
   const { status } = parsed;
 
   await MediaGroupModel.update({ status }, { where: { id } });
+  clearFanartCache();
 
   res.json({ success: true });
 };
