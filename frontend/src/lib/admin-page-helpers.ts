@@ -40,18 +40,32 @@ export const getAdminChangedData = (
   changedFields: Map<string, Set<string>>,
   deletedIds: Set<string>,
 ): MVItem[] & { _deleted?: string[] } => {
-  const result: MVItem[] & { _deleted?: string[] } = [];
+  const result: any[] & { _deleted?: string[] } = [];
   const originalById = new Map(originalData.map((mv) => [mv.id, mv]));
 
   data.forEach((mv) => {
     const changed = changedFields.get(mv.id);
     const tracked = !!changed && changed.size > 0;
     const original = originalById.get(mv.id);
-    const differsFromOriginal = !original || JSON.stringify(original) !== JSON.stringify(mv);
 
-    if (tracked || differsFromOriginal) {
+    if (!original) {
       result.push({ ...mv });
+      return;
     }
+
+    if (!tracked) {
+      const diff = findDiff(original, mv);
+      if (Object.keys(diff).length > 0) {
+        result.push({ id: mv.id, ...diff });
+      }
+      return;
+    }
+
+    const partial: any = { id: mv.id };
+    changed.forEach((fieldPath) => {
+      setNestedValue(partial, fieldPath, getNestedValue(mv, fieldPath));
+    });
+    result.push(partial);
   });
 
   if (deletedIds.size > 0) {
@@ -59,4 +73,43 @@ export const getAdminChangedData = (
   }
 
   return result;
+};
+
+const toPathKey = (part: string) => {
+  const numeric = Number(part);
+  return Number.isInteger(numeric) && String(numeric) === part ? numeric : part;
+};
+
+const getNestedValue = (obj: any, path: string) => {
+  return path.split('.').reduce((current, part) => current?.[toPathKey(part)], obj);
+};
+
+const setNestedValue = (obj: any, path: string, value: any) => {
+  const parts = path.split('.');
+  let current = obj;
+
+  for (let i = 0; i < parts.length - 1; i++) {
+    const key = toPathKey(parts[i]);
+    const nextKey = toPathKey(parts[i + 1]);
+
+    if (current[key] === undefined) {
+      current[key] = typeof nextKey === 'number' ? [] : {};
+    }
+    current = current[key];
+  }
+
+  current[toPathKey(parts[parts.length - 1])] = value;
+};
+
+const findDiff = (original: any, current: any) => {
+  const diff: any = {};
+
+  Object.keys(current).forEach((key) => {
+    if (key === 'id') return;
+    if (JSON.stringify(original?.[key]) !== JSON.stringify(current[key])) {
+      diff[key] = current[key];
+    }
+  });
+
+  return diff;
 };

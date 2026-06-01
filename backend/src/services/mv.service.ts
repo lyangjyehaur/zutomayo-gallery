@@ -103,7 +103,7 @@ export class MVService {
   }
 
   // 預留未來對接資料庫：此處目前操作文件，未來只需改為 DB Query
-  // 支持部分更新：直接替換完整 MV 對象，支持刪除操作
+  // 支持部分更新：合併變動欄位，支持刪除操作
   async updateAllMVs(newData: MVItem[], partial: boolean = false, deletedIds: string[] = []): Promise<UpdateResult> {
     const result: UpdateResult = {
       updated: [],
@@ -115,9 +115,10 @@ export class MVService {
     let finalData: MVItem[];
     
     if (partial) {
-      // 部分更新模式：直接用完整 MV 替換
+      // 部分更新模式：先與現有 MV 合併，再把完整結果交給 V2 mapper 寫入
       const currentData = await getRuntimeData();
       const dataMap = new Map(currentData.map(mv => [mv.id, mv]));
+      const mvsToPersist: MVItem[] = [];
       
       // 處理刪除
       for (const id of deletedIds) {
@@ -127,17 +128,21 @@ export class MVService {
         }
       }
       
-      // 處理更新和新增（前端已發送完整 MV）
-      for (const fullMv of newData) {
-        dataMap.set(fullMv.id, fullMv);
+      // 處理更新和新增
+      for (const partialMv of newData) {
+        const existing = dataMap.get(partialMv.id);
+        const merged = existing ? deepMerge(existing, partialMv) : partialMv;
+        dataMap.set(partialMv.id, merged);
+        mvsToPersist.push(merged);
         result.updated.push({
-          id: fullMv.id,
-          fields: Object.keys(fullMv),
-          images: fullMv.images ? fullMv.images.map((_, i) => i) : []
+          id: partialMv.id,
+          fields: Object.keys(partialMv),
+          images: partialMv.images ? partialMv.images.map((_, i) => i) : []
         });
       }
       
       finalData = Array.from(dataMap.values());
+      newData = mvsToPersist;
     } else {
       // 全量更新模式：直接替換（也處理刪除）
       const dataMap = new Map(newData.map(mv => [mv.id, mv]));
@@ -192,4 +197,71 @@ export class MVService {
     
     return result;
   }
+}
+
+function deepMerge<T>(target: T, source: Partial<T>): T {
+  if (Array.isArray(source) && Array.isArray(target)) {
+    return mergeArray(target, source) as T;
+  }
+
+  if (!isPlainObject(target) || !isPlainObject(source)) {
+    return source as T;
+  }
+
+  const result: any = { ...(target as any) };
+
+  for (const key of Object.keys(source as any)) {
+    if (key === 'id') continue;
+
+    const sourceValue = (source as any)[key];
+    const targetValue = (target as any)[key];
+
+    if (sourceValue === undefined) continue;
+
+    if (Array.isArray(sourceValue) && Array.isArray(targetValue)) {
+      result[key] = mergeArray(targetValue, sourceValue, key);
+    } else if (isPlainObject(sourceValue) && isPlainObject(targetValue)) {
+      result[key] = deepMerge(targetValue, sourceValue);
+    } else {
+      result[key] = sourceValue;
+    }
+  }
+
+  return result;
+}
+
+function mergeArray(target: any[], source: any[], key?: string): any[] {
+  const sourceHasSparseEntries = source.some((item) => item === null || item === undefined);
+  const sourceLooksPartial = sourceHasSparseEntries ||
+    (key === 'images' && source.some((item) => isPlainObject(item) && isPartialImageObject(item)));
+
+  if (!sourceLooksPartial) {
+    return [...source];
+  }
+
+  const result = [...target];
+  source.forEach((item, index) => {
+    if (item === null || item === undefined) return;
+
+    if (Array.isArray(item) && Array.isArray(result[index])) {
+      result[index] = mergeArray(result[index], item);
+    } else if (isPlainObject(item) && isPlainObject(result[index])) {
+      result[index] = deepMerge(result[index], item);
+    } else {
+      result[index] = item;
+    }
+  });
+
+  return result;
+}
+
+function isPartialImageObject(value: Record<string, any>): boolean {
+  const keys = Object.keys(value);
+  if (keys.length === 0) return true;
+
+  return !('url' in value && 'type' in value);
+}
+
+function isPlainObject(value: unknown): value is Record<string, any> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

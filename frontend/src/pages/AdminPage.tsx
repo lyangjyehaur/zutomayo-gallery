@@ -3309,7 +3309,7 @@ export function AdminPage() {
               <i className="hn hn-question-circle text-2xl" /> 確認儲存變更
             </AlertDialogTitle>
             <AlertDialogDescription className="text-foreground font-bold opacity-80">
-              即將把當前所有變更回寫至服務器資料庫 (SQLite)，請確認操作！
+              即將把當前所有變更回寫至服務器資料庫，請確認操作！
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

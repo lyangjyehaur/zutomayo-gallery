@@ -119,7 +119,7 @@ export const updateMVs = async (req: Request, res: Response) => {
     const deletedIds = reqDeletedIds || (updateData as any)._deleted || [];
     
     // 驗證輸入數據 (不需要再手動過濾 deletedIds，因為前端若要保留該 ID 的資料，就代表這是一次重建/改名復原操作)
-    const validatedData = validateMVs(updateData) as MVItem[];
+    const validatedData = validateMVs(updateData, { partial: partial === true }) as MVItem[];
     
     // 執行更新（支持部分更新邏輯）
     const updateResult = await mvService.updateAllMVs(validatedData, partial === true, deletedIds);

@@ -59,6 +59,52 @@ describe('admin page helpers', () => {
       { id: 'mv-2', title: 'Same title', year: '2024', images: [] },
     ] as any[];
 
-    expect(getAdminChangedData(data, originalData, new Map(), new Set()).map((mv) => mv.id)).toEqual(['mv-1']);
+    expect(getAdminChangedData(data, originalData, new Map(), new Set())).toEqual([
+      { id: 'mv-1', title: 'New title' },
+    ]);
+  });
+
+  it('returns only explicitly tracked changed fields for existing MVs', () => {
+    const originalData = [
+      {
+        id: 'mv-1',
+        title: 'Old title',
+        year: '2024',
+        images: [{ type: 'official', url: 'old.jpg', width: 100, height: 100 }],
+      },
+    ] as any[];
+    const data = [
+      {
+        id: 'mv-1',
+        title: 'New title',
+        year: '2024',
+        images: [{ type: 'official', url: 'old.jpg', width: 100, height: 100 }],
+      },
+    ] as any[];
+
+    expect(getAdminChangedData(data, originalData, new Map([['mv-1', new Set(['title'])]]), new Set())).toEqual([
+      { id: 'mv-1', title: 'New title' },
+    ]);
+  });
+
+  it('preserves nested tracked field paths without sending unrelated MV fields', () => {
+    const originalData = [
+      {
+        id: 'mv-1',
+        title: 'Title',
+        images: [{ type: 'official', url: 'old.jpg', width: 100, height: 100 }],
+      },
+    ] as any[];
+    const data = [
+      {
+        id: 'mv-1',
+        title: 'Title',
+        images: [{ type: 'official', url: 'new.jpg', width: 100, height: 100 }],
+      },
+    ] as any[];
+
+    expect(getAdminChangedData(data, originalData, new Map([['mv-1', new Set(['images.0.url'])]]), new Set())).toEqual([
+      { id: 'mv-1', images: [{ url: 'new.jpg' }] },
+    ]);
   });
 });

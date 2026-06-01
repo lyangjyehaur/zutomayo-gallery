@@ -85,6 +85,13 @@ export const mvItemSchema = z.object({
 }).passthrough(); // 允許 MV 物件內有未定義的新欄位
 
 export const mvArraySchema = z.array(mvItemSchema);
+export const partialMvItemSchema = mvItemSchema.extend({
+  keywords: mvItemSchema.shape.keywords.removeDefault(),
+  images: mvItemSchema.shape.images.removeDefault(),
+  albums: mvItemSchema.shape.albums.removeDefault(),
+  creators: mvItemSchema.shape.creators.removeDefault(),
+});
+export const partialMvArraySchema = z.array(partialMvItemSchema);
 
 // 驗證輔助函數
 export function validateQuery(query: unknown) {
@@ -99,6 +106,6 @@ export function validateProbe(body: unknown) {
   return probeSchema.parse(body);
 }
 
-export function validateMVs(data: unknown) {
-  return mvArraySchema.parse(data);
+export function validateMVs(data: unknown, options: { partial?: boolean } = {}) {
+  return (options.partial ? partialMvArraySchema : mvArraySchema).parse(data);
 }

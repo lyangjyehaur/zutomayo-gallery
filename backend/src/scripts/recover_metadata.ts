@@ -9,7 +9,7 @@ async function recover() {
   console.log('Connecting to PostgreSQL...');
   await sequelize.authenticate();
 
-  console.log('Connecting to SQLite backup...');
+  console.log('Connecting to legacy metadata backup...');
   const db = new Database('./data/database.sqlite', { readonly: true });
 
   try {
