@@ -774,7 +774,7 @@ export function AdminStagingFanartPage() {
                   </label>
 
                   <div className="aspect-square bg-black relative border-b-4 border-black">
-                  {f.media_type === 'video' ? (
+                  {(f.media_type === 'video' || f.media_type === 'gif') ? (
                     <video
                       src={f.r2_url || f.media_url}
                       className="w-full h-full object-cover"
