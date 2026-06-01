@@ -126,7 +126,6 @@ export function AdminStagingFanartPage() {
   const [selectedMvs, setSelectedMvs] = useState<Record<string, string[]>>({});
   const [selectedSingleMv, setSelectedSingleMv] = useState<Record<string, string>>({});
   const [artists, setArtists] = useState<{ id: string; name: string; twitter?: string }[]>([]);
-  const [authorHandleOptions, setAuthorHandleOptions] = useState<string[]>([]);
   const [selectedArtists, setSelectedArtists] = useState<Record<string, string>>({});
   const [suggestedArtists, setSuggestedArtists] = useState<Record<string, string>>({});
   const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
@@ -193,16 +192,6 @@ export function AdminStagingFanartPage() {
     } catch { /* silent */ }
   }, [baseApiUrl]);
 
-  const fetchAuthorHandles = useCallback(async () => {
-    try {
-      const res = await adminFetch(`${baseApiUrl}/staging-fanarts/author-handles`);
-      const data = await res.json();
-      if (data.success) {
-        setAuthorHandleOptions(data.data || []);
-      }
-    } catch { /* silent */ }
-  }, [baseApiUrl]);
-
   const fetchProgress = useCallback(async () => {
     setIsProgressLoading(true);
     try {
@@ -265,8 +254,7 @@ export function AdminStagingFanartPage() {
   useEffect(() => {
     fetchMvs();
     fetchArtists();
-    fetchAuthorHandles();
-  }, [fetchMvs, fetchArtists, fetchAuthorHandles]);
+  }, [fetchMvs, fetchArtists]);
 
   useEffect(() => {
     const status = progress?.syncProgress?.status;
@@ -555,7 +543,12 @@ export function AdminStagingFanartPage() {
             <select
               value={contentTypeFilter}
               onChange={(e) => {
-                setContentTypeFilter(e.target.value);
+                const newType = e.target.value;
+                setContentTypeFilter(newType);
+                // 切換到非官方/畫師綜合時清除帳號篩選
+                if (newType !== 'official' && newType !== 'collaboration') {
+                  setAuthorHandleFilter('');
+                }
                 setPage(1);
                 setSelectedCards(new Set());
                 setBatchSelectedMvs([]);
@@ -583,21 +576,23 @@ export function AdminStagingFanartPage() {
               <option value="video">影片</option>
               <option value="gif">GIF</option>
             </select>
-            <select
-              value={authorHandleFilter}
-              onChange={(e) => {
-                setAuthorHandleFilter(e.target.value);
-                setPage(1);
-                setSelectedCards(new Set());
-                setBatchSelectedMvs([]);
-              }}
-              className="border-2 border-black font-bold shadow-neo-sm h-8 px-2 bg-white max-w-[180px]"
-            >
-              <option value="">全部帳號</option>
-              {authorHandleOptions.map(handle => (
-                <option key={handle} value={handle}>@{handle}</option>
-              ))}
-            </select>
+            {(contentTypeFilter === 'official' || contentTypeFilter === 'collaboration') && (
+              <select
+                value={authorHandleFilter}
+                onChange={(e) => {
+                  setAuthorHandleFilter(e.target.value);
+                  setPage(1);
+                  setSelectedCards(new Set());
+                  setBatchSelectedMvs([]);
+                }}
+                className="border-2 border-black font-bold shadow-neo-sm h-8 px-2 bg-white max-w-[180px]"
+              >
+                <option value="">全部畫師</option>
+                {artists.filter(a => a.twitter).map(a => (
+                  <option key={a.twitter} value={a.twitter}>@{a.twitter} ({a.name})</option>
+                ))}
+              </select>
+            )}
             <select
               value={sortBy}
               onChange={(e) => {
