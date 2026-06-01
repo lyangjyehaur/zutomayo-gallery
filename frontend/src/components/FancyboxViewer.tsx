@@ -545,8 +545,8 @@ const PhotoItem = React.memo(function PhotoItem({ photo, index, onPhotoClick, de
             )}
 
             {photo.isVideo && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none transition-opacity group-hover:bg-black/30 z-20 backdrop-blur-[1px]">
-                <div className="bg-black/70 text-white p-2 sm:p-3 border-2 border-white/20 shadow-lg flex items-center justify-center backdrop-blur-md transform transition-transform group-hover:scale-110">
+              <div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none transition-opacity group-hover:bg-black/30 z-20">
+                <div className="bg-black/70 text-white p-2 sm:p-3 border-2 border-white/20 shadow-lg flex items-center justify-center transform transition-transform group-hover:scale-110">
                   <i className="hn hn-play-solid text-xl sm:text-2xl ml-0.5" />
                 </div>
               </div>
