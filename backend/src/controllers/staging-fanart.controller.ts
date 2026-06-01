@@ -205,6 +205,7 @@ async function promoteStagingFanart(staging: any, options?: { mvs?: unknown; mvI
   const hashtags = staging.get('hashtags') as string[];
   const authorName = staging.get('author_name') as any;
   const authorHandle = staging.get('author_handle') as any;
+  const retweetedByHandle = staging.get('retweeted_by_handle') as string;
   const mediaWidth = staging.get('media_width') as number;
   const mediaHeight = staging.get('media_height') as number;
   const contentType = (staging.get('content_type') as string) || 'fanart';
@@ -318,15 +319,17 @@ async function promoteStagingFanart(staging: any, options?: { mvs?: unknown; mvI
       like_count: likeCount || 0,
       retweet_count: retweetCount || 0,
       view_count: viewCount || 0,
+      retweeted_by_handle: retweetedByHandle || null,
       hashtags: hashtags || [],
       status: 'unorganized'
     }
   });
 
-  if ((authorName || authorHandle) && (!group.get('author_name') || !group.get('author_handle'))) {
+  if ((authorName || authorHandle || retweetedByHandle) && (!group.get('author_name') || !group.get('author_handle') || group.get('retweeted_by_handle') !== retweetedByHandle)) {
     const updateData: any = {};
     if (authorName && !group.get('author_name')) updateData.author_name = authorName;
     if (authorHandle && !group.get('author_handle')) updateData.author_handle = authorHandle;
+    if (retweetedByHandle && group.get('retweeted_by_handle') !== retweetedByHandle) updateData.retweeted_by_handle = retweetedByHandle;
     if (Object.keys(updateData).length > 0) await group.update(updateData);
   }
 

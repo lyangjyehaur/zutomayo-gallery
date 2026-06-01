@@ -139,6 +139,7 @@
 | `author_handle`| `VARCHAR(255)` | `NULL` | 來源作者帳號 (如 `@username`) |
 | `post_date` | `TIMESTAMP` | `NULL` | 來源發布時間 |
 | `status` | `VARCHAR(50)` | `DEFAULT 'pending'` | 審核狀態：`'pending'`, `'on_hold'`, `'organized'`, `'rejected'` (參考字典表) |
+| `retweeted_by_handle` | `VARCHAR(255)` | `NULL` | 轉發此推文的官方帳號 handle；多個帳號以逗號分隔 |
 
 ### 2.2. `media_annotations` (媒體標註表)
 儲存媒體上的文字標記與位置資訊，用於圖片標註功能。

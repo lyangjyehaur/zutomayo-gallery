@@ -143,6 +143,7 @@ interface PhotoData {
   groupId?: string;
   tweetUrl?: string;
   likeCount?: number;
+  retweetedByHandle?: string | null;
   tweetAuthor?: string;
   tweetHandle?: string;
   original_thumbnail_url?: string;
@@ -249,6 +250,7 @@ const FancyboxCaptionOverlay = ({ api, photos, annotationsMap }: { api: any; pho
 
   const title = photos[activeIndex]?.caption ?? '';
   const richText = photos[activeIndex]?.richText ?? '';
+  const retweetedByHandle = photos[activeIndex]?.retweetedByHandle;
   const activeAnnotations = annotationsMap.get(activeIndex) || [];
 
   const handleCopyShareLink = useCallback(() => {
@@ -327,6 +329,11 @@ const FancyboxCaptionOverlay = ({ api, photos, annotationsMap }: { api: any; pho
             </div>
           </div>
           <div className="ztmy-fb-caption-rich">
+            {retweetedByHandle && (
+              <div className="text-xs text-blue-600 font-mono">
+                官方轉發: {retweetedByHandle.split(',').map(h => `@${h.trim().replace(/^@/, '')}`).join(', ')}
+              </div>
+            )}
             <div className="rich-text" dangerouslySetInnerHTML={{ __html: richText || t("app.no_desc", "暫無描述 (NO_METADATA_FOUND)") }} />
           </div>
         </div>

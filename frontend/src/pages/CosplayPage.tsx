@@ -134,6 +134,7 @@ export function CosplayPage({ mvData }: CosplayPageProps) {
         tweetHandle: group?.author_handle,
         tweetDate: group?.post_date,
         tweetText: group?.source_text,
+        retweeted_by_handle: group?.retweeted_by_handle,
         like_count
       };
     });
@@ -316,6 +317,7 @@ export function CosplayPage({ mvData }: CosplayPageProps) {
         caption: baseCaption,
         richText,
         likeCount: art.like_count,
+        retweetedByHandle: art.retweeted_by_handle,
       };
     });
   }, [allFanArts]);

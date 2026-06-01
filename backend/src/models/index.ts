@@ -120,6 +120,7 @@ export const MediaGroupModel = sequelize.define('MediaGroup', {
   like_count: { type: DataTypes.INTEGER, defaultValue: 0, comment: '喜歡數' },
   retweet_count: { type: DataTypes.INTEGER, defaultValue: 0, comment: '轉推數' },
   view_count: { type: DataTypes.INTEGER, defaultValue: 0, comment: '觀看數' },
+  retweeted_by_handle: { type: DataTypes.STRING, allowNull: true, comment: '轉發此推文的官方帳號 handle' },
   hashtags: { type: DataTypes.JSONB, defaultValue: [], comment: '推文標籤' },
 }, { tableName: 'media_groups', timestamps: false, comment: '媒體分組資訊 (共用來源詮釋資料，如推文)' });
 

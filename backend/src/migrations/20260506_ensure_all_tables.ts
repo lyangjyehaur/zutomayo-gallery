@@ -116,6 +116,7 @@ export const up = async ({ context: queryInterface }: { context: QueryInterface 
       like_count: { type: DataTypes.INTEGER, defaultValue: 0, allowNull: true },
       retweet_count: { type: DataTypes.INTEGER, defaultValue: 0, allowNull: true },
       view_count: { type: DataTypes.INTEGER, defaultValue: 0, allowNull: true },
+      retweeted_by_handle: { type: DataTypes.STRING, allowNull: true },
       hashtags: { type: DataTypes.JSONB, defaultValue: [], allowNull: true },
     });
     await queryInterface.addIndex('media_groups', ['status']);
