@@ -2047,7 +2047,7 @@ export function AdminPage() {
                     <span className="text-[10px] font-mono opacity-40 normal-case">Full_Date</span>
                   </label>
                   <DatePicker
-                    value={currentMV.date ? (() => { const d = new Date(currentMV.date + 'T00:00:00'); return isNaN(d.getTime()) ? null : d; })() : null}
+                    value={currentMV.date ? (() => { const d = new Date(currentMV.date); return isNaN(d.getTime()) ? null : d; })() : null}
                     onChange={(d) => updateField('date', d ? d.toISOString().slice(0, 10) : '')}
                     placeholder="選擇日期"
                   />
