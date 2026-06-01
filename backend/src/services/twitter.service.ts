@@ -457,6 +457,10 @@ const resolveOriginalTweet = (tweet: any): any => {
     tweet?.retweetedTweet,
   ];
   for (const candidate of candidates) {
+    // x.com 有時只回傳原始推文 ID 字串，不是完整嵌套對象
+    if (typeof candidate === 'string' && /^\d{10,}$/.test(candidate)) {
+      return { ...tweet, rest_id: candidate };
+    }
     const nested = findNestedTweet(candidate);
     if (nested) return nested;
   }
