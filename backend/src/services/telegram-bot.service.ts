@@ -229,18 +229,48 @@ async function findArtistForTopic({
   const normalizedName = (artistName || '').trim();
   if (!normalizedHandle && !normalizedName) return null;
 
-  const conditions: any[] = [];
-  if (normalizedHandle) conditions.push({ twitter: { [Op.iLike]: normalizedHandle } });
-  if (normalizedName) conditions.push({ name: { [Op.iLike]: normalizedName } });
+  // 1. 精確匹配 handle
+  if (normalizedHandle) {
+    const artist = await ArtistModel.findOne({ where: { twitter: { [Op.iLike]: normalizedHandle } } as any });
+    if (artist) {
+      return {
+        id: String(artist.get('id')),
+        name: String(artist.get('name') || '').trim(),
+        twitter: artist.get('twitter') as string | null | undefined,
+      };
+    }
+  }
 
-  const artist = await ArtistModel.findOne({ where: { [Op.or]: conditions } as any });
-  if (!artist) return null;
+  // 2. 精確匹配名稱
+  if (normalizedName) {
+    const artist = await ArtistModel.findOne({ where: { name: { [Op.iLike]: normalizedName } } as any });
+    if (artist) {
+      return {
+        id: String(artist.get('id')),
+        name: String(artist.get('name') || '').trim(),
+        twitter: artist.get('twitter') as string | null | undefined,
+      };
+    }
 
-  return {
-    id: String(artist.get('id')),
-    name: String(artist.get('name') || '').trim(),
-    twitter: artist.get('twitter') as string | null | undefined,
-  };
+    // 3. 部分名稱匹配（處理 "をか / Nowoka" → "をか" 的情況）
+    // 從 author_name 中提取第一個部分（按 / 分隔）
+    const nameParts = normalizedName.split(/\s*\/\s*/);
+    for (const part of nameParts) {
+      const trimmedPart = part.trim();
+      if (trimmedPart && trimmedPart.length >= 2) {  // 至少 2 個字元
+        const artist = await ArtistModel.findOne({ where: { name: { [Op.iLike]: trimmedPart } } as any });
+        if (artist) {
+          return {
+            id: String(artist.get('id')),
+            name: String(artist.get('name') || '').trim(),
+            twitter: artist.get('twitter') as string | null | undefined,
+          };
+        }
+      }
+    }
+  }
+
+  return null;
 }
 
 async function ensureArtistTopic(artistId: string, artistName: string): Promise<number | undefined> {
