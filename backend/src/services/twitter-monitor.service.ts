@@ -60,9 +60,14 @@ const safeDate = (value: string | Date | undefined) => {
   return Number.isNaN(date.getTime()) ? new Date() : date;
 };
 
-const normalizeTwitterMediaUrl = (url: string): string => {
+const extractTwitterMediaId = (url: string): string | null => {
   const match = url.match(/\/media\/([A-Za-z0-9_-]+)/);
-  if (match) return `media:${match[1]}`;
+  return match ? match[1] : null;
+};
+
+const normalizeTwitterMediaUrl = (url: string): string => {
+  const mediaId = extractTwitterMediaId(url);
+  if (mediaId) return `media:${mediaId}`;
   return url.toLowerCase().split('?')[0];
 };
 
@@ -290,6 +295,7 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
 
       for (const media of mediaList) {
         const originalMediaUrl = media.url;
+        const mediaId = extractTwitterMediaId(originalMediaUrl);
         const existingStaging = await deps.findExistingStagingFanart({
           where: {
             tweet_id: sourceTweetId,
@@ -322,9 +328,15 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
           }
         }
 
-        const existingByUrl = await deps.findExistingStagingFanart({
+        let existingByUrl = await deps.findExistingStagingFanart({
           where: { media_url: originalMediaUrl }
         });
+        if (!existingByUrl && mediaId) {
+          existingByUrl = await deps.findExistingStagingFanart({
+            where: { media_url: { [Op.iLike]: `%/${mediaId}%` } },
+            attributes: ['id', 'media_url', 'status', 'retweeted_by_handle', 'author_handle', 'tweet_id'],
+          });
+        }
         if (existingByUrl) {
           if (contentType === 'official' && retweetedByHandle && !notifiedTweetIds.has(sourceTweetId)) {
             await markOfficialRetweetOnStaging(existingByUrl, retweetedByHandle, sourceTweetLink, contentType, tweetHandle);
@@ -333,9 +345,14 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
           continue;
         }
 
-        const existingMediaByUrl = await deps.findExistingMedia({
-          where: { url: originalMediaUrl }
+        let existingMediaByUrl = await deps.findExistingMedia({
+          where: { original_url: originalMediaUrl }
         });
+        if (!existingMediaByUrl && mediaId) {
+          existingMediaByUrl = await deps.findExistingMedia({
+            where: { original_url: { [Op.iLike]: `%/${mediaId}%` } }
+          });
+        }
         if (existingMediaByUrl) {
           if (contentType === 'official' && retweetedByHandle && !notifiedTweetIds.has(sourceTweetId)) {
             const groupId = existingMediaByUrl.get('group_id') as string | null;

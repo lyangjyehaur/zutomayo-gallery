@@ -6,6 +6,7 @@ import {
   setTwitterMonitorServiceDepsForTest,
 } from './twitter-monitor.service.js';
 import { buildCanonicalTweetUrl } from './twitter.service.js';
+import { Op } from 'sequelize';
 
 test('TwitterMonitorService.checkRss uses RSS item parser and does not skip when external enrichment fails', async () => {
   const createdRows: any[] = [];
@@ -354,6 +355,78 @@ test('TwitterMonitorService.processFeed marks official retweet when media URL al
   }
 });
 
+test('TwitterMonitorService.processFeed marks official retweet when staging media URL matches by media id across tweet ids', async () => {
+  const notifications: any[] = [];
+  const updates: any[] = [];
+  const findStagingQueries: any[] = [];
+  let createCount = 0;
+
+  const existingStaging = {
+    get: (key: string) => ({
+      id: 'normalized-cross-tweet-staging',
+      retweeted_by_handle: null,
+      author_handle: 'original_artist',
+      status: 'pending',
+    } as any)[key],
+    update: async (payload: any) => {
+      updates.push(payload);
+      return existingStaging;
+    },
+  };
+
+  setTwitterMonitorServiceDepsForTest({
+    parseURL: async () => ({
+      items: [{
+        title: 'ZUTOMAYO ART (@zutomayo_art): RT normalized URL',
+        link: 'https://x.com/zutomayo_art/status/1212121212121212121',
+        isoDate: '2026-05-30T12:34:56.000Z',
+        creator: 'ZUTOMAYO ART (@zutomayo_art)',
+      }],
+    }),
+    extractMediaFromTweet: async () => [{
+      url: 'https://pbs.twimg.com/media/HJFM3SlasAEiMEf?format=jpg&name=orig',
+      type: 'image',
+      text: 'RT normalized URL',
+      user_name: 'Original Artist',
+      user_screen_name: 'original_artist',
+      date: '2026-05-30T12:34:56.000Z',
+      tweet_id: '1212121212121212121',
+      tweet_url: buildCanonicalTweetUrl('1212121212121212121'),
+      requested_tweet_id: '1212121212121212121',
+      hashtags: [],
+    }],
+    findExistingMediaGroup: async () => null,
+    findExistingStagingFanart: async (query) => {
+      findStagingQueries.push(query);
+      if (query.where?.media_url?.[Op.iLike] === '%/HJFM3SlasAEiMEf%') {
+        return existingStaging;
+      }
+      return null;
+    },
+    findExistingMedia: async () => null,
+    createStagingFanart: async () => {
+      createCount++;
+      return { get: (key: string) => key === 'id' ? 'new-staging' : undefined } as any;
+    },
+    sendFanartReviewNotification: async (payload) => {
+      notifications.push(payload);
+      return true;
+    },
+  });
+
+  try {
+    const result = await TwitterMonitorService.processFeed('https://rss.example.com/user/zutomayo_art', 'official');
+    assert.equal(result.newCandidates, 0);
+    assert.equal(createCount, 0);
+    assert.deepEqual(updates, [{ retweeted_by_handle: 'zutomayo_art' }]);
+    assert.equal(notifications.length, 1);
+    assert.equal(notifications[0].stagingId, 'normalized-cross-tweet-staging');
+    assert.ok(findStagingQueries.some((query) => query.where?.media_url?.[Op.iLike] === '%/HJFM3SlasAEiMEf%'));
+  } finally {
+    resetTwitterMonitorServiceDepsForTest();
+  }
+});
+
 test('TwitterMonitorService.processFeed skips promoted duplicate by media URL and notification failure does not block', async () => {
   let createCount = 0;
   const mediaGroupQueries: any[] = [];
@@ -391,7 +464,7 @@ test('TwitterMonitorService.processFeed skips promoted duplicate by media URL an
     },
     findExistingStagingFanart: async () => null,
     findExistingMedia: async (query) => {
-      if (query.where?.url === 'https://pbs.twimg.com/media/promoted.jpg?format=jpg&name=orig') {
+      if (query.where?.original_url === 'https://pbs.twimg.com/media/promoted.jpg?format=jpg&name=orig') {
         return { get: (key: string) => key === 'group_id' ? 'promoted-group' : undefined };
       }
       return null;
@@ -411,6 +484,75 @@ test('TwitterMonitorService.processFeed skips promoted duplicate by media URL an
     assert.equal(createCount, 0);
     assert.equal(mediaGroupQueries.length, 2);
     assert.equal(mediaGroupQueries[1].where.id, 'promoted-group');
+  } finally {
+    resetTwitterMonitorServiceDepsForTest();
+  }
+});
+
+test('TwitterMonitorService.processFeed skips promoted duplicate by normalized original media URL', async () => {
+  let createCount = 0;
+  const mediaQueries: any[] = [];
+  const mediaGroupQueries: any[] = [];
+
+  setTwitterMonitorServiceDepsForTest({
+    parseURL: async () => ({
+      items: [{
+        title: 'ZUTOMAYO ART (@zutomayo_art): RT promoted normalized',
+        link: 'https://x.com/zutomayo_art/status/1313131313131313131',
+        isoDate: '2026-05-31T12:34:56.000Z',
+        creator: 'ZUTOMAYO ART (@zutomayo_art)',
+      }],
+    }),
+    extractMediaFromTweet: async () => [{
+      url: 'https://pbs.twimg.com/media/HJFM3SlasAEiMEf?format=jpg&name=orig',
+      type: 'image',
+      text: 'RT promoted normalized',
+      user_name: 'Original Artist',
+      user_screen_name: 'original_artist',
+      date: '2026-05-31T12:34:56.000Z',
+      tweet_id: '1313131313131313131',
+      tweet_url: buildCanonicalTweetUrl('1313131313131313131'),
+      requested_tweet_id: '1313131313131313131',
+      hashtags: [],
+    }],
+    findExistingMediaGroup: async (query) => {
+      mediaGroupQueries.push(query);
+      if (query.where?.id === 'promoted-normalized-group') {
+        return {
+          get: (key: string) => ({
+            id: 'promoted-normalized-group',
+            retweeted_by_handle: null,
+            source_url: 'https://x.com/original_artist/status/9999999999999999999',
+          } as any)[key],
+          update: async () => undefined,
+        };
+      }
+      return null;
+    },
+    findExistingStagingFanart: async () => null,
+    findExistingMedia: async (query) => {
+      mediaQueries.push(query);
+      if (query.where?.original_url?.[Op.iLike] === '%/HJFM3SlasAEiMEf%') {
+        return { get: (key: string) => key === 'group_id' ? 'promoted-normalized-group' : undefined };
+      }
+      return null;
+    },
+    createStagingFanart: async () => {
+      createCount++;
+      return { get: (key: string) => key === 'id' ? 'new-staging' : undefined } as any;
+    },
+    sendFanartReviewNotification: async () => true,
+  });
+
+  try {
+    const result = await TwitterMonitorService.processFeed('https://rss.example.com/user/zutomayo_art', 'official');
+    assert.equal(result.newCandidates, 0);
+    assert.equal(createCount, 0);
+    assert.deepEqual(mediaQueries.map((query) => query.where), [
+      { original_url: 'https://pbs.twimg.com/media/HJFM3SlasAEiMEf?format=jpg&name=orig' },
+      { original_url: { [Op.iLike]: '%/HJFM3SlasAEiMEf%' } },
+    ]);
+    assert.equal(mediaGroupQueries[1].where.id, 'promoted-normalized-group');
   } finally {
     resetTwitterMonitorServiceDepsForTest();
   }
@@ -532,7 +674,7 @@ test('TwitterMonitorService.processFeed skips official tweet already present in 
     assert.equal(createCount, 0);
     assert.equal(notifications.length, 0);
     assert.equal(findStagingQueries.length, 1);
-    assert.deepEqual(findStagingQueries[0].attributes, ['id', 'status']);
+    assert.deepEqual(findStagingQueries[0].attributes, ['id', 'status', 'content_type']);
   } finally {
     resetTwitterMonitorServiceDepsForTest();
   }
