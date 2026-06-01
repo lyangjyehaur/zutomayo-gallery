@@ -424,7 +424,7 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata, view
   }, [isVideoActivated, videoPlatform, mv?.title]);
 
   const galleryImages = React.useMemo(() => {
-    return mv?.images ? mv.images.filter(img => img.usage !== 'cover' && img.type !== 'fanart') : [];
+    return mv?.images ? mv.images.filter(img => img.usage !== 'cover' && img.type === 'official') : [];
   }, [mv?.images]);
 
   const fanartCount = React.useMemo(() => {
