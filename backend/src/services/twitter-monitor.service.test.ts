@@ -218,6 +218,7 @@ test('TwitterMonitorService carries manual separate topic routing into Telegram 
     getMonitoredFeedTargets: async () => [{
       type: 'user',
       handle: 'manual_artist',
+      label: 'Pinned Label',
       source: 'manual',
       content_type: 'fanart',
       separate_topic: true,
@@ -243,6 +244,7 @@ test('TwitterMonitorService carries manual separate topic routing into Telegram 
       hashtags: [],
     }],
     findExistingMediaGroup: async () => null,
+    findExistingMedia: async () => null,
     findExistingStagingFanart: async () => null,
     createStagingFanart: async () => ({ get: (key: string) => key === 'id' ? 'staging-3' : undefined } as any),
     sendFanartReviewNotification: async (payload) => {
@@ -255,14 +257,16 @@ test('TwitterMonitorService carries manual separate topic routing into Telegram 
     const targets = await TwitterMonitorService.collectFeedTargets();
     assert.equal(targets.length, 1);
     assert.equal(targets[0].separateTopic, true);
+    assert.equal(targets[0].label, 'Pinned Label');
 
-    const result = await TwitterMonitorService.processFeed(targets[0].feedUrl, targets[0].contentType, targets[0].separateTopic);
+    const result = await TwitterMonitorService.processFeed(targets[0].feedUrl, targets[0].contentType, targets[0].separateTopic, targets[0].label);
     assert.equal(result.newCandidates, 1);
     assert.equal(notifications.length, 1);
     assert.equal(notifications[0].contentType, 'fanart');
-    assert.equal(notifications[0].artistName, 'Manual Artist');
+    assert.equal(notifications[0].artistName, 'Pinned Label');
     assert.equal(notifications[0].artistHandle, 'manual_artist');
     assert.equal(notifications[0].separateTopic, true);
+    assert.equal(notifications[0].label, 'Pinned Label');
   } finally {
     resetTwitterMonitorServiceDepsForTest();
   }

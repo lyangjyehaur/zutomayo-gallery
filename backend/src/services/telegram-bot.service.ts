@@ -327,22 +327,18 @@ async function getTopicIdForFanartReview({
   artistName,
   artistHandle,
   separateTopic,
+  label,
 }: {
   contentType?: string;
   artistName?: string;
   artistHandle?: string;
   separateTopic?: boolean;
+  label?: string;
 }): Promise<number | undefined> {
   if (separateTopic) {
     try {
-      const artist = await findArtistForTopicImpl({ artistName, artistHandle });
-      if (artist?.id && artist.name) {
-        const artistTopicId = await ensureArtistTopicImpl(artist.id, artist.name);
-        if (artistTopicId) return artistTopicId;
-      }
-
       const normalizedHandle = normalizeTwitterHandle(artistHandle);
-      const topicName = (artistName || artistHandle || '').trim();
+      const topicName = (label || artistName || artistHandle || '').trim();
       const topicKey = normalizedHandle ? `handle:${normalizedHandle}` : `name:${topicName}`;
       if (topicName) {
         const topicId = await ensureArtistTopicImpl(topicKey, topicName);
@@ -479,6 +475,7 @@ export const TelegramBotService = {
     artistName,
     artistHandle,
     separateTopic,
+    label,
   }: {
     stagingId: string;
     title: string;
@@ -489,6 +486,7 @@ export const TelegramBotService = {
     artistName?: string;
     artistHandle?: string;
     separateTopic?: boolean;
+    label?: string;
   }): Promise<boolean> => {
     if (!bot || !cachedChatId) {
       logger.warn('Telegram Bot not configured, skipping fanart review notification');
@@ -510,7 +508,7 @@ export const TelegramBotService = {
       ]]
     };
 
-    const threadId = await getTopicIdForFanartReview({ contentType, artistName, artistHandle, separateTopic });
+    const threadId = await getTopicIdForFanartReview({ contentType, artistName, artistHandle, separateTopic, label });
 
     try {
       const options: any = {

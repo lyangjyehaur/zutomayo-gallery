@@ -197,7 +197,7 @@ export const updateMonitorTarget = async (id: string, payload: any) => {
   await target.update(updateData);
   if (shouldRenameTopic) {
     const { syncArtistTopicName } = await import('./telegram-bot.service.js');
-    await syncArtistTopicName(`handle:${handle}`, nextTopicName).catch(err => {
+    await syncArtistTopicName(`handle:${currentHandle}`, nextTopicName).catch(err => {
       logger.warn({ err, monitorTargetId: id }, 'Failed to sync monitor target topic name');
     });
   }

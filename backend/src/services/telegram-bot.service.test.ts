@@ -70,6 +70,33 @@ test('getTopicIdForFanartReview creates a name-keyed topic when separate topic h
   }
 });
 
+test('getTopicIdForFanartReview prefers label as separate topic name', async () => {
+  const ensuredTopics: Array<{ key: string; name: string }> = [];
+  __testSetTelegramTopicState({
+    topicIds: { notification: 10, fanart: 20, fallback: 30 },
+    findArtistForTopic: async () => null,
+    ensureArtistTopic: async (key, name) => {
+      ensuredTopics.push({ key, name });
+      return 778;
+    },
+  });
+
+  try {
+    const topicId = await __testResolveTopicIdForFanartReview({
+      contentType: 'fanart',
+      artistName: 'RSS Display Name',
+      artistHandle: 'manual_artist',
+      separateTopic: true,
+      label: 'Pinned Label',
+    });
+
+    assert.equal(topicId, 778);
+    assert.deepEqual(ensuredTopics, [{ key: 'handle:manual_artist', name: 'Pinned Label' }]);
+  } finally {
+    __testSetTelegramTopicState();
+  }
+});
+
 test('getTopicIdForFanartReview sends unknown official content to fallback topic', async () => {
   __testSetTelegramTopicState({
     topicIds: { notification: 10, fanart: 20, fallback: 30 },

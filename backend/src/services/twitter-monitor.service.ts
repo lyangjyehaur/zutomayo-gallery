@@ -87,6 +87,7 @@ const notifyOfficialRetweet = async (payload: {
   artistName?: string;
   artistHandle?: string;
   separateTopic?: boolean;
+  label?: string;
 }) => {
   try {
     await deps.sendFanartReviewNotification(payload);
@@ -126,6 +127,7 @@ export type FeedTarget = {
   feedUrl: string;
   contentType: string;
   separateTopic?: boolean;
+  label?: string;
 };
 
 /**
@@ -147,6 +149,7 @@ export const collectFeedTargets = async (): Promise<FeedTarget[]> => {
       feedUrl: url,
       contentType: target.content_type || 'fanart',
       separateTopic: target.separate_topic || false,
+      label: target.label || '',
     });
   }
 
@@ -161,7 +164,7 @@ export const collectFeedTargets = async (): Promise<FeedTarget[]> => {
  * 處理單一 RSS feed：fetch → parse → extract media → 寫 staging → 發通知。
  * 回傳該 feed 產生的新候選數量。
  */
-export const processFeed = async (feedUrl: string, contentType: string = 'fanart', separateTopic: boolean = false): Promise<{ feedUrl: string; newCandidates: number }> => {
+export const processFeed = async (feedUrl: string, contentType: string = 'fanart', separateTopic: boolean = false, label?: string): Promise<{ feedUrl: string; newCandidates: number }> => {
   let feed: { items: RssTweetItem[] };
   try {
     feed = await deps.parseURL(feedUrl);
@@ -298,9 +301,10 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
           sourceUrl: sourceTweetLink,
           imageUrl: mediaType === 'image' ? originalMediaUrl : (media.thumbnail || undefined),
           contentType,
-          artistName: tweetAuthor,
+          artistName: label || tweetAuthor,
           artistHandle: tweetHandle,
           separateTopic,
+          label,
         });
       }
 
@@ -329,7 +333,7 @@ export const TwitterMonitorService = {
     let failedFeeds = 0;
 
     for (const target of feedTargets) {
-      const result = await processFeed(target.feedUrl, target.contentType, target.separateTopic);
+      const result = await processFeed(target.feedUrl, target.contentType, target.separateTopic, target.label);
       if (result.newCandidates === 0) {
         // 可能是正常（無新推文）或失敗（parseURL 已 emitError）
       }
