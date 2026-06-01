@@ -259,6 +259,8 @@ async function findArtistForTopic({
   return null;
 }
 
+let findArtistForTopicImpl = findArtistForTopic;
+
 async function ensureArtistTopic(artistId: string, artistName: string): Promise<number | undefined> {
   const topicKey = artistId.trim();
   const topicName = artistName.trim();
@@ -283,10 +285,12 @@ async function ensureArtistTopic(artistId: string, artistName: string): Promise<
     logger.info({ artistId: topicKey, artistName: topicName, threadId }, 'Created Telegram artist topic');
     return threadId;
   } catch (err) {
-    logger.warn({ err, artistName: topicName }, 'Failed to create Telegram artist topic; falling back to fanart topic');
+    logger.warn({ err, artistName: topicName }, 'Failed to create Telegram artist topic');
     return undefined;
   }
 }
+
+let ensureArtistTopicImpl = ensureArtistTopic;
 
 async function renameArtistTopic(artistId: string, newName: string): Promise<boolean> {
   const topicKey = artistId.trim();
@@ -331,17 +335,18 @@ async function getTopicIdForFanartReview({
 }): Promise<number | undefined> {
   if (separateTopic) {
     try {
-      const artist = await findArtistForTopic({ artistName, artistHandle });
+      const artist = await findArtistForTopicImpl({ artistName, artistHandle });
       if (artist?.id && artist.name) {
-        const artistTopicId = await ensureArtistTopic(artist.id, artist.name);
+        const artistTopicId = await ensureArtistTopicImpl(artist.id, artist.name);
         if (artistTopicId) return artistTopicId;
       }
 
       const normalizedHandle = normalizeTwitterHandle(artistHandle);
       const topicName = (artistName || artistHandle || '').trim();
-      if (normalizedHandle && topicName) {
-        const handleTopicId = await ensureArtistTopic(`handle:${normalizedHandle}`, topicName);
-        if (handleTopicId) return handleTopicId;
+      const topicKey = normalizedHandle ? `handle:${normalizedHandle}` : `name:${topicName}`;
+      if (topicName) {
+        const topicId = await ensureArtistTopicImpl(topicKey, topicName);
+        if (topicId) return topicId;
       }
     } catch (err) {
       logger.warn({ err, artistName, artistHandle }, 'Failed to resolve Telegram separate topic; falling back to fallback topic');
@@ -355,16 +360,35 @@ async function getTopicIdForFanartReview({
   }
 
   try {
-    const artist = await findArtistForTopic({ artistName, artistHandle });
-    if (!artist?.id || !artist.name) return cachedTopicIds.fanart || undefined;
+    const artist = await findArtistForTopicImpl({ artistName, artistHandle });
+    if (!artist?.id || !artist.name) return cachedTopicIds.fallback || undefined;
 
-    const artistTopicId = await ensureArtistTopic(artist.id, artist.name);
-    return artistTopicId || cachedTopicIds.fanart || undefined;
+    const artistTopicId = await ensureArtistTopicImpl(artist.id, artist.name);
+    return artistTopicId || cachedTopicIds.fallback || undefined;
   } catch (err) {
-    logger.warn({ err, artistName, artistHandle }, 'Failed to resolve Telegram artist topic; falling back to fanart topic');
-    return cachedTopicIds.fanart || undefined;
+    logger.warn({ err, artistName, artistHandle }, 'Failed to resolve Telegram official artist topic; falling back to fallback topic');
+    return cachedTopicIds.fallback || undefined;
   }
 }
+
+export function __testSetTelegramTopicState(overrides?: {
+  topicIds?: Partial<Record<TopicCategory, number | null>>;
+  artistTopicIds?: ArtistTopicIds;
+  findArtistForTopic?: typeof findArtistForTopic;
+  ensureArtistTopic?: typeof ensureArtistTopic;
+}): void {
+  cachedTopicIds = {
+    notification: null,
+    fanart: null,
+    fallback: null,
+    ...(overrides?.topicIds || {}),
+  };
+  cachedArtistTopicIds = deserializeArtistTopicIds(overrides?.artistTopicIds || {});
+  findArtistForTopicImpl = overrides?.findArtistForTopic || findArtistForTopic;
+  ensureArtistTopicImpl = overrides?.ensureArtistTopic || ensureArtistTopic;
+}
+
+export const __testResolveTopicIdForFanartReview = getTopicIdForFanartReview;
 
 /**
  * 重新建立 topics（admin 手動觸發）- 導出版本

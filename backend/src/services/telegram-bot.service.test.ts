@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  __testResolveTopicIdForFanartReview,
+  __testSetTelegramTopicState,
   buildFanartReviewCallbackData,
   parseFanartReviewCallbackData,
   syncArtistTopicName,
@@ -40,4 +42,49 @@ test('parseFanartReviewCallbackData parses known formats and returns null for un
 test('syncArtistTopicName returns false when artist id or name is blank', async () => {
   assert.equal(await syncArtistTopicName('', 'New Artist'), false);
   assert.equal(await syncArtistTopicName('artist-id', '   '), false);
+});
+
+test('getTopicIdForFanartReview creates a name-keyed topic when separate topic has no artist handle', async () => {
+  const ensuredTopics: Array<{ key: string; name: string }> = [];
+  __testSetTelegramTopicState({
+    topicIds: { notification: 10, fanart: 20, fallback: 30 },
+    findArtistForTopic: async () => null,
+    ensureArtistTopic: async (key, name) => {
+      ensuredTopics.push({ key, name });
+      return 777;
+    },
+  });
+
+  try {
+    const topicId = await __testResolveTopicIdForFanartReview({
+      contentType: 'fanart',
+      artistName: 'kinutani_yutaka',
+      artistHandle: '',
+      separateTopic: true,
+    });
+
+    assert.equal(topicId, 777);
+    assert.deepEqual(ensuredTopics, [{ key: 'name:kinutani_yutaka', name: 'kinutani_yutaka' }]);
+  } finally {
+    __testSetTelegramTopicState();
+  }
+});
+
+test('getTopicIdForFanartReview sends unknown official content to fallback topic', async () => {
+  __testSetTelegramTopicState({
+    topicIds: { notification: 10, fanart: 20, fallback: 30 },
+    findArtistForTopic: async () => null,
+  });
+
+  try {
+    const topicId = await __testResolveTopicIdForFanartReview({
+      contentType: 'official',
+      artistName: 'Unknown Official',
+      artistHandle: 'unknown_official',
+    });
+
+    assert.equal(topicId, 30);
+  } finally {
+    __testSetTelegramTopicState();
+  }
 });

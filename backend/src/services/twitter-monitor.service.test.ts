@@ -117,6 +117,55 @@ test('TwitterMonitorService.processFeed passes official artist routing fields to
   }
 });
 
+test('TwitterMonitorService.processFeed passes RSS item handle when extracted media has no screen name', async () => {
+  const notifications: any[] = [];
+  const createdRows: any[] = [];
+
+  setTwitterMonitorServiceDepsForTest({
+    parseURL: async () => ({
+      items: [{
+        title: 'kinutani_yutaka (@kinutani_yutaka): fanart update',
+        link: 'https://x.com/kinutani_yutaka/status/2323232323232323232',
+        isoDate: '2026-05-23T12:34:56.000Z',
+        creator: 'kinutani_yutaka (@kinutani_yutaka)',
+      }],
+    }),
+    extractMediaFromTweet: async () => [{
+      url: 'https://pbs.twimg.com/media/kinutani.jpg?format=jpg&name=orig',
+      type: 'image',
+      text: 'fanart update',
+      user_name: 'kinutani_yutaka',
+      user_screen_name: '',
+      date: '2026-05-23T12:34:56.000Z',
+      tweet_id: '2323232323232323232',
+      tweet_url: buildCanonicalTweetUrl('2323232323232323232'),
+      requested_tweet_id: '2323232323232323232',
+      hashtags: [],
+    }],
+    findExistingMediaGroup: async () => null,
+    findExistingMedia: async () => null,
+    findExistingStagingFanart: async () => null,
+    createStagingFanart: async (payload) => {
+      createdRows.push(payload);
+      return { get: (key: string) => key === 'id' ? 'staging-kinutani' : undefined } as any;
+    },
+    sendFanartReviewNotification: async (payload) => {
+      notifications.push(payload);
+      return true;
+    },
+  });
+
+  try {
+    const result = await TwitterMonitorService.processFeed('https://rss.example.com/user/kinutani_yutaka', 'fanart', true);
+    assert.equal(result.newCandidates, 1);
+    assert.equal(createdRows[0].author_handle, 'kinutani_yutaka');
+    assert.equal(notifications[0].artistHandle, 'kinutani_yutaka');
+    assert.equal(notifications[0].separateTopic, true);
+  } finally {
+    resetTwitterMonitorServiceDepsForTest();
+  }
+});
+
 test('TwitterMonitorService.processFeed stores retweeted_by_handle when official account retweets new content', async () => {
   const createdRows: any[] = [];
 
