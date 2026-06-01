@@ -117,6 +117,51 @@ test('TwitterMonitorService.processFeed passes official artist routing fields to
   }
 });
 
+test('TwitterMonitorService.processFeed stores retweeted_by_handle when official account retweets new content', async () => {
+  const createdRows: any[] = [];
+
+  setTwitterMonitorServiceDepsForTest({
+    parseURL: async () => ({
+      items: [{
+        title: 'ZUTOMAYO ART (@zutomayo_art): RT new fanart',
+        link: 'https://x.com/zutomayo_art/status/8888888888888888888',
+        isoDate: '2026-05-24T12:34:56.000Z',
+        creator: 'ZUTOMAYO ART (@zutomayo_art)',
+      }],
+    }),
+    extractMediaFromTweet: async () => [{
+      url: 'https://pbs.twimg.com/media/retweeted-new.jpg?format=jpg&name=orig',
+      type: 'image',
+      text: 'new fanart',
+      user_name: 'Original Artist',
+      user_screen_name: 'original_artist',
+      date: '2026-05-24T12:34:56.000Z',
+      tweet_id: '9999999999999999999',
+      tweet_url: buildCanonicalTweetUrl('9999999999999999999'),
+      requested_tweet_id: '8888888888888888888',
+      hashtags: [],
+    }],
+    findExistingMediaGroup: async () => null,
+    findExistingStagingFanart: async () => null,
+    createStagingFanart: async (payload) => {
+      createdRows.push(payload);
+      return { get: (key: string) => key === 'id' ? 'staging-retweet-new' : undefined } as any;
+    },
+    sendFanartReviewNotification: async () => true,
+  });
+
+  try {
+    const result = await TwitterMonitorService.processFeed('https://rss.example.com/user/zutomayo_art', 'official');
+    assert.equal(result.newCandidates, 1);
+    assert.equal(createdRows.length, 1);
+    assert.equal(createdRows[0].tweet_id, '9999999999999999999');
+    assert.equal(createdRows[0].author_handle, 'original_artist');
+    assert.equal(createdRows[0].retweeted_by_handle, 'zutomayo_art');
+  } finally {
+    resetTwitterMonitorServiceDepsForTest();
+  }
+});
+
 test('TwitterMonitorService carries manual separate topic routing into Telegram review notification', async () => {
   const notifications: any[] = [];
 

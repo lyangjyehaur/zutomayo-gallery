@@ -184,6 +184,7 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
       const tweetHandle = firstMedia.user_screen_name || '';
       const retweetedByHandle = extractHandleFromRssItem(item) || tweetHandle;
       const tweetDate = firstMedia.date || item.isoDate || new Date().toISOString();
+      const isRetweet = sourceTweetId !== tweetId;
 
       const existing = await deps.findExistingMediaGroup({
         where: { source_url: { [Op.regexp]: `/status/${sourceTweetId}([/?#]|$)` } }
@@ -233,6 +234,9 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
         }
 
         const mediaType = resolveMediaType(media, originalMediaUrl);
+        const stagingRetweetedByHandle = (contentType === 'official' && isRetweet && retweetedByHandle)
+          ? retweetedByHandle
+          : null;
         const staging = await deps.createStagingFanart({
           tweet_id: sourceTweetId,
           original_url: sourceTweetLink,
@@ -253,6 +257,7 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
           view_count: firstMedia.view_count || 0,
           hashtags: firstMedia.hashtags || [],
           content_type: contentType,
+          retweeted_by_handle: stagingRetweetedByHandle,
         });
 
         newCandidates++;
