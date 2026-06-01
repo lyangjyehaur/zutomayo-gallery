@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   buildFanartReviewCallbackData,
   parseFanartReviewCallbackData,
+  syncArtistTopicName,
 } from './telegram-bot.service.js';
 
 test('buildFanartReviewCallbackData generates short callback_data', () => {
@@ -34,4 +35,9 @@ test('parseFanartReviewCallbackData parses known formats and returns null for un
   assert.equal(parseFanartReviewCallbackData('fa:maybe:staging-4'), null);
   assert.equal(parseFanartReviewCallbackData('unknown'), null);
   assert.equal(parseFanartReviewCallbackData(undefined), null);
+});
+
+test('syncArtistTopicName returns false when artist id or name is blank', async () => {
+  assert.equal(await syncArtistTopicName('', 'New Artist'), false);
+  assert.equal(await syncArtistTopicName('artist-id', '   '), false);
 });

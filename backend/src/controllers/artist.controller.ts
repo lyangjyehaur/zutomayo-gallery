@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ArtistModel } from '../models/index.js';
+import { logger } from '../utils/logger.js';
 
 export const getArtists = async (_req: Request, res: Response, next: NextFunction) => {
   try {
@@ -93,7 +94,15 @@ export const patchArtist = async (req: Request, res: Response, next: NextFunctio
       }
     }
 
+    const currentName = String(row.get('name') || '').trim();
+    const nameChanged = 'name' in update && currentName !== update.name;
     await row.update(update);
+    if (nameChanged) {
+      const { syncArtistTopicName } = await import('../services/telegram-bot.service.js');
+      await syncArtistTopicName(id, update.name).catch(err => {
+        logger.warn({ err, artistId: id }, 'Failed to sync artist topic name');
+      });
+    }
     res.json({ success: true, data: row });
   } catch (error) {
     next(error);

@@ -272,6 +272,36 @@ async function ensureArtistTopic(artistId: string, artistName: string): Promise<
   }
 }
 
+async function renameArtistTopic(artistId: string, newName: string): Promise<boolean> {
+  const topicKey = artistId.trim();
+  const topicName = newName.trim();
+  if (!topicKey || !topicName) return false;
+
+  const cached = cachedArtistTopicIds.get(topicKey);
+  if (!cached) return false;
+  if (cached.name === topicName) return true;
+
+  if (!bot || !cachedChatId) return false;
+  const chatId = parseInt(cachedChatId, 10);
+  if (isNaN(chatId)) return false;
+
+  try {
+    await bot.editForumTopic(chatId, cached.thread_id, { name: topicName });
+    cached.name = topicName;
+    cachedArtistTopicIds.set(topicKey, cached);
+    await saveTopicIds();
+    logger.info({ artistId: topicKey, newName: topicName, threadId: cached.thread_id }, 'Renamed Telegram artist topic');
+    return true;
+  } catch (err) {
+    logger.warn({ err, artistId: topicKey, newName: topicName }, 'Failed to rename Telegram artist topic');
+    return false;
+  }
+}
+
+export async function syncArtistTopicName(artistId: string, newName: string): Promise<boolean> {
+  return renameArtistTopic(artistId, newName);
+}
+
 async function getTopicIdForFanartReview({
   contentType,
   artistName,

@@ -187,7 +187,20 @@ export const updateMonitorTarget = async (id: string, payload: any) => {
   if ('content_type' in payload && isContentType(payload.content_type)) updateData.content_type = payload.content_type;
   if ('separate_topic' in payload) updateData.separate_topic = Boolean(payload.separate_topic);
 
+  const currentLabel = target.get('label') as string | null | undefined;
+  const currentHandle = String(target.get('handle') || '');
+  const currentTopicName = (currentLabel && currentLabel.trim()) || currentHandle;
+  const nextSeparateTopic = 'separate_topic' in updateData ? updateData.separate_topic : Boolean(target.get('separate_topic'));
+  const nextTopicName = (updateData.label && String(updateData.label).trim()) || handle;
+  const shouldRenameTopic = 'label' in updateData && nextSeparateTopic && currentTopicName !== nextTopicName;
+
   await target.update(updateData);
+  if (shouldRenameTopic) {
+    const { syncArtistTopicName } = await import('./telegram-bot.service.js');
+    await syncArtistTopicName(`handle:${handle}`, nextTopicName).catch(err => {
+      logger.warn({ err, monitorTargetId: id }, 'Failed to sync monitor target topic name');
+    });
+  }
   return target;
 };
 
