@@ -314,7 +314,8 @@ export function CosplayPage({ mvData }: CosplayPageProps) {
       return {
         ...art,
         caption: baseCaption,
-        richText
+        richText,
+        likeCount: art.like_count,
       };
     });
   }, [allFanArts]);
