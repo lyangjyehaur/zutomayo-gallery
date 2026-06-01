@@ -144,10 +144,14 @@ export const getStagingFanarts = async (req: Request, res: Response) => {
   }
 
   const contentType = req.query.contentType as string | undefined;
+  const mediaType = req.query.mediaType as string | undefined;
   const authorHandle = typeof req.query.authorHandle === 'string' ? req.query.authorHandle.trim() : '';
   const where: any = { status };
   if (contentType && (contentType === 'fanart' || contentType === 'official' || contentType === 'cosplay')) {
     where.content_type = contentType;
+  }
+  if (mediaType && ['image', 'video', 'gif'].includes(mediaType)) {
+    where.media_type = mediaType;
   }
   if (authorHandle) {
     where.author_handle = authorHandle;
@@ -192,6 +196,20 @@ export const getStagingFanarts = async (req: Request, res: Response) => {
       limit,
       totalPages: Math.ceil(count / limit)
     }
+  });
+};
+
+export const listAuthorHandles = async (req: Request, res: Response) => {
+  const handles = await StagingFanartModel.findAll({
+    attributes: [[Sequelize.fn('DISTINCT', Sequelize.col('author_handle')), 'author_handle']],
+    where: { author_handle: { [Op.ne]: null } },
+    order: [['author_handle', 'ASC']],
+    raw: true,
+  }) as unknown as Array<{ author_handle: string | null }>;
+
+  res.json({
+    success: true,
+    data: handles.map(h => h.author_handle).filter(Boolean)
   });
 };
 

@@ -126,12 +126,16 @@ export function AdminStagingFanartPage() {
   const [selectedMvs, setSelectedMvs] = useState<Record<string, string[]>>({});
   const [selectedSingleMv, setSelectedSingleMv] = useState<Record<string, string>>({});
   const [artists, setArtists] = useState<{ id: string; name: string; twitter?: string }[]>([]);
+  const [authorHandleOptions, setAuthorHandleOptions] = useState<string[]>([]);
   const [selectedArtists, setSelectedArtists] = useState<Record<string, string>>({});
   const [suggestedArtists, setSuggestedArtists] = useState<Record<string, string>>({});
   const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
   const [batchSelectedMvs, setBatchSelectedMvs] = useState<string[]>([]);
   const [contentTypeFilter, setContentTypeFilter] = useState<string>(() => {
     return initialSettings?.contentTypeFilter || '';
+  });
+  const [mediaTypeFilter, setMediaTypeFilter] = useState<string>(() => {
+    return initialSettings?.mediaTypeFilter || '';
   });
   const [authorHandleFilter, setAuthorHandleFilter] = useState<string>(() => {
     return initialSettings?.authorHandleFilter || '';
@@ -156,6 +160,7 @@ export function AdminStagingFanartPage() {
       maxItems,
       crawlerContentType,
       contentTypeFilter,
+      mediaTypeFilter,
       authorHandleFilter,
       sortBy
     };
@@ -164,7 +169,7 @@ export function AdminStagingFanartPage() {
     } catch {
       toast.error('篩選設定保存失敗，請檢查瀏覽器隱私模式或存儲空間');
     }
-  }, [page, viewStatus, searchTerms, startDate, endDate, maxItems, crawlerContentType, contentTypeFilter, authorHandleFilter, sortBy]);
+  }, [page, viewStatus, searchTerms, startDate, endDate, maxItems, crawlerContentType, contentTypeFilter, mediaTypeFilter, authorHandleFilter, sortBy]);
 
   const fetchMvs = useCallback(async () => {
     try {
@@ -184,6 +189,16 @@ export function AdminStagingFanartPage() {
       const data = await res.json();
       if (data.success) {
         setArtists(data.data || []);
+      }
+    } catch { /* silent */ }
+  }, [baseApiUrl]);
+
+  const fetchAuthorHandles = useCallback(async () => {
+    try {
+      const res = await adminFetch(`${baseApiUrl}/staging-fanarts/author-handles`);
+      const data = await res.json();
+      if (data.success) {
+        setAuthorHandleOptions(data.data || []);
       }
     } catch { /* silent */ }
   }, [baseApiUrl]);
@@ -209,9 +224,10 @@ export function AdminStagingFanartPage() {
     setIsLoading(true);
     try {
       const ctParam = contentTypeFilter ? `&contentType=${contentTypeFilter}` : '';
+      const mediaTypeParam = mediaTypeFilter ? `&mediaType=${mediaTypeFilter}` : '';
       const authorParam = authorHandleFilter ? `&authorHandle=${encodeURIComponent(authorHandleFilter.trim().replace(/^@/, ''))}` : '';
       const sortParam = sortBy !== 'newest' ? `&sort=${sortBy}` : '';
-      const res = await adminFetch(`${baseApiUrl}/staging-fanarts?page=${p}&limit=60&status=${status}${ctParam}${authorParam}${sortParam}`);
+      const res = await adminFetch(`${baseApiUrl}/staging-fanarts?page=${p}&limit=60&status=${status}${ctParam}${mediaTypeParam}${authorParam}${sortParam}`);
       const data = await res.json();
       if (data.success) {
         setFanarts(data.data);
@@ -236,7 +252,7 @@ export function AdminStagingFanartPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [baseApiUrl, contentTypeFilter, authorHandleFilter, sortBy]);
+  }, [baseApiUrl, contentTypeFilter, mediaTypeFilter, authorHandleFilter, sortBy]);
 
   useEffect(() => {
     fetchFanarts(page, viewStatus);
@@ -249,7 +265,8 @@ export function AdminStagingFanartPage() {
   useEffect(() => {
     fetchMvs();
     fetchArtists();
-  }, [fetchMvs, fetchArtists]);
+    fetchAuthorHandles();
+  }, [fetchMvs, fetchArtists, fetchAuthorHandles]);
 
   useEffect(() => {
     const status = progress?.syncProgress?.status;
@@ -551,7 +568,22 @@ export function AdminStagingFanartPage() {
               <option value="collaboration">畫師綜合</option>
               <option value="cosplay">Cosplay</option>
             </select>
-            <Input
+            <select
+              value={mediaTypeFilter}
+              onChange={(e) => {
+                setMediaTypeFilter(e.target.value);
+                setPage(1);
+                setSelectedCards(new Set());
+                setBatchSelectedMvs([]);
+              }}
+              className="border-2 border-black font-bold shadow-neo-sm h-8 px-2 bg-white"
+            >
+              <option value="">全部媒體</option>
+              <option value="image">圖片</option>
+              <option value="video">影片</option>
+              <option value="gif">GIF</option>
+            </select>
+            <select
               value={authorHandleFilter}
               onChange={(e) => {
                 setAuthorHandleFilter(e.target.value);
@@ -559,9 +591,13 @@ export function AdminStagingFanartPage() {
                 setSelectedCards(new Set());
                 setBatchSelectedMvs([]);
               }}
-              placeholder="帳號篩選 (不含@)"
-              className="border-2 border-black font-bold shadow-neo-sm h-8 w-[140px] bg-white"
-            />
+              className="border-2 border-black font-bold shadow-neo-sm h-8 px-2 bg-white max-w-[180px]"
+            >
+              <option value="">全部帳號</option>
+              {authorHandleOptions.map(handle => (
+                <option key={handle} value={handle}>@{handle}</option>
+              ))}
+            </select>
             <select
               value={sortBy}
               onChange={(e) => {
