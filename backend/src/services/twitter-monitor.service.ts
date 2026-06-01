@@ -261,10 +261,27 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
       if (contentType === 'official') {
         const anyStagingForTweet = await deps.findExistingStagingFanart({
           where: { tweet_id: sourceTweetId },
-          attributes: ['id', 'status'],
+          attributes: ['id', 'status', 'content_type'],
         });
         if (anyStagingForTweet) {
-          console.log(`[Twitter Monitor] [Dedup] official tweet=${sourceTweetId} already in staging (${anyStagingForTweet.get('status')}), skip`);
+          const existingType = String(anyStagingForTweet.get('content_type') || '');
+          if (existingType === 'fanart' || existingType === 'cosplay') {
+            // 官方帳號轉發了 fanart/cosplay — 不入庫但通知用戶
+            if (!notifiedTweetIds.has(sourceTweetId)) {
+              await notifyOfficialRetweet({
+                stagingId: String(anyStagingForTweet.get('id')),
+                title: '📋 官方帳號轉發了二創內容',
+                body: `轉發者: @${retweetedByHandle}\n原推作者: @${tweetHandle}\n內容類型: ${existingType}\n狀態: ${anyStagingForTweet.get('status')}`,
+                sourceUrl: sourceTweetLink,
+                contentType,
+                artistHandle: tweetHandle,
+              });
+              notifiedTweetIds.add(sourceTweetId);
+            }
+            console.log(`[Twitter Monitor] [Dedup] official retweeted ${existingType} tweet=${sourceTweetId}, notified without creating staging`);
+          } else {
+            console.log(`[Twitter Monitor] [Dedup] official tweet=${sourceTweetId} already in staging as ${existingType} (${anyStagingForTweet.get('status')}), skip`);
+          }
           continue;
         }
       }
