@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { format, parse } from 'date-fns';
 import { toast } from 'sonner';
 import { formatApiError } from '@/lib/api-error';
+import { getProxyImgUrl } from '@/lib/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MultiSelect, Option } from '@/components/ui/multi-select';
@@ -24,6 +25,8 @@ interface StagingFanart {
   original_url: string;
   media_url: string;
   r2_url: string | null;
+  thumbnail_url?: string | null;
+  original_thumbnail_url?: string | null;
   media_type: string;
   crawled_at: string;
   post_date?: string;
@@ -777,6 +780,7 @@ export function AdminStagingFanartPage() {
                   {(f.media_type === 'video' || f.media_type === 'gif') ? (
                     <video
                       src={f.r2_url || f.media_url}
+                      poster={f.thumbnail_url ? getProxyImgUrl(f.thumbnail_url, 'thumb') : (f.original_thumbnail_url ? getProxyImgUrl(f.original_thumbnail_url, 'thumb') : undefined)}
                       className="w-full h-full object-cover"
                       controls
                       preload="metadata"
