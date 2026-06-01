@@ -25,7 +25,10 @@ type TelegramConfig = {
     thread_id: number | null
     initialized: boolean
   }>
-  artist_topic_ids?: Record<string, number>
+  artist_topic_ids?: Record<string, {
+    name: string
+    thread_id: number
+  }>
   all_topics_initialized: boolean
 }
 
@@ -390,15 +393,15 @@ export function AdminTelegramConfigPage() {
             <p className="text-xs font-mono font-bold opacity-70">畫師 Topics</p>
             {config?.artist_topic_ids && Object.keys(config.artist_topic_ids).length > 0 ? (
               Object.entries(config.artist_topic_ids)
-                .sort(([a], [b]) => a.localeCompare(b))
-                .map(([artistName, threadId]) => (
-                  <div key={artistName} className="flex items-center justify-between p-3 border-2 border-black rounded-lg">
+                .sort(([, a], [, b]) => a.name.localeCompare(b.name))
+                .map(([artistId, topic]) => (
+                  <div key={artistId} className="flex items-center justify-between p-3 border-2 border-black rounded-lg">
                     <div>
-                      <span className="font-mono font-medium">{artistName}</span>
-                      <span className="text-xs font-mono opacity-60 ml-2">(official)</span>
+                      <span className="font-mono font-medium">{topic.name || artistId}</span>
+                      <span className="text-xs font-mono opacity-60 ml-2">({artistId})</span>
                     </div>
                     <span className="px-2 py-0.5 text-xs font-mono border-2 border-blue-500 bg-blue-100 text-blue-700 rounded">
-                      ID: {threadId}
+                      ID: {topic.thread_id}
                     </span>
                   </div>
                 ))

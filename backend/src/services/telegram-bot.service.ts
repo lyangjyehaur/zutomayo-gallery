@@ -3,6 +3,12 @@ import { Op } from 'sequelize';
 import { ArtistModel, SysConfigModel } from '../models/index.js';
 import { logger } from '../utils/logger.js';
 import { errorEventEmitter } from './error-events.service.js';
+import {
+  deserializeArtistTopicIds,
+  serializeArtistTopicIds,
+  type ArtistTopicEntry,
+  type ArtistTopicIds,
+} from './telegram-topic-cache.js';
 
 const CONFIG_KEY = 'telegram_config';
 
@@ -21,7 +27,7 @@ const FANART_REVIEW_CALLBACK_PREFIX: Record<FanartReviewAction, string> = {
 
 // Topic 分類定義
 export type TopicCategory = 'notification' | 'fanart';
-export type ArtistTopicIds = Record<string, number>;
+export type { ArtistTopicEntry, ArtistTopicIds };
 
 // Topic 配置：每個分類對應的 topic 名稱和顏色
 const TOPIC_DEFINITIONS: Record<TopicCategory, { name: string; iconColor: number }> = {
@@ -34,7 +40,7 @@ let cachedTopicIds: Record<TopicCategory, number | null> = {
   notification: null,
   fanart: null,
 };
-let cachedArtistTopicIds = new Map<string, number>();
+let cachedArtistTopicIds = new Map<string, ArtistTopicEntry>();
 
 function initBot(token: string) {
   if (!token) {
@@ -78,10 +84,7 @@ export async function refreshTelegramConfig(): Promise<void> {
         fanart: dbConfig.topic_ids.fanart || null,
       };
     }
-    cachedArtistTopicIds = new Map(
-      Object.entries((dbConfig.artist_topic_ids || {}) as ArtistTopicIds)
-        .filter((entry): entry is [string, number] => typeof entry[0] === 'string' && typeof entry[1] === 'number')
-    );
+    cachedArtistTopicIds = deserializeArtistTopicIds(dbConfig.artist_topic_ids || {});
 
     if (tokenChanged) {
       initBot(cachedBotToken);
@@ -159,7 +162,7 @@ async function saveTopicIds(): Promise<void> {
     const dbConfig = (row?.get('value') as any) || {};
 
     dbConfig.topic_ids = cachedTopicIds;
-    dbConfig.artist_topic_ids = Object.fromEntries(cachedArtistTopicIds);
+    dbConfig.artist_topic_ids = serializeArtistTopicIds(cachedArtistTopicIds);
 
     await SysConfigModel.upsert({
       key: CONFIG_KEY,
@@ -188,7 +191,7 @@ export function getTelegramTopicIds(): Record<TopicCategory, number | null> {
 }
 
 export function getTelegramArtistTopicIds(): ArtistTopicIds {
-  return Object.fromEntries(cachedArtistTopicIds);
+  return serializeArtistTopicIds(cachedArtistTopicIds);
 }
 
 /**
@@ -221,7 +224,7 @@ async function findArtistForTopic({
 }: {
   artistName?: string;
   artistHandle?: string;
-}): Promise<{ name: string; twitter?: string | null } | null> {
+}): Promise<{ id: string; name: string; twitter?: string | null } | null> {
   const normalizedHandle = normalizeTwitterHandle(artistHandle);
   const normalizedName = (artistName || '').trim();
   if (!normalizedHandle && !normalizedName) return null;
@@ -234,17 +237,19 @@ async function findArtistForTopic({
   if (!artist) return null;
 
   return {
+    id: String(artist.get('id')),
     name: String(artist.get('name') || '').trim(),
     twitter: artist.get('twitter') as string | null | undefined,
   };
 }
 
-async function ensureArtistTopic(artistName: string): Promise<number | undefined> {
+async function ensureArtistTopic(artistId: string, artistName: string): Promise<number | undefined> {
+  const topicKey = artistId.trim();
   const topicName = artistName.trim();
-  if (!topicName) return undefined;
+  if (!topicKey || !topicName) return undefined;
 
-  const cached = cachedArtistTopicIds.get(topicName);
-  if (cached) return cached;
+  const cached = cachedArtistTopicIds.get(topicKey);
+  if (cached) return cached.thread_id;
 
   if (!bot || !cachedChatId) return undefined;
   const chatId = parseInt(cachedChatId, 10);
@@ -257,9 +262,9 @@ async function ensureArtistTopic(artistName: string): Promise<number | undefined
     const threadId = topic.message_thread_id;
     if (typeof threadId !== 'number') return undefined;
 
-    cachedArtistTopicIds.set(topicName, threadId);
+    cachedArtistTopicIds.set(topicKey, { name: topicName, thread_id: threadId });
     await saveTopicIds();
-    logger.info({ artistName: topicName, threadId }, 'Created Telegram artist topic');
+    logger.info({ artistId: topicKey, artistName: topicName, threadId }, 'Created Telegram artist topic');
     return threadId;
   } catch (err) {
     logger.warn({ err, artistName: topicName }, 'Failed to create Telegram artist topic; falling back to fanart topic');
@@ -282,9 +287,9 @@ async function getTopicIdForFanartReview({
 
   try {
     const artist = await findArtistForTopic({ artistName, artistHandle });
-    if (!artist?.name) return cachedTopicIds.fanart || undefined;
+    if (!artist?.id || !artist.name) return cachedTopicIds.fanart || undefined;
 
-    const artistTopicId = await ensureArtistTopic(artist.name);
+    const artistTopicId = await ensureArtistTopic(artist.id, artist.name);
     return artistTopicId || cachedTopicIds.fanart || undefined;
   } catch (err) {
     logger.warn({ err, artistName, artistHandle }, 'Failed to resolve Telegram artist topic; falling back to fanart topic');

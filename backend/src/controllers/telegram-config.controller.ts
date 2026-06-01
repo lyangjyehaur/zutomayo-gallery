@@ -178,6 +178,7 @@ export const getTopicStatus = async (_req: Request, res: Response) => {
     success: true,
     data: {
       topics: topicStatus,
+      artist_topic_ids: artistTopicIds,
       artist_topics: artistTopicIds,
       all_initialized: allTopicsInitialized,
     },
