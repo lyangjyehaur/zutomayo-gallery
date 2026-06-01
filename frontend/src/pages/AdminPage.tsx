@@ -21,6 +21,12 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MVItem } from '@/lib/types';
 import { getProxyImgUrl, isMediaVideo } from '@/lib/image';
+import {
+  getAdminChangedData,
+  getAdminVisibleImages,
+  isAdminFieldIncomplete,
+  isAdminVideoPreview,
+} from '@/lib/admin-page-helpers';
 import Editor from '@monaco-editor/react';
 import {
   Dialog,
@@ -937,14 +943,7 @@ export function AdminPage() {
   }, [activeIndex]);
 
   const visibleImages = useMemo(() => {
-    return (currentMV?.images || [])
-      .map((img, originalIndex) => ({ img, originalIndex }))
-      .filter(({ img }) => {
-        if (imageTypeTab === 'fanart') return img.type === 'fanart';
-        return img.type !== 'fanart';
-      })
-      .filter(({ img }) => img.usage !== 'cover' && img.type !== 'cover')
-      .slice(0, imageDisplayLimit);
+    return getAdminVisibleImages(currentMV?.images, imageTypeTab, imageDisplayLimit);
   }, [currentMV?.images, imageDisplayLimit, imageTypeTab]);
 
   const getAdminImagePreviewUrl = (img: any) => {
@@ -986,13 +985,7 @@ export function AdminPage() {
   }, [handleImageObserver, currentMV?.images, imageDisplayLimit]);
 
   // 動態檢測欄位是否為空 (支持未來新增的欄位)
-  const isFieldIncomplete = (val: any) => {
-    if (val === undefined || val === null) return true;
-    if (typeof val === 'string') return val.trim() === '';
-    if (Array.isArray(val)) return val.length === 0;
-    if (typeof val === 'number') return val === 0;
-    return false;
-  };
+  const isFieldIncomplete = isAdminFieldIncomplete;
 
   // 檢測整個 MV 項目是否完整
   const isMVIncomplete = (mv: MVItem) => {
@@ -1023,26 +1016,7 @@ export function AdminPage() {
   // 獲取需要保存的完整 MV 數據（用於部分更新）
   // 直接打包整個 MV 對象，避免嵌套字段的部分更新問題
   const getChangedData = (): MVItem[] & { _deleted?: string[] } => {
-    const result: MVItem[] & { _deleted?: string[] } = [];
-    
-    data.forEach((mv) => {
-      const changed = changedFields.get(mv.id);
-      
-      // 如果沒有任何變動，或這是未修改的新項目，跳過
-      if (!changed || changed.size === 0) {
-        return;
-      }
-      
-      // 直接複製整個 MV 對象（包含所有字段和圖片）
-      result.push({ ...mv });
-    });
-    
-    // 添加刪除標記
-    if (deletedIds.size > 0) {
-      result._deleted = Array.from(deletedIds);
-    }
-    
-    return result;
+    return getAdminChangedData(data, originalDataRef.current, changedFields, deletedIds);
   };
 
   // 更新單個欄位
@@ -2622,8 +2596,18 @@ export function AdminPage() {
                           )}
                           {img.url ? (
                             <>
-                              <img src={getAdminImagePreviewUrl(img)} className="w-full h-full object-cover" alt="預覽" />
-                              {isVideo && (
+                              {isAdminVideoPreview(img) ? (
+                                <video
+                                  src={getAdminImagePreviewUrl(img)}
+                                  poster={img.thumbnail_url ? getProxyImgUrl(img.thumbnail_url, 'thumb') : undefined}
+                                  className="w-full h-full object-cover"
+                                  preload="metadata"
+                                  muted
+                                />
+                              ) : (
+                                <img src={getAdminImagePreviewUrl(img)} className="w-full h-full object-cover" alt="預覽" />
+                              )}
+                              {(isVideo || isAdminVideoPreview(img)) && (
                                 <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
                                   <div className="bg-black/80 text-white rounded-full p-2 border-2 border-white/20">
                                     <i className="hn hn-play text-xl ml-0.5" />
@@ -2733,17 +2717,32 @@ export function AdminPage() {
                               <div className="aspect-square bg-black/5 border-2 border-dashed border-black/20 flex items-center justify-center overflow-hidden relative rounded">
                                 {currentMV.images[editingImageIdx].url ? (
                                   <>
-                                    <img
-                                      src={getAdminImagePreviewUrl(currentMV.images[editingImageIdx])}
-                                      className="w-full h-full object-contain"
-                                      alt="預覽"
-                                    />
+                                    {isAdminVideoPreview(currentMV.images[editingImageIdx]) ? (
+                                      <video
+                                        src={getAdminImagePreviewUrl(currentMV.images[editingImageIdx])}
+                                        poster={
+                                          currentMV.images[editingImageIdx].thumbnail_url
+                                            ? getProxyImgUrl(currentMV.images[editingImageIdx].thumbnail_url, 'thumb')
+                                            : undefined
+                                        }
+                                        className="w-full h-full object-contain"
+                                        preload="metadata"
+                                        controls
+                                        muted
+                                      />
+                                    ) : (
+                                      <img
+                                        src={getAdminImagePreviewUrl(currentMV.images[editingImageIdx])}
+                                        className="w-full h-full object-contain"
+                                        alt="預覽"
+                                      />
+                                    )}
                                     {currentMV.images[editingImageIdx].url?.match(/\.gif$/i) || currentMV.images[editingImageIdx].url?.includes("tweet_video_thumb") ? (
                                       <div className="absolute top-2 left-2 flex items-center justify-center bg-black/60 text-white rounded px-2 py-0.5 shadow-sm backdrop-blur-sm border border-white/10 z-10 pointer-events-none">
                                         <span className="font-black text-[10px] tracking-widest">GIF</span>
                                       </div>
                                     ) : null}
-                                    {((currentMV.images[editingImageIdx].url?.match(/\.(mp4|webm)$/i) ||
+                                    {(!isAdminVideoPreview(currentMV.images[editingImageIdx]) && (currentMV.images[editingImageIdx].url?.match(/\.(mp4|webm)$/i) ||
                                       currentMV.images[editingImageIdx].url?.includes("video.twimg.com") ||
                                       (currentMV.images[editingImageIdx].thumbnail &&
                                         currentMV.images[editingImageIdx].thumbnail !== currentMV.images[editingImageIdx].url)) &&
@@ -2850,8 +2849,18 @@ export function AdminPage() {
                                         >
                                           {rawUrl ? (
                                             <>
-                                              <img src={getAdminImagePreviewUrl(img)} className="w-full h-full object-cover" alt={String(img?.id || idx)} />
-                                              {isVideo ? (
+                                              {isAdminVideoPreview(img) ? (
+                                                <video
+                                                  src={getAdminImagePreviewUrl(img)}
+                                                  poster={img.thumbnail_url ? getProxyImgUrl(img.thumbnail_url, 'thumb') : undefined}
+                                                  className="w-full h-full object-cover"
+                                                  preload="metadata"
+                                                  muted
+                                                />
+                                              ) : (
+                                                <img src={getAdminImagePreviewUrl(img)} className="w-full h-full object-cover" alt={String(img?.id || idx)} />
+                                              )}
+                                              {(isVideo || isAdminVideoPreview(img)) ? (
                                                 <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
                                                   <div className="bg-black/80 text-white rounded-full p-1 border border-white/20">
                                                     <i className="hn hn-play text-sm ml-0.5" />
