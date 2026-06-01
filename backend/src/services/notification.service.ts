@@ -131,7 +131,7 @@ export const NotificationService = {
 
     try {
       const { TelegramBotService } = await import('./telegram-bot.service.js');
-      await TelegramBotService.sendReviewNotification({ title, body, url });
+      await TelegramBotService.sendReviewNotification({ title, body, url, notificationType: type });
     } catch (err) {
       logger.warn({ err }, 'Failed to send Telegram notification');
     }

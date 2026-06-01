@@ -361,6 +361,13 @@ await initServices();
 app.listen(PORT, () => {
   logger.info({ port: PORT }, 'ZTMY Backend running');
   logger.info({ env: process.env.NODE_ENV || 'development' }, 'Environment');
+
+  // 初始化 Telegram Topics（非阻塞）
+  import('./services/telegram-bot.service.js').then(({ initializeTopics }) => {
+    initializeTopics().catch(err => {
+      logger.warn({ err }, 'Failed to initialize Telegram topics at startup');
+    });
+  }).catch(() => {});
 });
 
 process.on('uncaughtException', (err) => {

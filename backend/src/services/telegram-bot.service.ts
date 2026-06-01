@@ -18,6 +18,23 @@ const FANART_REVIEW_CALLBACK_PREFIX: Record<FanartReviewAction, string> = {
   reject: 'fa:no',
 };
 
+// Topic 分類定義
+export type TopicCategory = 'official' | 'notification' | 'fanart';
+
+// Topic 配置：每個分類對應的 topic 名稱和顏色
+const TOPIC_DEFINITIONS: Record<TopicCategory, { name: string; iconColor: number }> = {
+  official: { name: '官方消息', iconColor: 0x6FB1E4 },      // 藍色
+  notification: { name: '系統通知', iconColor: 0xFFD700 },  // 金色
+  fanart: { name: '二創相關', iconColor: 0xFF69B4 },        // 粉色
+};
+
+// topic ID 緩存
+let cachedTopicIds: Record<TopicCategory, number | null> = {
+  official: null,
+  notification: null,
+  fanart: null,
+};
+
 function initBot(token: string) {
   if (!token) {
     bot = null;
@@ -53,12 +70,101 @@ export async function refreshTelegramConfig(): Promise<void> {
     cachedBotToken = newToken;
     cachedChatId = newChatId;
 
+    // 載入 topic IDs
+    if (dbConfig.topic_ids) {
+      cachedTopicIds = {
+        official: dbConfig.topic_ids.official || null,
+        notification: dbConfig.topic_ids.notification || null,
+        fanart: dbConfig.topic_ids.fanart || null,
+      };
+    }
+
     if (tokenChanged) {
       initBot(cachedBotToken);
       logger.info('Telegram Bot re-initialized with new token');
     }
   } catch (err) {
     logger.warn({ err }, 'Failed to refresh Telegram config from DB, using cached values');
+  }
+}
+
+/**
+ * 初始化所有 topics（如果尚未建立）
+ * 需要在 bot 啟動且 chat_id 有設定時呼叫
+ */
+export async function initializeTopics(): Promise<void> {
+  if (!bot || !cachedChatId) {
+    logger.warn('Telegram Bot not configured, skipping topic initialization');
+    return;
+  }
+
+  const chatId = parseInt(cachedChatId, 10);
+  if (isNaN(chatId)) {
+    logger.warn('Invalid Telegram Chat ID, skipping topic initialization');
+    return;
+  }
+
+  // 如果所有 topic 都已經有 ID，跳過
+  if (cachedTopicIds.official && cachedTopicIds.notification && cachedTopicIds.fanart) {
+    logger.info('All Telegram topics already initialized');
+    return;
+  }
+
+  logger.info('Initializing Telegram topics...');
+
+  for (const [category, definition] of Object.entries(TOPIC_DEFINITIONS)) {
+    const cat = category as TopicCategory;
+    if (cachedTopicIds[cat]) {
+      logger.info(`Topic '${cat}' already exists (thread_id: ${cachedTopicIds[cat]})`);
+      continue;
+    }
+
+    try {
+      // Telegram Bot API 9.4+ returns ForumTopic object, but type def says boolean
+      const topic = await bot.createForumTopic(chatId, definition.name, {
+        icon_color: definition.iconColor,
+      }) as any;
+      const threadId = topic.message_thread_id;
+      cachedTopicIds[cat] = threadId;
+      logger.info(`Created topic '${cat}' (name: ${definition.name}, thread_id: ${threadId})`);
+    } catch (err: any) {
+      const errorText = String(err?.message || err).toLowerCase();
+      if (errorText.includes('topic_name_duplicate') || errorText.includes('already')) {
+        logger.info(`Topic '${cat}' already exists but thread_id unknown (will be mapped from incoming messages)`);
+      } else if (errorText.includes('not a forum') || errorText.includes('forums_disabled')) {
+        logger.warn(
+          `Cannot create topic '${cat}': Topics mode is not enabled. ` +
+          `The user must open the DM with this bot in Telegram, tap the bot name ` +
+          `at the top, and enable 'Topics' in chat settings.`
+        );
+      } else {
+        logger.warn({ err }, `Failed to create topic '${cat}'`);
+      }
+    }
+  }
+
+  // 持久化 topic IDs 到 DB
+  await saveTopicIds();
+}
+
+/**
+ * 保存 topic IDs 到 DB
+ */
+async function saveTopicIds(): Promise<void> {
+  try {
+    const row = await SysConfigModel.findByPk(CONFIG_KEY);
+    const dbConfig = (row?.get('value') as any) || {};
+
+    dbConfig.topic_ids = cachedTopicIds;
+
+    await SysConfigModel.upsert({
+      key: CONFIG_KEY,
+      value: dbConfig,
+    });
+
+    logger.info('Topic IDs saved to database');
+  } catch (err) {
+    logger.warn({ err }, 'Failed to save topic IDs to database');
   }
 }
 
@@ -73,25 +179,76 @@ export function getTelegramChatId(): string {
   return cachedChatId;
 }
 
+export function getTelegramTopicIds(): Record<TopicCategory, number | null> {
+  return { ...cachedTopicIds };
+}
+
+/**
+ * 根據通知類型取得對應的 topic ID
+ */
+function getTopicIdForNotificationType(type?: string): number | undefined {
+  if (!type) return undefined;
+
+  // 根據 type 映射到 category
+  const typeToCategory: Record<string, TopicCategory> = {
+    'new-submission': 'official',
+    'crawler-complete': 'official',
+    'new-fanart': 'fanart',
+    'error-threshold': 'notification',
+  };
+
+  const category = typeToCategory[type];
+  if (!category) return undefined;
+
+  return cachedTopicIds[category] || undefined;
+}
+
+/**
+ * 重新建立 topics（admin 手動觸發）- 導出版本
+ */
+export async function reinitializeTopics(): Promise<Record<TopicCategory, number | null>> {
+  return TelegramBotService.reinitializeTopics();
+}
+
 export const TelegramBotService = {
-  sendMessage: async ({ text, imageUrl, parseMode }: { text: string; imageUrl?: string; parseMode?: string }): Promise<boolean> => {
+  sendMessage: async ({
+    text,
+    imageUrl,
+    parseMode,
+    messageThreadId,
+    notificationType,
+  }: {
+    text: string;
+    imageUrl?: string;
+    parseMode?: string;
+    messageThreadId?: number;
+    notificationType?: string;
+  }): Promise<boolean> => {
     if (!bot || !cachedChatId) {
       logger.warn('Telegram Bot not configured, skipping notification');
       return false;
     }
 
+    // 優先使用明確指定的 messageThreadId，其次根據 notificationType 查找
+    const threadId = messageThreadId || getTopicIdForNotificationType(notificationType);
+
     try {
+      const options: any = {
+        parse_mode: parseMode as any || 'HTML',
+      };
+      if (threadId) {
+        options.message_thread_id = threadId;
+      }
+
       if (imageUrl) {
         await bot.sendPhoto(cachedChatId, imageUrl, {
           caption: text.substring(0, 1024),
-          parse_mode: parseMode as any || 'HTML',
+          ...options,
         });
       } else {
-        await bot.sendMessage(cachedChatId, text, {
-          parse_mode: parseMode as any || 'HTML',
-        });
+        await bot.sendMessage(cachedChatId, text, options);
       }
-      logger.info('Telegram notification sent successfully');
+      logger.info({ topic: threadId || 'general' }, 'Telegram notification sent successfully');
       return true;
     } catch (err) {
       const errMsg = `Failed to send Telegram notification: ${err instanceof Error ? err.message : String(err)}`;
@@ -105,12 +262,24 @@ export const TelegramBotService = {
     }
   },
 
-  sendReviewNotification: async ({ title, body, url, imageUrl }: { title: string; body: string; url?: string; imageUrl?: string }): Promise<boolean> => {
+  sendReviewNotification: async ({
+    title,
+    body,
+    url,
+    imageUrl,
+    notificationType,
+  }: {
+    title: string;
+    body: string;
+    url?: string;
+    imageUrl?: string;
+    notificationType?: string;
+  }): Promise<boolean> => {
     let text = `<b>${escapeHtml(title)}</b>\n\n${escapeHtml(body)}`;
     if (url) {
       text += `\n\n<a href="${escapeHtmlAttribute(url)}">開啟審核</a>`;
     }
-    return TelegramBotService.sendMessage({ text, imageUrl, parseMode: 'HTML' });
+    return TelegramBotService.sendMessage({ text, imageUrl, parseMode: 'HTML', notificationType });
   },
 
   sendFanartReviewNotification: async ({
@@ -118,7 +287,7 @@ export const TelegramBotService = {
     title,
     body,
     sourceUrl,
-    imageUrl
+    imageUrl,
   }: {
     stagingId: string;
     title: string;
@@ -146,29 +315,33 @@ export const TelegramBotService = {
       ]]
     };
 
+    // 二創相關通知發送到 fanart topic
+    const threadId = cachedTopicIds.fanart || undefined;
+
     try {
+      const options: any = {
+        parse_mode: 'HTML',
+        reply_markup: replyMarkup,
+      };
+      if (threadId) {
+        options.message_thread_id = threadId;
+      }
+
       if (imageUrl) {
         try {
           await bot.sendPhoto(cachedChatId, imageUrl, {
             caption: text.substring(0, 1024),
-            parse_mode: 'HTML',
-            reply_markup: replyMarkup,
+            ...options,
           });
         } catch (err) {
           logger.warn({ err }, 'Failed to send Telegram fanart review photo, falling back to message');
-          await bot.sendMessage(cachedChatId, text, {
-            parse_mode: 'HTML',
-            reply_markup: replyMarkup,
-          });
+          await bot.sendMessage(cachedChatId, text, options);
         }
       } else {
-        await bot.sendMessage(cachedChatId, text, {
-          parse_mode: 'HTML',
-          reply_markup: replyMarkup,
-        });
+        await bot.sendMessage(cachedChatId, text, options);
       }
 
-      logger.info('Telegram fanart review notification sent successfully');
+      logger.info({ topic: threadId || 'general' }, 'Telegram fanart review notification sent successfully');
       return true;
     } catch (err) {
       const errMsg = `Failed to send Telegram fanart review notification: ${err instanceof Error ? err.message : String(err)}`;
@@ -180,6 +353,16 @@ export const TelegramBotService = {
       });
       return false;
     }
+  },
+
+  /**
+   * 重新建立 topics（admin 手動觸發）
+   */
+  reinitializeTopics: async (): Promise<Record<TopicCategory, number | null>> => {
+    // 清除緩存，強制重建
+    cachedTopicIds = { official: null, notification: null, fanart: null };
+    await initializeTopics();
+    return getTelegramTopicIds();
   },
 };
 

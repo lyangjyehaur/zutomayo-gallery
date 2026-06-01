@@ -1,6 +1,6 @@
 import React from "react"
 import { toast } from "sonner"
-import { Eye, EyeOff, Loader2, RefreshCw, Save, Send, TestTube2, Webhook } from "lucide-react"
+import { Eye, EyeOff, Loader2, RefreshCw, Save, Send, TestTube2, Webhook, MessageSquare, AlertCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,6 +20,12 @@ type TelegramConfig = {
     chat_id: boolean
     webhook_secret: boolean
   }
+  topic_status: Record<string, {
+    label: string
+    thread_id: number | null
+    initialized: boolean
+  }>
+  all_topics_initialized: boolean
 }
 
 type WebhookInfo = {
@@ -42,6 +48,8 @@ export function AdminTelegramConfigPage() {
   const [isTesting, setIsTesting] = React.useState(false)
   const [isSettingWebhook, setIsSettingWebhook] = React.useState(false)
   const [isLoadingWebhook, setIsLoadingWebhook] = React.useState(false)
+  const [isInitializingTopics, setIsInitializingTopics] = React.useState(false)
+  const [isReinitializingTopics, setIsReinitializingTopics] = React.useState(false)
 
   const [botToken, setBotToken] = React.useState("")
   const [chatId, setChatId] = React.useState("")
@@ -60,9 +68,9 @@ export function AdminTelegramConfigPage() {
       const res = await adminFetch(apiBase)
       const json = await res.json()
       if (!res.ok) throw json
-      setConfig(json)
-      setChatId(json.chat_id || "")
-      setWebhookUrl(json.webhook_url || "")
+      setConfig(json.data)
+      setChatId(json.data.chat_id || "")
+      setWebhookUrl(json.data.webhook_url || "")
     } catch (error: any) {
       toast.error(formatApiError(error, "載入 Telegram 設定失敗"))
     } finally {
@@ -77,7 +85,7 @@ export function AdminTelegramConfigPage() {
       const res = await adminFetch(`${apiBase}/webhook-info`)
       const json = await res.json()
       if (!res.ok) throw json
-      setWebhookInfo(json)
+      setWebhookInfo(json.data)
     } catch (error: any) {
       setWebhookError(formatApiError(error, "取得 Webhook 資訊失敗"))
       setWebhookInfo(null)
@@ -138,7 +146,7 @@ export function AdminTelegramConfigPage() {
       const res = await adminFetch(`${apiBase}/test`, { method: "POST" })
       const json = await res.json()
       if (!res.ok) throw json
-      toast.success(`測試訊息已發送！Message ID: ${json.message_id}`)
+      toast.success(`測試訊息已發送！Message ID: ${json.data.message_id}`)
     } catch (error: any) {
       toast.error(formatApiError(error, "發送測試訊息失敗"))
     } finally {
@@ -166,6 +174,50 @@ export function AdminTelegramConfigPage() {
       toast.error(formatApiError(error, "設定 Webhook 失敗"))
     } finally {
       setIsSettingWebhook(false)
+    }
+  }
+
+  const handleInitTopics = async () => {
+    setIsInitializingTopics(true)
+    try {
+      const res = await adminFetch(`${apiBase}/topics/init`, { method: "POST" })
+      const json = await res.json()
+      if (!res.ok) throw json
+
+      if (json.success) {
+        toast.success("Topics 已初始化完成")
+      } else {
+        toast.warning(json.message, {
+          description: json.hint,
+        })
+      }
+      await loadConfig()
+    } catch (error: any) {
+      toast.error(formatApiError(error, "初始化 Topics 失敗"))
+    } finally {
+      setIsInitializingTopics(false)
+    }
+  }
+
+  const handleReinitTopics = async () => {
+    setIsReinitializingTopics(true)
+    try {
+      const res = await adminFetch(`${apiBase}/topics/reinit`, { method: "POST" })
+      const json = await res.json()
+      if (!res.ok) throw json
+
+      if (json.success) {
+        toast.success("Topics 已重新建立")
+      } else {
+        toast.warning(json.message, {
+          description: json.hint,
+        })
+      }
+      await loadConfig()
+    } catch (error: any) {
+      toast.error(formatApiError(error, "重新建立 Topics 失敗"))
+    } finally {
+      setIsReinitializingTopics(false)
     }
   }
 
@@ -292,6 +344,83 @@ export function AdminTelegramConfigPage() {
               {isTesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <TestTube2 className="mr-2 h-4 w-4" />}
               發送測試訊息
             </Button>
+          </div>
+        </div>
+
+        {/* Topics Section */}
+        <div className="border-4 border-black rounded-lg bg-background shadow-neo p-6 space-y-4">
+          <h2 className="text-lg font-heading font-bold flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            Topics 分類設定
+          </h2>
+
+          <p className="text-sm font-mono opacity-70">
+            啟用 Topics 功能後，不同類型的通知會自動分類到對應的 topic 中。
+          </p>
+
+          {/* Topic Status */}
+          {config?.topic_status && (
+            <div className="space-y-2">
+              {Object.entries(config.topic_status).map(([key, topic]) => (
+                <div key={key} className="flex items-center justify-between p-3 border-2 border-black rounded-lg">
+                  <div>
+                    <span className="font-mono font-medium">{topic.label}</span>
+                    <span className="text-xs font-mono opacity-60 ml-2">({key})</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {topic.initialized ? (
+                      <span className="px-2 py-0.5 text-xs font-mono border-2 border-green-500 bg-green-100 text-green-700 rounded">
+                        ID: {topic.thread_id}
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 text-xs font-mono border-2 border-yellow-500 bg-yellow-100 text-yellow-700 rounded">
+                        未初始化
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Warning if not all topics initialized */}
+          {config?.all_topics_initialized === false && (
+            <div className="flex items-start gap-2 p-3 border-2 border-yellow-500 bg-yellow-50 rounded-lg">
+              <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-yellow-800">部分 Topics 尚未初始化</p>
+                <p className="text-yellow-700 mt-1">
+                  請先在 Telegram 私聊中開啟 Topics 功能：打開與 bot 的私聊 → 點擊 bot 名字 → 開啟 Topics
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="neutral"
+              onClick={handleInitTopics}
+              disabled={isInitializingTopics || !config?.has_bot_token || !config?.has_chat_id}
+            >
+              {isInitializingTopics ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MessageSquare className="mr-2 h-4 w-4" />}
+              初始化 Topics
+            </Button>
+            <Button
+              variant="neutral"
+              onClick={handleReinitTopics}
+              disabled={isReinitializingTopics || !config?.has_bot_token || !config?.has_chat_id}
+            >
+              {isReinitializingTopics ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+              重新建立 Topics
+            </Button>
+          </div>
+
+          {/* Help text */}
+          <div className="text-xs font-mono opacity-60 space-y-1">
+            <p>• 「初始化 Topics」：只建立尚未存在的 topic</p>
+            <p>• 「重新建立 Topics」：刪除舊的並重新建立所有 topic（thread ID 會變更）</p>
+            <p>• 建立後的通知會自動發送到對應的 topic</p>
           </div>
         </div>
 

@@ -6,6 +6,9 @@ import {
   getApifyConfig, updateApifyConfig,
   getAllSystemConfig,
   getTelegramConfig, updateTelegramConfig,
+  getTopicStatus,
+  initTopics,
+  reinitTopics,
   testTelegramBot, getTelegramWebhookInfo, setTelegramWebhook,
 } from '../controllers/notification-config.controller.js';
 import { ADMIN_PERMISSIONS } from '../constants/admin-permissions.js';
@@ -25,6 +28,11 @@ router.put('/telegram', asyncHandler(updateTelegramConfig));
 router.post('/telegram/test', asyncHandler(testTelegramBot));
 router.get('/telegram/webhook-info', asyncHandler(getTelegramWebhookInfo));
 router.post('/telegram/set-webhook', asyncHandler(setTelegramWebhook));
+
+// Telegram Topics
+router.get('/telegram/topics', asyncHandler(getTopicStatus));
+router.post('/telegram/topics/init', asyncHandler(initTopics));
+router.post('/telegram/topics/reinit', asyncHandler(reinitTopics));
 
 // Bark
 router.get('/bark', asyncHandler(getBarkConfig));

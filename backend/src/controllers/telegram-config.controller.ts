@@ -2,7 +2,13 @@ import { Request, Response } from 'express';
 import { SysConfigModel } from '../models/index.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
-import { refreshTelegramConfig } from '../services/telegram-bot.service.js';
+import {
+  refreshTelegramConfig,
+  initializeTopics,
+  getTelegramTopicIds,
+  reinitializeTopics,
+  type TopicCategory,
+} from '../services/telegram-bot.service.js';
 
 const CONFIG_KEY = 'telegram_config';
 
@@ -17,6 +23,13 @@ function maskToken(token: string): string {
   if (!token || token.length < 10) return token;
   return token.substring(0, 6) + '...' + token.substring(token.length - 4);
 }
+
+// Topic 分類定義（與 service 保持一致）
+const TOPIC_LABELS: Record<TopicCategory, string> = {
+  official: '官方消息',
+  notification: '系統通知',
+  fanart: '二創相關',
+};
 
 export const getTelegramConfig = async (_req: Request, res: Response) => {
   const row = await SysConfigModel.findByPk(CONFIG_KEY);
@@ -35,6 +48,19 @@ export const getTelegramConfig = async (_req: Request, res: Response) => {
     webhook_secret: !dbConfig.webhook_secret && !!process.env.TELEGRAM_WEBHOOK_SECRET,
   };
 
+  // 取得 topic 狀態
+  const topicIds = getTelegramTopicIds();
+  const topicStatus: Record<string, { label: string; thread_id: number | null; initialized: boolean }> = {};
+  for (const [key, label] of Object.entries(TOPIC_LABELS)) {
+    const threadId = topicIds[key as TopicCategory];
+    topicStatus[key] = {
+      label,
+      thread_id: threadId,
+      initialized: !!threadId,
+    };
+  }
+  const allTopicsInitialized = Object.values(topicStatus).every(t => t.initialized);
+
   res.json({
     success: true,
     data: {
@@ -46,6 +72,8 @@ export const getTelegramConfig = async (_req: Request, res: Response) => {
       has_webhook_secret: !!config.webhook_secret,
       webhook_url: config.webhook_url,
       from_env: fromEnv,
+      topic_status: topicStatus,
+      all_topics_initialized: allTopicsInitialized,
     },
   });
 };
@@ -124,6 +152,123 @@ export const testTelegramBot = async (_req: Request, res: Response) => {
   } catch (err: any) {
     if (err instanceof AppError) throw err;
     throw new AppError(500, 'TELEGRAM_TEST_ERROR', `發送失敗：${err.message}`);
+  }
+};
+
+export const getTopicStatus = async (_req: Request, res: Response) => {
+  const topicIds = getTelegramTopicIds();
+  const topicStatus: Record<string, { label: string; thread_id: number | null; initialized: boolean }> = {};
+  
+  for (const [key, label] of Object.entries(TOPIC_LABELS)) {
+    const threadId = topicIds[key as TopicCategory];
+    topicStatus[key] = {
+      label,
+      thread_id: threadId,
+      initialized: !!threadId,
+    };
+  }
+
+  const allTopicsInitialized = Object.values(topicStatus).every(t => t.initialized);
+
+  res.json({
+    success: true,
+    data: {
+      topics: topicStatus,
+      all_initialized: allTopicsInitialized,
+    },
+  });
+};
+
+export const initTopics = async (_req: Request, res: Response) => {
+  const row = await SysConfigModel.findByPk(CONFIG_KEY);
+  const dbConfig = (row?.get('value') as any) || {};
+
+  const botToken = dbConfig.bot_token || process.env.TELEGRAM_BOT_TOKEN || '';
+  const chatId = dbConfig.chat_id || process.env.TELEGRAM_CHAT_ID || '';
+
+  if (!botToken) {
+    throw new AppError(400, 'TELEGRAM_BOT_NOT_CONFIGURED', '尚未設定 Telegram Bot Token');
+  }
+  if (!chatId) {
+    throw new AppError(400, 'TELEGRAM_CHAT_NOT_CONFIGURED', '尚未設定 Telegram Chat ID');
+  }
+
+  try {
+    await initializeTopics();
+    const topicIds = getTelegramTopicIds();
+    const allInitialized = Object.values(topicIds).every(id => id !== null);
+
+    if (!allInitialized) {
+      const failedTopics = Object.entries(topicIds)
+        .filter(([_, id]) => id === null)
+        .map(([key, _]) => TOPIC_LABELS[key as TopicCategory]);
+
+      res.json({
+        success: false,
+        message: `部分 topic 建立失敗，請確認已在 Telegram 私聊中開啟 Topics 功能`,
+        hint: '在 Telegram 中打開與 bot 的私聊，點擊 bot 名字 → 開啟 Topics',
+        data: {
+          topics: topicIds,
+          failed_topics: failedTopics,
+        },
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: '所有 Topics 已初始化完成',
+      data: { topics: topicIds },
+    });
+  } catch (err: any) {
+    if (err instanceof AppError) throw err;
+    throw new AppError(500, 'TELEGRAM_TOPIC_INIT_ERROR', `初始化失敗：${err.message}`);
+  }
+};
+
+export const reinitTopics = async (_req: Request, res: Response) => {
+  const row = await SysConfigModel.findByPk(CONFIG_KEY);
+  const dbConfig = (row?.get('value') as any) || {};
+
+  const botToken = dbConfig.bot_token || process.env.TELEGRAM_BOT_TOKEN || '';
+  const chatId = dbConfig.chat_id || process.env.TELEGRAM_CHAT_ID || '';
+
+  if (!botToken) {
+    throw new AppError(400, 'TELEGRAM_BOT_NOT_CONFIGURED', '尚未設定 Telegram Bot Token');
+  }
+  if (!chatId) {
+    throw new AppError(400, 'TELEGRAM_CHAT_NOT_CONFIGURED', '尚未設定 Telegram Chat ID');
+  }
+
+  try {
+    const topicIds = await reinitializeTopics();
+    const allInitialized = Object.values(topicIds).every(id => id !== null);
+
+    if (!allInitialized) {
+      const failedTopics = Object.entries(topicIds)
+        .filter(([_, id]) => id === null)
+        .map(([key, _]) => TOPIC_LABELS[key as TopicCategory]);
+
+      res.json({
+        success: false,
+        message: `部分 topic 重建失敗，請確認已在 Telegram 私聊中開啟 Topics 功能`,
+        hint: '在 Telegram 中打開與 bot 的私聊，點擊 bot 名字 → 開啟 Topics',
+        data: {
+          topics: topicIds,
+          failed_topics: failedTopics,
+        },
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: '所有 Topics 已重新建立',
+      data: { topics: topicIds },
+    });
+  } catch (err: any) {
+    if (err instanceof AppError) throw err;
+    throw new AppError(500, 'TELEGRAM_TOPIC_REINIT_ERROR', `重建失敗：${err.message}`);
   }
 };
 
