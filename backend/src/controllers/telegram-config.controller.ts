@@ -29,6 +29,7 @@ function maskToken(token: string): string {
 const TOPIC_LABELS: Record<TopicCategory, string> = {
   notification: '系統通知',
   fanart: '二創相關',
+  fallback: '未分類',
 };
 
 export const getTelegramConfig = async (_req: Request, res: Response) => {

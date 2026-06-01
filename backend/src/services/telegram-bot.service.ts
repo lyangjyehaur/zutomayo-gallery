@@ -26,19 +26,21 @@ const FANART_REVIEW_CALLBACK_PREFIX: Record<FanartReviewAction, string> = {
 };
 
 // Topic 分類定義
-export type TopicCategory = 'notification' | 'fanart';
+export type TopicCategory = 'notification' | 'fanart' | 'fallback';
 export type { ArtistTopicEntry, ArtistTopicIds };
 
 // Topic 配置：每個分類對應的 topic 名稱和顏色
 const TOPIC_DEFINITIONS: Record<TopicCategory, { name: string; iconColor: number }> = {
   notification: { name: '系統通知', iconColor: 0xFFD700 },  // 金色
   fanart: { name: '二創相關', iconColor: 0xFF69B4 },        // 粉色
+  fallback: { name: '未分類', iconColor: 0x808080 },        // 灰色
 };
 
 // topic ID 緩存
 let cachedTopicIds: Record<TopicCategory, number | null> = {
   notification: null,
   fanart: null,
+  fallback: null,
 };
 let cachedArtistTopicIds = new Map<string, ArtistTopicEntry>();
 
@@ -82,6 +84,7 @@ export async function refreshTelegramConfig(): Promise<void> {
       cachedTopicIds = {
         notification: dbConfig.topic_ids.notification || null,
         fanart: dbConfig.topic_ids.fanart || null,
+        fallback: dbConfig.topic_ids.fallback || null,
       };
     }
     cachedArtistTopicIds = deserializeArtistTopicIds(dbConfig.artist_topic_ids || {});
@@ -341,9 +344,10 @@ async function getTopicIdForFanartReview({
         if (handleTopicId) return handleTopicId;
       }
     } catch (err) {
-      logger.warn({ err, artistName, artistHandle }, 'Failed to resolve Telegram separate topic; falling back to fanart topic');
+      logger.warn({ err, artistName, artistHandle }, 'Failed to resolve Telegram separate topic; falling back to fallback topic');
     }
-    return cachedTopicIds.fanart || undefined;
+    // separateTopic=true 但找不到畫師 → fallback topic（不混進 fanart）
+    return cachedTopicIds.fallback || undefined;
   }
 
   if (contentType !== 'official') {
@@ -526,7 +530,7 @@ export const TelegramBotService = {
    */
   reinitializeTopics: async (): Promise<Record<TopicCategory, number | null>> => {
     // 清除靜態 topic 緩存，強制重建。畫師 topics 會按需建立。
-    cachedTopicIds = { notification: null, fanart: null };
+    cachedTopicIds = { notification: null, fanart: null, fallback: null };
     await initializeTopics();
     return getTelegramTopicIds();
   },

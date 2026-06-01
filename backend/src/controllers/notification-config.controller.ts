@@ -571,6 +571,7 @@ export const getAllNotificationSettings = async (_req: Request, res: Response) =
 const TOPIC_LABELS: Record<TopicCategory, string> = {
   notification: '系統通知',
   fanart: '二創相關',
+  fallback: '未分類',
 };
 
 export const getTopicStatus = async (_req: Request, res: Response) => {
