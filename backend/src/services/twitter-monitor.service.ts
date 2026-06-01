@@ -73,8 +73,13 @@ const extractHandleFromRssItem = (item: RssTweetItem) => {
 const appendHandle = (currentHandle: unknown, tweetHandle: string) => {
   const current = typeof currentHandle === 'string' ? currentHandle : '';
   const handles = current.split(',').map((value) => value.trim()).filter(Boolean);
-  if (handles.includes(tweetHandle)) return current;
-  return [...handles, tweetHandle].join(',');
+  if (handles.includes(tweetHandle)) {
+    console.log(`[Twitter Monitor] [Dedup] handle @${tweetHandle} already in [${current}], skip`);
+    return current;
+  }
+  const result = [...handles, tweetHandle].join(',');
+  console.log(`[Twitter Monitor] [Dedup] handle @${tweetHandle} appended → [${result}]`);
+  return result;
 };
 
 const notifyOfficialRetweet = async (payload: {
@@ -91,16 +96,22 @@ const notifyOfficialRetweet = async (payload: {
 }) => {
   try {
     await deps.sendFanartReviewNotification(payload);
+    console.log(`[Twitter Monitor] [RT-Notify] sent ok: staging=${payload.stagingId} source=${payload.sourceUrl || 'none'}`);
   } catch (error) {
     console.error('[Twitter Monitor] Failed to send official retweet notification:', error);
   }
 };
 
 const markOfficialRetweetOnStaging = async (existingStaging: any, retweetedByHandle: string, sourceTweetLink: string, contentType?: string, artistHandle?: string) => {
+  const stagingId = String(existingStaging.get('id'));
   const currentHandle = existingStaging.get('retweeted_by_handle');
   const newHandle = appendHandle(currentHandle, retweetedByHandle);
-  if (newHandle === currentHandle) return;
+  if (newHandle === currentHandle) {
+    console.log(`[Twitter Monitor] [Staging-RT] id=${stagingId} @${retweetedByHandle} already marked, skip notification`);
+    return;
+  }
 
+  console.log(`[Twitter Monitor] [Staging-RT] id=${stagingId} marking @${retweetedByHandle}, sending notification`);
   await existingStaging.update({ retweeted_by_handle: newHandle });
   await notifyOfficialRetweet({
     stagingId: String(existingStaging.get('id')),
@@ -114,10 +125,15 @@ const markOfficialRetweetOnStaging = async (existingStaging: any, retweetedByHan
 
 const notifyPromotedOfficialRetweet = async (existingGroup: any, retweetedByHandle: string, sourceTweetLink: string, contentType?: string, artistHandle?: string) => {
   if (!existingGroup) return;
+  const groupId = String(existingGroup.get('id'));
   const currentHandle = existingGroup.get('retweeted_by_handle');
   const newHandle = appendHandle(currentHandle, retweetedByHandle);
-  if (newHandle === currentHandle) return;
+  if (newHandle === currentHandle) {
+    console.log(`[Twitter Monitor] [Promoted-RT] group=${groupId} @${retweetedByHandle} already marked, skip notification`);
+    return;
+  }
 
+  console.log(`[Twitter Monitor] [Promoted-RT] group=${groupId} marking @${retweetedByHandle}, sending notification`);
   await existingGroup.update({ retweeted_by_handle: newHandle });
   await notifyOfficialRetweet({
     stagingId: 'promoted',
@@ -217,6 +233,10 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
       const retweetedByHandle = extractHandleFromRssItem(item) || tweetHandle;
       const tweetDate = firstMedia.date || item.isoDate || new Date().toISOString();
       const isRetweet = sourceTweetId !== tweetId;
+
+      if (isRetweet) {
+        console.log(`[Twitter Monitor] [RT-Detect] tweet=${tweetId} → source=${sourceTweetId} by @${retweetedByHandle}`);
+      }
 
       const existing = await deps.findExistingMediaGroup({
         where: { source_url: { [Op.regexp]: `/status/${sourceTweetId}([/?#]|$)` } }
