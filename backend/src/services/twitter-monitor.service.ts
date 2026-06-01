@@ -56,6 +56,49 @@ const safeDate = (value: string | Date | undefined) => {
   return Number.isNaN(date.getTime()) ? new Date() : date;
 };
 
+const extractHandleFromRssItem = (item: RssTweetItem) => {
+  const source = item.creator || item.author || item.title || '';
+  return source.match(/@([A-Za-z0-9_]+)/)?.[1] || '';
+};
+
+const appendHandle = (currentHandle: unknown, tweetHandle: string) => {
+  const current = typeof currentHandle === 'string' ? currentHandle : '';
+  const handles = current.split(',').map((value) => value.trim()).filter(Boolean);
+  if (handles.includes(tweetHandle)) return current;
+  return [...handles, tweetHandle].join(',');
+};
+
+const notifyOfficialRetweet = async (payload: Parameters<TwitterMonitorDeps['sendFanartReviewNotification']>[0]) => {
+  try {
+    await deps.sendFanartReviewNotification(payload);
+  } catch (error) {
+    console.error('[Twitter Monitor] Failed to send official retweet notification:', error);
+  }
+};
+
+const markOfficialRetweetOnStaging = async (existingStaging: any, retweetedByHandle: string, sourceTweetLink: string) => {
+  const currentHandle = existingStaging.get('retweeted_by_handle');
+  const newHandle = appendHandle(currentHandle, retweetedByHandle);
+  if (newHandle === currentHandle) return;
+
+  await existingStaging.update({ retweeted_by_handle: newHandle });
+  await notifyOfficialRetweet({
+    stagingId: String(existingStaging.get('id')),
+    title: '📋 官方帳號轉發已存在內容',
+    body: `轉發者: @${retweetedByHandle}\n原推作者: @${existingStaging.get('author_handle') || 'unknown'}\n狀態: ${existingStaging.get('status')}`,
+    sourceUrl: sourceTweetLink,
+  });
+};
+
+const notifyPromotedOfficialRetweet = async (retweetedByHandle: string, originalMediaUrl: string, sourceTweetLink: string) => {
+  await notifyOfficialRetweet({
+    stagingId: 'promoted',
+    title: '📋 官方帳號轉發已上架內容',
+    body: `轉發者: @${retweetedByHandle}\n已上架的媒體: ${originalMediaUrl}`,
+    sourceUrl: sourceTweetLink,
+  });
+};
+
 export type FeedTarget = {
   feedUrl: string;
   contentType: string;
@@ -135,19 +178,24 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
     if (mediaList && mediaList.length > 0) {
       const sourceTweetId = mediaList[0].tweet_id || tweetId;
       const sourceTweetLink = mediaList[0].tweet_url || buildCanonicalTweetUrl(sourceTweetId);
-
-      const existing = await deps.findExistingMediaGroup({
-        where: { source_url: { [Op.regexp]: `/status/${sourceTweetId}([/?#]|$)` } }
-      });
-      if (existing) continue;
-
-      console.log(`[Twitter Monitor] New tweet candidate found: ${sourceTweetLink}`);
-
       const firstMedia = mediaList[0];
       const tweetText = firstMedia.text || item.title || '';
       const tweetAuthor = firstMedia.user_name || item.creator || '';
       const tweetHandle = firstMedia.user_screen_name || '';
+      const retweetedByHandle = extractHandleFromRssItem(item) || tweetHandle;
       const tweetDate = firstMedia.date || item.isoDate || new Date().toISOString();
+
+      const existing = await deps.findExistingMediaGroup({
+        where: { source_url: { [Op.regexp]: `/status/${sourceTweetId}([/?#]|$)` } }
+      });
+      if (existing) {
+        if (contentType === 'official' && retweetedByHandle) {
+          await notifyPromotedOfficialRetweet(retweetedByHandle, firstMedia.url, sourceTweetLink);
+        }
+        continue;
+      }
+
+      console.log(`[Twitter Monitor] New tweet candidate found: ${sourceTweetLink}`);
 
       for (const media of mediaList) {
         const originalMediaUrl = media.url;
@@ -157,7 +205,32 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
             media_url: originalMediaUrl,
           }
         });
-        if (existingStaging) continue;
+        if (existingStaging) {
+          if (contentType === 'official' && retweetedByHandle) {
+            await markOfficialRetweetOnStaging(existingStaging, retweetedByHandle, sourceTweetLink);
+          }
+          continue;
+        }
+
+        const existingByUrl = await deps.findExistingStagingFanart({
+          where: { media_url: originalMediaUrl }
+        });
+        if (existingByUrl) {
+          if (contentType === 'official' && retweetedByHandle) {
+            await markOfficialRetweetOnStaging(existingByUrl, retweetedByHandle, sourceTweetLink);
+          }
+          continue;
+        }
+
+        const existingMediaByUrl = await deps.findExistingMediaGroup({
+          where: { url: originalMediaUrl }
+        });
+        if (existingMediaByUrl) {
+          if (contentType === 'official' && retweetedByHandle) {
+            await notifyPromotedOfficialRetweet(retweetedByHandle, originalMediaUrl, sourceTweetLink);
+          }
+          continue;
+        }
 
         const mediaType = resolveMediaType(media, originalMediaUrl);
         const staging = await deps.createStagingFanart({

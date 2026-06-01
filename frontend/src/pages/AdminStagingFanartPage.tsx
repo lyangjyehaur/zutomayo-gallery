@@ -35,6 +35,7 @@ interface StagingFanart {
   view_count?: number;
   author_name?: string;
   author_handle?: string;
+  retweeted_by_handle?: string | null;
 }
 
 interface ProgressData {
@@ -790,6 +791,11 @@ export function AdminStagingFanartPage() {
                       </span>
                     )}
                     <span className="truncate" title={f.tweet_id}>ID: {f.tweet_id}</span>
+                    {f.retweeted_by_handle && (
+                      <span className="truncate text-blue-700" title={f.retweeted_by_handle}>
+                        官方轉發: {f.retweeted_by_handle.split(',').map(handle => `@${handle.trim().replace(/^@/, '')}`).join(', ')}
+                      </span>
+                    )}
                     <span>Type: {f.media_type}</span>
                     <span className="truncate" title={new Date(f.crawled_at).toLocaleString()}>Date: {new Date(f.crawled_at).toLocaleDateString()}</span>
                   </div>

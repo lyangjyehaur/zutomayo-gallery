@@ -273,6 +273,7 @@
 | `media_url` | `TEXT` | `NULL` | 原始媒體連結 |
 | `thumbnail_url` | `TEXT` | `NULL` | 影片縮圖或預覽圖網址 |
 | `original_thumbnail_url` | `TEXT` | `NULL` | 原始影片縮圖或預覽圖網址 |
+| `retweeted_by_handle` | `VARCHAR(255)` | `NULL` | 轉發此推文的官方帳號 handle；多個帳號以逗號分隔 |
 | `r2_url` | `TEXT` | `NULL` | R2 備份連結 (可為空) |
 | `media_type` | `VARCHAR(20)` | `NULL` | 媒體格式類型 (image/video) |
 | `crawled_at` | `TIMESTAMP` | `NULL` | 爬取時間 |

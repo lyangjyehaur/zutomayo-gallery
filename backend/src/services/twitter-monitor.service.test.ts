@@ -173,3 +173,197 @@ test('TwitterMonitorService carries manual separate topic routing into Telegram 
     resetTwitterMonitorServiceDepsForTest();
   }
 });
+
+test('TwitterMonitorService.processFeed marks official retweet when media URL already exists in staging', async () => {
+  const notifications: any[] = [];
+  const updates: any[] = [];
+  const findStagingQueries: any[] = [];
+  let createCount = 0;
+
+  const existingStaging = {
+    get: (key: string) => ({
+      id: 'existing-staging',
+      retweeted_by_handle: null,
+      author_handle: 'original_artist',
+      status: 'pending',
+    } as any)[key],
+    update: async (payload: any) => {
+      updates.push(payload);
+      return existingStaging;
+    },
+  };
+
+  setTwitterMonitorServiceDepsForTest({
+    parseURL: async () => ({
+      items: [{
+        title: 'ZUTOMAYO ART (@zutomayo_art): RT',
+        link: 'https://x.com/zutomayo_art/status/4444444444444444444',
+        isoDate: '2026-05-25T12:34:56.000Z',
+        creator: 'ZUTOMAYO ART',
+      }],
+    }),
+    extractMediaFromTweet: async () => [{
+      url: 'https://pbs.twimg.com/media/original.jpg?format=jpg&name=orig',
+      type: 'image',
+      text: 'RT',
+      user_name: 'ZUTOMAYO ART',
+      user_screen_name: 'zutomayo_art',
+      date: '2026-05-25T12:34:56.000Z',
+      tweet_id: '4444444444444444444',
+      tweet_url: buildCanonicalTweetUrl('4444444444444444444'),
+      requested_tweet_id: '4444444444444444444',
+      hashtags: [],
+    }],
+    findExistingMediaGroup: async () => null,
+    findExistingStagingFanart: async (query) => {
+      findStagingQueries.push(query);
+      if (query.where?.media_url === 'https://pbs.twimg.com/media/original.jpg?format=jpg&name=orig' && !query.where?.tweet_id) {
+        return existingStaging;
+      }
+      return null;
+    },
+    createStagingFanart: async () => {
+      createCount++;
+      return { get: (key: string) => key === 'id' ? 'new-staging' : undefined } as any;
+    },
+    sendFanartReviewNotification: async (payload) => {
+      notifications.push(payload);
+      return true;
+    },
+  });
+
+  try {
+    const result = await TwitterMonitorService.processFeed('https://rss.example.com/user/zutomayo_art', 'official');
+    assert.equal(result.newCandidates, 0);
+    assert.equal(createCount, 0);
+    assert.deepEqual(updates, [{ retweeted_by_handle: 'zutomayo_art' }]);
+    assert.equal(findStagingQueries.length, 2);
+    assert.equal(findStagingQueries[1].where.media_url, 'https://pbs.twimg.com/media/original.jpg?format=jpg&name=orig');
+    assert.equal(notifications.length, 1);
+    assert.equal(notifications[0].stagingId, 'existing-staging');
+    assert.equal(notifications[0].title, '📋 官方帳號轉發已存在內容');
+    assert.match(notifications[0].body, /轉發者: @zutomayo_art/);
+    assert.match(notifications[0].body, /原推作者: @original_artist/);
+    assert.match(notifications[0].body, /狀態: pending/);
+  } finally {
+    resetTwitterMonitorServiceDepsForTest();
+  }
+});
+
+test('TwitterMonitorService.processFeed skips promoted duplicate by media URL and notification failure does not block', async () => {
+  let createCount = 0;
+  const mediaGroupQueries: any[] = [];
+
+  setTwitterMonitorServiceDepsForTest({
+    parseURL: async () => ({
+      items: [{
+        title: 'ZUTOMAYO ART (@zutomayo_art): RT promoted',
+        link: 'https://x.com/zutomayo_art/status/5555555555555555555',
+        isoDate: '2026-05-26T12:34:56.000Z',
+        creator: 'ZUTOMAYO ART',
+      }],
+    }),
+    extractMediaFromTweet: async () => [{
+      url: 'https://pbs.twimg.com/media/promoted.jpg?format=jpg&name=orig',
+      type: 'image',
+      text: 'RT promoted',
+      user_name: 'ZUTOMAYO ART',
+      user_screen_name: 'zutomayo_art',
+      date: '2026-05-26T12:34:56.000Z',
+      tweet_id: '5555555555555555555',
+      tweet_url: buildCanonicalTweetUrl('5555555555555555555'),
+      requested_tweet_id: '5555555555555555555',
+      hashtags: [],
+    }],
+    findExistingMediaGroup: async (query) => {
+      mediaGroupQueries.push(query);
+      if (query.where?.url === 'https://pbs.twimg.com/media/promoted.jpg?format=jpg&name=orig') {
+        return { get: () => undefined };
+      }
+      return null;
+    },
+    findExistingStagingFanart: async () => null,
+    createStagingFanart: async () => {
+      createCount++;
+      return { get: (key: string) => key === 'id' ? 'new-staging' : undefined } as any;
+    },
+    sendFanartReviewNotification: async () => {
+      throw new Error('telegram down');
+    },
+  });
+
+  try {
+    const result = await TwitterMonitorService.processFeed('https://rss.example.com/user/zutomayo_art', 'official');
+    assert.equal(result.newCandidates, 0);
+    assert.equal(createCount, 0);
+    assert.equal(mediaGroupQueries.length, 2);
+    assert.equal(mediaGroupQueries[1].where.url, 'https://pbs.twimg.com/media/promoted.jpg?format=jpg&name=orig');
+  } finally {
+    resetTwitterMonitorServiceDepsForTest();
+  }
+});
+
+test('TwitterMonitorService.processFeed marks official retweet when canonical staging duplicate is found', async () => {
+  const updates: any[] = [];
+  const notifications: any[] = [];
+  let createCount = 0;
+
+  const existingStaging = {
+    get: (key: string) => ({
+      id: 'canonical-staging',
+      retweeted_by_handle: 'another_official',
+      author_handle: 'original_artist',
+      status: 'approved',
+    } as any)[key],
+    update: async (payload: any) => {
+      updates.push(payload);
+      return existingStaging;
+    },
+  };
+
+  setTwitterMonitorServiceDepsForTest({
+    parseURL: async () => ({
+      items: [{
+        title: 'ZUTOMAYO ART (@zutomayo_art): RT canonical',
+        link: 'https://x.com/zutomayo_art/status/6666666666666666666',
+        isoDate: '2026-05-27T12:34:56.000Z',
+        creator: 'ZUTOMAYO ART (@zutomayo_art)',
+      }],
+    }),
+    extractMediaFromTweet: async () => [{
+      url: 'https://pbs.twimg.com/media/canonical.jpg?format=jpg&name=orig',
+      type: 'image',
+      text: 'RT canonical',
+      user_name: 'Original Artist',
+      user_screen_name: 'original_artist',
+      date: '2026-05-27T12:34:56.000Z',
+      tweet_id: '7777777777777777777',
+      tweet_url: buildCanonicalTweetUrl('7777777777777777777'),
+      requested_tweet_id: '6666666666666666666',
+      hashtags: [],
+    }],
+    findExistingMediaGroup: async () => null,
+    findExistingStagingFanart: async (query) => query.where?.tweet_id ? existingStaging : null,
+    createStagingFanart: async () => {
+      createCount++;
+      return { get: (key: string) => key === 'id' ? 'new-staging' : undefined } as any;
+    },
+    sendFanartReviewNotification: async (payload) => {
+      notifications.push(payload);
+      return true;
+    },
+  });
+
+  try {
+    const result = await TwitterMonitorService.processFeed('https://rss.example.com/user/zutomayo_art', 'official');
+    assert.equal(result.newCandidates, 0);
+    assert.equal(createCount, 0);
+    assert.deepEqual(updates, [{ retweeted_by_handle: 'another_official,zutomayo_art' }]);
+    assert.equal(notifications.length, 1);
+    assert.equal(notifications[0].stagingId, 'canonical-staging');
+    assert.match(notifications[0].body, /轉發者: @zutomayo_art/);
+    assert.match(notifications[0].body, /狀態: approved/);
+  } finally {
+    resetTwitterMonitorServiceDepsForTest();
+  }
+});
