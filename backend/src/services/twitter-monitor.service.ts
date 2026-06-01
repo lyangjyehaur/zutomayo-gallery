@@ -68,7 +68,17 @@ const appendHandle = (currentHandle: unknown, tweetHandle: string) => {
   return [...handles, tweetHandle].join(',');
 };
 
-const notifyOfficialRetweet = async (payload: Parameters<TwitterMonitorDeps['sendFanartReviewNotification']>[0]) => {
+const notifyOfficialRetweet = async (payload: {
+  stagingId: string;
+  title: string;
+  body: string;
+  sourceUrl?: string;
+  imageUrl?: string;
+  contentType?: string;
+  artistName?: string;
+  artistHandle?: string;
+  separateTopic?: boolean;
+}) => {
   try {
     await deps.sendFanartReviewNotification(payload);
   } catch (error) {
@@ -76,7 +86,7 @@ const notifyOfficialRetweet = async (payload: Parameters<TwitterMonitorDeps['sen
   }
 };
 
-const markOfficialRetweetOnStaging = async (existingStaging: any, retweetedByHandle: string, sourceTweetLink: string) => {
+const markOfficialRetweetOnStaging = async (existingStaging: any, retweetedByHandle: string, sourceTweetLink: string, contentType?: string, artistHandle?: string) => {
   const currentHandle = existingStaging.get('retweeted_by_handle');
   const newHandle = appendHandle(currentHandle, retweetedByHandle);
   if (newHandle === currentHandle) return;
@@ -87,15 +97,19 @@ const markOfficialRetweetOnStaging = async (existingStaging: any, retweetedByHan
     title: '📋 官方帳號轉發已存在內容',
     body: `轉發者: @${retweetedByHandle}\n原推作者: @${existingStaging.get('author_handle') || 'unknown'}\n狀態: ${existingStaging.get('status')}`,
     sourceUrl: sourceTweetLink,
+    contentType,
+    artistHandle,
   });
 };
 
-const notifyPromotedOfficialRetweet = async (retweetedByHandle: string, originalMediaUrl: string, sourceTweetLink: string) => {
+const notifyPromotedOfficialRetweet = async (retweetedByHandle: string, originalMediaUrl: string, sourceTweetLink: string, contentType?: string, artistHandle?: string) => {
   await notifyOfficialRetweet({
     stagingId: 'promoted',
     title: '📋 官方帳號轉發已上架內容',
     body: `轉發者: @${retweetedByHandle}\n已上架的媒體: ${originalMediaUrl}`,
     sourceUrl: sourceTweetLink,
+    contentType,
+    artistHandle,
   });
 };
 
@@ -191,7 +205,7 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
       });
       if (existing) {
         if (contentType === 'official' && retweetedByHandle) {
-          await notifyPromotedOfficialRetweet(retweetedByHandle, firstMedia.url, sourceTweetLink);
+          await notifyPromotedOfficialRetweet(retweetedByHandle, firstMedia.url, sourceTweetLink, contentType, tweetHandle);
         }
         continue;
       }
@@ -208,7 +222,7 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
         });
         if (existingStaging) {
           if (contentType === 'official' && retweetedByHandle) {
-            await markOfficialRetweetOnStaging(existingStaging, retweetedByHandle, sourceTweetLink);
+            await markOfficialRetweetOnStaging(existingStaging, retweetedByHandle, sourceTweetLink, contentType, tweetHandle);
           }
           continue;
         }
@@ -218,7 +232,7 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
         });
         if (existingByUrl) {
           if (contentType === 'official' && retweetedByHandle) {
-            await markOfficialRetweetOnStaging(existingByUrl, retweetedByHandle, sourceTweetLink);
+            await markOfficialRetweetOnStaging(existingByUrl, retweetedByHandle, sourceTweetLink, contentType, tweetHandle);
           }
           continue;
         }
@@ -228,7 +242,7 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
         });
         if (existingMediaByUrl) {
           if (contentType === 'official' && retweetedByHandle) {
-            await notifyPromotedOfficialRetweet(retweetedByHandle, originalMediaUrl, sourceTweetLink);
+            await notifyPromotedOfficialRetweet(retweetedByHandle, originalMediaUrl, sourceTweetLink, contentType, tweetHandle);
           }
           continue;
         }
