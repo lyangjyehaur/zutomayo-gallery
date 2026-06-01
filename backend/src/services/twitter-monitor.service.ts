@@ -228,7 +228,7 @@ export const TwitterMonitorService = {
     let failedFeeds = 0;
 
     for (const target of feedTargets) {
-      const result = await processFeed(target.feedUrl, target.contentType);
+      const result = await processFeed(target.feedUrl, target.contentType, target.separateTopic);
       if (result.newCandidates === 0) {
         // 可能是正常（無新推文）或失敗（parseURL 已 emitError）
       }
