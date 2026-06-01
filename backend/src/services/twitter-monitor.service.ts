@@ -202,6 +202,7 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
   }
 
   let newCandidates = 0;
+  const notifiedTweetIds = new Set<string>();
 
   for (const item of feed.items) {
     if (!item.link) continue;
@@ -242,8 +243,9 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
         where: { source_url: { [Op.regexp]: `/status/${sourceTweetId}([/?#]|$)` } }
       });
       if (existing) {
-        if (contentType === 'official' && retweetedByHandle) {
+        if (contentType === 'official' && retweetedByHandle && !notifiedTweetIds.has(sourceTweetId)) {
           await notifyPromotedOfficialRetweet(existing, retweetedByHandle, sourceTweetLink, contentType, tweetHandle);
+          notifiedTweetIds.add(sourceTweetId);
         }
         continue;
       }
@@ -259,8 +261,9 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
           }
         });
         if (existingStaging) {
-          if (contentType === 'official' && retweetedByHandle) {
+          if (contentType === 'official' && retweetedByHandle && !notifiedTweetIds.has(sourceTweetId)) {
             await markOfficialRetweetOnStaging(existingStaging, retweetedByHandle, sourceTweetLink, contentType, tweetHandle);
+            notifiedTweetIds.add(sourceTweetId);
           }
           continue;
         }
@@ -269,8 +272,9 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
           where: { media_url: originalMediaUrl }
         });
         if (existingByUrl) {
-          if (contentType === 'official' && retweetedByHandle) {
+          if (contentType === 'official' && retweetedByHandle && !notifiedTweetIds.has(sourceTweetId)) {
             await markOfficialRetweetOnStaging(existingByUrl, retweetedByHandle, sourceTweetLink, contentType, tweetHandle);
+            notifiedTweetIds.add(sourceTweetId);
           }
           continue;
         }
@@ -279,11 +283,12 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
           where: { url: originalMediaUrl }
         });
         if (existingMediaByUrl) {
-          if (contentType === 'official' && retweetedByHandle) {
+          if (contentType === 'official' && retweetedByHandle && !notifiedTweetIds.has(sourceTweetId)) {
             const groupId = existingMediaByUrl.get('group_id') as string | null;
             const existingGroup = groupId ? await deps.findExistingMediaGroup({ where: { id: groupId } }) : null;
             if (existingGroup) {
               await notifyPromotedOfficialRetweet(existingGroup, retweetedByHandle, sourceTweetLink, contentType, tweetHandle);
+              notifiedTweetIds.add(sourceTweetId);
             }
           }
           continue;
