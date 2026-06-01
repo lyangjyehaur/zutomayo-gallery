@@ -112,11 +112,17 @@ const markOfficialRetweetOnStaging = async (existingStaging: any, retweetedByHan
   });
 };
 
-const notifyPromotedOfficialRetweet = async (retweetedByHandle: string, originalMediaUrl: string, sourceTweetLink: string, contentType?: string, artistHandle?: string) => {
+const notifyPromotedOfficialRetweet = async (existingGroup: any, retweetedByHandle: string, sourceTweetLink: string, contentType?: string, artistHandle?: string) => {
+  if (!existingGroup) return;
+  const currentHandle = existingGroup.get('retweeted_by_handle');
+  const newHandle = appendHandle(currentHandle, retweetedByHandle);
+  if (newHandle === currentHandle) return;
+
+  await existingGroup.update({ retweeted_by_handle: newHandle });
   await notifyOfficialRetweet({
     stagingId: 'promoted',
     title: '📋 官方帳號轉發已上架內容',
-    body: `轉發者: @${retweetedByHandle}\n已上架的媒體: ${originalMediaUrl}`,
+    body: `轉發者: @${retweetedByHandle}\n已上架的內容: ${existingGroup.get('source_url') || ''}`,
     sourceUrl: sourceTweetLink,
     contentType,
     artistHandle,
@@ -217,7 +223,7 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
       });
       if (existing) {
         if (contentType === 'official' && retweetedByHandle) {
-          await notifyPromotedOfficialRetweet(retweetedByHandle, firstMedia.url, sourceTweetLink, contentType, tweetHandle);
+          await notifyPromotedOfficialRetweet(existing, retweetedByHandle, sourceTweetLink, contentType, tweetHandle);
         }
         continue;
       }
@@ -254,7 +260,11 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
         });
         if (existingMediaByUrl) {
           if (contentType === 'official' && retweetedByHandle) {
-            await notifyPromotedOfficialRetweet(retweetedByHandle, originalMediaUrl, sourceTweetLink, contentType, tweetHandle);
+            const groupId = existingMediaByUrl.get('group_id') as string | null;
+            const existingGroup = groupId ? await deps.findExistingMediaGroup({ where: { id: groupId } }) : null;
+            if (existingGroup) {
+              await notifyPromotedOfficialRetweet(existingGroup, retweetedByHandle, sourceTweetLink, contentType, tweetHandle);
+            }
           }
           continue;
         }
