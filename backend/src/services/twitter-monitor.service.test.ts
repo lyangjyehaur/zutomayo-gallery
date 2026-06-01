@@ -41,7 +41,9 @@ test('TwitterMonitorService.checkRss uses RSS item parser and does not skip when
       }];
     },
     findExistingMediaGroup: async () => null,
+    findExistingMedia: async () => null,
     findExistingStagingFanart: async () => null,
+    findAllStagingFanart: async () => [],
     createStagingFanart: async (payload) => {
       createdRows.push(payload);
       return { get: (key: string) => key === 'id' ? 'staging-1' : undefined } as any;
@@ -97,6 +99,7 @@ test('TwitterMonitorService.processFeed passes official artist routing fields to
       hashtags: [],
     }],
     findExistingMediaGroup: async () => null,
+    findExistingMedia: async () => null,
     findExistingStagingFanart: async () => null,
     createStagingFanart: async () => ({ get: (key: string) => key === 'id' ? 'staging-2' : undefined } as any),
     sendFanartReviewNotification: async (payload) => {
@@ -145,6 +148,7 @@ test('TwitterMonitorService.processFeed passes RSS item handle when extracted me
     findExistingMediaGroup: async () => null,
     findExistingMedia: async () => null,
     findExistingStagingFanart: async () => null,
+    findAllStagingFanart: async () => [],
     createStagingFanart: async (payload) => {
       createdRows.push(payload);
       return { get: (key: string) => key === 'id' ? 'staging-kinutani' : undefined } as any;
@@ -191,6 +195,7 @@ test('TwitterMonitorService.processFeed stores retweeted_by_handle when official
       hashtags: [],
     }],
     findExistingMediaGroup: async () => null,
+    findExistingMedia: async () => null,
     findExistingStagingFanart: async () => null,
     createStagingFanart: async (payload) => {
       createdRows.push(payload);
@@ -246,6 +251,7 @@ test('TwitterMonitorService carries manual separate topic routing into Telegram 
     findExistingMediaGroup: async () => null,
     findExistingMedia: async () => null,
     findExistingStagingFanart: async () => null,
+    findAllStagingFanart: async () => [],
     createStagingFanart: async () => ({ get: (key: string) => key === 'id' ? 'staging-3' : undefined } as any),
     sendFanartReviewNotification: async (payload) => {
       notifications.push(payload);
@@ -335,8 +341,8 @@ test('TwitterMonitorService.processFeed marks official retweet when media URL al
     assert.equal(result.newCandidates, 0);
     assert.equal(createCount, 0);
     assert.deepEqual(updates, [{ retweeted_by_handle: 'zutomayo_art' }]);
-    assert.equal(findStagingQueries.length, 2);
-    assert.equal(findStagingQueries[1].where.media_url, 'https://pbs.twimg.com/media/original.jpg?format=jpg&name=orig');
+    assert.equal(findStagingQueries.length, 3);
+    assert.equal(findStagingQueries[2].where.media_url, 'https://pbs.twimg.com/media/original.jpg?format=jpg&name=orig');
     assert.equal(notifications.length, 1);
     assert.equal(notifications[0].stagingId, 'existing-staging');
     assert.equal(notifications[0].title, '📋 官方帳號轉發已存在內容');
@@ -375,12 +381,21 @@ test('TwitterMonitorService.processFeed skips promoted duplicate by media URL an
     }],
     findExistingMediaGroup: async (query) => {
       mediaGroupQueries.push(query);
-      if (query.where?.url === 'https://pbs.twimg.com/media/promoted.jpg?format=jpg&name=orig') {
-        return { get: () => undefined };
+      if (query.where?.id === 'promoted-group') {
+        return {
+          get: (key: string) => key === 'id' ? 'promoted-group' : undefined,
+          update: async () => undefined,
+        };
       }
       return null;
     },
     findExistingStagingFanart: async () => null,
+    findExistingMedia: async (query) => {
+      if (query.where?.url === 'https://pbs.twimg.com/media/promoted.jpg?format=jpg&name=orig') {
+        return { get: (key: string) => key === 'group_id' ? 'promoted-group' : undefined };
+      }
+      return null;
+    },
     createStagingFanart: async () => {
       createCount++;
       return { get: (key: string) => key === 'id' ? 'new-staging' : undefined } as any;
@@ -395,13 +410,13 @@ test('TwitterMonitorService.processFeed skips promoted duplicate by media URL an
     assert.equal(result.newCandidates, 0);
     assert.equal(createCount, 0);
     assert.equal(mediaGroupQueries.length, 2);
-    assert.equal(mediaGroupQueries[1].where.url, 'https://pbs.twimg.com/media/promoted.jpg?format=jpg&name=orig');
+    assert.equal(mediaGroupQueries[1].where.id, 'promoted-group');
   } finally {
     resetTwitterMonitorServiceDepsForTest();
   }
 });
 
-test('TwitterMonitorService.processFeed marks official retweet when canonical staging duplicate is found', async () => {
+test('TwitterMonitorService.processFeed skips official retweet when canonical staging duplicate is found', async () => {
   const updates: any[] = [];
   const notifications: any[] = [];
   let createCount = 0;
@@ -456,11 +471,138 @@ test('TwitterMonitorService.processFeed marks official retweet when canonical st
     const result = await TwitterMonitorService.processFeed('https://rss.example.com/user/zutomayo_art', 'official');
     assert.equal(result.newCandidates, 0);
     assert.equal(createCount, 0);
-    assert.deepEqual(updates, [{ retweeted_by_handle: 'another_official,zutomayo_art' }]);
+    assert.deepEqual(updates, []);
+    assert.equal(notifications.length, 0);
+  } finally {
+    resetTwitterMonitorServiceDepsForTest();
+  }
+});
+
+test('TwitterMonitorService.processFeed skips official tweet already present in staging without notification', async () => {
+  const notifications: any[] = [];
+  const findStagingQueries: any[] = [];
+  let createCount = 0;
+
+  const existingStaging = {
+    get: (key: string) => ({
+      id: 'existing-official',
+      status: 'rejected',
+    } as any)[key],
+  };
+
+  setTwitterMonitorServiceDepsForTest({
+    parseURL: async () => ({
+      items: [{
+        title: 'ZUTOMAYO ART (@zutomayo_art): official RT',
+        link: 'https://x.com/zutomayo_art/status/8888888888888888888',
+        isoDate: '2026-05-28T12:34:56.000Z',
+        creator: 'ZUTOMAYO ART (@zutomayo_art)',
+      }],
+    }),
+    extractMediaFromTweet: async () => [{
+      url: 'https://pbs.twimg.com/media/already-staged.jpg?format=jpg&name=orig',
+      type: 'image',
+      text: 'official RT',
+      user_name: 'Original Artist',
+      user_screen_name: 'original_artist',
+      date: '2026-05-28T12:34:56.000Z',
+      tweet_id: '9999999999999999999',
+      tweet_url: buildCanonicalTweetUrl('9999999999999999999'),
+      requested_tweet_id: '8888888888888888888',
+      hashtags: [],
+    }],
+    findExistingMediaGroup: async () => null,
+    findExistingStagingFanart: async (query) => {
+      findStagingQueries.push(query);
+      return query.where?.tweet_id === '9999999999999999999' && !query.where?.media_url ? existingStaging : null;
+    },
+    createStagingFanart: async () => {
+      createCount++;
+      return { get: (key: string) => key === 'id' ? 'new-staging' : undefined } as any;
+    },
+    sendFanartReviewNotification: async (payload) => {
+      notifications.push(payload);
+      return true;
+    },
+  });
+
+  try {
+    const result = await TwitterMonitorService.processFeed('https://rss.example.com/user/zutomayo_art', 'official');
+    assert.equal(result.newCandidates, 0);
+    assert.equal(createCount, 0);
+    assert.equal(notifications.length, 0);
+    assert.equal(findStagingQueries.length, 1);
+    assert.deepEqual(findStagingQueries[0].attributes, ['id', 'status']);
+  } finally {
+    resetTwitterMonitorServiceDepsForTest();
+  }
+});
+
+test('TwitterMonitorService.processFeed notifies fanart retweet when staging media URL matches by normalized URL', async () => {
+  const notifications: any[] = [];
+  const updates: any[] = [];
+  let createCount = 0;
+
+  const existingStaging = {
+    get: (key: string) => ({
+      id: 'normalized-staging',
+      media_url: 'https://pbs.twimg.com/media/HJFM3SlasAEiMEf.jpg?name=orig',
+      retweeted_by_handle: null,
+      author_handle: 'original_artist',
+      status: 'rejected',
+    } as any)[key],
+    update: async (payload: any) => {
+      updates.push(payload);
+      return existingStaging;
+    },
+  };
+
+  setTwitterMonitorServiceDepsForTest({
+    parseURL: async () => ({
+      items: [{
+        title: 'Fan Account (@fan_reposter): RT',
+        link: 'https://x.com/fan_reposter/status/1010101010101010101',
+        isoDate: '2026-05-29T12:34:56.000Z',
+        creator: 'Fan Account (@fan_reposter)',
+      }],
+    }),
+    extractMediaFromTweet: async () => [{
+      url: 'https://pbs.twimg.com/media/HJFM3SlasAEiMEf?format=jpg&name=orig',
+      type: 'image',
+      text: 'fanart RT',
+      user_name: 'Original Artist',
+      user_screen_name: 'original_artist',
+      date: '2026-05-29T12:34:56.000Z',
+      tweet_id: '2058886118477836622',
+      tweet_url: buildCanonicalTweetUrl('2058886118477836622'),
+      requested_tweet_id: '1010101010101010101',
+      hashtags: [],
+    }],
+    findExistingMediaGroup: async () => null,
+    findExistingStagingFanart: async () => null,
+    findAllStagingFanart: async (query) => {
+      assert.equal(query.where?.tweet_id, '2058886118477836622');
+      return [existingStaging];
+    },
+    createStagingFanart: async () => {
+      createCount++;
+      return { get: (key: string) => key === 'id' ? 'new-staging' : undefined } as any;
+    },
+    sendFanartReviewNotification: async (payload) => {
+      notifications.push(payload);
+      return true;
+    },
+  });
+
+  try {
+    const result = await TwitterMonitorService.processFeed('https://rss.example.com/user/fan_reposter', 'fanart');
+    assert.equal(result.newCandidates, 0);
+    assert.equal(createCount, 0);
+    assert.deepEqual(updates, [{ retweeted_by_handle: 'fan_reposter' }]);
     assert.equal(notifications.length, 1);
-    assert.equal(notifications[0].stagingId, 'canonical-staging');
-    assert.match(notifications[0].body, /轉發者: @zutomayo_art/);
-    assert.match(notifications[0].body, /狀態: approved/);
+    assert.equal(notifications[0].stagingId, 'normalized-staging');
+    assert.match(notifications[0].body, /轉發者: @fan_reposter/);
+    assert.match(notifications[0].body, /狀態: rejected/);
   } finally {
     resetTwitterMonitorServiceDepsForTest();
   }

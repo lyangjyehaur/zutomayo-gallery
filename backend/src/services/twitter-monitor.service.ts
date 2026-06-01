@@ -21,6 +21,7 @@ type TwitterMonitorDeps = {
   findExistingMediaGroup: (options: any) => Promise<any>;
   findExistingMedia: (options: any) => Promise<any>;
   findExistingStagingFanart: (options: any) => Promise<any>;
+  findAllStagingFanart: (options: any) => Promise<any[]>;
   createStagingFanart: (payload: any) => Promise<any>;
   sendFanartReviewNotification: typeof TelegramBotService.sendFanartReviewNotification;
 };
@@ -32,6 +33,7 @@ const defaultDeps: TwitterMonitorDeps = {
   findExistingMediaGroup: (options) => MediaGroupModel.findOne(options),
   findExistingMedia: (options) => MediaModel.findOne(options),
   findExistingStagingFanart: (options) => StagingFanartModel.findOne(options),
+  findAllStagingFanart: (options) => StagingFanartModel.findAll(options),
   createStagingFanart: (payload) => StagingFanartModel.create(payload),
   sendFanartReviewNotification: (payload) => TelegramBotService.sendFanartReviewNotification(payload),
 };
@@ -56,6 +58,12 @@ const resolveMediaType = (media: TwitterMedia, url: string) => {
 const safeDate = (value: string | Date | undefined) => {
   const date = value ? new Date(value) : new Date();
   return Number.isNaN(date.getTime()) ? new Date() : date;
+};
+
+const normalizeTwitterMediaUrl = (url: string): string => {
+  const match = url.match(/\/media\/([A-Za-z0-9_-]+)/);
+  if (match) return `media:${match[1]}`;
+  return url.toLowerCase().split('?')[0];
 };
 
 const extractHandleFromRssItem = (item: RssTweetItem) => {
@@ -250,6 +258,17 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
         continue;
       }
 
+      if (contentType === 'official') {
+        const anyStagingForTweet = await deps.findExistingStagingFanart({
+          where: { tweet_id: sourceTweetId },
+          attributes: ['id', 'status'],
+        });
+        if (anyStagingForTweet) {
+          console.log(`[Twitter Monitor] [Dedup] official tweet=${sourceTweetId} already in staging (${anyStagingForTweet.get('status')}), skip`);
+          continue;
+        }
+      }
+
       console.log(`[Twitter Monitor] New tweet candidate found: ${sourceTweetLink}`);
 
       for (const media of mediaList) {
@@ -266,6 +285,24 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
             notifiedTweetIds.add(sourceTweetId);
           }
           continue;
+        }
+
+        if (contentType !== 'official') {
+          const normalizedUrl = normalizeTwitterMediaUrl(originalMediaUrl);
+          const allStagingForTweet = await deps.findAllStagingFanart({
+            where: { tweet_id: sourceTweetId },
+            attributes: ['id', 'media_url', 'status', 'retweeted_by_handle', 'author_handle'],
+          });
+          const matchedByNormalized = allStagingForTweet.find(
+            (record: any) => normalizeTwitterMediaUrl(String(record.get('media_url'))) === normalizedUrl
+          );
+          if (matchedByNormalized) {
+            if (retweetedByHandle && !notifiedTweetIds.has(sourceTweetId)) {
+              await markOfficialRetweetOnStaging(matchedByNormalized, retweetedByHandle, sourceTweetLink, contentType, tweetHandle);
+              notifiedTweetIds.add(sourceTweetId);
+            }
+            continue;
+          }
         }
 
         const existingByUrl = await deps.findExistingStagingFanart({
