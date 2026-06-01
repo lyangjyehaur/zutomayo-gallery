@@ -130,6 +130,9 @@ export function AdminStagingFanartPage() {
   const [contentTypeFilter, setContentTypeFilter] = useState<string>(() => {
     return initialSettings?.contentTypeFilter || '';
   });
+  const [authorHandleFilter, setAuthorHandleFilter] = useState<string>(() => {
+    return initialSettings?.authorHandleFilter || '';
+  });
   const [sortBy, setSortBy] = useState<string>(() => {
     return initialSettings?.sortBy || 'newest';
   });
@@ -150,6 +153,7 @@ export function AdminStagingFanartPage() {
       maxItems,
       crawlerContentType,
       contentTypeFilter,
+      authorHandleFilter,
       sortBy
     };
     try {
@@ -157,7 +161,7 @@ export function AdminStagingFanartPage() {
     } catch {
       toast.error('篩選設定保存失敗，請檢查瀏覽器隱私模式或存儲空間');
     }
-  }, [page, viewStatus, searchTerms, startDate, endDate, maxItems, crawlerContentType, contentTypeFilter, sortBy]);
+  }, [page, viewStatus, searchTerms, startDate, endDate, maxItems, crawlerContentType, contentTypeFilter, authorHandleFilter, sortBy]);
 
   const fetchMvs = useCallback(async () => {
     try {
@@ -202,8 +206,9 @@ export function AdminStagingFanartPage() {
     setIsLoading(true);
     try {
       const ctParam = contentTypeFilter ? `&contentType=${contentTypeFilter}` : '';
+      const authorParam = authorHandleFilter ? `&authorHandle=${encodeURIComponent(authorHandleFilter.trim().replace(/^@/, ''))}` : '';
       const sortParam = sortBy !== 'newest' ? `&sort=${sortBy}` : '';
-      const res = await adminFetch(`${baseApiUrl}/staging-fanarts?page=${p}&limit=60&status=${status}${ctParam}${sortParam}`);
+      const res = await adminFetch(`${baseApiUrl}/staging-fanarts?page=${p}&limit=60&status=${status}${ctParam}${authorParam}${sortParam}`);
       const data = await res.json();
       if (data.success) {
         setFanarts(data.data);
@@ -228,7 +233,7 @@ export function AdminStagingFanartPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [baseApiUrl, contentTypeFilter, sortBy]);
+  }, [baseApiUrl, contentTypeFilter, authorHandleFilter, sortBy]);
 
   useEffect(() => {
     fetchFanarts(page, viewStatus);
@@ -543,6 +548,17 @@ export function AdminStagingFanartPage() {
               <option value="collaboration">畫師綜合</option>
               <option value="cosplay">Cosplay</option>
             </select>
+            <Input
+              value={authorHandleFilter}
+              onChange={(e) => {
+                setAuthorHandleFilter(e.target.value);
+                setPage(1);
+                setSelectedCards(new Set());
+                setBatchSelectedMvs([]);
+              }}
+              placeholder="帳號篩選 (不含@)"
+              className="border-2 border-black font-bold shadow-neo-sm h-8 w-[140px] bg-white"
+            />
             <select
               value={sortBy}
               onChange={(e) => {
@@ -790,19 +806,29 @@ export function AdminStagingFanartPage() {
                         {f.author_name || ''}{f.author_handle ? ` @${f.author_handle}` : ''}
                       </span>
                     )}
-                    <span className="truncate" title={f.tweet_id}>ID: {f.tweet_id}</span>
+                    <span className="truncate text-[9px] opacity-30 hover:opacity-70 transition-opacity cursor-help" title={f.tweet_id}>
+                      ...{f.tweet_id.slice(-6)}
+                    </span>
                     {f.retweeted_by_handle && (
-                      <span className="truncate text-blue-700" title={f.retweeted_by_handle}>
-                        官方轉發: {f.retweeted_by_handle.split(',').map(handle => `@${handle.trim().replace(/^@/, '')}`).join(', ')}
+                      <span className="truncate text-blue-700 font-bold" title={f.retweeted_by_handle}>
+                        🔄 {f.retweeted_by_handle.split(',').map(handle => `@${handle.trim().replace(/^@/, '')}`).join(', ')}
                       </span>
                     )}
                     <span>Type: {f.media_type}</span>
-                    <span className="truncate" title={new Date(f.crawled_at).toLocaleString()}>Date: {new Date(f.crawled_at).toLocaleDateString()}</span>
+                    {f.post_date ? (
+                      <span className="truncate" title={`抓取: ${new Date(f.crawled_at).toLocaleString()}`}>
+                        📅 {new Date(f.post_date).toLocaleDateString()}
+                      </span>
+                    ) : (
+                      <span className="truncate" title={`抓取: ${new Date(f.crawled_at).toLocaleString()}`}>
+                        📅 {new Date(f.crawled_at).toLocaleDateString()}
+                      </span>
+                    )}
                   </div>
-                  <div className="flex flex-wrap gap-2 text-[10px] sm:text-xs font-bold">
-                    <span>❤️ {f.like_count ?? 0}</span>
-                    <span>🔁 {f.retweet_count ?? 0}</span>
-                    <span>👁 {f.view_count ?? 0}</span>
+                  <div className="flex flex-wrap gap-2 text-[10px] sm:text-xs font-bold tabular-nums">
+                    <span title="Likes">❤{f.like_count ?? 0}</span>
+                    <span title="Retweets">🔁{f.retweet_count ?? 0}</span>
+                    <span title="Views">👁{f.view_count ?? 0}</span>
                   </div>
                   <div className="flex items-center gap-1 text-[10px] sm:text-xs">
                     <span className="font-bold">Type:</span>

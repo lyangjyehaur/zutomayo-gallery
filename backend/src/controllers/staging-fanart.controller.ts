@@ -144,9 +144,13 @@ export const getStagingFanarts = async (req: Request, res: Response) => {
   }
 
   const contentType = req.query.contentType as string | undefined;
+  const authorHandle = typeof req.query.authorHandle === 'string' ? req.query.authorHandle.trim() : '';
   const where: any = { status };
   if (contentType && (contentType === 'fanart' || contentType === 'official' || contentType === 'cosplay')) {
     where.content_type = contentType;
+  }
+  if (authorHandle) {
+    where.author_handle = authorHandle;
   }
 
   const sort = (req.query.sort as string) || 'newest';
