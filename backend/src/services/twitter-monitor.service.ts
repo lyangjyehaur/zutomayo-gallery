@@ -59,8 +59,15 @@ const safeDate = (value: string | Date | undefined) => {
 };
 
 const extractHandleFromRssItem = (item: RssTweetItem) => {
+  // 1. 從 creator/author/title 提取 @handle
   const source = item.creator || item.author || item.title || '';
-  return source.match(/@([A-Za-z0-9_]+)/)?.[1] || '';
+  const handleFromText = source.match(/@([A-Za-z0-9_]+)/)?.[1];
+  if (handleFromText) return handleFromText;
+
+  // 2. 從 link URL 提取 handle（https://x.com/{handle}/status/{id}）
+  const link = item.link || '';
+  const handleFromUrl = link.match(/(?:twitter\.com|x\.com)\/([A-Za-z0-9_]+)\/status/i)?.[1];
+  return handleFromUrl || '';
 };
 
 const appendHandle = (currentHandle: unknown, tweetHandle: string) => {
@@ -197,7 +204,7 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
       const firstMedia = mediaList[0];
       const tweetText = firstMedia.text || item.title || '';
       const tweetAuthor = firstMedia.user_name || item.creator || '';
-      const tweetHandle = firstMedia.user_screen_name || '';
+      const tweetHandle = firstMedia.user_screen_name || extractHandleFromRssItem(item) || '';
       const retweetedByHandle = extractHandleFromRssItem(item) || tweetHandle;
       const tweetDate = firstMedia.date || item.isoDate || new Date().toISOString();
       const isRetweet = sourceTweetId !== tweetId;
