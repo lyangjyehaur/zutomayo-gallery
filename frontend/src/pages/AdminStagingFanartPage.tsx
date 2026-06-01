@@ -129,6 +129,7 @@ export function AdminStagingFanartPage() {
   const [selectedArtists, setSelectedArtists] = useState<Record<string, string>>({});
   const [suggestedArtists, setSuggestedArtists] = useState<Record<string, string>>({});
   const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
+  const [reparsingCards, setReparsingCards] = useState<Set<string>>(new Set());
   const [batchSelectedMvs, setBatchSelectedMvs] = useState<string[]>([]);
   const [contentTypeFilter, setContentTypeFilter] = useState<string>(() => {
     return initialSettings?.contentTypeFilter || '';
@@ -385,6 +386,32 @@ export function AdminStagingFanartPage() {
       }
     } catch (error: any) {
       toast.error(formatApiError(error, `Failed to ${action} staging fanart`));
+    }
+  };
+
+  const handleReparse = async (id: string) => {
+    setReparsingCards(prev => new Set(prev).add(id));
+    try {
+      const res = await adminFetch(`${baseApiUrl}/staging-fanarts/${id}/reparse`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (data.data) {
+          setFanarts(prev => prev.map(f => f.id === id ? data.data : f));
+        }
+        toast.success(data.message === 'NO_CHANGES' ? '沒有可更新的解析資料' : '已重新解析');
+      } else {
+        toast.error(formatApiError(data, '重新解析失敗'));
+      }
+    } catch (error: any) {
+      toast.error(formatApiError(error, '重新解析失敗'));
+    } finally {
+      setReparsingCards(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   };
 
@@ -951,8 +978,18 @@ export function AdminStagingFanartPage() {
                     </div>
                   ) : null}
 
-                  {viewStatus === 'pending' || viewStatus === 'reviewed' ? (
-                    <div className="mt-auto grid grid-cols-3 gap-2 pt-2">
+                  <div className="mt-auto pt-2">
+                    <Button
+                      className="mb-2 h-7 w-full bg-white text-black hover:bg-gray-100 border border-black shadow-none font-bold text-[10px]"
+                      onClick={() => handleReparse(f.id)}
+                      disabled={reparsingCards.has(f.id)}
+                      title="重新解析推文資料"
+                    >
+                      <i className={`hn hn-refresh sm:mr-1 ${reparsingCards.has(f.id) ? 'animate-spin' : ''}`} />
+                      <span className="hidden sm:inline">{reparsingCards.has(f.id) ? '解析中' : '重新解析'}</span>
+                    </Button>
+                    {viewStatus === 'pending' || viewStatus === 'reviewed' ? (
+                    <div className="grid grid-cols-3 gap-2">
                       <Button
                         className="w-full bg-red-500 text-white hover:bg-red-600 border-2 border-black shadow-neo-sm font-black uppercase tracking-wider text-xs h-8"
                         onClick={() => handleAction(f.id, 'reject')}
@@ -973,7 +1010,7 @@ export function AdminStagingFanartPage() {
                       </Button>
                     </div>
                   ) : viewStatus === 'on_hold' ? (
-                    <div className="mt-auto grid grid-cols-3 gap-2 pt-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <Button
                         className="w-full bg-red-500 text-white hover:bg-red-600 border-2 border-black shadow-neo-sm font-black uppercase tracking-wider text-xs h-8"
                         onClick={() => handleAction(f.id, 'reject')}
@@ -994,7 +1031,7 @@ export function AdminStagingFanartPage() {
                       </Button>
                     </div>
                   ) : (
-                    <div className="mt-auto pt-2">
+                    <div>
                       <Button
                         className="w-full bg-yellow-200 text-black hover:bg-yellow-300 border-2 border-black shadow-neo-sm font-black uppercase tracking-wider text-xs h-8"
                         onClick={() => handleAction(f.id, 'restore')}
@@ -1003,6 +1040,7 @@ export function AdminStagingFanartPage() {
                       </Button>
                     </div>
                   )}
+                  </div>
                 </div>
               </div>
             ))}

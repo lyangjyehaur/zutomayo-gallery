@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { StagingFanartModel, MediaGroupModel, MediaModel, CrawlerStateModel, MVMediaModel, ArtistModel, ArtistMediaModel } from '../models/index.js';
 import { MVService } from '../services/mv.service.js';
 import { nanoid } from 'nanoid';
@@ -492,6 +492,74 @@ export const holdStagingFanart = async (req: Request, res: Response) => {
   const { id } = req.params;
   const result = await applyStagingReviewAction(id, 'hold');
   res.json({ success: true, message: result.alreadyProcessed ? 'Already on hold' : 'Put on hold successfully', data: result });
+};
+
+export const reparseStagingFanart = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const record = await StagingFanartModel.findByPk(id);
+    if (!record) {
+      res.status(404).json({ success: false, error: 'NOT_FOUND' });
+      return;
+    }
+
+    const originalUrl = String(record.get('original_url') || '');
+    if (!originalUrl) {
+      res.status(400).json({ success: false, error: 'NO_URL' });
+      return;
+    }
+
+    const { TwitterService } = await import('../services/twitter.service.js');
+    const mediaList = await TwitterService.extractMediaFromTweet(originalUrl, undefined, { fetch: globalThis.fetch });
+
+    if (!mediaList || mediaList.length === 0) {
+      res.status(422).json({ success: false, error: 'EXTRACT_FAILED' });
+      return;
+    }
+
+    const firstMedia = mediaList[0];
+    const newTweetId = firstMedia.tweet_id || '';
+    const newAuthorHandle = firstMedia.user_screen_name || '';
+    const newAuthorName = firstMedia.user_name || '';
+    const newMediaUrl = firstMedia.url || '';
+    const newThumbnail = firstMedia.thumbnail || null;
+
+    const update: Record<string, unknown> = {};
+    const setIfChanged = (field: string, value: unknown) => {
+      if (String(record.get(field) ?? '') !== String(value ?? '')) {
+        update[field] = value;
+      }
+    };
+
+    if (newTweetId && newTweetId !== String(record.get('tweet_id') || '')) {
+      update.tweet_id = newTweetId;
+      update.original_url = newAuthorHandle
+        ? `https://x.com/${newAuthorHandle}/status/${newTweetId}`
+        : `https://x.com/i/status/${newTweetId}`;
+    }
+    if (newAuthorHandle) setIfChanged('author_handle', newAuthorHandle);
+    if (newAuthorName) setIfChanged('author_name', newAuthorName);
+    if (newMediaUrl) setIfChanged('media_url', newMediaUrl);
+    if (newThumbnail) {
+      setIfChanged('thumbnail_url', newThumbnail);
+      setIfChanged('original_thumbnail_url', newThumbnail);
+    }
+    if (firstMedia.like_count !== undefined && firstMedia.like_count !== null) setIfChanged('like_count', firstMedia.like_count);
+    if (firstMedia.retweet_count !== undefined && firstMedia.retweet_count !== null) setIfChanged('retweet_count', firstMedia.retweet_count);
+    if (firstMedia.view_count !== undefined && firstMedia.view_count !== null) setIfChanged('view_count', firstMedia.view_count);
+
+    if (Object.keys(update).length === 0) {
+      res.json({ success: true, data: record, message: 'NO_CHANGES' });
+      return;
+    }
+
+    await record.update(update);
+
+    const updated = await StagingFanartModel.findByPk(id);
+    res.json({ success: true, data: updated, updatedFields: Object.keys(update) });
+  } catch (error) {
+    next(error);
+  }
 };
 
 export async function applyStagingReviewAction(id: string, action: StagingReviewAction) {
