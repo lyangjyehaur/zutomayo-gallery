@@ -9,7 +9,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.3-3178c6)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-38b2ac)
 
-修訂日期：2026-05-08
+修訂日期：2026-06-01
 
 ---
 
@@ -41,6 +41,10 @@
 - 📊 **資料可視化與編輯**：內建 Monaco Editor 支援直接編輯/檢視資料，並提供完善的管理介面。
 - 💬 **互動留言系統**：整合 Waline 留言板，支援自定義 Emoji、Reaction 表態與 Pageview 瀏覽量統計。
 - ⚡ **極致效能優化**：嚴格的 React.memo 渲染控制、組件懶加載與 Vite Chunk 拆分，確保頁面載入如絲般順滑。
+- 📋 **內容分類系統**：支援 Fanart / 官方 / 畫師綜合 / Cosplay 四種內容分類，配合兩階段審核流程（Telegram 初審 → review-app 關聯 MV）。
+- 🐦 **Twitter 監聽與自動入庫**：透過 RSSHub 監聽畫師與 hashtag 推文，自動抓取媒體並寫入暫存表，支援轉推去重與官方帳號轉發標記。
+- 📬 **Telegram 分類推送**：通知自動分類到對應的 Telegram Topic（畫師獨立 topic / 二創 / 系統通知），支援帳號獨立 topic。
+- 🎭 **Cosplay 模組**：獨立的 Cosplay 內容管理與展示，與 Fanart 共用相同的審核與展示架構。
 
 ---
 

@@ -9,7 +9,7 @@ An online gallery for ZUTOMAYO MV illustration assets, with an admin panel for d
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.3-3178c6)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-38b2ac)
 
-Last updated: 2026-05-08
+Last updated: 2026-06-01
 
 ---
 
