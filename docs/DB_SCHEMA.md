@@ -301,6 +301,7 @@
 | `enabled` | `BOOLEAN` | `DEFAULT true` | 是否啟用監聽；停用項目仍保留在管理介面 |
 | `note` | `TEXT` | `NULL` | 管理備註 |
 | `content_type` | `VARCHAR(20)` | `DEFAULT 'fanart'` | 內容分類 (`fanart`/`official`/`collaboration`/`cosplay`)，爬取時繼承到 staging |
+| `separate_topic` | `BOOLEAN` | `DEFAULT false` | 是否將此監聽目標的通知發送到獨立 Telegram topic |
 | `created_at` | `TIMESTAMP` | | 建立時間 |
 | `updated_at` | `TIMESTAMP` | | 更新時間 |
 

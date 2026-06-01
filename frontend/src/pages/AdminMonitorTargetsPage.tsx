@@ -4,6 +4,7 @@ import { Edit2, Plus, RefreshCw, Save, Trash2, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { adminFetch, getMonitorTargetsApiBase } from "@/lib/admin-api"
 import { formatApiError } from "@/lib/api-error"
@@ -19,6 +20,7 @@ type MonitorTarget = {
   enabled: boolean
   note?: string | null
   content_type?: string
+  separate_topic?: boolean
   created_at?: string
   updated_at?: string
 }
@@ -36,7 +38,7 @@ type SourcesResponse = {
   hashtags: MonitorTarget[]
 }
 
-const emptyForm = { handle: "", label: "", note: "", content_type: "fanart" }
+const emptyForm = { handle: "", label: "", note: "", content_type: "fanart", separate_topic: false }
 
 const displayHandle = (type: MonitorTargetType, handle: string) => {
   return type === "hashtag" ? `#${handle}` : `@${handle}`
@@ -189,6 +191,7 @@ export function AdminMonitorTargetsPage() {
       label: target.label || "",
       note: target.note || "",
       content_type: target.content_type || "fanart",
+      separate_topic: !!target.separate_topic,
     })
   }
 
@@ -271,7 +274,7 @@ export function AdminMonitorTargetsPage() {
           <h2 className="font-black tracking-wider mb-4">
             {activeTab === "user" ? "手動用戶監聽" : "手動 Hashtag 監聽"}
           </h2>
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_minmax(120px,auto)_minmax(220px,2fr)_auto] gap-2 items-start mb-4">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_minmax(120px,auto)_minmax(160px,auto)_minmax(200px,2fr)_auto] gap-2 items-start mb-4">
             <Input
               value={form.handle}
               onChange={(e) => setForm((prev) => ({ ...prev, handle: e.target.value }))}
@@ -293,6 +296,13 @@ export function AdminMonitorTargetsPage() {
               <option value="official">官方</option>
               <option value="cosplay">Cosplay</option>
             </select>
+            <label className="h-10 border-2 border-black bg-white px-3 flex items-center justify-between gap-3 font-bold text-sm">
+              <span>獨立 topic</span>
+              <Switch
+                checked={form.separate_topic}
+                onCheckedChange={(checked) => setForm((prev) => ({ ...prev, separate_topic: checked }))}
+              />
+            </label>
             <Input
               value={form.note}
               onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
@@ -322,7 +332,7 @@ export function AdminMonitorTargetsPage() {
                 return (
                   <div key={target.id} className="border-2 border-black bg-secondary-background p-3">
                     {isEditing ? (
-                      <div className="grid grid-cols-1 lg:grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_minmax(100px,auto)_minmax(220px,2fr)_auto] gap-2 items-start">
+                      <div className="grid grid-cols-1 lg:grid-cols-[minmax(150px,1fr)_minmax(150px,1fr)_minmax(100px,auto)_minmax(150px,auto)_minmax(200px,2fr)_auto] gap-2 items-start">
                         <Input
                           value={editForm.handle}
                           onChange={(e) => setEditForm((prev) => ({ ...prev, handle: e.target.value }))}
@@ -343,6 +353,13 @@ export function AdminMonitorTargetsPage() {
                           <option value="official">官方</option>
                           <option value="cosplay">Cosplay</option>
                         </select>
+                        <label className="h-10 border-2 border-black bg-white px-3 flex items-center justify-between gap-3 font-bold text-sm">
+                          <span>獨立 topic</span>
+                          <Switch
+                            checked={editForm.separate_topic}
+                            onCheckedChange={(checked) => setEditForm((prev) => ({ ...prev, separate_topic: checked }))}
+                          />
+                        </label>
                         <Textarea
                           value={editForm.note}
                           onChange={(e) => setEditForm((prev) => ({ ...prev, note: e.target.value }))}
@@ -367,6 +384,11 @@ export function AdminMonitorTargetsPage() {
                             <span className={`text-xs font-mono border-2 border-black px-2 py-0.5 ${target.content_type === 'official' ? 'bg-blue-100' : target.content_type === 'cosplay' ? 'bg-purple-100' : 'bg-orange-100'}`}>
                               {target.content_type === 'official' ? '官方' : target.content_type === 'cosplay' ? 'Cosplay' : 'Fanart'}
                             </span>
+                            {target.separate_topic ? (
+                              <span className="text-xs font-mono border-2 border-black px-2 py-0.5 bg-ztmy-green/40">
+                                獨立 topic
+                              </span>
+                            ) : null}
                             <span className={`text-xs font-mono border-2 border-black px-2 py-0.5 ${target.enabled ? "bg-ztmy-green/60" : "bg-red-100"}`}>
                               {target.enabled ? "啟用" : "停用"}
                             </span>

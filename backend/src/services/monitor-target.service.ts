@@ -12,6 +12,7 @@ export type MonitorFeedTarget = {
   label?: string | null;
   source: 'artist' | 'manual' | 'env';
   content_type: ContentType;
+  separate_topic?: boolean;
 };
 
 export type ArtistTwitterSource = {
@@ -160,6 +161,7 @@ export const createMonitorTarget = async (payload: any) => {
     enabled: typeof payload.enabled === 'boolean' ? payload.enabled : true,
     note: typeof payload.note === 'string' && payload.note.trim() ? payload.note.trim() : null,
     content_type: contentType,
+    separate_topic: Boolean(payload.separate_topic),
   } as any);
 };
 
@@ -183,6 +185,7 @@ export const updateMonitorTarget = async (id: string, payload: any) => {
   if ('note' in payload) updateData.note = typeof payload.note === 'string' && payload.note.trim() ? payload.note.trim() : null;
   if ('enabled' in payload) updateData.enabled = Boolean(payload.enabled);
   if ('content_type' in payload && isContentType(payload.content_type)) updateData.content_type = payload.content_type;
+  if ('separate_topic' in payload) updateData.separate_topic = Boolean(payload.separate_topic);
 
   await target.update(updateData);
   return target;
@@ -221,11 +224,25 @@ export const getMonitoredFeedTargets = async (): Promise<MonitorFeedTarget[]> =>
   artistUsers.forEach((artist) => push({ type: 'user', handle: artist.handle, label: artist.name, source: 'artist', content_type: 'official' }));
   manualRows.forEach((row: any) => {
     const data = row.toJSON();
-    push({ type: 'user', handle: data.handle, label: data.label, source: 'manual', content_type: data.content_type || 'fanart' });
+    push({
+      type: 'user',
+      handle: data.handle,
+      label: data.label,
+      source: 'manual',
+      content_type: data.content_type || 'fanart',
+      separate_topic: data.separate_topic || false,
+    });
   });
   hashtagRows.forEach((row: any) => {
     const data = row.toJSON();
-    push({ type: 'hashtag', handle: data.handle, label: data.label, source: 'manual', content_type: data.content_type || 'fanart' });
+    push({
+      type: 'hashtag',
+      handle: data.handle,
+      label: data.label,
+      source: 'manual',
+      content_type: data.content_type || 'fanart',
+      separate_topic: data.separate_topic || false,
+    });
   });
 
   return targets;

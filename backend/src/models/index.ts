@@ -368,6 +368,7 @@ export const MonitorTargetModel = sequelize.define('MonitorTarget', {
   enabled: { type: DataTypes.BOOLEAN, defaultValue: true, comment: '是否啟用監聽' },
   note: { type: DataTypes.TEXT, allowNull: true, comment: '管理備註' },
   content_type: { type: DataTypes.STRING(20), defaultValue: 'fanart', comment: '內容分類 (fanart/official/cosplay)' },
+  separate_topic: { type: DataTypes.BOOLEAN, defaultValue: false, comment: '是否將此監聽目標的通知發送到獨立 Telegram topic' },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '建立時間' },
   updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '更新時間' },
 }, {

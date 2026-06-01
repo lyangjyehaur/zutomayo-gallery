@@ -276,11 +276,33 @@ async function getTopicIdForFanartReview({
   contentType,
   artistName,
   artistHandle,
+  separateTopic,
 }: {
   contentType?: string;
   artistName?: string;
   artistHandle?: string;
+  separateTopic?: boolean;
 }): Promise<number | undefined> {
+  if (separateTopic) {
+    try {
+      const artist = await findArtistForTopic({ artistName, artistHandle });
+      if (artist?.id && artist.name) {
+        const artistTopicId = await ensureArtistTopic(artist.id, artist.name);
+        if (artistTopicId) return artistTopicId;
+      }
+
+      const normalizedHandle = normalizeTwitterHandle(artistHandle);
+      const topicName = (artistName || artistHandle || '').trim();
+      if (normalizedHandle && topicName) {
+        const handleTopicId = await ensureArtistTopic(`handle:${normalizedHandle}`, topicName);
+        if (handleTopicId) return handleTopicId;
+      }
+    } catch (err) {
+      logger.warn({ err, artistName, artistHandle }, 'Failed to resolve Telegram separate topic; falling back to fanart topic');
+    }
+    return cachedTopicIds.fanart || undefined;
+  }
+
   if (contentType !== 'official') {
     return cachedTopicIds.fanart || undefined;
   }
@@ -385,6 +407,7 @@ export const TelegramBotService = {
     contentType,
     artistName,
     artistHandle,
+    separateTopic,
   }: {
     stagingId: string;
     title: string;
@@ -394,6 +417,7 @@ export const TelegramBotService = {
     contentType?: string;
     artistName?: string;
     artistHandle?: string;
+    separateTopic?: boolean;
   }): Promise<boolean> => {
     if (!bot || !cachedChatId) {
       logger.warn('Telegram Bot not configured, skipping fanart review notification');
@@ -415,7 +439,7 @@ export const TelegramBotService = {
       ]]
     };
 
-    const threadId = await getTopicIdForFanartReview({ contentType, artistName, artistHandle });
+    const threadId = await getTopicIdForFanartReview({ contentType, artistName, artistHandle, separateTopic });
 
     try {
       const options: any = {

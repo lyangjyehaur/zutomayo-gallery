@@ -59,6 +59,7 @@ const safeDate = (value: string | Date | undefined) => {
 export type FeedTarget = {
   feedUrl: string;
   contentType: string;
+  separateTopic?: boolean;
 };
 
 /**
@@ -76,7 +77,11 @@ export const collectFeedTargets = async (): Promise<FeedTarget[]> => {
     const url = buildTwitterRssFeedUrl(rssHubBase, target);
     if (seen.has(url)) continue;
     seen.add(url);
-    result.push({ feedUrl: url, contentType: target.content_type || 'fanart' });
+    result.push({
+      feedUrl: url,
+      contentType: target.content_type || 'fanart',
+      separateTopic: target.separate_topic || false,
+    });
   }
 
   if (legacyFeedUrl && !seen.has(legacyFeedUrl)) {
@@ -90,7 +95,7 @@ export const collectFeedTargets = async (): Promise<FeedTarget[]> => {
  * 處理單一 RSS feed：fetch → parse → extract media → 寫 staging → 發通知。
  * 回傳該 feed 產生的新候選數量。
  */
-export const processFeed = async (feedUrl: string, contentType: string = 'fanart'): Promise<{ feedUrl: string; newCandidates: number }> => {
+export const processFeed = async (feedUrl: string, contentType: string = 'fanart', separateTopic: boolean = false): Promise<{ feedUrl: string; newCandidates: number }> => {
   let feed: { items: RssTweetItem[] };
   try {
     feed = await deps.parseURL(feedUrl);
@@ -194,6 +199,7 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
           contentType,
           artistName: tweetAuthor,
           artistHandle: tweetHandle,
+          separateTopic,
         });
       }
 

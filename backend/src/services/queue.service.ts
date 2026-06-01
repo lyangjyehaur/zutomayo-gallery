@@ -58,7 +58,7 @@ if (isProduction || hasRedisUrl) {
       logger.info({ feedCount: feedTargets.length }, '[Twitter Monitor] Enqueuing feed jobs');
 
       for (const target of feedTargets) {
-        await twitterQueue!.add('check-feed', { feedUrl: target.feedUrl, contentType: target.contentType }, {
+        await twitterQueue!.add('check-feed', { feedUrl: target.feedUrl, contentType: target.contentType, separateTopic: target.separateTopic }, {
           attempts: 2,
           backoff: { type: 'exponential', delay: 3000 },
         });
@@ -69,8 +69,8 @@ if (isProduction || hasRedisUrl) {
     }
 
     if (job.name === 'check-feed') {
-      const { feedUrl, contentType } = job.data as { feedUrl: string; contentType?: string };
-      const result = await processFeed(feedUrl, contentType || 'fanart');
+      const { feedUrl, contentType, separateTopic } = job.data as { feedUrl: string; contentType?: string; separateTopic?: boolean };
+      const result = await processFeed(feedUrl, contentType || 'fanart', separateTopic || false);
       await job.updateProgress(100);
       return result;
     }

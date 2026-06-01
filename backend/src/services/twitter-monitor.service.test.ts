@@ -12,7 +12,7 @@ test('TwitterMonitorService.checkRss uses RSS item parser and does not skip when
   const notifications: any[] = [];
 
   setTwitterMonitorServiceDepsForTest({
-    getMonitoredFeedTargets: async () => [{ type: 'user', handle: 'zutomayo_art', source: 'manual' }],
+    getMonitoredFeedTargets: async () => [{ type: 'user', handle: 'zutomayo_art', source: 'manual', content_type: 'fanart' }],
     parseURL: async () => ({
       items: [{
         title: 'Artist (@artist): fallback #ZTMY',
@@ -112,6 +112,63 @@ test('TwitterMonitorService.processFeed passes official artist routing fields to
     assert.equal(notifications[0].contentType, 'official');
     assert.equal(notifications[0].artistName, 'ACAね');
     assert.equal(notifications[0].artistHandle, 'zutomayo');
+  } finally {
+    resetTwitterMonitorServiceDepsForTest();
+  }
+});
+
+test('TwitterMonitorService carries manual separate topic routing into Telegram review notification', async () => {
+  const notifications: any[] = [];
+
+  setTwitterMonitorServiceDepsForTest({
+    getMonitoredFeedTargets: async () => [{
+      type: 'user',
+      handle: 'manual_artist',
+      source: 'manual',
+      content_type: 'fanart',
+      separate_topic: true,
+    }],
+    parseURL: async () => ({
+      items: [{
+        title: 'Manual Artist (@manual_artist): fanart update',
+        link: 'https://x.com/manual_artist/status/3333333333333333333',
+        isoDate: '2026-05-24T12:34:56.000Z',
+        creator: 'Manual Artist',
+      }],
+    }),
+    extractMediaFromTweet: async () => [{
+      url: 'https://pbs.twimg.com/media/manual.jpg?format=jpg&name=orig',
+      type: 'image',
+      text: 'fanart update',
+      user_name: 'Manual Artist',
+      user_screen_name: 'manual_artist',
+      date: '2026-05-24T12:34:56.000Z',
+      tweet_id: '3333333333333333333',
+      tweet_url: buildCanonicalTweetUrl('3333333333333333333'),
+      requested_tweet_id: '3333333333333333333',
+      hashtags: [],
+    }],
+    findExistingMediaGroup: async () => null,
+    findExistingStagingFanart: async () => null,
+    createStagingFanart: async () => ({ get: (key: string) => key === 'id' ? 'staging-3' : undefined } as any),
+    sendFanartReviewNotification: async (payload) => {
+      notifications.push(payload);
+      return true;
+    },
+  });
+
+  try {
+    const targets = await TwitterMonitorService.collectFeedTargets();
+    assert.equal(targets.length, 1);
+    assert.equal(targets[0].separateTopic, true);
+
+    const result = await TwitterMonitorService.processFeed(targets[0].feedUrl, targets[0].contentType, targets[0].separateTopic);
+    assert.equal(result.newCandidates, 1);
+    assert.equal(notifications.length, 1);
+    assert.equal(notifications[0].contentType, 'fanart');
+    assert.equal(notifications[0].artistName, 'Manual Artist');
+    assert.equal(notifications[0].artistHandle, 'manual_artist');
+    assert.equal(notifications[0].separateTopic, true);
   } finally {
     resetTwitterMonitorServiceDepsForTest();
   }
