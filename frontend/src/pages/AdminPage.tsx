@@ -48,6 +48,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { materializeGroupAndStripLegacy } from "@/lib/admin-media"
+import { DatePicker } from "@/components/ui/date-picker"
 import { Progress } from '@/components/ui/progress';
 import { AdminSplitView, type AdminSplitGroup } from "@/components/admin/AdminSplitView"
 import {
@@ -2045,10 +2046,10 @@ export function AdminPage() {
                     <span className="opacity-70">完整日期</span>
                     <span className="text-[10px] font-mono opacity-40 normal-case">Full_Date</span>
                   </label>
-                  <Input 
-                    value={currentMV.date} 
-                    onChange={(e) => updateField('date', e.target.value)} 
-                    className={getErrorClass(currentMV.date)}
+                  <DatePicker
+                    value={currentMV.date ? new Date(currentMV.date + 'T00:00:00') : null}
+                    onChange={(d) => updateField('date', d ? d.toISOString().slice(0, 10) : '')}
+                    placeholder="選擇日期"
                   />
                 </div>
               </div>
