@@ -4,6 +4,7 @@ import {
   getAdminChangedData,
   getAdminVisibleImages,
   isAdminFieldIncomplete,
+  isAdminMVIncomplete,
 } from './admin-page-helpers';
 
 describe('admin page helpers', () => {
@@ -25,6 +26,27 @@ describe('admin page helpers', () => {
     expect(isAdminFieldIncomplete(undefined)).toBe(true);
     expect(isAdminFieldIncomplete('')).toBe(true);
     expect(isAdminFieldIncomplete([])).toBe(true);
+  });
+
+  it('only requires id, title, and one image url for MV completeness', () => {
+    expect(isAdminMVIncomplete({
+      id: 'mv-1',
+      title: 'MV title',
+      year: '',
+      date: '',
+      youtube: '',
+      bilibili: null,
+      description: '',
+      heroVideo: null,
+      images: [{ type: 'official', url: 'https://example.com/image.jpg', width: 0, height: 0 }],
+      creators: [],
+      albums: [],
+      keywords: [],
+    } as any)).toBe(false);
+
+    expect(isAdminMVIncomplete({ id: '', title: 'MV title', images: [{ url: 'https://example.com/image.jpg' }] } as any)).toBe(true);
+    expect(isAdminMVIncomplete({ id: 'mv-1', title: '  ', images: [{ url: 'https://example.com/image.jpg' }] } as any)).toBe(true);
+    expect(isAdminMVIncomplete({ id: 'mv-1', title: 'MV title', images: [{ url: ' ' }] } as any)).toBe(true);
   });
 
   it('includes modified MVs even if explicit changed-field tracking missed the edit', () => {

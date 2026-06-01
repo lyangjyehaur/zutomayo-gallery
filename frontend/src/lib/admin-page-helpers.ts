@@ -9,6 +9,14 @@ export const isAdminFieldIncomplete = (val: any) => {
   return false;
 };
 
+export const isAdminMVIncomplete = (mv: MVItem) => {
+  if (!mv.id || !mv.title?.trim()) return true;
+
+  if (!mv.images || mv.images.length === 0) return true;
+
+  return !mv.images.some((img) => img.url && img.url.trim() !== '');
+};
+
 export const getAdminVisibleImages = (
   images: any[] | undefined,
   imageTypeTab: AdminImageTypeTab,

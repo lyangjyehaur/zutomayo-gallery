@@ -25,6 +25,7 @@ import {
   getAdminChangedData,
   getAdminVisibleImages,
   isAdminFieldIncomplete,
+  isAdminMVIncomplete,
   isAdminVideoPreview,
 } from '@/lib/admin-page-helpers';
 import Editor from '@monaco-editor/react';
@@ -987,18 +988,8 @@ export function AdminPage() {
   // 動態檢測欄位是否為空 (支持未來新增的欄位)
   const isFieldIncomplete = isAdminFieldIncomplete;
 
-  // 檢測整個 MV 項目是否完整
-  const isMVIncomplete = (mv: MVItem) => {
-    // 1. 檢查頂層欄位 (id, title, year, youtube, 或是透過 Schema 工具新增的欄位)
-    const hasBasicEmpty = Object.values(mv).some(value => isFieldIncomplete(value));
-    
-    // 2. 深度檢查設定圖陣列中的每一項 (URL 不能為空，寬高不能為 0)
-    const hasImageEmpty = mv.images?.some(img => 
-      isFieldIncomplete(img.url) || isFieldIncomplete(img.width) || isFieldIncomplete(img.height)
-    );
-
-    return hasBasicEmpty || !!hasImageEmpty;
-  };
+  // 檢測整個 MV 項目是否完整：只要求基礎資訊與媒體關聯
+  const isMVIncomplete = isAdminMVIncomplete;
 
   const getErrorClass = (val: any) => isFieldIncomplete(val) ? 'border-red-500/50 bg-red-500/5' : '';
 
