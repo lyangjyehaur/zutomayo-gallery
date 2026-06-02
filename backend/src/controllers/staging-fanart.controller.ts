@@ -533,8 +533,9 @@ export const reparseStagingFanart = async (req: Request, res: Response, next: Ne
 
     if (newTweetId && newTweetId !== String(record.get('tweet_id') || '')) {
       update.tweet_id = newTweetId;
-      update.original_url = newAuthorHandle
-        ? `https://x.com/${newAuthorHandle}/status/${newTweetId}`
+      const handleForUrl = newAuthorHandle || String(record.get('author_handle') || '');
+      update.original_url = handleForUrl
+        ? `https://x.com/${handleForUrl}/status/${newTweetId}`
         : `https://x.com/i/status/${newTweetId}`;
     }
     if (newAuthorHandle) setIfChanged('author_handle', newAuthorHandle);
