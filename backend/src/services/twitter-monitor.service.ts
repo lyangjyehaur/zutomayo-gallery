@@ -124,8 +124,17 @@ const markOfficialRetweetOnStaging = async (existingStaging: any, retweetedByHan
     return;
   }
 
-  console.log(`[Twitter Monitor] [Staging-RT] id=${stagingId} marking @${retweetedByHandle}, sending notification`);
+  console.log(`[Twitter Monitor] [Staging-RT] id=${stagingId} marking @${retweetedByHandle}`);
   await existingStaging.update({ retweeted_by_handle: newHandle });
+
+  // 只有被拒絕的內容被轉發時才發通知
+  const status = String(existingStaging.get('status') || '');
+  if (status !== 'rejected') {
+    console.log(`[Twitter Monitor] [Staging-RT] id=${stagingId} status=${status}, skip notification`);
+    return;
+  }
+
+  console.log(`[Twitter Monitor] [Staging-RT] id=${stagingId} rejected content retweeted, sending notification`);
   await notifyOfficialRetweet({
     stagingId: String(existingStaging.get('id')),
     title: '📋 官方帳號轉發已存在內容',
@@ -199,7 +208,7 @@ export const collectFeedTargets = async (): Promise<FeedTarget[]> => {
  * 處理單一 RSS feed：fetch → parse → extract media → 寫 staging → 發通知。
  * 回傳該 feed 產生的新候選數量。
  */
-export const processFeed = async (feedUrl: string, contentType: string = 'fanart', separateTopic: boolean = false, label?: string): Promise<{ feedUrl: string; newCandidates: number }> => {
+export const processFeed = async (feedUrl: string, contentType: string = 'fanart', separateTopic: boolean = false, label?: string, sharedNotifiedIds?: Set<string>): Promise<{ feedUrl: string; newCandidates: number }> => {
   let feed: { items: RssTweetItem[] };
   try {
     feed = await deps.parseURL(feedUrl);
@@ -215,7 +224,7 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
   }
 
   let newCandidates = 0;
-  const notifiedTweetIds = new Set<string>();
+  const notifiedTweetIds = sharedNotifiedIds || new Set<string>();
 
   for (const item of feed.items) {
     if (!item.link) continue;
@@ -271,19 +280,27 @@ export const processFeed = async (feedUrl: string, contentType: string = 'fanart
         if (anyStagingForTweet) {
           const existingType = String(anyStagingForTweet.get('content_type') || '');
           if (existingType === 'fanart' || existingType === 'cosplay') {
-            // 官方帳號轉發了 fanart/cosplay — 不入庫但通知用戶
-            if (!notifiedTweetIds.has(sourceTweetId)) {
-              await notifyOfficialRetweet({
-                stagingId: String(anyStagingForTweet.get('id')),
-                title: '📋 官方帳號轉發了二創內容',
-                body: `轉發者: @${retweetedByHandle}\n原推作者: @${tweetHandle}\n內容類型: ${existingType}\n狀態: ${anyStagingForTweet.get('status')}`,
-                sourceUrl: sourceTweetLink,
-                contentType,
-                artistHandle: tweetHandle,
-              });
-              notifiedTweetIds.add(sourceTweetId);
+            // 官方帳號轉發了 fanart/cosplay — 只有被拒絕且未標記過的才通知
+            const existingStatus = String(anyStagingForTweet.get('status') || '');
+            const currentRtHandle = anyStagingForTweet.get('retweeted_by_handle');
+            const newRtHandle = appendHandle(currentRtHandle, retweetedByHandle);
+            if (newRtHandle !== currentRtHandle) {
+              await anyStagingForTweet.update({ retweeted_by_handle: newRtHandle });
+              if (existingStatus === 'rejected' && !notifiedTweetIds.has(sourceTweetId)) {
+                await notifyOfficialRetweet({
+                  stagingId: String(anyStagingForTweet.get('id')),
+                  title: '📋 官方帳號轉發了被拒絕的二創內容',
+                  body: `轉發者: @${retweetedByHandle}\n原推作者: @${tweetHandle}\n內容類型: ${existingType}\n狀態: ${existingStatus}`,
+                  sourceUrl: sourceTweetLink,
+                  contentType,
+                  artistHandle: tweetHandle,
+                });
+                notifiedTweetIds.add(sourceTweetId);
+              }
+              console.log(`[Twitter Monitor] [Dedup] official retweeted ${existingType} tweet=${sourceTweetId} status=${existingStatus}, handle updated to [${newRtHandle}]${existingStatus === 'rejected' ? ', notified' : ', skip notification'}`);
+            } else {
+              console.log(`[Twitter Monitor] [Dedup] official retweeted ${existingType} tweet=${sourceTweetId} handle @${retweetedByHandle} already marked, skip`);
             }
-            console.log(`[Twitter Monitor] [Dedup] official retweeted ${existingType} tweet=${sourceTweetId}, notified without creating staging`);
           } else {
             console.log(`[Twitter Monitor] [Dedup] official tweet=${sourceTweetId} already in staging as ${existingType} (${anyStagingForTweet.get('status')}), skip`);
           }
@@ -437,9 +454,10 @@ export const TwitterMonitorService = {
     console.log(`[Twitter Monitor] Running check for ${feedTargets.length} feed(s)...`);
     let totalNewCandidates = 0;
     let failedFeeds = 0;
+    const globalNotifiedIds = new Set<string>();
 
     for (const target of feedTargets) {
-      const result = await processFeed(target.feedUrl, target.contentType, target.separateTopic, target.label);
+      const result = await processFeed(target.feedUrl, target.contentType, target.separateTopic, target.label, globalNotifiedIds);
       if (result.newCandidates === 0) {
         // 可能是正常（無新推文）或失敗（parseURL 已 emitError）
       }

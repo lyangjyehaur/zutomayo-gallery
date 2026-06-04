@@ -524,6 +524,27 @@ export const reparseStagingFanart = async (req: Request, res: Response, next: Ne
     const newMediaUrl = firstMedia.url || '';
     const newThumbnail = firstMedia.thumbnail || null;
 
+    const currentTweetId = String(record.get('tweet_id') || '');
+    const currentAuthorHandle = String(record.get('author_handle') || '');
+    const currentSourceText = String(record.get('source_text') || '');
+    const isRetweet = currentSourceText.startsWith('RT @') || originalUrl.includes('/i/status/');
+    const tweetIdChanged = newTweetId && newTweetId !== currentTweetId;
+
+    // 偵測到轉推時，從 HTML 提取轉推者 handle
+    let detectedRetweetedBy = '';
+    if (isRetweet && tweetIdChanged && originalUrl.includes('/i/status/')) {
+      try {
+        const resp = await fetch(originalUrl);
+        const html = await resp.text();
+        const screenNames = [...new Set(html.match(/"screen_name":"([A-Za-z0-9_]+)"/g) || [])]
+          .map(m => m.match(/"screen_name":"([A-Za-z0-9_]+)"/)?.[1] || '')
+          .filter(Boolean);
+        const origHandle = currentAuthorHandle || newAuthorHandle;
+        const retweeter = screenNames.find(h => h.toLowerCase() !== origHandle.toLowerCase());
+        if (retweeter) detectedRetweetedBy = retweeter;
+      } catch {}
+    }
+
     const update: Record<string, unknown> = {};
     const setIfChanged = (field: string, value: unknown) => {
       if (String(record.get(field) ?? '') !== String(value ?? '')) {
@@ -531,15 +552,29 @@ export const reparseStagingFanart = async (req: Request, res: Response, next: Ne
       }
     };
 
-    if (newTweetId && newTweetId !== String(record.get('tweet_id') || '')) {
+    // 更新 tweet_id 和 original_url
+    if (tweetIdChanged) {
       update.tweet_id = newTweetId;
-      const handleForUrl = newAuthorHandle || String(record.get('author_handle') || '');
+      const handleForUrl = newAuthorHandle || currentAuthorHandle;
       update.original_url = handleForUrl
         ? `https://x.com/${handleForUrl}/status/${newTweetId}`
         : `https://x.com/i/status/${newTweetId}`;
     }
-    if (newAuthorHandle) setIfChanged('author_handle', newAuthorHandle);
-    if (newAuthorName) setIfChanged('author_name', newAuthorName);
+
+    // author_handle: 如果解析到新的且跟現有不同才更新
+    if (newAuthorHandle && newAuthorHandle !== currentAuthorHandle) {
+      setIfChanged('author_handle', newAuthorHandle);
+    }
+
+    // author_name: 如果是轉推，不要用轉推者的名字覆蓋原始作者的名字
+    if (newAuthorName) {
+      const nameMatchesHandle = newAuthorHandle && currentAuthorHandle &&
+        newAuthorHandle.toLowerCase() === currentAuthorHandle.toLowerCase();
+      if (!isRetweet || nameMatchesHandle) {
+        setIfChanged('author_name', newAuthorName);
+      }
+    }
+
     if (newMediaUrl) setIfChanged('media_url', newMediaUrl);
     if (newThumbnail) {
       setIfChanged('thumbnail_url', newThumbnail);
@@ -548,6 +583,22 @@ export const reparseStagingFanart = async (req: Request, res: Response, next: Ne
     if (firstMedia.like_count !== undefined && firstMedia.like_count !== null) setIfChanged('like_count', firstMedia.like_count);
     if (firstMedia.retweet_count !== undefined && firstMedia.retweet_count !== null) setIfChanged('retweet_count', firstMedia.retweet_count);
     if (firstMedia.view_count !== undefined && firstMedia.view_count !== null) setIfChanged('view_count', firstMedia.view_count);
+
+    // 轉推處理：清理 source_text 中的 RT 前綴
+    if (isRetweet && tweetIdChanged) {
+      const rtMatch = currentSourceText.match(/^RT @[A-Za-z0-9_]+:\s*([\s\S]*)/);
+      if (rtMatch) {
+        setIfChanged('source_text', rtMatch[1].trim());
+      }
+    }
+
+    // 設定轉發者 handle
+    if (detectedRetweetedBy) {
+      const currentRt = String(record.get('retweeted_by_handle') || '');
+      if (!currentRt) {
+        update.retweeted_by_handle = detectedRetweetedBy;
+      }
+    }
 
     if (Object.keys(update).length === 0) {
       res.json({ success: true, data: record, message: 'NO_CHANGES' });
