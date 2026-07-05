@@ -283,3 +283,72 @@ test('extractMediaFromTweet does not canonicalize quote tweets to the quoted twe
   assert.equal(media[0].user_screen_name, 'quote_artist');
   assert.deepEqual(media[0].hashtags, ['QuoteTag']);
 });
+
+// x.com 2024+ 將 SSR 從 __INITIAL_STATE__ JSON 遷移到 RSC (React Server Components) payload。
+// 此測試驗證建構路徑③ buildMediaFromRscPayload 能從 RSC 格式正確抓出多張圖片。
+test('extractMediaFromTweet parses multiple images from x.com RSC payload', async () => {
+  const tweetUrl = 'https://x.com/zutomayo/status/2073719137424273488';
+  // 簡化的 RSC payload fixture（節錄真實 x.com SSR 結構的關鍵欄位）
+  const html = `
+<!DOCTYPE html><html><head>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","url":"https://x.com/"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SocialMediaPosting","articleBody":"イチジク煙 キャラデザ\\nお楽しみ。。。。 https://t.co/gYOgZMnwYL","author":{"@type":"Person","alternateName":"@zutomayo","name":"ACAねこスキル (ずっと真夜中でいいのに。)","url":"https://x.com/zutomayo"},"dateCreated":"2026-07-05T10:42:24.000Z","datePublished":"2026-07-05T10:42:24.000Z","headline":"イチジク煙 キャラデザ\\nお楽しみ。。。。 https://t.co/gYOgZMnwYL","identifier":"2073719137424273488","image":"https://pbs.twimg.com/media/HMdUkInbEAApmNe.jpg:large","interactionStatistic":[{"@type":"InteractionCounter","interactionType":"https://schema.org/LikeAction","name":"Likes","userInteractionCount":3275},{"@type":"InteractionCounter","interactionType":"https://schema.org/InteractAction","name":"Retweets","userInteractionCount":542},{"@type":"InteractionCounter","interactionType":"https://schema.org/InteractAction","name":"Replies","userInteractionCount":64},{"@type":"InteractionCounter","interactionType":"https://schema.org/ViewAction","userInteractionCount":82933}],"mainEntityOfPage":"https://x.com/zutomayo/status/2073719137424273488","text":"イチジク煙 キャラデザ\\nお楽しみ。。。。 https://t.co/gYOgZMnwYL","url":"https://x.com/zutomayo/status/2073719137424273488"}</script>
+</head><body>
+<script nonce="abc">window.__INITIAL_DATA__={"appMetadata":{"appVersion":"abc123"}}</script>
+<script nonce="def">
+"client:VHdlZXQ6MjA3MzcxOTEzNzQyNDI3MzQ4OA==":$R[1]={__id:"client:VHdlZXQ6MjA3MzcxOTEzNzQyNDI3MzQ4OA==",__typename:"ApiTweet",rest_id:"2073719137424273488",id:"VHdlZXQ6MjA3MzcxOTEzNzQyNDI3MzQ4OA==",core:$R[2]={__ref:"VHdlZXQ6MjA3MzcxOTEzNzQyNDI3MzQ4OA==:core"},legacy:$R[3]={__ref:"VHdlZXQ6MjA3MzcxOTEzNzQyNDI3MzQ4OA==:legacy"}},
+"VHdlZXQ6MjA3MzcxOTEzNzQyNDI3MzQ4OA==:core":$R[4]={__id:"VHdlZXQ6MjA3MzcxOTEzNzQyNDI3MzQ4OA==:core",__typename:"TweetCore",user_results:$R[5]={__ref:"VXNlclJlc3VsdHM6OTg2Mjc1MjAyMDMwOTA3Mzky"}},
+"VHdlZXQ6MjA3MzcxOTEzNzQyNDI3MzQ4OA==:legacy":$R[6]={__id:"VHdlZXQ6MjA3MzcxOTEzNzQyNDI3MzQ4OA==:legacy",__typename:"TweetLegacy",full_text:"イチジク煙 キャラデザ\\nお楽しみ。。。。 https://t.co/gYOgZMnwYL",favorite_count:3275,retweet_count:542,reply_count:64,view_count:82933,created_at:"Sat Jul 05 10:42:24 +0000 2026"},
+"client:VHdlZXQ6MjA3MzcxOTEzNzQyNDI3MzQ4OA==:media_entities2:0":$R[7]={__id:"client:VHdlZXQ6MjA3MzcxOTEzNzQyNDI3MzQ4OA==:media_entities2:0",__typename:"ApiMediaEntity",id_str:"2073719133192261632",type:"photo",source_status_id_str:null,media_url_https:"https://pbs.twimg.com/media/HMdUkInbEAApmNe.jpg",ext_alt_text:null,additional_media_info:null,original_info:$R[8]={__ref:"client:VHdlZXQ6MjA3MzcxOTEzNzQyNDI3MzQ4OA==:media_entities2:0:original_info"},ext_playlists:$R[9]={__refs:$R[10]=[]},video_info:null,sensitive_media_warning:null,indices:$R[11]=[21,44]},
+"client:VHdlZXQ6MjA3MzcxOTEzNzQyNDI3MzQ4OA==:media_entities2:0:original_info":$R[12]={__id:"client:VHdlZXQ6MjA3MzcxOTEzNzQyNDI3MzQ4OA==:media_entities2:0:original_info",__typename:"OriginalMediaInfo",width:1200,height:1500},
+"client:VHdlZXQ6MjA3MzcxOTEzNzQyNDI3MzQ4OA==:media_entities2:1":$R[13]={__id:"client:VHdlZXQ6MjA3MzcxOTEzNzQyNDI3MzQ4OA==:media_entities2:1",__typename:"ApiMediaEntity",id_str:"2073719133133574145",type:"photo",source_status_id_str:null,media_url_https:"https://pbs.twimg.com/media/HMdUkIZbkAERzDH.jpg",ext_alt_text:null,additional_media_info:null,original_info:$R[14]={__ref:"client:VHdlZXQ6MjA3MzcxOTEzNzQyNDI3MzQ4OA==:media_entities2:1:original_info"},video_info:null},
+"client:VHdlZXQ6MjA3MzcxOTEzNzQyNDI3MzQ4OA==:media_entities2:2":$R[15]={__id:"client:VHdlZXQ6MjA3MzcxOTEzNzQyNDI3MzQ4OA==:media_entities2:2",__typename:"ApiMediaEntity",id_str:"2073719133162868736",type:"photo",source_status_id_str:null,media_url_https:"https://pbs.twimg.com/media/HMdUkIgakAA-2YN.jpg",ext_alt_text:null,additional_media_info:null,original_info:$R[16]={__ref:"client:VHdlZXQ6MjA3MzcxOTEzNzQyNDI3MzQ4OA==:media_entities2:2:original_info"},video_info:null},
+"client:VHdlZXQ6MjA3MzcxOTEzNzQyNDI3MzQ4OA==:media_entities2:3":$R[17]={__id:"client:VHdlZXQ6MjA3MzcxOTEzNzQyNDI3MzQ4OA==:media_entities2:3",__typename:"ApiMediaEntity",id_str:"2073719133125132288",type:"photo",source_status_id_str:null,media_url_https:"https://pbs.twimg.com/media/HMdUkIXawAAVcqV.jpg",ext_alt_text:null,additional_media_info:null,original_info:$R[18]={__ref:"client:VHdlZXQ6MjA3MzcxOTEzNzQyNDI3MzQ4OA==:media_entities2:3:original_info"},video_info:null}
+</script>
+<meta property="og:image" content="https://pbs.twimg.com/media/HMdUkInbEAApmNe.jpg:large">
+<meta name="twitter:card" content="summary_large_image">
+</body></html>`;
+  const media = await TwitterService.extractMediaFromTweet(tweetUrl, undefined, {
+    fetch: async () => ({ ok: true, text: async () => html } as Response),
+  });
+
+  assert.equal(media.length, 4, '應抓到 4 張圖片');
+  assert.equal(media[0].type, 'image');
+  assert.equal(media[0].url, 'https://pbs.twimg.com/media/HMdUkInbEAApmNe.jpg?name=orig');
+  assert.equal(media[1].url, 'https://pbs.twimg.com/media/HMdUkIZbkAERzDH.jpg?name=orig');
+  assert.equal(media[2].url, 'https://pbs.twimg.com/media/HMdUkIgakAA-2YN.jpg?name=orig');
+  assert.equal(media[3].url, 'https://pbs.twimg.com/media/HMdUkIXawAAVcqV.jpg?name=orig');
+  assert.equal(media[0].tweet_id, '2073719137424273488');
+  assert.equal(media[0].requested_tweet_id, '2073719137424273488');
+  assert.equal(media[0].user_screen_name, 'zutomayo');
+  assert.equal(media[0].user_name, 'ACAねこスキル (ずっと真夜中でいいのに。)');
+  assert.equal(media[0].date, '2026-07-05T10:42:24.000Z');
+  assert.equal(media[0].like_count, 3275);
+  assert.equal(media[0].retweet_count, 542);
+  assert.equal(media[0].view_count, 82933);
+  assert.ok(media[0].text?.includes('イチジク煙'));
+  // 每張圖都應帶有相同的 common metadata
+  for (const item of media) {
+    assert.equal(item.user_screen_name, 'zutomayo');
+    assert.equal(item.like_count, 3275);
+  }
+});
+
+test('extractMediaFromTweet falls back to og:image when RSC payload has no media entities', async () => {
+  const tweetUrl = 'https://x.com/zutomayo/status/9999999999999999999';
+  const html = `
+<html><head>
+<script type="application/ld+json">{"@type":"WebSite","url":"https://x.com/"}</script>
+<meta property="og:image" content="https://pbs.twimg.com/media/fallback.jpg:large">
+<meta name="twitter:description" content="fallback text">
+</head><body></body></html>`;
+  const media = await TwitterService.extractMediaFromTweet(tweetUrl, undefined, {
+    fetch: async () => ({ ok: true, text: async () => html } as Response),
+  });
+
+  // RSC payload 無 ApiMediaEntity，應退化到 buildMediaFromHtmlMeta
+  assert.equal(media.length, 1);
+  assert.equal(media[0].url, 'https://pbs.twimg.com/media/fallback.jpg:large?name=orig');
+  assert.equal(media[0].type, 'image');
+  assert.equal(media[0].text, 'fallback text');
+});

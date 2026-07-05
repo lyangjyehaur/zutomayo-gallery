@@ -359,6 +359,169 @@ const buildMediaFromHtmlMeta = (html: string, requestedTweetId: string): Twitter
   return media;
 };
 
+// === RSC (React Server Components) payload 解析 ===
+// x.com 2024+ 將 SSR 從 __INITIAL_STATE__ JSON 遷移到 RSC payload，
+// 格式特色：key 無引號、$R[N]={__ref:"..."} 物件引用、!0/!1 布林縮寫。
+// 此函數從 RSC payload 用 regex 抓 media entities，並從 ld+json 補 metadata。
+
+const decodeRscStringLiteral = (raw: string): string => {
+  try {
+    return JSON.parse(`"${raw}"`);
+  } catch {
+    return raw.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+  }
+};
+
+const readLdJsonSocialPosting = (html: string): {
+  tweetId?: string;
+  text?: string;
+  userName?: string;
+  userScreenName?: string;
+  date?: string;
+  likeCount?: number;
+  retweetCount?: number;
+  viewCount?: number;
+} | null => {
+  const matches = [...html.matchAll(/<script[^>]+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)];
+  for (const m of matches) {
+    try {
+      const parsed = JSON.parse(m[1]);
+      if (parsed?.['@type'] !== 'SocialMediaPosting') continue;
+      const stats: any[] = parsed.interactionStatistic || [];
+      const findStat = (name: string) => stats.find((s) => s.name === name)?.userInteractionCount;
+      const viewStat = stats.find((s) => !s.name && typeof s.interactionType === 'string' && s.interactionType.includes('ViewAction'))?.userInteractionCount;
+      return {
+        tweetId: parsed.identifier,
+        text: parsed.articleBody || parsed.headline,
+        userName: parsed.author?.name,
+        userScreenName: typeof parsed.author?.alternateName === 'string' ? parsed.author.alternateName.replace(/^@/, '') : undefined,
+        date: parsed.dateCreated || parsed.datePublished,
+        likeCount: findStat('Likes'),
+        retweetCount: findStat('Retweets'),
+        viewCount: viewStat,
+      };
+    } catch {
+      continue;
+    }
+  }
+  return null;
+};
+
+const findRscVideoMp4Url = (html: string, startIndex: number): string | null => {
+  const videoInfoIdx = html.indexOf('video_info:', startIndex);
+  if (videoInfoIdx < 0) return null;
+  let searchFrom = videoInfoIdx + 'video_info:'.length;
+  // RSC 可能 video_info:$R[N]={...} 或 video_info:{...}
+  const refMatch = html.slice(searchFrom).match(/^\$R\[\d+\]=/);
+  if (refMatch) searchFrom += refMatch[0].length;
+  const braceIdx = html.indexOf('{', searchFrom);
+  if (braceIdx < 0 || braceIdx > searchFrom + 5) return null;
+  // 括號配對抓出 video_info 物件
+  let depth = 0;
+  let inStr = false;
+  let escaped = false;
+  let end = -1;
+  for (let i = braceIdx; i < html.length && i < braceIdx + 5000; i++) {
+    const ch = html[i];
+    if (inStr) {
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') inStr = true;
+    else if (ch === '{') depth++;
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0) { end = i; break; }
+    }
+  }
+  if (end < 0) return null;
+  const block = html.slice(braceIdx, end + 1);
+  // 抓所有 bitrate + url 配對，選最高 bitrate
+  const variants: Array<{ bitrate: number; url: string }> = [];
+  const variantRegex = /bitrate:(\d+)[^}]*?url:"([^"]+)"/g;
+  let vm: RegExpExecArray | null;
+  while ((vm = variantRegex.exec(block)) !== null) {
+    variants.push({ bitrate: parseInt(vm[1], 10), url: vm[2] });
+  }
+  // 沒有 bitrate 欄位的 variant（通常是最小解析度）
+  const urlOnlyRegex = /url:"([^"]+\.mp4[^"]*)"/g;
+  let um: RegExpExecArray | null;
+  while ((um = urlOnlyRegex.exec(block)) !== null) {
+    if (!variants.some((v) => v.url === um![1])) {
+      variants.push({ bitrate: 0, url: um[1] });
+    }
+  }
+  if (variants.length === 0) return null;
+  variants.sort((a, b) => b.bitrate - a.bitrate);
+  return variants[0].url;
+};
+
+const buildMediaFromRscPayload = (html: string, requestedTweetId: string): TwitterMedia[] => {
+  // 1. 從 RSC payload 抓所有 ApiMediaEntity
+  const mediaRegex = /__typename:"ApiMediaEntity",id_str:"([^"]+)",type:"([^"]+)"[^}]*?media_url_https:"([^"]+)"/g;
+  const rawMedia: Array<{ id_str: string; type: string; media_url_https: string; endIndex: number }> = [];
+  let m: RegExpExecArray | null;
+  while ((m = mediaRegex.exec(html)) !== null) {
+    rawMedia.push({
+      id_str: m[1],
+      type: m[2],
+      media_url_https: m[3],
+      endIndex: m.index + m[0].length,
+    });
+  }
+  if (rawMedia.length === 0) return [];
+
+  // 2. 從 ld+json 抓 metadata
+  const ld = readLdJsonSocialPosting(html);
+
+  // 3. 從 RSC payload 抓 full_text + counts
+  const fullTextMatch = html.match(/full_text:"((?:[^"\\]|\\.)*)"/);
+  const fullText = fullTextMatch ? decodeRscStringLiteral(fullTextMatch[1]) : undefined;
+  const favMatch = html.match(/favorite_count:(\d+)/);
+  const rtMatch = html.match(/retweet_count:(\d+)/);
+
+  // 4. 組合
+  const text = fullText || ld?.text;
+  const hashtags = parseHashtagsFromText(text);
+  const tweetId = ld?.tweetId || requestedTweetId;
+  const common = {
+    text: text || undefined,
+    user_name: ld?.userName,
+    user_screen_name: ld?.userScreenName,
+    date: ld?.date,
+    tweet_id: tweetId,
+    tweet_url: buildCanonicalTweetUrl(tweetId),
+    requested_tweet_id: requestedTweetId,
+    like_count: favMatch ? Number(favMatch[1]) : (ld?.likeCount ?? null),
+    retweet_count: rtMatch ? Number(rtMatch[1]) : (ld?.retweetCount ?? null),
+    view_count: ld?.viewCount ?? null,
+    hashtags: hashtags.length > 0 ? hashtags : null,
+  };
+
+  const media: TwitterMedia[] = [];
+  for (const raw of rawMedia) {
+    if (raw.type === 'photo') {
+      media.push({
+        url: normalizeTwitterImageUrl(raw.media_url_https),
+        type: 'image',
+        ...common,
+      });
+    } else if (raw.type === 'video' || raw.type === 'animated_gif') {
+      const videoUrl = findRscVideoMp4Url(html, raw.endIndex);
+      if (!videoUrl) continue; // 跟 readTweetMedia 一致：抓不到 mp4 就跳過
+      media.push({
+        url: videoUrl,
+        type: raw.type === 'animated_gif' ? 'gif' : 'video',
+        thumbnail: normalizeTwitterImageUrl(raw.media_url_https),
+        ...common,
+      });
+    }
+  }
+  return media;
+};
+
 const extractBalancedJson = (text: string, start: number): string | null => {
   const firstBrace = text.indexOf('{', start);
   if (firstBrace < 0) return null;
@@ -626,6 +789,10 @@ export const TwitterService = {
 
     const enrichedFallbackMedia = enrichFallbackMediaFromTweetState(fallbackMedia, requestedTweetId, states);
     if (enrichedFallbackMedia.length > 0) return enrichedFallbackMedia;
+
+    // x.com 2024+ 遷移到 RSC payload，__INITIAL_STATE__ JSON 不再可用
+    const rscMedia = buildMediaFromRscPayload(html, requestedTweetId);
+    if (rscMedia.length > 0) return rscMedia;
 
     return buildMediaFromHtmlMeta(html, requestedTweetId);
   },
