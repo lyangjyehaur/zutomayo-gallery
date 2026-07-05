@@ -251,7 +251,7 @@ if $do_backend; then
         -v /opt/projects/zutomayo-gallery/backend:/app -w /app \
         -e DB_HOST=postgresql \
         -e NODE_ENV=production \
-        -e ALLOWED_ORIGINS="https://gallery.ztmr.club,https://review.ztmy.art" \
+        -e ALLOWED_ORIGINS="https://ztmy.art,https://gallery.ztmr.club,https://review.ztmy.art" \
         -e SESSION_SECRET \
         1panel/node:22.22.1 npm start
 ENDSSH
