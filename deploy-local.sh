@@ -31,6 +31,30 @@ require_cmd ssh
 require_cmd scp
 require_cmd tar
 require_cmd npm
+require_cmd git
+
+tag_frontend_deploy() {
+    local version
+    local hash
+    local tag_name
+
+    version=$(node -p "require('./package.json').version")
+    hash=$(git rev-parse --short HEAD)
+    tag_name="deploy-v${version}-${hash}"
+
+    if git rev-parse -q --verify "refs/tags/${tag_name}" >/dev/null; then
+        echo -e "${YELLOW}Deploy tag 已存在：${tag_name}${NC}"
+    else
+        git tag -a "${tag_name}" -m "Deploy frontend v${version}"
+        echo -e "${GREEN}已建立 Deploy tag：${tag_name}${NC}"
+    fi
+
+    if git remote get-url origin >/dev/null 2>&1; then
+        git push origin "${tag_name}"
+    else
+        echo -e "${YELLOW}未找到 git remote origin，略過推送 deploy tag。${NC}"
+    fi
+}
 
 # 如果 conf 內有定義，覆蓋預設值
 if [ ! -z "$SERVER_IP" ]; then
@@ -163,6 +187,7 @@ if $do_frontend; then
     ssh ${SERVER} "sudo find '${REMOTE_WWW_DIR}' -type d -exec chmod 755 {} \; && sudo find '${REMOTE_WWW_DIR}' -type f -exec chmod 644 {} \;"
     
     echo -e "${GREEN}前端檔案上傳成功並已設定權限！${NC}"
+    tag_frontend_deploy
 fi
 
 # Review App 上傳邏輯

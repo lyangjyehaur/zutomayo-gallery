@@ -36,7 +36,13 @@ export function PWAPrompt() {
     }
   }, [offlineReady, setOfflineReady, t]);
 
- const [newVersion, setNewVersion] = useState<{ version: string; buildHash: string } | null>(null);
+  type VersionInfo = {
+    version: string;
+    buildHash: string;
+    commits?: string[];
+  };
+
+  const [newVersion, setNewVersion] = useState<VersionInfo | null>(null);
 
   // 開發環境除錯按鈕 (強制觸發 PWA 更新提示)
   useEffect(() => {
@@ -80,13 +86,24 @@ export function PWAPrompt() {
         .then((res) => res.json())
         .then((data) => {
           if (data && data.version) {
-            setNewVersion(data);
+            setNewVersion({
+              version: data.version,
+              buildHash: data.buildHash || '?',
+              commits: Array.isArray(data.commits) ? data.commits : [],
+            });
           }
         })
         .catch(() => {
+          setNewVersion({ version: '?', buildHash: '?', commits: [] });
         });
     }
   }, [needRefresh]);
+
+  const changelogItems = newVersion
+    ? newVersion.commits && newVersion.commits.length > 0
+      ? newVersion.commits
+      : [t('app.pwa_changelog_fallback', '修復與優化')]
+    : [];
 
   return (
     <Drawer open={needRefresh} onOpenChange={(open) => {
@@ -116,6 +133,21 @@ export function PWAPrompt() {
               </div>
             </div>
           </div>
+
+          {newVersion && (
+            <div className="p-4 pb-0">
+              <div className="text-xs font-bold mb-2 opacity-70">
+                {t('app.pwa_changelog', '更新內容')}
+              </div>
+              <div className="bg-secondary-background/50 p-2.5 rounded-base border-2 border-border text-[12px] max-h-[200px] overflow-y-auto">
+                {changelogItems.map((commit, i) => (
+                  <div key={`${commit}-${i}`} className="py-1 border-b border-border/30 last:border-0">
+                    {commit}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <DrawerFooter className="flex flex-col gap-2 mt-4">
             <button
