@@ -1267,6 +1267,7 @@ export function AdminPage() {
               newExtractedImages.push({
                 url: media.url,
                 thumbnail: media.thumbnail || '',
+                type: imageTypeTab === 'fanart' ? 'fanart' : 'official',
                 group: {
                   source_url: url,
                   source_text: media.text,
@@ -1597,7 +1598,7 @@ export function AdminPage() {
 
   const addImage = () => {
     const newImage: any = { url: '', caption: '', alt: '', richText: '', width: 0, height: 0 };
-    if (imageTypeTab === 'fanart') newImage.type = 'fanart';
+    newImage.type = imageTypeTab === 'fanart' ? 'fanart' : 'official';
     const images = [...(currentMV.images || []), newImage];
     updateField('images', images);
     // 確保新增的圖片在視線範圍內
