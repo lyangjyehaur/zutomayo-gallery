@@ -23,6 +23,7 @@ import { MVItem } from '@/lib/types';
 import { getProxyImgUrl, isMediaVideo } from '@/lib/image';
 import {
   getAdminChangedData,
+  getAdminVisibleImageCount,
   getAdminVisibleImages,
   isAdminFieldIncomplete,
   isAdminMVIncomplete,
@@ -948,6 +949,12 @@ export function AdminPage() {
     return getAdminVisibleImages(currentMV?.images, imageTypeTab, imageDisplayLimit);
   }, [currentMV?.images, imageDisplayLimit, imageTypeTab]);
 
+  // 當前 tab 過濾後（排除 cover）的總數，不受分頁 limit 影響。
+  const totalVisibleCount = useMemo(
+    () => getAdminVisibleImageCount(currentMV?.images, imageTypeTab),
+    [currentMV?.images, imageTypeTab],
+  );
+
   const getAdminImagePreviewUrl = (img: any) => {
     const raw = img.thumbnail || img.url || '';
     const original = img.original_url || img.originalUrl || '';
@@ -959,14 +966,14 @@ export function AdminPage() {
   const handleImageObserver = useCallback((entries: IntersectionObserverEntry[]) => {
     const [target] = entries;
     if (target.isIntersecting && currentMV?.images) {
-      if (imageDisplayLimit < currentMV.images.length) {
+      if (imageDisplayLimit < totalVisibleCount) {
         setImageDisplayLimit(prev => prev + 24);
       }
     }
-  }, [currentMV?.images, imageDisplayLimit]);
+  }, [currentMV?.images, imageDisplayLimit, totalVisibleCount]);
 
   useEffect(() => {
-    if (!currentMV?.images || imageDisplayLimit >= currentMV.images.length) return;
+    if (!currentMV?.images || imageDisplayLimit >= totalVisibleCount) return;
 
     const observer = new IntersectionObserver(handleImageObserver, { 
       root: null,
@@ -2393,7 +2400,7 @@ export function AdminPage() {
                         <span className="text-[10px] font-bold opacity-40 font-mono normal-case ml-2">03_Setting_Images_Gallery</span>
                       </div>
                       <span className="text-[10px] font-bold ml-2 flex flex-col leading-tight">
-                        <span className="opacity-60">總數：{currentMV.images?.length || 0}</span>
+                        <span className="opacity-60">總數：{totalVisibleCount}</span>
                         <span className="font-mono opacity-30 normal-case">TOTAL_COUNT</span>
                       </span>
                     </div>

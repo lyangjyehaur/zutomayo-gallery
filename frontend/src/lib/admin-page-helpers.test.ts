@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   getAdminChangedData,
+  getAdminVisibleImageCount,
   getAdminVisibleImages,
   isAdminFieldIncomplete,
   isAdminMVIncomplete,
@@ -18,6 +19,28 @@ describe('admin page helpers', () => {
 
     expect(getAdminVisibleImages(images, 'official', 24).map(({ img }) => img.id)).toEqual(['official']);
     expect(getAdminVisibleImages(images, 'fanart', 24).map(({ img }) => img.id)).toEqual(['fanart']);
+  });
+
+  it('getAdminVisibleImageCount returns filtered total matching the visible list (ignores pagination)', () => {
+    const images = [
+      { id: 'official1', type: 'official', url: 'a.jpg' },
+      { id: 'official2', type: 'official', url: 'b.jpg' },
+      { id: 'cosplay', type: 'cosplay', url: 'c.jpg' },
+      { id: 'fanart1', type: 'fanart', url: 'd.jpg' },
+      { id: 'fanart2', type: 'fanart', url: 'e.jpg' },
+      { id: 'cover', type: 'official', usage: 'cover', url: 'f.jpg' },
+    ];
+
+    // official tab：3 張 official，但 1 張是 cover，應為 2
+    expect(getAdminVisibleImageCount(images, 'official')).toBe(2);
+    // fanart tab：2 張 fanart
+    expect(getAdminVisibleImageCount(images, 'fanart')).toBe(2);
+    // 計數不受分頁 limit 影響（即使 limit=1，總數仍應為 2）
+    expect(getAdminVisibleImages(images, 'official', 1).map(({ img }) => img.id)).toEqual(['official1']);
+    expect(getAdminVisibleImageCount(images, 'official')).toBe(2);
+    // undefined / 空 images
+    expect(getAdminVisibleImageCount(undefined, 'official')).toBe(0);
+    expect(getAdminVisibleImageCount([], 'official')).toBe(0);
   });
 
   it('does not mark numeric zero as incomplete', () => {

@@ -17,20 +17,31 @@ export const isAdminMVIncomplete = (mv: MVItem) => {
   return !mv.images.some((img) => img.url && img.url.trim() !== '');
 };
 
+// 過濾出當前 tab 可見的圖片（依 type + 排除 cover），保留 originalIndex。
+// 注意：不 slice，呼叫端自行處理分頁。
+const filterAdminVisibleImages = (
+  images: any[] | undefined,
+  imageTypeTab: AdminImageTypeTab,
+) => (images || [])
+  .map((img, originalIndex) => ({ img, originalIndex }))
+  .filter(({ img }) => {
+    if (imageTypeTab === 'fanart') return img.type === 'fanart';
+    return img.type === 'official';
+  })
+  .filter(({ img }) => img.usage !== 'cover' && img.type !== 'cover');
+
 export const getAdminVisibleImages = (
   images: any[] | undefined,
   imageTypeTab: AdminImageTypeTab,
   imageDisplayLimit: number,
-) => {
-  return (images || [])
-    .map((img, originalIndex) => ({ img, originalIndex }))
-    .filter(({ img }) => {
-      if (imageTypeTab === 'fanart') return img.type === 'fanart';
-      return img.type === 'official';
-    })
-    .filter(({ img }) => img.usage !== 'cover' && img.type !== 'cover')
-    .slice(0, imageDisplayLimit);
-};
+) => filterAdminVisibleImages(images, imageTypeTab).slice(0, imageDisplayLimit);
+
+// 當前 tab 過濾後（排除 cover）的總數，不受分頁 limit 影響。
+// 用於 UI 顯示「總數」，確保與列表實際可見數量一致。
+export const getAdminVisibleImageCount = (
+  images: any[] | undefined,
+  imageTypeTab: AdminImageTypeTab,
+): number => filterAdminVisibleImages(images, imageTypeTab).length;
 
 export const isAdminVideoPreview = (img: any) => img?.media_type === 'video' || img?.media_type === 'gif';
 
