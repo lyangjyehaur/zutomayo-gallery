@@ -157,6 +157,7 @@ fi
 REMOTE_WWW_DIR="${REMOTE_DEPLOY_PATH:-}"
 REMOTE_REVIEW_DIR="${REMOTE_REVIEW_DEPLOY_PATH:-}"
 REMOTE_PROJECT_DIR="${REMOTE_PROJECT_PATH:-}"
+REMOTE_LEGACY_DIR="${REMOTE_LEGACY_DEPLOY_PATH:-}"
 
 required_settings=(
     SERVER_DEST REMOTE_WWW_DIR REMOTE_REVIEW_DIR REMOTE_PROJECT_DIR
@@ -176,11 +177,12 @@ fi
 
 
 # 顯示選單
-# 支援非互動模式：--all / --frontend / --backend / --review（可組合）與 --status
+# 支援非互動模式：--all / --frontend / --backend / --review / --legacy（可組合）與 --status
 # Deploy tag 只會在明確傳入 --tag 時建立並 push。
 do_frontend=false
 do_backend=false
 do_review=false
+do_legacy=false
 do_status=false
 do_tag=false
 for arg in "$@"; do
@@ -189,13 +191,14 @@ for arg in "$@"; do
     --frontend) do_frontend=true ;;
     --backend) do_backend=true ;;
     --review) do_review=true ;;
+    --legacy) do_legacy=true ;;
     --status) do_status=true ;;
     --tag) do_tag=true ;;
     *) echo -e "${RED}無效參數：${arg}${NC}"; exit 1 ;;
   esac
 done
 
-if ! $do_frontend && ! $do_backend && ! $do_review && ! $do_status; then
+if ! $do_frontend && ! $do_backend && ! $do_review && ! $do_legacy && ! $do_status; then
   echo -e "${GREEN}==========================================${NC}"
   echo -e "${GREEN} ZUTOMAYO MV Gallery 部署工具${NC}"
   echo -e "${GREEN}==========================================${NC}"
@@ -204,8 +207,9 @@ if ! $do_frontend && ! $do_backend && ! $do_review && ! $do_status; then
   echo "3) 部署全部 (前端 + Review App + 後端)"
   echo "4) 部署 Review App (本地編譯並上傳)"
   echo "5) 檢查遠端後端狀態"
+  echo "6) 部署舊域名遷移頁"
   echo "0) 退出"
-  echo -n "請選擇部署項目 [1-5, 預設 3]: "
+  echo -n "請選擇部署項目 [1-6, 預設 3]: "
   read choice
 
   if [ -z "$choice" ]; then
@@ -223,8 +227,21 @@ if ! $do_frontend && ! $do_backend && ! $do_review && ! $do_status; then
     3) do_frontend=true; do_backend=true; do_review=true ;;
     4) do_review=true ;;
     5) do_status=true ;;
+    6) do_legacy=true ;;
     *) echo -e "${RED}無效選項：$choice${NC}"; exit 1 ;;
   esac
+fi
+
+if $do_legacy; then
+    legacy_settings=(
+        REMOTE_LEGACY_DIR LEGACY_SITE_TARGET_URL LEGACY_REDIRECT_CONF OPENRESTY_CONTAINER_NAME
+    )
+    for setting_name in "${legacy_settings[@]}"; do
+        if [ -z "${!setting_name:-}" ]; then
+            echo -e "${RED}錯誤：deploy-local.conf 缺少遷移頁設定 ${setting_name}。${NC}"
+            exit 1
+        fi
+    done
 fi
 
 if $do_status; then
@@ -355,6 +372,49 @@ if $do_review; then
     ssh "${SSH_ARGS[@]}" "${SERVER_DEST}" "sudo find '${REMOTE_REVIEW_DIR}' -type d -exec chmod 755 {} \; && sudo find '${REMOTE_REVIEW_DIR}' -type f -exec chmod 644 {} \;"
 
     echo -e "${GREEN}Review App 檔案上傳成功並已設定權限！${NC}"
+fi
+
+# 舊域名遷移頁部署邏輯
+if $do_legacy; then
+    echo -e "\n${GREEN}==========================================${NC}"
+    echo -e "${GREEN} 正在部署舊域名遷移頁...${NC}"
+    echo -e "${GREEN}==========================================${NC}"
+
+    legacy_tmp_dir="$(mktemp -d)"
+    node "${SCRIPT_DIR}/scripts/render-legacy-site.mjs" \
+        --template "${SCRIPT_DIR}/legacy-site/index.template.html" \
+        --output "${legacy_tmp_dir}/index.html" \
+        --target "${LEGACY_SITE_TARGET_URL}"
+    upload_file "${legacy_tmp_dir}/index.html" "/tmp/zutomayo-legacy-index.html"
+    find "${legacy_tmp_dir}" -type f -delete
+    rmdir "${legacy_tmp_dir}"
+
+    ssh "${SSH_ARGS[@]}" "${SERVER_DEST}" bash -s -- \
+        "${REMOTE_LEGACY_DIR}" "${LEGACY_REDIRECT_CONF}" "${OPENRESTY_CONTAINER_NAME}" <<'ENDSSH'
+LEGACY_DIR="$1"
+REDIRECT_CONF="$2"
+OPENRESTY_CONTAINER="$3"
+DISABLED_REDIRECT="${REDIRECT_CONF}.disabled"
+
+sudo install -d -m 755 "${LEGACY_DIR}"
+sudo install -m 644 /tmp/zutomayo-legacy-index.html "${LEGACY_DIR}/index.html"
+sudo unlink /tmp/zutomayo-legacy-index.html
+
+redirect_changed=false
+if [ -f "${REDIRECT_CONF}" ]; then
+    sudo mv "${REDIRECT_CONF}" "${DISABLED_REDIRECT}"
+    redirect_changed=true
+fi
+
+if ! sudo docker exec "${OPENRESTY_CONTAINER}" openresty -t; then
+    if ${redirect_changed}; then
+        sudo mv "${DISABLED_REDIRECT}" "${REDIRECT_CONF}"
+    fi
+    exit 1
+fi
+sudo docker exec "${OPENRESTY_CONTAINER}" openresty -s reload
+ENDSSH
+    echo -e "${GREEN}舊域名遷移頁部署完成！${NC}"
 fi
 
 # 後端部署邏輯
