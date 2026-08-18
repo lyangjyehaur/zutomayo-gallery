@@ -11,6 +11,12 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 DATA_DIR="$PROJECT_DIR/backend/data"
 DB_PATH="$DATA_DIR/ip2region.xdb"
 DB_V6_PATH="$DATA_DIR/ip2region_v6.xdb"
+DEPLOY_CONFIG="${DEPLOY_CONFIG:-$PROJECT_DIR/deploy.conf}"
+
+if [ -f "$DEPLOY_CONFIG" ]; then
+    # shellcheck disable=SC1090
+    . "$DEPLOY_CONFIG"
+fi
 
 if [ -f "$PROJECT_DIR/backend/.env" ]; then
     set -a
@@ -18,9 +24,8 @@ if [ -f "$PROJECT_DIR/backend/.env" ]; then
     set +a
 fi
 
-# 下載網址 (從 GitHub 官方倉庫下載)
-URL="https://github.com/lionsoul2014/ip2region/raw/refs/heads/master/data/ip2region_v4.xdb"
-URL_V6="https://github.com/lionsoul2014/ip2region/raw/refs/heads/master/data/ip2region_v6.xdb"
+: "${IP2REGION_V4_URL:?請在 backend/.env 或環境變數設定 IP2REGION_V4_URL}"
+: "${IP2REGION_V6_URL:?請在 backend/.env 或環境變數設定 IP2REGION_V6_URL}"
 
 echo "=========================================="
 echo "開始更新 IP 數據庫..."
@@ -31,7 +36,7 @@ mkdir -p "$DATA_DIR"
 
 # 1. 更新 ip2region (IPv4)
 echo "下載 ip2region (IPv4)..."
-if curl -f -L -o "$DB_PATH.tmp" "$URL"; then
+if curl -f -L -o "$DB_PATH.tmp" "$IP2REGION_V4_URL"; then
     mv "$DB_PATH.tmp" "$DB_PATH"
     echo "✅ ip2region v4 下載成功"
 else
@@ -41,7 +46,7 @@ fi
 
 # 2. 更新 ip2region (IPv6)
 echo "下載 ip2region (IPv6)..."
-if curl -f -L -o "$DB_V6_PATH.tmp" "$URL_V6"; then
+if curl -f -L -o "$DB_V6_PATH.tmp" "$IP2REGION_V6_URL"; then
     mv "$DB_V6_PATH.tmp" "$DB_V6_PATH"
     echo "✅ ip2region v6 下載成功"
 else
@@ -60,12 +65,13 @@ else
 fi
 
 if [ -n "$MAXMIND_LICENSE_KEY" ]; then
+    : "${MAXMIND_DOWNLOAD_ORIGIN:?請在 backend/.env 或環境變數設定 MAXMIND_DOWNLOAD_ORIGIN}"
     echo "更新 MaxMind GeoLite2 (City/ASN)..."
     for EDITION in "GeoLite2-City" "GeoLite2-ASN"; do
         TMP_DIR="$(mktemp -d)"
         TAR_PATH="$TMP_DIR/${EDITION}.tar.gz"
         OUT_PATH="$DATA_DIR/${EDITION}.mmdb"
-        URL_MM="https://download.maxmind.com/app/geoip_download?edition_id=${EDITION}&license_key=${MAXMIND_LICENSE_KEY}&suffix=tar.gz"
+        URL_MM="${MAXMIND_DOWNLOAD_ORIGIN%/}/app/geoip_download?edition_id=${EDITION}&license_key=${MAXMIND_LICENSE_KEY}&suffix=tar.gz"
         if curl -f -L -o "$TAR_PATH" "$URL_MM"; then
             tar -xzf "$TAR_PATH" -C "$TMP_DIR"
             FOUND="$(find "$TMP_DIR" -name "${EDITION}.mmdb" | head -n 1)"
@@ -86,9 +92,6 @@ fi
 
 # 重啟後端服務讓記憶體重新載入最新的資料庫
 echo "⏳ 正在重啟後端服務..."
-if command -v pm2 &> /dev/null; then
-    pm2 restart ztmy-gallery-api
-    echo "✅ 已重啟後端服務 (pm2 restart ztmy-gallery-api)"
-else
-    echo "⚠️ 未偵測到 pm2 命令，請確保手動重啟您的後端服務讓設定生效。"
-fi
+: "${BACKEND_CONTAINER_NAME:?請在 ${DEPLOY_CONFIG} 或環境變數設定 BACKEND_CONTAINER_NAME}"
+docker restart "$BACKEND_CONTAINER_NAME"
+echo "✅ 已重啟後端容器 ($BACKEND_CONTAINER_NAME)"

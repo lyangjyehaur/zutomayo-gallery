@@ -177,6 +177,7 @@ prod_v1_backup_*.sql
 frontend/.DS_Store
 frontend/src/.DS_Store
 frontend/dev-dist/
+frontend/code-dist.tar.gz
 frontend/public/version.json
 frontend/pnpm-lock.yaml
 

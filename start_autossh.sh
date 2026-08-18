@@ -7,11 +7,18 @@ set -euo pipefail
 #   ./start_autossh.sh stop
 #   ./start_autossh.sh status
 # 可覆寫參數：
-#   SSH_TARGET=server3 LOCAL_PORT=15432 REMOTE_PORT=5432 ./start_autossh.sh start
+#   SSH_TARGET=my-server LOCAL_PORT=15432 REMOTE_PORT=5432 ./start_autossh.sh start
 # 進階參數：
 #   MONITOR_PORT=20000  autossh loopback 監控端口
 
-SSH_TARGET="${SSH_TARGET:-server3}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEPLOY_CONFIG="${DEPLOY_CONFIG:-${SCRIPT_DIR}/deploy-local.conf}"
+if [ -f "$DEPLOY_CONFIG" ]; then
+    # shellcheck disable=SC1090
+    source "$DEPLOY_CONFIG"
+fi
+: "${SSH_TARGET:?請在 ${DEPLOY_CONFIG} 或環境變數設定 SSH_TARGET}"
+
 LOCAL_PORT="${LOCAL_PORT:-15432}"
 REMOTE_HOST="${REMOTE_HOST:-127.0.0.1}"
 REMOTE_PORT="${REMOTE_PORT:-5432}"

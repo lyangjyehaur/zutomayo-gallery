@@ -5,12 +5,20 @@
 
 set -e
 
+cd "$(dirname "$0")"
+
+CONFIG_FILE="${CONFIG_FILE:-deploy.conf}"
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "Missing deployment config: $CONFIG_FILE" >&2
+    exit 1
+fi
+source "$CONFIG_FILE"
+: "${BACKEND_CONTAINER_NAME:?Set BACKEND_CONTAINER_NAME in ${CONFIG_FILE}}"
+: "${BACKEND_HEALTH_ORIGIN:?Set BACKEND_HEALTH_ORIGIN in ${CONFIG_FILE}}"
+
 echo "========================================="
 echo " Zutomayo Gallery - Update Script"
 echo "========================================="
-
-# 1. 確保在專案根目錄
-cd "$(dirname "$0")"
 
 echo "=> [1/5] Pulling latest code from git..."
 git pull origin main
@@ -30,13 +38,20 @@ npm run migrate
 cd ..
 
 echo "=> [5/5] Restarting services..."
-# 假設使用 PM2 管理進程，若使用 Docker 可以改為 docker-compose restart
-if command -v pm2 &> /dev/null; then
-    echo "Restarting via PM2..."
-    pm2 reload all
-else
-    echo "PM2 not found. Please restart your services manually."
-    echo "Example: npm run dev"
+docker restart "$BACKEND_CONTAINER_NAME"
+
+HTTP_STATUS=""
+for attempt in $(seq 1 15); do
+    HTTP_STATUS="$(curl -sS -o /dev/null -w '%{http_code}' "${BACKEND_HEALTH_ORIGIN}/health" || true)"
+    if [ "$HTTP_STATUS" = "200" ]; then
+        break
+    fi
+    sleep 2
+done
+if [ "$HTTP_STATUS" != "200" ]; then
+    echo "Backend health check failed (HTTP ${HTTP_STATUS:-unknown})." >&2
+    docker logs --tail 50 "$BACKEND_CONTAINER_NAME" >&2 || true
+    exit 1
 fi
 
 echo "========================================="

@@ -38,13 +38,23 @@ if [ ! -f "$CONFIG_FILE" ]; then
 # ==========================================
 
 # 前端部署目標路徑 (例如: Nginx 的站點目錄)
-FRONTEND_DEPLOY_PATH="/www/wwwroot/mv.ztmr.club"
+FRONTEND_DEPLOY_PATH=""
 
 # 前端備份目錄 (每次更新前會將舊檔案備份到這裡)
 FRONTEND_BACKUP_PATH="/www/wwwroot/mv_backup"
 
 # Review App 部署目標路徑
-REVIEW_APP_DEPLOY_PATH="/www/wwwroot/review.ztmr.club"
+REVIEW_APP_DEPLOY_PATH=""
+
+# 後端 health check origin（例如 http://localhost:5010）
+BACKEND_HEALTH_ORIGIN=""
+
+# 後端 Docker 服務設定
+BACKEND_CONTAINER_NAME=""
+DOCKER_NETWORK=""
+NODE_IMAGE=""
+BACKEND_PORT=""
+BACKEND_RESTART_POLICY="unless-stopped"
 
 EOF
     echo -e "${RED}已建立預設 $CONFIG_FILE！${NC}"
@@ -54,6 +64,14 @@ fi
 
 # 讀取設定檔變數
 source "$CONFIG_FILE"
+
+require_deploy_setting() {
+    local setting_name="$1"
+    if [ -z "${!setting_name:-}" ]; then
+        echo -e "${RED}錯誤：${CONFIG_FILE} 缺少必要設定 ${setting_name}。${NC}"
+        exit 1
+    fi
+}
 
 # ==========================================
 # 2. 互動式選單
@@ -78,35 +96,56 @@ if [[ "$choice" != "1" && "$choice" != "2" && "$choice" != "3" && "$choice" != "
     exit 1
 fi
 
+case "$choice" in
+    1)
+        required_settings=(
+            FRONTEND_DEPLOY_PATH FRONTEND_BACKUP_PATH REVIEW_APP_DEPLOY_PATH
+            BACKEND_HEALTH_ORIGIN BACKEND_CONTAINER_NAME DOCKER_NETWORK NODE_IMAGE
+            BACKEND_PORT BACKEND_RESTART_POLICY
+        )
+        ;;
+    2)
+        required_settings=(FRONTEND_DEPLOY_PATH FRONTEND_BACKUP_PATH)
+        ;;
+    3)
+        required_settings=(
+            FRONTEND_BACKUP_PATH BACKEND_HEALTH_ORIGIN BACKEND_CONTAINER_NAME
+            DOCKER_NETWORK NODE_IMAGE BACKEND_PORT BACKEND_RESTART_POLICY
+        )
+        ;;
+    4)
+        required_settings=(REVIEW_APP_DEPLOY_PATH FRONTEND_BACKUP_PATH)
+        ;;
+    5)
+        required_settings=(BACKEND_HEALTH_ORIGIN BACKEND_CONTAINER_NAME BACKEND_PORT)
+        ;;
+esac
+for setting_name in "${required_settings[@]}"; do
+    require_deploy_setting "$setting_name"
+done
+
 # 如果選擇檢查服務狀態，直接執行並退出
 if [ "$choice" == "5" ]; then
     echo -e "\n${YELLOW}=== 服務狀態檢查 ===${NC}"
     
-    echo -e "\n[PM2 狀態]"
-    if command -v pm2 &> /dev/null; then
-        pm2 status ztmy-gallery-api || echo -e "${RED}未找到 ztmy-gallery-api 服務。${NC}"
-    else
-        echo -e "${RED}未安裝 PM2。${NC}"
-    fi
+    echo -e "\n[Docker 容器狀態]"
+    docker ps --filter "name=^/${BACKEND_CONTAINER_NAME}$" \
+        --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
 
     echo -e "\n[API 健康檢查]"
-    BACKEND_PORT=$(grep -E "^PORT=" backend/.env 2>/dev/null | cut -d '=' -f2)
-    BACKEND_PORT=${BACKEND_PORT:-5010}
-    
-    HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:${BACKEND_PORT}/health || echo "FAILED")
+    HEALTH_ORIGIN="${BACKEND_HEALTH_ORIGIN}"
+    HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${HEALTH_ORIGIN}/health" || echo "FAILED")
     if [ "$HTTP_STATUS" == "200" ]; then
         echo -e "${GREEN}✓ 服務運作正常 (Port: ${BACKEND_PORT})${NC}"
         # 抓取詳細狀態資訊
-        HEALTH_INFO=$(curl -s http://localhost:${BACKEND_PORT}/health)
+        HEALTH_INFO=$(curl -s "${HEALTH_ORIGIN}/health")
         echo -e "詳細資訊: ${HEALTH_INFO}"
     else
         echo -e "${RED}✗ 服務無回應或已停止 (HTTP Status: $HTTP_STATUS)${NC}"
     fi
     
     echo -e "\n[最近 15 行日誌]"
-    if command -v pm2 &> /dev/null; then
-        pm2 logs ztmy-gallery-api --lines 15 --nostream || echo -e "${YELLOW}無法獲取日誌。${NC}"
-    fi
+    docker logs --tail 15 "${BACKEND_CONTAINER_NAME}" 2>&1 || echo -e "${YELLOW}無法獲取日誌。${NC}"
     
     echo -e "\n${GREEN}==========================================${NC}"
     exit 0
@@ -240,54 +279,45 @@ deploy_frontend() {
 # ==========================================
 deploy_backend() {
     echo -e "\n${YELLOW}[Backend] 開始處理後端...${NC}"
-    cd backend
-    
-    echo -e "${YELLOW}清理舊的 node_modules...${NC}"
-    rm -rf node_modules
-    
-    echo "安裝後端依賴 (僅生產環境)..."
-    npm install --omit=dev --ignore-scripts
-    echo -e "${YELLOW}強制重建原生套件 (better-sqlite3, bcrypt)...${NC}"
-    npm rebuild better-sqlite3 bcrypt
-    
-    echo -e "${GREEN}使用本地 (Mac) 上傳的編譯產物，跳過伺服器端 tsc 編譯...${NC}"
+    local project_root
+    project_root="$(pwd)"
+
+    echo "在容器環境安裝後端 production 依賴..."
+    docker run --rm \
+        -v "${project_root}/backend:/app" \
+        -w /app \
+        "${NODE_IMAGE}" \
+        npm install --omit=dev
+
+    echo -e "${GREEN}使用已上傳的編譯產物，跳過伺服器端 tsc 編譯。${NC}"
     
     echo -e "\n${YELLOW}[Backend] 準備備份後端資料...${NC}"
     TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
     BACKUP_DIR="${FRONTEND_BACKUP_PATH}/backend_data_${TIMESTAMP}"
     
-    if [ -d "data" ]; then
+    if [ -d "backend/data" ]; then
         echo "正在備份後端資料 (SQLite & JSON) 至 $BACKUP_DIR ..."
         mkdir -p "$BACKUP_DIR"
-        cp -a data/. "$BACKUP_DIR/"
+        cp -a backend/data/. "$BACKUP_DIR/"
         echo "後端資料備份完成。"
     else
         echo "未偵測到 data 資料夾，跳過備份。"
     fi
 
     echo -e "\n${YELLOW}[Backend] 準備啟動後端服務...${NC}"
-    # 檢查是否已安裝 PM2
-    if ! command -v pm2 &> /dev/null; then
-        echo -e "${YELLOW}未偵測到 PM2，正在全域安裝 PM2...${NC}"
-        npm install -g pm2
-    fi
-
-    # 檢查是否已經有同名的 PM2 服務在運行
-    if pm2 status | grep -q "ztmy-gallery-api"; then
-        echo "重啟現有的 PM2 服務..."
-        pm2 restart ztmy-gallery-api
-    else
-        echo "建立新的 PM2 服務..."
-        pm2 start dist/index.js --name "ztmy-gallery-api"
-        echo "儲存 PM2 設定..."
-        pm2 save
-    fi
+    docker stop "${BACKEND_CONTAINER_NAME}" >/dev/null 2>&1 || true
+    docker rm "${BACKEND_CONTAINER_NAME}" >/dev/null 2>&1 || true
+    docker run -d \
+        --name "${BACKEND_CONTAINER_NAME}" \
+        --restart "${BACKEND_RESTART_POLICY}" \
+        --network "${DOCKER_NETWORK}" \
+        -p "${BACKEND_PORT}:${BACKEND_PORT}" \
+        -v "${project_root}/backend:/app" \
+        -w /app \
+        "${NODE_IMAGE}" \
+        npm start
     
     echo -e "\n${YELLOW}[Backend] 正在進行服務健康檢查...${NC}"
-    
-    # 嘗試從 backend/.env 讀取 PORT，預設為 5010
-    BACKEND_PORT=$(grep -E "^PORT=" .env | cut -d '=' -f2)
-    BACKEND_PORT=${BACKEND_PORT:-5010}
     
     # 最多嘗試 10 次，每次間隔 2 秒
     MAX_RETRIES=10
@@ -299,7 +329,8 @@ deploy_backend() {
         sleep 2
         
         # 呼叫 /health 端點並取得 HTTP 狀態碼
-        HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:${BACKEND_PORT}/health || echo "FAILED")
+        HEALTH_ORIGIN="${BACKEND_HEALTH_ORIGIN}"
+        HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${HEALTH_ORIGIN}/health" || echo "FAILED")
         
         if [ "$HTTP_STATUS" == "200" ]; then
             HEALTH_CHECK_PASSED=true
@@ -312,12 +343,12 @@ deploy_backend() {
     if [ "$HEALTH_CHECK_PASSED" = true ]; then
         echo -e "${GREEN}✓ 服務健康檢查通過！後端已成功運行於 Port ${BACKEND_PORT}。${NC}"
     else
-        echo -e "${RED}✗ 服務健康檢查失敗！無法連線到 http://localhost:${BACKEND_PORT}/health${NC}"
-        echo -e "${YELLOW}請使用 'pm2 logs ztmy-gallery-api' 指令查看詳細的錯誤日誌。${NC}"
-        # 這裡不 exit 1，因為雖然檢查失敗，但部署流程已經走完了，留給使用者自己查錯
+        echo -e "${RED}✗ 服務健康檢查失敗！無法連線到 ${HEALTH_ORIGIN}/health${NC}"
+        echo -e "${YELLOW}請使用 'docker logs ${BACKEND_CONTAINER_NAME}' 指令查看詳細的錯誤日誌。${NC}"
+        docker logs --tail 50 "${BACKEND_CONTAINER_NAME}" >&2 || true
+        exit 1
     fi
 
-    cd ..
     echo -e "${GREEN}[Backend] 後端部署完成！${NC}"
 }
 

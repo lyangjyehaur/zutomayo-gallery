@@ -1,0 +1,27 @@
+# Copy this file to deploy-local.conf and fill in the deployment-specific values.
+# deploy-local.conf is gitignored; host addresses and runtime topology do not belong in scripts.
+
+# SSH target. SSH_TARGET may be an alias from ~/.ssh/config. If omitted, set SERVER_USER and SERVER_IP.
+SSH_TARGET=""
+SERVER_USER=""
+SERVER_IP=""
+SERVER_PORT=""
+
+# Remote project and static-site paths
+REMOTE_PROJECT_PATH=""
+REMOTE_DEPLOY_PATH=""
+REMOTE_REVIEW_DEPLOY_PATH=""
+REMOTE_BACKUP_PATH=""
+
+# Backend Docker runtime
+BACKEND_CONTAINER_NAME=""
+DOCKER_NETWORK=""
+NODE_IMAGE=""
+BACKEND_HEALTH_ORIGIN=""
+BACKEND_PORT=""
+BACKEND_RESTART_POLICY="unless-stopped"
+
+# RSSHub maintenance
+RSSHUB_COMPOSE_FILE=""
+RSSHUB_SERVICE_NAME=""
+TWITTER_COOKIE_DOMAIN=""
