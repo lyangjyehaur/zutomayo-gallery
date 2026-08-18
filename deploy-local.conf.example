@@ -7,6 +7,12 @@ SERVER_USER=""
 SERVER_IP=""
 SERVER_PORT=""
 
+# Fail stalled transfers instead of waiting forever. Values are seconds except the retry count.
+SSH_CONNECT_TIMEOUT="15"
+SSH_KEEPALIVE_INTERVAL="10"
+SSH_KEEPALIVE_COUNT_MAX="3"
+SSH_CONNECTION_ATTEMPTS="3"
+
 # Remote project and static-site paths
 REMOTE_PROJECT_PATH=""
 REMOTE_DEPLOY_PATH=""

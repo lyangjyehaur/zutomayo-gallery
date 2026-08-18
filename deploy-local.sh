@@ -136,11 +136,23 @@ tag_frontend_deploy() {
 
 # 所有伺服器與容器參數都由 deploy-local.conf 提供
 SERVER_DEST="${SSH_TARGET:-${SERVER_USER:-}@${SERVER_IP:-}}"
-SSH_ARGS=()
-SCP_ARGS=()
+SSH_CONNECT_TIMEOUT="${SSH_CONNECT_TIMEOUT:-15}"
+SSH_KEEPALIVE_INTERVAL="${SSH_KEEPALIVE_INTERVAL:-10}"
+SSH_KEEPALIVE_COUNT_MAX="${SSH_KEEPALIVE_COUNT_MAX:-3}"
+SSH_CONNECTION_ATTEMPTS="${SSH_CONNECTION_ATTEMPTS:-3}"
+SSH_COMMON_ARGS=(
+    -o "BatchMode=yes"
+    -o "ConnectTimeout=${SSH_CONNECT_TIMEOUT}"
+    -o "ConnectionAttempts=${SSH_CONNECTION_ATTEMPTS}"
+    -o "ServerAliveInterval=${SSH_KEEPALIVE_INTERVAL}"
+    -o "ServerAliveCountMax=${SSH_KEEPALIVE_COUNT_MAX}"
+    -o "TCPKeepAlive=yes"
+)
+SSH_ARGS=("${SSH_COMMON_ARGS[@]}")
+SCP_ARGS=("${SSH_COMMON_ARGS[@]}")
 if [ -n "${SERVER_PORT:-}" ]; then
-    SSH_ARGS=(-p "${SERVER_PORT}")
-    SCP_ARGS=(-P "${SERVER_PORT}")
+    SSH_ARGS+=(-p "${SERVER_PORT}")
+    SCP_ARGS+=(-P "${SERVER_PORT}")
 fi
 REMOTE_WWW_DIR="${REMOTE_DEPLOY_PATH:-}"
 REMOTE_REVIEW_DIR="${REMOTE_REVIEW_DEPLOY_PATH:-}"
