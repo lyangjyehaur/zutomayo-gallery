@@ -67,7 +67,7 @@
 
 Admin 介面的「監聽目標管理」頁會呼叫 `/api/monitor-targets/sources` 顯示畫師 read-only 來源、手動 user 來源與 hashtag 來源，並透過 `/api/monitor-targets` CRUD 手動目標。
 
-> RSSHub 的 `/twitter/keyword/*` 依賴 X SearchTimeline，可能因上游私有 API 變更暫時返回 503。這種情況應保留 hashtag target 並設為 disabled，避免固定排程製造錯誤監控與通知噪音；待 RSSHub upstream 恢復後再重新啟用。user timeline feeds 不受此降級影響。
+> RSSHub 的 `/twitter/keyword/*` 依賴 X SearchTimeline。自建 RSSHub 啟動時必須先執行 `scripts/patch-rsshub.mjs`，把目前 bundle 的 Twitter GraphQL request 修正為 POST；補丁找不到對應 bundle pattern 時應讓容器啟動失敗，避免 hashtag route 靜默以 503 運行。若 X 再次改動私有 API，應保留 hashtag target 並設為 disabled，避免固定排程製造錯誤監控與通知噪音；待補丁或 RSSHub upstream 恢復後再重新啟用。user timeline feeds 不受此降級影響。
 
 ## 4. 檔案下載與 R2 儲存
 
