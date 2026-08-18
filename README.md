@@ -4,7 +4,7 @@
 
 | [繁體中文](README.md) | [简体中文](README.zh-Hans.md) | [English](README.en.md) | [日本語](README.ja.md) |
 
-![Version](https://img.shields.io/badge/version-3.7.14-blue)
+![Version](https://img.shields.io/badge/version-3.7.15-blue)
 ![React](https://img.shields.io/badge/React-18.3-61dafb)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.3-3178c6)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-38b2ac)
@@ -365,10 +365,7 @@ Vite 在 `vite build` 時會以 production mode 載入 `frontend/.env.production
 ```bash
 ./deploy-local.sh --all      # 本機 build 後部署主站、Review App 與 backend
 ./deploy-local.sh --status   # 檢查遠端 backend health 與近期 logs
-./deploy-local.sh --legacy   # 渲染並部署舊站遷移頁，通過 OpenResty config test 後停用 redirect
 ```
-
-遷移頁的遠端目錄、目標網址、舊 redirect 設定檔與 OpenResty 容器名稱分別由 `REMOTE_LEGACY_DEPLOY_PATH`、`LEGACY_SITE_TARGET_URL`、`LEGACY_REDIRECT_CONF`、`OPENRESTY_CONTAINER_NAME` 提供；模板本身不包含正式域名。
 
 **選項 B：線上增量更新腳本 (推薦日常更新)**
 本專案提供 `update.sh`，會自動 `git pull`、安裝依賴、build、執行 migrations 並重啟 `deploy.conf` 指定的 Docker 後端容器：
