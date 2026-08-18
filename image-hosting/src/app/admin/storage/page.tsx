@@ -12,8 +12,8 @@ import { Label } from "@/components/ui/label";
 export default function StorageStrategiesPage() {
   const [strategies, setStrategies] = useState([
     { id: 1, name: "Local Fast", type: "local", endpoint: "/uploads" },
-    { id: 2, name: "S3 Primary", type: "s3", endpoint: "s3.aws.com/bucket" },
-    { id: 3, name: "Cloudflare R2", type: "r2", endpoint: "r2.cloudflare.com/bucket" },
+    { id: 2, name: "S3 Primary", type: "s3", endpoint: "Configured in storage strategy" },
+    { id: 3, name: "Cloudflare R2", type: "r2", endpoint: "Configured in storage strategy" },
   ]);
 
   return (

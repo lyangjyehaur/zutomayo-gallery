@@ -6,7 +6,15 @@ import { TwitterService } from '../services/twitter.service.js';
 import { backupImageToR2 } from '../services/r2.service.js';
 import { errorEventEmitter } from '../services/error-events.service.js';
 import { logger } from '../utils/logger.js';
-import { isTweetSourceMedia } from '../utils/media-source.js';
+import {
+  getTwitterMediaHosts,
+  getTwitterSourceHosts,
+  isTweetSourceMedia,
+  isTwitterMediaUrl,
+  isTwitterSourceUrl,
+  isTwitterVideoUrl,
+  toSqlHostPatterns,
+} from '../utils/media-source.js';
 
 const clampInt = (value: unknown, fallback: number, min: number, max: number): number => {
   const n = Number(value);
@@ -31,15 +39,17 @@ const buildLikePatternSql = (
 };
 
 const buildTweetGroupSql = (groupAlias: string, mediaAlias: string, replacements: Record<string, any>) => {
+  const sourcePatterns = getTwitterSourceHosts().map((host) => `%${host}/%/status/%`);
+  const mediaPatterns = toSqlHostPatterns(getTwitterMediaHosts());
   const sourceSql = buildLikePatternSql(
     [`${groupAlias}.source_url`],
-    ['%x.com/%/status/%', '%twitter.com/%/status/%', '%mobile.twitter.com/%/status/%'],
+    sourcePatterns,
     replacements,
     `${groupAlias}_source_`,
   );
   const mediaSql = buildLikePatternSql(
     [`${mediaAlias}.url`, `${mediaAlias}.original_url`],
-    ['%pbs.twimg.com%', '%video.twimg.com%'],
+    mediaPatterns,
     replacements,
     `${mediaAlias}_media_`,
   );
@@ -71,7 +81,7 @@ export const listMediaGroups = async (req: Request, res: Response) => {
   const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
   const mediaJoinSql = buildLikePatternSql(
     ['m.url', 'm.original_url'],
-    ['%pbs.twimg.com%', '%video.twimg.com%'],
+    toSqlHostPatterns(getTwitterMediaHosts()),
     replacements,
     'm_media_',
   );
@@ -231,7 +241,7 @@ export const listRepairMediaGroups = async (req: Request, res: Response) => {
   const whereSql = `WHERE ${whereClauses.join(' AND ')}`;
   const mediaJoinSql = buildLikePatternSql(
     ['m.url', 'm.original_url'],
-    ['%pbs.twimg.com%', '%video.twimg.com%'],
+    toSqlHostPatterns(getTwitterMediaHosts()),
     replacements,
     'm_media_',
   );
@@ -260,7 +270,7 @@ export const listRepairMediaGroups = async (req: Request, res: Response) => {
       SELECT m2.url, m2.original_url
       FROM media m2
       WHERE m2.group_id = g.id
-        AND (${buildLikePatternSql(['m2.url', 'm2.original_url'], ['%pbs.twimg.com%', '%video.twimg.com%'], replacements, 'm2_media_')})
+        AND (${buildLikePatternSql(['m2.url', 'm2.original_url'], toSqlHostPatterns(getTwitterMediaHosts()), replacements, 'm2_media_')})
       ORDER BY m2.created_at ASC NULLS LAST, m2.id ASC
       LIMIT 1
     ) sm ON true
@@ -365,8 +375,6 @@ export const unassignMediaGroup = async (req: Request, res: Response) => {
 // Twitter Re-parse (Preview + Apply)
 // ==========================================
 
-const TWITTER_URL_PATTERN = /(?:twitter\.com|x\.com)/i;
-const TWIMG_URL_PATTERN = /pbs\.twimg\.com|video\.twimg\.com/i;
 const MAX_REPARSE_BATCH = 50;
 const VXITTER_DELAY_MS = 1500;
 
@@ -458,7 +466,7 @@ const matchParsedMedia = (
       const tmUrl = String(tm.url || '');
       // 精確匹配 original_url
       if (currentUrl && tmUrl && currentUrl === tmUrl) return true;
-      // 匹配 pbs.twimg.com 圖片的 base URL (不含格式參數)
+      // 匹配圖片的 base URL (不含格式參數)
       if (currentUrl && tmUrl && currentUrl.replace(/\?.*$/, '') === tmUrl.replace(/\?.*$/, '')) return true;
       return false;
     });
@@ -473,7 +481,7 @@ const matchParsedMedia = (
         original_url: m.original_url || null,
       };
       let mediaType = tm.type === 'video' ? 'video' : (tm.type === 'animated_gif' || tm.type === 'gif' ? 'gif' : 'image');
-      if (String(tm.url || '').includes('.mp4') || String(tm.url || '').includes('video.twimg.com')) {
+      if (String(tm.url || '').includes('.mp4') || isTwitterVideoUrl(tm.url)) {
         mediaType = 'video';
       }
       const parsed: ParsedMediaMeta = {
@@ -498,7 +506,7 @@ const matchParsedMedia = (
     if (usedIndices.has(i)) continue;
     const tm = tweetMediaList[i];
     let mediaType = tm.type === 'video' ? 'video' : (tm.type === 'animated_gif' || tm.type === 'gif' ? 'gif' : 'image');
-    if (String(tm.url || '').includes('.mp4') || String(tm.url || '').includes('video.twimg.com')) {
+    if (String(tm.url || '').includes('.mp4') || isTwitterVideoUrl(tm.url)) {
       mediaType = 'video';
     }
     media_new.push({
@@ -559,7 +567,7 @@ export const previewReparseTwitter = async (req: Request, res: Response) => {
       const g = group.toJSON() as any;
       const sourceUrl = String(g.source_url || '');
 
-      if (!TWITTER_URL_PATTERN.test(sourceUrl)) {
+      if (!isTwitterSourceUrl(sourceUrl)) {
         errors.push({ group_id: g.id, error: '非推特來源' });
         continue;
       }
@@ -664,7 +672,7 @@ export const applyReparseTwitter = async (req: Request, res: Response) => {
       const g = group.toJSON() as any;
       const sourceUrl = String(g.source_url || '');
 
-      if (!TWITTER_URL_PATTERN.test(sourceUrl)) {
+      if (!isTwitterSourceUrl(sourceUrl)) {
         skipped++;
         continue;
       }
@@ -726,7 +734,7 @@ export const applyReparseTwitter = async (req: Request, res: Response) => {
 
             // 更新 media_type
             let mediaType = tm.type === 'video' ? 'video' : (tm.type === 'animated_gif' || tm.type === 'gif' ? 'gif' : 'image');
-            if (String(tm.url || '').includes('.mp4') || String(tm.url || '').includes('video.twimg.com')) {
+            if (String(tm.url || '').includes('.mp4') || isTwitterVideoUrl(tm.url)) {
               mediaType = 'video';
             }
             if (isFieldSelected(selectedMediaFields, m.id, 'media_type') && mediaType && (shouldOverwrite || isEmpty(m.media_type) || m.media_type === 'image') && mediaType !== m.media_type) {
@@ -738,7 +746,7 @@ export const applyReparseTwitter = async (req: Request, res: Response) => {
             }
 
             // 補全 R2 備份：url 仍指向 twimg 且無 R2 備份
-            if (isFieldSelected(selectedMediaFields, m.id, 'url') && TWIMG_URL_PATTERN.test(String(m.url || ''))) {
+            if (isFieldSelected(selectedMediaFields, m.id, 'url') && isTwitterMediaUrl(m.url)) {
               const r2Folder = mediaType === 'video' ? 'fanarts/videos' : 'fanarts';
               const r2Url = await backupImageToR2(String(m.url), r2Folder, {
                 metadata: { 'group-id': g.id, 'source': 'reparse-r2-fill' },
@@ -768,14 +776,14 @@ export const applyReparseTwitter = async (req: Request, res: Response) => {
             if (allowedNewUrls && !allowedNewUrls.has(tmUrl)) continue;
 
             let mediaType = tm.type === 'video' ? 'video' : (tm.type === 'animated_gif' || tm.type === 'gif' ? 'gif' : 'image');
-            if (tmUrl.includes('.mp4') || tmUrl.includes('video.twimg.com')) {
+            if (tmUrl.includes('.mp4') || isTwitterVideoUrl(tmUrl)) {
               mediaType = 'video';
             }
 
             // 備份到 R2
             const r2Folder = mediaType === 'video' ? 'fanarts/videos' : 'fanarts';
             let r2Url: string | null = null;
-            if (TWIMG_URL_PATTERN.test(tmUrl)) {
+            if (isTwitterMediaUrl(tmUrl)) {
               r2Url = await backupImageToR2(tmUrl, r2Folder, {
                 metadata: { 'group-id': g.id, 'source': 'reparse-new' },
               });
@@ -784,7 +792,7 @@ export const applyReparseTwitter = async (req: Request, res: Response) => {
 
             // 備份視頻縮圖
             let thumbnailR2Url = tm.thumbnail || null;
-            if (thumbnailR2Url && TWIMG_URL_PATTERN.test(thumbnailR2Url) && mediaType === 'video') {
+            if (thumbnailR2Url && isTwitterMediaUrl(thumbnailR2Url) && mediaType === 'video') {
               const thumbR2 = await backupImageToR2(thumbnailR2Url, 'fanarts/videos/thumbs', {
                 metadata: { 'group-id': g.id, 'source': 'reparse-new-thumb' },
               });

@@ -10,6 +10,10 @@ import {
   reinitializeTopics,
   type TopicCategory,
 } from '../services/telegram-bot.service.js';
+import { joinConfiguredUrl, requireConfiguredUrl } from '../config/urls.js';
+
+const telegramApiUrl = (botToken: string, method: string) =>
+  joinConfiguredUrl(requireConfiguredUrl('TELEGRAM_API_BASE_URL'), `/bot${botToken}/${method}`);
 
 const CONFIG_KEY = 'telegram_config';
 
@@ -129,7 +133,7 @@ export const testTelegramBot = async (_req: Request, res: Response) => {
   }
 
   try {
-    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    const response = await fetch(telegramApiUrl(botToken, 'sendMessage'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -289,7 +293,7 @@ export const getTelegramWebhookInfo = async (_req: Request, res: Response) => {
   }
 
   try {
-    const response = await fetch(`https://api.telegram.org/bot${botToken}/getWebhookInfo`);
+    const response = await fetch(telegramApiUrl(botToken, 'getWebhookInfo'));
     const result = await response.json() as any;
 
     if (!result.ok) {
@@ -337,7 +341,7 @@ export const setTelegramWebhook = async (req: Request, res: Response) => {
   }
 
   try {
-    const response = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
+    const response = await fetch(telegramApiUrl(botToken, 'setWebhook'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(params),

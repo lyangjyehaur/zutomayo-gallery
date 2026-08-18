@@ -124,7 +124,7 @@ async function removeTelegramInlineKeyboard(chatId: number, messageId: number): 
 /**
  * Waline webhook token 驗證中間件
  * Waline 不支持內建簽名驗證，使用路徑 token 方式保護端點
- * 配置 Waline WEBHOOK 時設為: https://your-domain/api/webhook/waline/<WALINE_WEBHOOK_SECRET>
+ * 配置 Waline WEBHOOK 時使用 PUBLIC_APP_ORIGIN 對應的 webhook 路徑。
  * 若未配置 WALINE_WEBHOOK_SECRET，生產環境拒絕請求，開發環境放行但警告
  */
 export const verifyWalineWebhook = (req: Request, res: Response, next: NextFunction): void => {
@@ -182,7 +182,7 @@ export const handleWalineWebhook = async (req: Request, res: Response) => {
       title: `畫廊新留言: ${nick}`,
       body: `${comment}\n\n頁面: ${url}`,
       url: undefined,
-      extraParams: 'group=Waline&icon=https://gallery.ztmr.club/favicon.ico',
+      extraParams: `group=Waline&icon=${encodeURIComponent(process.env.WALINE_NOTIFICATION_ICON_URL || '')}`,
     });
 
     if (sent) {

@@ -3,6 +3,7 @@ import Database from 'better-sqlite3';
 import { sequelize, ArtistModel, AlbumModel, SysConfigModel, MediaModel, ArtistMediaModel } from '../models/index.js';
 
 import { nanoid } from 'nanoid';
+import { isTwitterVideoUrl } from '../utils/media-source.js';
 const generateShortId = () => nanoid(16);
 
 async function recover() {
@@ -59,7 +60,7 @@ async function recover() {
                 let currentMediaType = 'image';
                 if (typeof c === 'object' && c.type) {
                   currentMediaType = c.type === 'video' || c.type === 'animated_gif' ? 'video' : 'image';
-                } else if (c.url.includes('.mp4') || c.url.includes('video.twimg.com')) {
+                } else if (c.url.includes('.mp4') || isTwitterVideoUrl(c.url)) {
                   currentMediaType = 'video';
                 } else if (c.url.includes('.gif')) {
                   currentMediaType = 'gif';

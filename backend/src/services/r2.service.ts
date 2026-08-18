@@ -2,6 +2,7 @@ import { S3Client, PutObjectCommand, HeadObjectCommand, CopyObjectCommand, Delet
 import crypto from 'crypto';
 import type { Readable } from 'stream';
 import { logger } from '../utils/logger.js';
+import { isTwitterImageUrl } from '../utils/media-source.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -9,8 +10,11 @@ const ACCOUNT_ID = process.env.R2_ACCOUNT_ID || '';
 const ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || '';
 const SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || '';
 const BUCKET_NAME = process.env.R2_BUCKET_NAME || 'zutomayo-gallery-archive';
-const rawR2Domain = process.env.R2_PUBLIC_DOMAIN || 'https://r2.dan.tw';
-export const R2_PUBLIC_DOMAIN = rawR2Domain.startsWith('http') ? rawR2Domain : `https://${rawR2Domain}`;
+const rawR2Domain = process.env.R2_PUBLIC_DOMAIN || '';
+export const R2_PUBLIC_DOMAIN = rawR2Domain
+  ? (rawR2Domain.startsWith('http') ? rawR2Domain : `https://${rawR2Domain}`)
+  : '';
+const R2_ENDPOINT_URL = String(process.env.R2_ENDPOINT_URL || '').trim() || undefined;
 
 export const getR2DevKeyPrefix = (): string => {
   if (process.env.NODE_ENV === 'production') return '';
@@ -35,10 +39,10 @@ export const MAX_VIDEO_FILE_SIZE = 500 * 1024 * 1024;
 
 let s3Client: S3Client | null = null;
 
-if (ACCOUNT_ID && ACCESS_KEY_ID && SECRET_ACCESS_KEY) {
+if (ACCOUNT_ID && ACCESS_KEY_ID && SECRET_ACCESS_KEY && R2_ENDPOINT_URL) {
   s3Client = new S3Client({
     region: 'auto',
-    endpoint: `https://${ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    endpoint: R2_ENDPOINT_URL,
     credentials: {
       accessKeyId: ACCESS_KEY_ID,
       secretAccessKey: SECRET_ACCESS_KEY,
@@ -47,7 +51,7 @@ if (ACCOUNT_ID && ACCESS_KEY_ID && SECRET_ACCESS_KEY) {
   logger.info('[R2] Service initialized successfully.');
 } else {
   if (isProduction) {
-    logger.warn('[R2] Missing R2 credentials in production environment.');
+    logger.warn('[R2] Missing R2 credentials or R2_ENDPOINT_URL in production environment.');
   } else {
     logger.info('[R2] Skipped initialization in development (missing credentials).');
   }
@@ -238,7 +242,7 @@ export const moveFileInR2 = async (oldKey: string, newKey: string): Promise<stri
 
 /**
  * 下載網路圖片並上傳到 R2
- * @param url 原始圖片網址 (如推特 pbs.twimg.com)
+ * @param url 原始圖片網址
  * @param folder 儲存的資料夾名稱 (如 fanarts, mvs/ID)
  * @param options 上傳選項 (重試次數、Metadata)
  * @returns 成功上傳後的 R2 公開網址
@@ -277,7 +281,7 @@ export const backupImageToR2 = async (
       // 3. 下載原圖
       // 如果是推特圖，加上 name=orig 來抓取最大畫質
       let fetchUrl = url;
-      if (fetchUrl.includes('pbs.twimg.com')) {
+      if (isTwitterImageUrl(fetchUrl)) {
         // 移除現有的格式參數，確保我們能附加 orig
         fetchUrl = fetchUrl.replace(/&name=[a-z0-9]+/i, '');
         fetchUrl = fetchUrl.replace(/\?name=[a-z0-9]+/i, '?');

@@ -22,8 +22,28 @@ function base64URLToBuffer(base64url: string): Uint8Array {
 const rpName = 'ZUTOMAYO Gallery Admin';
 
 const getOriginInfo = (req: Request) => {
-  const origin = req.get('origin') || process.env.EXPECTED_ORIGIN || 'http://localhost:5173';
-  const rpID = process.env.RP_ID || new URL(origin).hostname;
+  const origin = req.get('origin') || process.env.EXPECTED_ORIGIN || '';
+  const configuredRpId = String(process.env.RP_ID || '').trim();
+  if (!origin) {
+    throw new AppError(
+      500,
+      'WEBAUTHN_ORIGIN_NOT_CONFIGURED',
+      'Passkey 服務尚未設定來源網域',
+    );
+  }
+
+  let rpID = configuredRpId;
+  if (!rpID) {
+    try {
+      rpID = new URL(origin).hostname;
+    } catch {
+      throw new AppError(
+        500,
+        'WEBAUTHN_ORIGIN_INVALID',
+        'Passkey 服務來源網域設定無效',
+      );
+    }
+  }
   return { origin, rpID };
 };
 

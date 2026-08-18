@@ -7,7 +7,7 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 export interface R2Config {
-  accountId: string;
+  endpoint?: string;
   accessKeyId: string;
   secretAccessKey: string;
   bucket: string;
@@ -20,9 +20,13 @@ export class R2Storage {
   private publicDomain?: string;
 
   constructor(config: R2Config) {
+    const endpoint = String(config.endpoint || "").trim();
+    if (!endpoint) {
+      throw new Error("R2 storage endpoint is required");
+    }
     this.client = new S3Client({
       region: "auto",
-      endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
+      endpoint,
       credentials: {
         accessKeyId: config.accessKeyId,
         secretAccessKey: config.secretAccessKey,

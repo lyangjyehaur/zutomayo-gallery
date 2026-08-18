@@ -59,22 +59,17 @@ if (trustProxy === 'true') {
 }
 
 // CORS 配置 - 僅允許特定來源
-import { getAllowedOrigins, resolveCorsOrigin } from './utils/cors.js';
+import { getAllowedOrigins, isCorsOriginAllowed } from './utils/cors.js';
 
 const allowedOrigins = getAllowedOrigins();
 
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    if (!origin) {
-      return callback(null, true);
-    }
-    
-    if (resolveCorsOrigin(origin)) {
-      callback(null, true);
-    } else {
+    const allowed = isCorsOriginAllowed(origin);
+    if (!allowed) {
       logger.warn({ origin }, '[CORS] Blocked request from origin');
-      callback(new Error('Not allowed by CORS'));
     }
+    callback(null, allowed);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],

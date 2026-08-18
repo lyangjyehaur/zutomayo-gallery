@@ -2,6 +2,7 @@ import fetch from 'node-fetch';
 import { SysConfigModel } from '../models/index.js';
 import { errorEventEmitter } from './error-events.service.js';
 import { logger } from '../utils/logger.js';
+import { getUrlOriginForLog } from '../utils/sensitive-url.js';
 
 // 動態配置：DB 優先，env fallback
 let cachedBarkUrl = process.env.BARK_URL || '';
@@ -28,6 +29,11 @@ const NOTIFICATION_TYPE_TO_PREF: Record<string, string> = {
   'error-threshold': 'error',
 };
 
+const getBarkLogContext = (barkUrl: string): { barkOrigin?: string; barkConfigured: boolean } => {
+  const barkOrigin = getUrlOriginForLog(barkUrl);
+  return { ...(barkOrigin ? { barkOrigin } : {}), barkConfigured: Boolean(barkUrl) };
+};
+
 export const NotificationService = {
   sendBarkNotification: async ({
     title,
@@ -49,7 +55,11 @@ export const NotificationService = {
     const encodedBody = encodeURIComponent(body);
 
     // Bark URL 格式: {base_url}/{device_key}/{title}/{body}
-    const baseUrl = cachedBarkUrl || 'https://api.day.app';
+    const baseUrl = cachedBarkUrl || process.env.BARK_API_BASE_URL || '';
+    if (!baseUrl) {
+      logger.warn('BARK_API_BASE_URL not configured, skipping Bark notification');
+      return false;
+    }
     const deviceKey = cachedBarkKey || '';
     let barkUrl = `${baseUrl.replace(/\/$/, '')}${deviceKey ? `/${deviceKey}` : ''}/${encodedTitle}/${encodedBody}`;
 
@@ -61,7 +71,8 @@ export const NotificationService = {
       barkUrl += url ? `&${extraParams}` : `?${extraParams}`;
     }
 
-    logger.info({ barkUrl }, 'Sending Bark notification');
+    const barkLogContext = getBarkLogContext(barkUrl);
+    logger.info(barkLogContext, 'Sending Bark notification');
 
     try {
       const response = await fetch(barkUrl);
@@ -75,7 +86,7 @@ export const NotificationService = {
         errorEventEmitter.emitError({
           source: 'cron',
           message: errMsg,
-          details: { phase: 'bark-notification', barkUrl },
+          details: { phase: 'bark-notification', ...barkLogContext },
         });
         return false;
       }

@@ -1,6 +1,7 @@
 import { MediaGroupModel, MediaModel } from '../models/index.js';
 import { getMVsFromDB, saveMVsToDB } from './v2_mapper.js';
 import { backupImageToR2 } from './r2.service.js';
+import { isTwitterMediaUrl } from '../utils/media-source.js';
 
 export type R2SyncResult = {
   successCount: number;
@@ -19,7 +20,7 @@ export const runR2Sync = async (): Promise<R2SyncResult> => {
     if (!data.images) continue;
 
     for (const media of data.images) {
-      if (!media.url || !(media.url.includes('pbs.twimg.com') || media.url.includes('video.twimg.com'))) {
+      if (!media.url || !isTwitterMediaUrl(media.url)) {
         skippedCount++;
         continue;
       }
@@ -38,7 +39,7 @@ export const runR2Sync = async (): Promise<R2SyncResult> => {
           await MediaModel.update({ url: r2Url }, { where: { id: media.id } });
           successCount++;
 
-          if (media.media_type === 'video' && media.thumbnail_url && media.thumbnail_url.includes('pbs.twimg.com')) {
+          if (media.media_type === 'video' && media.thumbnail_url && isTwitterMediaUrl(media.thumbnail_url)) {
             const r2ThumbUrl = await backupImageToR2(media.thumbnail_url, `fanarts/videos/thumbs`, {
               metadata: { 'fanart-id': data.id },
             });
@@ -66,7 +67,7 @@ export const runR2Sync = async (): Promise<R2SyncResult> => {
         const isString = typeof imgObj === 'string';
         const imgUrl = isString ? imgObj : imgObj.url;
 
-        if (imgUrl && imgUrl.includes('pbs.twimg.com')) {
+        if (imgUrl && isTwitterMediaUrl(imgUrl)) {
           const r2Url = await backupImageToR2(imgUrl, `mvs/${mv.id}`, {
             metadata: {
               'mv-id': mv.id,
@@ -101,4 +102,3 @@ export const runR2Sync = async (): Promise<R2SyncResult> => {
 
   return { successCount, failCount, skippedCount };
 };
-

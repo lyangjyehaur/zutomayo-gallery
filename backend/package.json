@@ -14,6 +14,7 @@
     "admin:grant-super-admin": "tsx src/scripts/admin-cli.ts grant-super-admin",
     "admin:list-users": "tsx src/scripts/admin-cli.ts list-users",
     "fetch-tweets": "tsx src/scripts/fetch-zutomayo-art-tweets.ts",
+    "backfill:retweet-metadata": "tsx src/scripts/backfill-retweet-metadata.ts",
     "reparse-tweets": "tsx src/scripts/reparse-raw-apify.ts",
     "reparse-prod": "node dist/scripts/reparse-raw-apify.js",
     "migrate": "tsx src/scripts/migrate.ts up",

@@ -1,10 +1,7 @@
-const DEV_ORIGINS = [
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://localhost:5175',
-  'http://localhost:4173',
-  'http://localhost:3000',
-]
+const getDevOrigins = (): string[] => String(process.env.DEV_ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean)
 
 const getAllowedOrigins = (): string[] => {
   const origins: string[] = []
@@ -14,7 +11,7 @@ const getAllowedOrigins = (): string[] => {
   }
 
   if (process.env.NODE_ENV !== 'production') {
-    origins.push(...DEV_ORIGINS)
+    origins.push(...getDevOrigins())
   }
 
   return [...new Set(origins)]
@@ -29,4 +26,8 @@ export const resolveCorsOrigin = (requestOrigin: string | undefined): string | u
     return requestOrigin
   }
   return undefined
+}
+
+export const isCorsOriginAllowed = (requestOrigin: string | undefined): boolean => {
+  return !requestOrigin || Boolean(resolveCorsOrigin(requestOrigin))
 }

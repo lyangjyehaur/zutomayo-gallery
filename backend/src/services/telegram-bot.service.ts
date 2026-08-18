@@ -11,6 +11,7 @@ import {
 } from './telegram-topic-cache.js';
 
 const CONFIG_KEY = 'telegram_config';
+const TELEGRAM_PHOTO_CAPTION_LIMIT = 1024;
 
 // 動態配置：DB 優先，env fallback
 let cachedBotToken = process.env.TELEGRAM_BOT_TOKEN || '';
@@ -50,7 +51,9 @@ function initBot(token: string) {
     return;
   }
   try {
-    bot = new TelegramBot(token, { polling: false });
+    const baseApiUrl = String(process.env.TELEGRAM_API_BASE_URL || '').replace(/\/+$/, '');
+    if (!baseApiUrl) throw new Error('TELEGRAM_API_BASE_URL is required');
+    bot = new TelegramBot(token, { polling: false, baseApiUrl });
     logger.info('Telegram Bot initialized');
   } catch (err) {
     logger.error({ err }, 'Failed to initialize Telegram Bot');
@@ -493,12 +496,8 @@ export const TelegramBotService = {
       return false;
     }
 
-    const escapedTitle = escapeHtml(title);
-    const escapedBody = escapeHtml(body);
-    let text = `<b>${escapedTitle}</b>\n\n${escapedBody}`;
-    if (sourceUrl) {
-      text += `\n\n<a href="${escapeHtmlAttribute(sourceUrl)}">開啟原推文</a>`;
-    }
+    const text = buildFanartReviewMessage(title, body, sourceUrl);
+    const photoCaption = buildFanartReviewPhotoCaption(title, body, sourceUrl);
 
     const replyMarkup = {
       inline_keyboard: [[
@@ -522,7 +521,7 @@ export const TelegramBotService = {
       if (imageUrl) {
         try {
           await bot.sendPhoto(cachedChatId, imageUrl, {
-            caption: text.substring(0, 1024),
+            caption: photoCaption,
             ...options,
           });
         } catch (err) {
@@ -582,6 +581,35 @@ export function parseFanartReviewCallbackData(data: unknown): { action: FanartRe
       : 'reject';
 
   return { action, stagingId };
+}
+
+export function buildFanartReviewPhotoCaption(title: string, body: string, sourceUrl?: string): string {
+  const fullMessage = buildFanartReviewMessage(title, body, sourceUrl);
+  if (fullMessage.length <= TELEGRAM_PHOTO_CAPTION_LIMIT) return fullMessage;
+
+  const escapedTitle = escapeHtmlToLength(title, 256);
+  const prefix = `<b>${escapedTitle}</b>\n\n`;
+  const suffix = '…';
+  const bodyLimit = Math.max(0, TELEGRAM_PHOTO_CAPTION_LIMIT - prefix.length - suffix.length);
+  return `${prefix}${escapeHtmlToLength(body, bodyLimit)}${suffix}`;
+}
+
+function buildFanartReviewMessage(title: string, body: string, sourceUrl?: string): string {
+  let text = `<b>${escapeHtml(title)}</b>\n\n${escapeHtml(body)}`;
+  if (sourceUrl) {
+    text += `\n\n<a href="${escapeHtmlAttribute(sourceUrl)}">開啟原推文</a>`;
+  }
+  return text;
+}
+
+function escapeHtmlToLength(value: string, maxLength: number): string {
+  let escaped = '';
+  for (const character of value) {
+    const next = escapeHtml(character);
+    if (escaped.length + next.length > maxLength) break;
+    escaped += next;
+  }
+  return escaped;
 }
 
 function escapeHtml(str: string): string {

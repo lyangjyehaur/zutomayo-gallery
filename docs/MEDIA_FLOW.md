@@ -13,7 +13,7 @@
 - **觸發機制**：後端定時執行 `TwitterMonitorService.checkRss()`，合併畫師 `twitter` 欄位、後台啟用的手動 user 監聽目標、後台啟用的 hashtag 監聽目標，以及舊版 `TWITTER_RSS_URL` fallback，產生去重後的 RSS feed 清單。
 - **來源管理**：`/admin/monitor-targets` 可管理手動 user / hashtag 來源；畫師 Twitter 來源來自 artists 資料，僅在此頁 read-only 顯示。RSSHub base 優先使用 `TWITTER_RSSHUB_BASE_URL` / `RSSHUB_BASE_URL`，未設定時使用 `https://rsshub.app`。
 - **處理流程**：
-  1. **解析推文**：透過 `TwitterService.extractMediaFromTweet` 以 RSSHub item 為主提取推文中的圖片/影片真實網址；RSS description 會容錯處理雙重 HTML escape、多張圖片與影片 poster/source，圖片 URL 會正規化為 `name=orig`。服務會嘗試讀取 `https://x.com/i/status/{tweet_id}` 的頁面 JSON state 補強原推文/轉推 canonical ID、作者與互動數；若 x.com 補強失敗，仍以 RSS item 產生 staging 候選。手動 URL-only 解析則使用 x.com JSON state，必要時降級到 OpenGraph/Twitter card meta media。
+  1. **解析推文**：透過 `TwitterService.extractMediaFromTweet` 以 RSSHub item 為主提取推文中的圖片/影片真實網址；RSS description 會容錯處理雙重 HTML escape、多張圖片與影片 poster/source，圖片 URL 會正規化為 `name=orig`。服務會嘗試讀取 `https://x.com/i/status/{tweet_id}` 的頁面 JSON/RSC state 補強原推文/轉推 canonical ID、作者與互動數；RSC media entity 必須屬於 requested tweet，或屬於 RSS 已證實的轉推原文，quoted tweet 媒體會被排除並依 media ID / normalized URL 去重。若 x.com 補強失敗，仍以 RSS item 產生 staging 候選。手動 URL-only 解析則使用 x.com JSON/RSC state，必要時降級到 OpenGraph/Twitter card meta media；非 2xx HTML 只有在含 requested tweet 的結構化證據時才可使用，任意 preload 圖片不能作為身分證據，BlurredMediaTombstone/preload fallback 也必須綁定 requested tweet。
   2. **寫入暫存資料庫**：將每個新候選媒體以原始媒體 URL 寫入 `staging_fanarts`，狀態為 `pending`，`r2_url` 保持 `null`；監聽階段不寫入 R2，避免被拒絕或暫存觀察的無用媒體進入 R2。
   3. **通知管理員**：透過 `TelegramBotService.sendFanartReviewNotification()` 發送 Telegram inline 審核按鈕；預覽圖使用原始圖片 URL 或影片 thumbnail。
   4. **Telegram 初審**：Telegram callback 將狀態改為 `reviewed`（而非直接批准），進入 review-app 待關聯。
@@ -22,6 +22,7 @@
      - `official`：單選一個 MV 後核准
      - `collaboration`：直接核准（自動從 `author_handle` 匹配畫師，或手動選擇）
   6. **Promote 入庫**：staging promotion 流程下載媒體並上傳至 R2（`collaboration` 類型的 Media.url 保留原始 URL），建立 `media_groups`、`media` 及對應的 `mv_media`（official/fanart/cosplay）或 `artist_media`（collaboration）關聯。
+- **歷史轉推修復**：canonical `backend/src/scripts/backfill-retweet-metadata.ts` 只掃描 RSS `/i/status/` 且 `source_text` 為 `RT @...` 的 legacy rows。工具預設 dry-run；apply 時逐筆 transaction。原推已存在則把可證實的官方轉推者合併進 canonical rows 的 `retweeted_by_handle`，保留 duplicate row 並標 `rejected`，不刪除 audit record。
 - **程式碼參考**：[twitter-monitor.service.ts](file:///Users/lyangjyehaur/Projects/zutomayo-gallery/backend/src/services/twitter-monitor.service.ts)
 
 ### 1.2 管理員手動同步/重建 (R2 Rebuild)
@@ -42,7 +43,13 @@
 - **Metadata 附加**：上傳時會附帶 `original-url`, `mv-id`, `fanart-id` 等自訂 Metadata，作為未來的備用資料庫。
 - **程式碼參考**：[r2.service.ts](file:///Users/lyangjyehaur/Projects/zutomayo-gallery/backend/src/services/r2.service.ts)
 
-### 2.2 PostgreSQL 關聯式資料庫 (V2 Schema)
+### 2.2 MV Media 寫入契約
+
+- Admin Twitter 解析結果統一將 Twitter `type` 映射到 `media_type`，將影片/GIF 的 `thumbnail` 映射到 `thumbnail_url`；gallery classification `type` 仍獨立保存 `official` / `fanart`，不可混用。
+- 建立新 media 時，省略 `media_type` 才預設為 `image`。更新既有 media 時，省略 `media_type` 或 `thumbnail_url` 代表保留原值；只有明確提供欄位才更新，`thumbnail_url: null` / 空值可明確清空縮圖。
+- MV 寫入 transaction 已 commit 後，runtime cache 會從 DB 重載。若重載失敗，服務會失效本機 cache 並記錄錯誤，但不會把已成功 commit 的 mutation 回報成失敗。
+
+### 2.3 PostgreSQL 關聯式資料庫 (V2 Schema)
 - **`mvs`**：MV 核心資料表。
 - **`media`**：統一媒體表，儲存所有圖片/影片的 `url` (R2 網址) 與 `original_url` (原始網址)。
 - **`media_groups`**：媒體分組，用於綁定同一篇推文來源的多張圖片，紀錄作者與來源連結。
@@ -105,7 +112,7 @@
 - **不分海內外**：前端組件 (如 `FancyboxViewer`) 渲染圖片時，會優先檢查資料庫是否保留了 `original_url` (推特或 YouTube 原始網址)。
 - 若存在，則將 `original_url` 交給 `getProxyImgUrl` 處理：
   - **海外/翻牆用戶**：直連 `pbs.twimg.com`，完全不消耗我方資源。
-  - **大陸用戶**：替換為 Nginx 反代 `assets.ztmr.club/ti` 穿透 GFW。這裡的巧妙之處在於，依然利用 Twitter 原生的 `?name=small/large` 參數來獲取官方縮圖，**刻意繞過 Imgproxy**，從而大幅節省圖片重新壓縮的 CPU 消耗。
+  - **大陸用戶**：替換為 `VITE_ASSETS_ORIGIN` 配置的 Nginx `/ti` 反代穿透 GFW。這裡依然利用 Twitter 原生的 `?name=small/large` 參數取得官方縮圖，**刻意繞過 Imgproxy**，從而節省圖片重新壓縮的 CPU 消耗。
 - **優雅降級 (Fallback)**：只有當 Twitter/YouTube 上的圖片因刪除等原因失效 (觸發 `onError`) 時，前端才會退回並載入 R2 上的備份圖 (`img.url`)。
 
 #### 📍 特殊狀態：原圖下載模式 (Raw Download)
@@ -121,7 +128,7 @@
 
 ### 4.3 Imgproxy 動態影像處理與安全機制
 - **縮圖生成**：將 R2 中的高畫質原圖，即時壓縮成 WebP 縮圖 (`w:302/402/602/f:webp`)。
-- **下載檔名注入**：在 `raw` 模式下，透過 `filename:XXX` 參數，在 HTTP 回應中注入 `Content-Disposition: attachment; filename="XXX.jpg"`，讓瀏覽器下載時自動使用友好的自訂檔名 (例如 `勘冴えて悔しいわ_1.jpg`)，而非 R2 上的 MD5 Hash 亂碼。
+- **下載檔名注入**：在 `raw` 模式下，透過 `filename:XXX` 參數，在 HTTP 回應中注入 `Content-Disposition: attachment; filename="XXX.jpg"`，讓瀏覽器下載時自動使用友好的自訂檔名 (例如 `勘冴えて悔しいわ_1.jpg`)，而非 R2 上的 MD5 Hash 亂碼。後端會先移除自訂檔名的最後一段副檔名，再由 imgproxy 依實際圖片格式補回，避免產生 `.jpg.jpg`。
 - **安全簽名**：若設定了 `IMGPROXY_KEY`，前端不會直接暴露 imgproxy 網址，而是指向後端 API `/api/system/image/proxy`，由後端生成簽名後 302 重定向，防止伺服器被惡意消耗算力。
 
 ### 4.4 異常處理與降級 (Fallback)
@@ -189,8 +196,8 @@ graph TD
   {
     "AllowedOrigins": [
       "http://localhost:5173",
-      "https://*.ztmr.club",
-      "https://ztmr.club"
+      "https://*.zutomayo.art",
+      "https://zutomayo.art"
     ],
     "AllowedMethods": [
       "GET",

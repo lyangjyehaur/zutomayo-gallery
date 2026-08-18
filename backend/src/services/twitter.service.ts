@@ -9,6 +9,7 @@ export interface TwitterMedia {
   tweet_id?: string;  // 真正含有媒體的推文 ID（轉推時為原推文 ID）
   tweet_url?: string; // 真正含有媒體的推文網址
   requested_tweet_id?: string; // 輸入網址上的推文 ID
+  retweeted_by_handle?: string; // requested tweet 為轉推時的轉推者
   like_count?: number | null;
   retweet_count?: number | null;
   view_count?: number | null;
@@ -16,10 +17,26 @@ export interface TwitterMedia {
 }
 
 import { logger } from '../utils/logger.js';
+import { isTwitterImageUrl } from '../utils/media-source.js';
+import { requireConfiguredUrl } from '../config/urls.js';
 
-const ZUTOMAYO_ART_STATUS_URL = 'https://x.com/zutomayo_art/status/';
-const X_STATUS_URL = 'https://x.com/i/status/';
+const TWITTER_WEB_ORIGIN = requireConfiguredUrl('TWITTER_WEB_ORIGIN');
+const TWITTER_IMAGE_ORIGIN = requireConfiguredUrl('TWITTER_IMAGE_ORIGIN');
+const TWITTER_VIDEO_ORIGIN = requireConfiguredUrl('TWITTER_VIDEO_ORIGIN');
+const TWITTER_ALLOWED_HOSTS = [TWITTER_WEB_ORIGIN, ...String(process.env.TWITTER_LEGACY_ORIGINS || '').split(',')]
+  .map((origin) => origin.trim())
+  .filter(Boolean)
+  .map((origin) => {
+    try { return new URL(origin).hostname.toLowerCase(); } catch { return ''; }
+  })
+  .filter(Boolean);
+const ZUTOMAYO_ART_STATUS_URL = `${TWITTER_WEB_ORIGIN}/zutomayo_art/status/`;
+const X_STATUS_URL = `${TWITTER_WEB_ORIGIN}/i/status/`;
 const X_FETCH_TIMEOUT_MS = 8000;
+
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const TWITTER_IMAGE_ORIGIN_PATTERN = escapeRegExp(TWITTER_IMAGE_ORIGIN);
+const TWITTER_VIDEO_ORIGIN_PATTERN = escapeRegExp(TWITTER_VIDEO_ORIGIN);
 
 type FetchLike = (input: string | URL, init?: RequestInit) => Promise<Pick<Response, 'ok' | 'statusText' | 'text'>>;
 
@@ -53,7 +70,7 @@ const parseTweetUrl = (tweetUrl: string): URL | null => {
   try {
     const url = new URL(urlText);
     const host = url.hostname.toLowerCase();
-    if (!['x.com', 'www.x.com', 'twitter.com', 'www.twitter.com', 'mobile.twitter.com'].includes(host)) {
+    if (!TWITTER_ALLOWED_HOSTS.includes(host)) {
       return null;
     }
     return url;
@@ -165,7 +182,7 @@ const readAttributes = (tag: string): Record<string, string> => {
 const normalizeTwitterImageUrl = (url: string): string => {
   try {
     const parsed = new URL(decodePossiblyEscapedHtml(url));
-    if (parsed.hostname === 'pbs.twimg.com') {
+    if (isTwitterImageUrl(parsed.toString())) {
       parsed.searchParams.set('name', 'orig');
       return parsed.toString();
     }
@@ -262,11 +279,14 @@ const extractRssMediaElements = (item: RssTweetItem) => {
  * 轉推的 RSS description/content 通常包含原推連結。
  */
 const extractOriginalTweetIdFromRss = (item: RssTweetItem): string | null => {
-  const html = [item.description, item.content].filter(Boolean).join(' ');
+  const html = decodePossiblyEscapedHtml([item.description, item.content].filter(Boolean).join(' '));
   if (!html) return null;
-  // 從 HTML 中找 Twitter status 連結，取第一個（通常是原推）
-  const linkMatch = html.match(/(?:twitter\.com|x\.com)\/\w+\/status\/(\d+)/i);
-  return linkMatch ? linkMatch[1] : null;
+  // 從允許的 Twitter Web origins 中找 status 連結，取第一個（通常是原推）。
+  for (const match of html.matchAll(/https?:\/\/[^\s"'<>]+/gi)) {
+    const tweetId = extractTweetId(match[0].replace(/&amp;.*$/i, ''));
+    if (tweetId) return tweetId;
+  }
+  return null;
 };
 
 const buildMediaFromRssItem = (item: RssTweetItem, requestedTweetId: string, sourceTweetId = requestedTweetId): TwitterMedia[] => {
@@ -284,6 +304,7 @@ const buildMediaFromRssItem = (item: RssTweetItem, requestedTweetId: string, sou
     tweet_id: sourceTweetId,
     tweet_url: tweetUrl,
     requested_tweet_id: requestedTweetId,
+    retweeted_by_handle: sourceTweetId !== requestedTweetId ? author.screenName || undefined : undefined,
     like_count: null,
     retweet_count: null,
     view_count: null,
@@ -315,6 +336,63 @@ const normalizeMetaMediaUrl = (url: string, type: string): string => (
   type === 'image' ? normalizeTwitterImageUrl(url) : decodePossiblyEscapedHtml(url)
 );
 
+// Twitter Web 對敏感/年齡限制推文用 BlurredMediaTombstone 取代 ApiMediaEntity，
+// 只暴露 blurred_image_url（模糊縮圖），但媒體 ID 是真實的，可構建 orig URL。
+// 也涵蓋 <link rel="preload" as="image"> 暴露媒體 ID 的情況。
+const buildMediaFromPreloadImages = (html: string, requestedTweetId: string): TwitterMedia[] => {
+  const escapedTweetId = requestedTweetId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const hasRequestedTombstone = new RegExp(`TweetResults:${escapedTweetId}(?=[:"])`).test(html)
+    && /__typename:"BlurredMediaTombstone"/.test(html);
+  if (!hasRequestedTombstone) return [];
+
+  const seen = new Set<string>();
+  const urls: string[] = [];
+
+  // 1. 從 RSC payload 的 BlurredMediaTombstone 抓 blurred_image_url
+  const blurRegex = new RegExp(`blurred_image_url:"(${TWITTER_IMAGE_ORIGIN_PATTERN}/media/[^"]+)"`, 'g');
+  let m: RegExpExecArray | null;
+  while ((m = blurRegex.exec(html)) !== null) {
+    const rawUrl = m[1].replace(/&amp;/g, '&');
+    const mediaIdMatch = rawUrl.match(/\/media\/([^?/]+)/);
+    if (!mediaIdMatch) continue;
+    const origUrl = `${TWITTER_IMAGE_ORIGIN}/media/${mediaIdMatch[1]}?format=jpg&name=orig`;
+    if (seen.has(origUrl)) continue;
+    seen.add(origUrl);
+    urls.push(origUrl);
+  }
+
+  // 2. 從 <link rel="preload" as="image"> 抓媒體 URL
+  const preloadRegex = new RegExp(`<link[^>]+rel="preload"[^>]+as="image"[^>]+href="(${TWITTER_IMAGE_ORIGIN_PATTERN}/media/[^"]+)"`, 'g');
+  while ((m = preloadRegex.exec(html)) !== null) {
+    const rawUrl = m[1].replace(/&amp;/g, '&');
+    const mediaIdMatch = rawUrl.match(/\/media\/([^?/]+)/);
+    if (!mediaIdMatch) continue;
+    const origUrl = `${TWITTER_IMAGE_ORIGIN}/media/${mediaIdMatch[1]}?format=jpg&name=orig`;
+    if (seen.has(origUrl)) continue;
+    seen.add(origUrl);
+    urls.push(origUrl);
+  }
+
+  if (urls.length === 0) return [];
+
+  const tweetUrl = buildCanonicalTweetUrl(requestedTweetId);
+  return urls.map((url) => ({
+    url,
+    type: 'image' as const,
+    text: undefined,
+    user_name: undefined,
+    user_screen_name: undefined,
+    date: undefined,
+    tweet_id: requestedTweetId,
+    tweet_url: tweetUrl,
+    requested_tweet_id: requestedTweetId,
+    like_count: null,
+    retweet_count: null,
+    view_count: null,
+    hashtags: null,
+  }));
+};
+
 const buildMediaFromHtmlMeta = (html: string, requestedTweetId: string): TwitterMedia[] => {
   const meta = readHtmlMetaTags(html);
   const text = firstMetaValue(meta, 'twitter:description', 'og:description') || '';
@@ -323,7 +401,11 @@ const buildMediaFromHtmlMeta = (html: string, requestedTweetId: string): Twitter
   const imageUrls = unique([
     ...(meta['og:image'] || []),
     ...(meta['twitter:image'] || []),
-  ].map((url) => normalizeMetaMediaUrl(url, 'image')).filter(Boolean));
+  ].map((url) => normalizeMetaMediaUrl(url, 'image'))
+    .filter((url): url is string => Boolean(url)
+      && !url.includes('rweb/ssr/default')
+      && !url.includes('profile_images') // og:image 可能是作者頭像，非推文媒體
+    ));
   const videoUrls = unique([
     ...(meta['og:video'] || []),
     ...(meta['twitter:player:stream'] || []),
@@ -360,7 +442,7 @@ const buildMediaFromHtmlMeta = (html: string, requestedTweetId: string): Twitter
 };
 
 // === RSC (React Server Components) payload 解析 ===
-// x.com 2024+ 將 SSR 從 __INITIAL_STATE__ JSON 遷移到 RSC payload，
+// Twitter Web 2024+ 將 SSR 從 __INITIAL_STATE__ JSON 遷移到 RSC payload，
 // 格式特色：key 無引號、$R[N]={__ref:"..."} 物件引用、!0/!1 布林縮寫。
 // 此函數從 RSC payload 用 regex 抓 media entities，並從 ld+json 補 metadata。
 
@@ -407,71 +489,176 @@ const readLdJsonSocialPosting = (html: string): {
   return null;
 };
 
-const findRscVideoMp4Url = (html: string, startIndex: number): string | null => {
+const findRscVideoMp4Url = (html: string, mediaIdStr: string, startIndex: number, mediaUrlHttps?: string): string | null => {
+  // 先嘗試 inline video_info（舊格式：video_info:{...variants...}）
   const videoInfoIdx = html.indexOf('video_info:', startIndex);
-  if (videoInfoIdx < 0) return null;
-  let searchFrom = videoInfoIdx + 'video_info:'.length;
-  // RSC 可能 video_info:$R[N]={...} 或 video_info:{...}
-  const refMatch = html.slice(searchFrom).match(/^\$R\[\d+\]=/);
-  if (refMatch) searchFrom += refMatch[0].length;
-  const braceIdx = html.indexOf('{', searchFrom);
-  if (braceIdx < 0 || braceIdx > searchFrom + 5) return null;
-  // 括號配對抓出 video_info 物件
-  let depth = 0;
-  let inStr = false;
-  let escaped = false;
-  let end = -1;
-  for (let i = braceIdx; i < html.length && i < braceIdx + 5000; i++) {
-    const ch = html[i];
-    if (inStr) {
-      if (escaped) escaped = false;
-      else if (ch === '\\') escaped = true;
-      else if (ch === '"') inStr = false;
-      continue;
-    }
-    if (ch === '"') inStr = true;
-    else if (ch === '{') depth++;
-    else if (ch === '}') {
-      depth--;
-      if (depth === 0) { end = i; break; }
+  if (videoInfoIdx >= 0) {
+    let searchFrom = videoInfoIdx + 'video_info:'.length;
+    const refMatch = html.slice(searchFrom).match(/^\$R\[\d+\]=/);
+    if (refMatch) searchFrom += refMatch[0].length;
+    const braceIdx = html.indexOf('{', searchFrom);
+    // 只有當 { 緊接在 video_info: 或 $R[N]= 後，且不是 {__ref:...} 引用時，才當作 inline
+    if (braceIdx >= 0 && braceIdx <= searchFrom + 5) {
+      const peek = html.slice(braceIdx, braceIdx + 12);
+      if (!peek.startsWith('{__ref:')) {
+        // 括號配對抓出 video_info 物件
+        let depth = 0;
+        let inStr = false;
+        let escaped = false;
+        let end = -1;
+        for (let i = braceIdx; i < html.length && i < braceIdx + 5000; i++) {
+          const ch = html[i];
+          if (inStr) {
+            if (escaped) escaped = false;
+            else if (ch === '\\') escaped = true;
+            else if (ch === '"') inStr = false;
+            continue;
+          }
+          if (ch === '"') inStr = true;
+          else if (ch === '{') depth++;
+          else if (ch === '}') {
+            depth--;
+            if (depth === 0) { end = i; break; }
+          }
+        }
+        if (end >= 0) {
+          const block = html.slice(braceIdx, end + 1);
+          const variants: Array<{ bitrate: number; url: string }> = [];
+          const variantRegex = /bitrate:(\d+)[^}]*?url:"([^"]+)"/g;
+          let vm: RegExpExecArray | null;
+          while ((vm = variantRegex.exec(block)) !== null) {
+            variants.push({ bitrate: parseInt(vm[1], 10), url: vm[2] });
+          }
+          const urlOnlyRegex = /url:"([^"]+\.mp4[^"]*)"/g;
+          let um: RegExpExecArray | null;
+          while ((um = urlOnlyRegex.exec(block)) !== null) {
+            if (!variants.some((v) => v.url === um![1])) {
+              variants.push({ bitrate: 0, url: um[1] });
+            }
+          }
+          if (variants.length > 0) {
+            variants.sort((a, b) => b.bitrate - a.bitrate);
+            return variants[0].url;
+          }
+        }
+      }
     }
   }
-  if (end < 0) return null;
-  const block = html.slice(braceIdx, end + 1);
-  // 抓所有 bitrate + url 配對，選最高 bitrate
+
+  // 新格式：RSC ref 結構。video_info:$R[N]={__ref:"client:..."}
+  // 實際 variant 定義散落在 HTML 各處，但每個 ApiMediaEntityVideoVariant
+  // 都有 bitrate + content_type + url 連續出現，且 mp4 url 包含 media id_str
+  // （如 TWITTER 影片來源網域的 amplify_video/{MEDIA_ID}/vid/...mp4）。
+  // 用 media id_str 全域過濾所有 variant，選最高 bitrate 的 mp4。
+  if (!mediaIdStr) return null;
   const variants: Array<{ bitrate: number; url: string }> = [];
-  const variantRegex = /bitrate:(\d+)[^}]*?url:"([^"]+)"/g;
+  // 抓 bitrate + url 配對（url 限 mp4 且包含 media id）
+  const mp4UrlPattern = `${TWITTER_VIDEO_ORIGIN_PATTERN}/[^"]*${escapeRegExp(mediaIdStr)}[^"]*\\.mp4[^"]*`;
+  const variantRegex = new RegExp(`bitrate:(\\d+|null)[^}]*?url:"(${mp4UrlPattern})"`, 'g');
   let vm: RegExpExecArray | null;
-  while ((vm = variantRegex.exec(block)) !== null) {
-    variants.push({ bitrate: parseInt(vm[1], 10), url: vm[2] });
+  while ((vm = variantRegex.exec(html)) !== null) {
+    const bitrate = vm[1] === 'null' ? 0 : parseInt(vm[1], 10);
+    variants.push({ bitrate, url: vm[2] });
   }
-  // 沒有 bitrate 欄位的 variant（通常是最小解析度）
-  const urlOnlyRegex = /url:"([^"]+\.mp4[^"]*)"/g;
+  // 也抓沒有 bitrate 的 mp4 url（fallback）
+  const urlOnlyRegex = new RegExp(`url:"(${mp4UrlPattern})"`, 'g');
   let um: RegExpExecArray | null;
-  while ((um = urlOnlyRegex.exec(block)) !== null) {
+  while ((um = urlOnlyRegex.exec(html)) !== null) {
     if (!variants.some((v) => v.url === um![1])) {
       variants.push({ bitrate: 0, url: um[1] });
     }
   }
-  if (variants.length === 0) return null;
-  variants.sort((a, b) => b.bitrate - a.bitrate);
-  return variants[0].url;
+  if (variants.length > 0) {
+    variants.sort((a, b) => b.bitrate - a.bitrate);
+    return variants[0].url;
+  }
+
+  // animated_gif fallback：gif 的 mp4 url 格式為 tweet_video/{MEDIA_ID}.mp4，
+  // 不包含 ApiMediaEntity 的 id_str，需從 media_url_https（tweet_video_thumb/{ID}.jpg）
+  // 提取媒體 ID，在 HTML 中找對應的 tweet_video/{ID}.mp4
+  if (mediaUrlHttps) {
+    const thumbIdMatch = mediaUrlHttps.match(/\/(?:tweet_video_thumb|amplify_video_thumb|media)\/([^?/.]+)/);
+    if (thumbIdMatch) {
+      const thumbId = thumbIdMatch[1];
+      const escapedThumbId = escapeRegExp(thumbId);
+      const gifMp4Regex = new RegExp(`url:"(${TWITTER_VIDEO_ORIGIN_PATTERN}/tweet_video/${escapedThumbId}\\.mp4[^"]*)"`, 'g');
+      let gm: RegExpExecArray | null;
+      while ((gm = gifMp4Regex.exec(html)) !== null) {
+        return gm[1];
+      }
+      const bareMp4Regex = new RegExp(`(${TWITTER_VIDEO_ORIGIN_PATTERN}/tweet_video/${escapedThumbId}\\.mp4[^"\\s]*)`);
+      const bareMatch = html.match(bareMp4Regex);
+      if (bareMatch) return bareMatch[1];
+    }
+  }
+
+  return null;
 };
 
-const buildMediaFromRscPayload = (html: string, requestedTweetId: string): TwitterMedia[] => {
+const readRscMediaOwnerTweetId = (html: string, entityIndex: number): string | null => {
+  const prefix = html.slice(Math.max(0, entityIndex - 500), entityIndex);
+  const keys = Array.from(prefix.matchAll(/client:([^":,\s]+):media_entities2:\d+/g));
+  const encodedTweetKey = keys.at(-1)?.[1];
+  if (!encodedTweetKey) return null;
+
+  try {
+    const decoded = Buffer.from(encodedTweetKey, 'base64').toString('utf8');
+    return decoded.match(/^Tweet:(\d+)$/)?.[1] || null;
+  } catch {
+    return null;
+  }
+};
+
+const hasRequestedTweetEvidence = (html: string, requestedTweetId: string): boolean => {
+  if (readLdJsonSocialPosting(html)?.tweetId === requestedTweetId) return true;
+
+  const escapedTweetId = requestedTweetId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (new RegExp(`TweetResults:${escapedTweetId}(?=[:"])`).test(html)) return true;
+
+  for (const match of html.matchAll(/client:([^":,\s]+)(?=[:"])/g)) {
+    try {
+      if (Buffer.from(match[1], 'base64').toString('utf8') === `Tweet:${requestedTweetId}`) {
+        return true;
+      }
+    } catch {
+      // Ignore non-base64 RSC keys.
+    }
+  }
+
+  return false;
+};
+
+const buildMediaFromRscPayload = (
+  html: string,
+  requestedTweetId: string,
+  sourceTweetId = requestedTweetId,
+): TwitterMedia[] => {
   // 1. 從 RSC payload 抓所有 ApiMediaEntity
   const mediaRegex = /__typename:"ApiMediaEntity",id_str:"([^"]+)",type:"([^"]+)"[^}]*?media_url_https:"([^"]+)"/g;
-  const rawMedia: Array<{ id_str: string; type: string; media_url_https: string; endIndex: number }> = [];
+  const rawMedia: Array<{
+    id_str: string;
+    type: string;
+    media_url_https: string;
+    ownerTweetId: string | null;
+    endIndex: number;
+  }> = [];
   let m: RegExpExecArray | null;
   while ((m = mediaRegex.exec(html)) !== null) {
     rawMedia.push({
       id_str: m[1],
       type: m[2],
       media_url_https: m[3],
+      ownerTweetId: readRscMediaOwnerTweetId(html, m.index),
       endIndex: m.index + m[0].length,
     });
   }
   if (rawMedia.length === 0) return [];
+
+  const hasScopedEntity = rawMedia.some((item) => item.ownerTweetId === sourceTweetId);
+  const scopedMedia = hasScopedEntity
+    ? rawMedia.filter((item) => item.ownerTweetId === sourceTweetId)
+    : rawMedia.filter((item) => item.ownerTweetId === null);
+  if (scopedMedia.length === 0) return [];
 
   // 2. 從 ld+json 抓 metadata
   const ld = readLdJsonSocialPosting(html);
@@ -485,7 +672,7 @@ const buildMediaFromRscPayload = (html: string, requestedTweetId: string): Twitt
   // 4. 組合
   const text = fullText || ld?.text;
   const hashtags = parseHashtagsFromText(text);
-  const tweetId = ld?.tweetId || requestedTweetId;
+  const tweetId = sourceTweetId;
   const common = {
     text: text || undefined,
     user_name: ld?.userName,
@@ -501,16 +688,25 @@ const buildMediaFromRscPayload = (html: string, requestedTweetId: string): Twitt
   };
 
   const media: TwitterMedia[] = [];
-  for (const raw of rawMedia) {
+  const seenMediaIds = new Set<string>();
+  const seenUrls = new Set<string>();
+  for (const raw of scopedMedia) {
+    if (seenMediaIds.has(raw.id_str)) continue;
     if (raw.type === 'photo') {
+      const url = normalizeTwitterImageUrl(raw.media_url_https);
+      if (seenUrls.has(url)) continue;
+      seenMediaIds.add(raw.id_str);
+      seenUrls.add(url);
       media.push({
-        url: normalizeTwitterImageUrl(raw.media_url_https),
+        url,
         type: 'image',
         ...common,
       });
     } else if (raw.type === 'video' || raw.type === 'animated_gif') {
-      const videoUrl = findRscVideoMp4Url(html, raw.endIndex);
-      if (!videoUrl) continue; // 跟 readTweetMedia 一致：抓不到 mp4 就跳過
+      const videoUrl = findRscVideoMp4Url(html, raw.id_str, raw.endIndex, raw.media_url_https);
+      if (!videoUrl || seenUrls.has(videoUrl)) continue; // 跟 readTweetMedia 一致：抓不到 mp4 就跳過
+      seenMediaIds.add(raw.id_str);
+      seenUrls.add(videoUrl);
       media.push({
         url: videoUrl,
         type: raw.type === 'animated_gif' ? 'gif' : 'video',
@@ -620,7 +816,7 @@ const resolveOriginalTweet = (tweet: any): any => {
     tweet?.retweetedTweet,
   ];
   for (const candidate of candidates) {
-    // x.com 有時只回傳原始推文 ID 字串，不是完整嵌套對象
+    // Twitter Web 有時只回傳原始推文 ID 字串，不是完整嵌套對象
     if (typeof candidate === 'string' && /^\d{10,}$/.test(candidate)) {
       return { ...tweet, rest_id: candidate };
     }
@@ -636,6 +832,23 @@ const readUserFromTweet = (tweet: any) => {
   return {
     name: legacy?.name || tweet?.user_name || '',
     screenName: legacy?.screen_name || legacy?.screenName || tweet?.user_screen_name || '',
+  };
+};
+
+const resolveTweetContextFromStates = (requestedTweetId: string, states: unknown[]) => {
+  const tweets = collectTweetObjects(states);
+  const requestedTweet = tweets.find(
+    (tweet) => firstTweetId(tweet.rest_id, tweet.id_str, tweet.id) === requestedTweetId,
+  ) || tweets[0];
+  if (!requestedTweet) return null;
+
+  const sourceTweet = resolveOriginalTweet(requestedTweet);
+  const sourceTweetId = firstTweetId(sourceTweet?.rest_id, sourceTweet?.id_str, sourceTweet?.id) || requestedTweetId;
+  const requestedUser = readUserFromTweet(requestedTweet);
+  return {
+    sourceTweet,
+    sourceTweetId,
+    retweetedByHandle: sourceTweetId !== requestedTweetId ? requestedUser.screenName : '',
   };
 };
 
@@ -682,9 +895,9 @@ const readTweetMedia = (tweet: any): Array<Pick<TwitterMedia, 'url' | 'type' | '
 };
 
 const buildMediaFromTweetState = (requestedTweetId: string, states: unknown[]): TwitterMedia[] => {
-  const sourceTweet = resolveSourceTweetFromStates(requestedTweetId, states);
-  if (!sourceTweet) return [];
-  const sourceTweetId = firstTweetId(sourceTweet?.rest_id, sourceTweet?.id_str, sourceTweet?.id) || requestedTweetId;
+  const context = resolveTweetContextFromStates(requestedTweetId, states);
+  if (!context) return [];
+  const { sourceTweet, sourceTweetId, retweetedByHandle } = context;
   const media = readTweetMedia(sourceTweet);
   if (media.length === 0) return [];
   const legacy = sourceTweet?.legacy || sourceTweet;
@@ -699,6 +912,7 @@ const buildMediaFromTweetState = (requestedTweetId: string, states: unknown[]): 
     tweet_id: sourceTweetId,
     tweet_url: buildCanonicalTweetUrl(sourceTweetId),
     requested_tweet_id: requestedTweetId,
+    retweeted_by_handle: retweetedByHandle || undefined,
     like_count: readCount(legacy?.favorite_count, legacy?.like_count, sourceTweet?.like_count),
     retweet_count: readCount(legacy?.retweet_count, sourceTweet?.retweet_count),
     view_count: readCount(sourceTweet?.views?.count, legacy?.view_count, sourceTweet?.view_count),
@@ -706,17 +920,11 @@ const buildMediaFromTweetState = (requestedTweetId: string, states: unknown[]): 
   }));
 };
 
-const resolveSourceTweetFromStates = (requestedTweetId: string, states: unknown[]): any | null => {
-  const tweets = collectTweetObjects(states);
-  const requestedTweet = tweets.find((tweet) => firstTweetId(tweet.rest_id, tweet.id_str, tweet.id) === requestedTweetId) || tweets[0];
-  return requestedTweet ? resolveOriginalTweet(requestedTweet) : null;
-};
-
 const enrichFallbackMediaFromTweetState = (fallbackMedia: TwitterMedia[], requestedTweetId: string, states: unknown[]): TwitterMedia[] => {
   if (fallbackMedia.length === 0) return fallbackMedia;
-  const sourceTweet = resolveSourceTweetFromStates(requestedTweetId, states);
-  if (!sourceTweet) return fallbackMedia;
-  const sourceTweetId = firstTweetId(sourceTweet?.rest_id, sourceTweet?.id_str, sourceTweet?.id) || requestedTweetId;
+  const context = resolveTweetContextFromStates(requestedTweetId, states);
+  if (!context) return fallbackMedia;
+  const { sourceTweet, sourceTweetId, retweetedByHandle } = context;
   const legacy = sourceTweet?.legacy || sourceTweet;
   const user = readUserFromTweet(sourceTweet);
   const hashtags = readHashtags(legacy, sourceTweet);
@@ -729,6 +937,7 @@ const enrichFallbackMediaFromTweetState = (fallbackMedia: TwitterMedia[], reques
     tweet_id: sourceTweetId,
     tweet_url: buildCanonicalTweetUrl(sourceTweetId),
     requested_tweet_id: requestedTweetId,
+    retweeted_by_handle: retweetedByHandle || media.retweeted_by_handle,
     like_count: readCount(legacy?.favorite_count, legacy?.like_count, sourceTweet?.like_count) ?? media.like_count,
     retweet_count: readCount(legacy?.retweet_count, sourceTweet?.retweet_count) ?? media.retweet_count,
     view_count: readCount(sourceTweet?.views?.count, legacy?.view_count, sourceTweet?.view_count) ?? media.view_count,
@@ -736,22 +945,30 @@ const enrichFallbackMediaFromTweetState = (fallbackMedia: TwitterMedia[], reques
   }));
 };
 
-const fetchXTweetHtml = async (tweetId: string, fetchFn: FetchLike): Promise<string | null> => {
+const fetchXTweetHtml = async (tweetId: string, fetchFn: FetchLike, originalUrl?: string): Promise<string | null> => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), X_FETCH_TIMEOUT_MS);
+  // Twitter Web 對 i/status/{id} 格式（無用戶名）的未登入存取較嚴格，
+  // 部分推文會返回真 404；優先用使用者提供的原始 URL（帶用戶名）。
+  const targetUrl = originalUrl || buildCanonicalTweetUrl(tweetId);
   try {
-    const response = await fetchFn(buildCanonicalTweetUrl(tweetId), {
+    const response = await fetchFn(targetUrl, {
       method: 'GET',
       signal: controller.signal,
       headers: {
         accept: 'text/html,application/xhtml+xml',
-        'user-agent': 'Mozilla/5.0 (compatible; zutomayo-gallery/1.0)',
+        'accept-language': 'en-US,en;q=0.9',
+        // 用真實瀏覽器 UA，bot UA 更容易被 Twitter Web 擋
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
       },
     });
-    if (!response.ok) return null;
-    return await response.text();
+    // Twitter Web 偶爾以非 2xx 回傳仍含推文資料的 SSR HTML。只有與 requested
+    // tweet ID 綁定的結構化證據才能放行；頁面大小與 preload 都不能證明身份。
+    const text = await response.text();
+    if (!response.ok && !hasRequestedTweetEvidence(text, tweetId)) return null;
+    return text;
   } catch (error) {
-    logger.warn({ err: error, tweetId }, 'x.com 推文補強失敗，改用 RSS item');
+    logger.warn({ err: error, tweetId }, 'Twitter Web 推文補強失敗，改用 RSS item');
     return null;
   } finally {
     clearTimeout(timeout);
@@ -760,7 +977,7 @@ const fetchXTweetHtml = async (tweetId: string, fetchFn: FetchLike): Promise<str
 
 export const TwitterService = {
   /**
-   * 從 RSSHub item 解析媒體資料。x.com 補強失敗時也會走這條 fallback。
+   * 從 RSSHub item 解析媒體資料。Twitter Web 補強失敗時也會走這條 fallback。
    */
   async extractMediaFromRssItem(item: RssTweetItem, _options: TwitterExtractOptions = {}): Promise<TwitterMedia[]> {
     const requestedTweetId = extractTweetId(item.link || '');
@@ -769,7 +986,7 @@ export const TwitterService = {
   },
 
   /**
-   * RSS-first 解析推文媒體，並以 x.com HTML/JSON 狀態補強 RT 原推資訊。
+   * RSS-first 解析推文媒體，並以 Twitter Web HTML/JSON 狀態補強 RT 原推資訊。
    */
   async extractMediaFromTweet(tweetUrl: string, rssItem?: RssTweetItem, options: TwitterExtractOptions = {}): Promise<TwitterMedia[]> {
     const requestedTweetId = extractTweetId(tweetUrl);
@@ -780,7 +997,7 @@ export const TwitterService = {
     const effectiveSourceId = rssOriginalId || requestedTweetId;
     const fallbackMedia = rssItem ? buildMediaFromRssItem(rssItem, requestedTweetId, effectiveSourceId) : [];
     const fetchFn = options.fetch || fetch;
-    const html = await fetchXTweetHtml(requestedTweetId, fetchFn);
+    const html = await fetchXTweetHtml(requestedTweetId, fetchFn, tweetUrl);
     if (!html) return fallbackMedia;
 
     const states = parseJsonStatesFromHtml(html);
@@ -790,9 +1007,13 @@ export const TwitterService = {
     const enrichedFallbackMedia = enrichFallbackMediaFromTweetState(fallbackMedia, requestedTweetId, states);
     if (enrichedFallbackMedia.length > 0) return enrichedFallbackMedia;
 
-    // x.com 2024+ 遷移到 RSC payload，__INITIAL_STATE__ JSON 不再可用
-    const rscMedia = buildMediaFromRscPayload(html, requestedTweetId);
+    // Twitter Web 2024+ 遷移到 RSC payload，__INITIAL_STATE__ JSON 不再可用
+    const rscMedia = buildMediaFromRscPayload(html, requestedTweetId, effectiveSourceId);
     if (rscMedia.length > 0) return rscMedia;
+
+    // Twitter Web 對敏感/限制推文的 SSR 不回傳 ApiMediaEntity，但在 <link rel="preload"> 暴露媒體 ID
+    const preloadMedia = buildMediaFromPreloadImages(html, requestedTweetId);
+    if (preloadMedia.length > 0) return preloadMedia;
 
     return buildMediaFromHtmlMeta(html, requestedTweetId);
   },

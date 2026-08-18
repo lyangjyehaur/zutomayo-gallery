@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { Sequelize } from 'sequelize';
 import { sequelize as newDb, MediaModel, ArtistMediaModel } from '../models/index.js';
+import { isTwitterVideoUrl } from '../utils/media-source.js';
 
 const OLD_DB_NAME = process.env.OLD_DB_NAME || process.env.DB_NAME || 'zutomayo_gallery';
 const OLD_DB_USER = process.env.OLD_DB_USER || process.env.DB_USER || 'zutomayo_gallery';
@@ -40,7 +41,7 @@ async function fix() {
         }
         
         // 順手修復 mp4 被誤判為 image 的問題
-        if (item.url && (item.url.includes('.mp4') || item.url.includes('video.twimg.com'))) {
+        if (item.url && (item.url.includes('.mp4') || isTwitterVideoUrl(item.url))) {
           await MediaModel.update(
             { media_type: 'video' },
             { where: { original_url: item.url, media_type: 'image' } }

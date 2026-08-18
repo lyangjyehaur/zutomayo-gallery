@@ -22,9 +22,10 @@ import { syncImagesToR2, uploadHeroVideo, deleteHeroVideo, getHeroVideoConfig } 
 import { rebuildR2 } from '../controllers/r2_rebuild.js';
 import { ADMIN_PERMISSIONS } from '../constants/admin-permissions.js';
 import { requireAnyPermission, requirePermission } from '../middleware/auth.middleware.js';
-import { asyncHandler } from '../middleware/errorHandler.js';
+import { AppError, asyncHandler } from '../middleware/errorHandler.js';
 import { cacheMiddleware } from '../middleware/cache.middleware.js';
 import { errorEventEmitter } from '../services/error-events.service.js';
+import { toImgproxyFilenameBase } from '../utils/imgproxy.js';
 import multer from 'multer';
 import os from 'os';
 import crypto from 'crypto';
@@ -150,7 +151,10 @@ router.get('/image/proxy', (req, res) => {
   
   const salt = process.env.IMGPROXY_SALT;
   const key = process.env.IMGPROXY_KEY;
-  const imgProxyDomain = (process.env.IMGPROXY_URL || 'https://img.ztmr.club').replace(/\/$/, '');
+  const imgProxyDomain = String(process.env.IMGPROXY_URL || '').replace(/\/$/, '');
+  if (!imgProxyDomain) {
+    throw new AppError(503, 'IMGPROXY_NOT_CONFIGURED', '圖片代理服務尚未設定');
+  }
   
   const safeBase64 = (str: string) => Buffer.from(str).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   const base64Url = safeBase64(url);
@@ -159,9 +163,10 @@ router.get('/image/proxy', (req, res) => {
   if (mode === 'raw') {
     paramsArr.push('raw:1', 'return_attachment:1');
     if (filename && typeof filename === 'string') {
-      // 當使用 raw:1 時，imgproxy 不會處理圖片，也不會自動推斷並補上副檔名。
-      // 因此必須將完整帶有副檔名的檔名 (.jpg) 傳給 imgproxy，否則下載下來的檔案會沒有副檔名，導致系統無法識別為圖片。
-      paramsArr.push(`filename:${safeBase64(filename)}:1`);
+      // imgproxy 4.x 會根據原圖格式自動補上副檔名，因此 option 只傳 basename，
+      // 否則已帶 .jpg 的自訂檔名會變成 .jpg.jpg。
+      const filenameBase = toImgproxyFilenameBase(filename);
+      paramsArr.push(`filename:${safeBase64(filenameBase)}:1`);
     }
   } else if (mode === 'full') {
     paramsArr.push('w:1002', 'f:webp');

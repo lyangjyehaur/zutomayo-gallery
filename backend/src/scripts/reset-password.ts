@@ -11,7 +11,7 @@ async function resetPassword() {
     if (deletedCount > 0) {
       console.log('✅ 成功清除自訂密碼！');
       console.log('👉 系統已恢復為 .env 中的 ADMIN_PASSWORD 或預設密碼 "zutomayo"');
-      console.log('⚠️ 請記得重新啟動後端服務 (例如: pm2 restart ztmy-gallery) 讓設定生效。');
+      console.log('⚠️ 請記得重新啟動後端 Docker 容器（容器名稱由部署配置的 BACKEND_CONTAINER_NAME 決定）讓設定生效。');
     } else {
       console.log('ℹ️ 資料庫中沒有找到自訂密碼，目前已經是使用初始/環境變數密碼的狀態。');
     }

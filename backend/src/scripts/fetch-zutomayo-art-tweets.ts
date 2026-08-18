@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { ApifyClient } from 'apify-client';
 import { StagingFanartModel, CrawlerStateModel, syncModels } from '../models/index.js';
+import { requireConfiguredUrl } from '../config/urls.js';
 const APIFY_API_TOKEN = process.env.APIFY_API_TOKEN;
 
 interface SyncProgress {
@@ -32,6 +33,8 @@ export async function runCrawler(searchTerms: string, startDate?: string, endDat
   if (!normalizedSearchTerms) {
     throw new Error('Missing searchTerms');
   }
+
+  const twitterWebOrigin = requireConfiguredUrl('TWITTER_WEB_ORIGIN');
 
   await syncModels();
   
@@ -154,7 +157,7 @@ export async function runCrawler(searchTerms: string, startDate?: string, endDat
 
       try {
         const { tweetId, targetTweet, mediaList } = item as any;
-        const originalUrl = targetTweet.url || `https://twitter.com/i/web/status/${tweetId}`;
+        const originalUrl = targetTweet.url || `${twitterWebOrigin}/i/web/status/${tweetId}`;
         const crawledAt = new Date();
         const postDate = targetTweet.created_at ? new Date(targetTweet.created_at) : (targetTweet.createdAt ? new Date(targetTweet.createdAt) : crawledAt);
         const sourceText = targetTweet.full_text || targetTweet.text || '';

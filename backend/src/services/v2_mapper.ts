@@ -16,6 +16,24 @@ import { nanoid } from 'nanoid';
 const generateShortId = () => nanoid(16);
 import { MVItem, MVMedia } from '../types.js';
 
+export function getExistingMediaUpdates(
+  existing: { media_type?: string | null; thumbnail_url?: string | null; url?: string | null },
+  incoming: Pick<MVMedia, 'media_type' | 'thumbnail_url' | 'url'>,
+): Record<string, string | null> {
+  const updates: Record<string, string | null> = {};
+  if (Object.hasOwn(incoming, 'media_type') && incoming.media_type !== undefined) {
+    if (existing.media_type !== incoming.media_type) updates.media_type = incoming.media_type;
+  }
+  if (Object.hasOwn(incoming, 'thumbnail_url') && incoming.thumbnail_url !== undefined) {
+    const desiredThumbnail = incoming.thumbnail_url || null;
+    if (existing.thumbnail_url !== desiredThumbnail) updates.thumbnail_url = desiredThumbnail;
+  }
+  if (existing.url !== incoming.url) updates.url = incoming.url;
+  return updates;
+}
+
+export const getNewMediaType = (mediaType: MVMedia['media_type']): string => mediaType || 'image';
+
 /**
  * 讀取 V2 關聯式資料庫，並轉換回前端期望的 V1 JSONB 結構
  */
@@ -41,7 +59,7 @@ export async function getMVsFromDB(): Promise<MVItem[]> {
     ]
   });
 
-  // R2 直連優化：不再需要將 r2.dan.tw 轉換為 assets.ztmr.club/r2
+  // R2 直連優化：不再需要將 R2 URL 轉換為 assets proxy URL
   const formatMediaUrl = (url: string) => {
     return url;
   };
@@ -222,7 +240,7 @@ export async function saveMVsToDB(mvs: MVItem[], transaction?: any): Promise<voi
             defaults: {
               id: img.id || generateShortId(),
               type: img.type || 'official',
-              media_type: 'image', // 預設為圖片，後續可擴充
+              media_type: getNewMediaType(img.media_type),
               url: url,
               thumbnail_url: img.thumbnail_url || null,
               caption: img.caption || null,
@@ -234,6 +252,21 @@ export async function saveMVsToDB(mvs: MVItem[], transaction?: any): Promise<voi
           });
 
           const imageId = image.get('id');
+          // 若記錄已存在，補齊 media_type / thumbnail_url / url（舊資料可能缺欄位或被誤標為 image）
+          {
+            const updates = getExistingMediaUpdates({
+              media_type: image.get('media_type') as string | null,
+              thumbnail_url: image.get('thumbnail_url') as string | null,
+              url: image.get('url') as string | null,
+            }, {
+              media_type: img.media_type,
+              thumbnail_url: img.thumbnail_url,
+              url,
+            });
+            if (Object.keys(updates).length > 0) {
+              await image.update(updates, { transaction: t });
+            }
+          }
           if (desiredTags) {
             const currentTags = image.get('tags') as any;
             const nextTags = Array.from(

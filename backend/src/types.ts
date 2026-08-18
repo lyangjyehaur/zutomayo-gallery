@@ -4,7 +4,7 @@ export interface MVMedia {
   media_type?: string;
   url: string;
   original_url?: string;
-  thumbnail_url?: string;
+  thumbnail_url?: string | null;
   caption?: string;
   width?: number;
   height?: number;

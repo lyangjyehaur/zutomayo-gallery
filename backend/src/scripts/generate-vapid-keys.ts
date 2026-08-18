@@ -7,7 +7,7 @@ function generateVapidKeys() {
   console.log('Add these to your .env file:\n');
   console.log(`VAPID_PUBLIC_KEY=${vapidKeys.publicKey}`);
   console.log(`VAPID_PRIVATE_KEY=${vapidKeys.privateKey}`);
-  console.log(`VAPID_SUBJECT=mailto:admin@ztmr.club`);
+  console.log(`VAPID_SUBJECT=${process.env.VAPID_SUBJECT || 'mailto:admin@example.com'}`);
   console.log('\n⚠️  Keep VAPID_PRIVATE_KEY secret! Never commit it to version control.\n');
 }
 

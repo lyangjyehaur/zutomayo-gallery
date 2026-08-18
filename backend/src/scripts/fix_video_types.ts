@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { MediaModel } from '../models/index.js';
 import { Op } from 'sequelize';
+import { getTwitterVideoHosts, toSqlHostPatterns } from '../utils/media-source.js';
 
 async function fixVideoTypes() {
   console.log('Fixing media_type for videos in V2 DB...');
@@ -13,9 +14,11 @@ async function fixVideoTypes() {
           media_type: 'image',
           [Op.or]: [
             { url: { [Op.like]: '%.mp4%' } },
-            { url: { [Op.like]: '%video.twimg.com%' } },
             { original_url: { [Op.like]: '%.mp4%' } },
-            { original_url: { [Op.like]: '%video.twimg.com%' } }
+            ...toSqlHostPatterns(getTwitterVideoHosts()).flatMap((pattern) => [
+              { url: { [Op.like]: pattern } },
+              { original_url: { [Op.like]: pattern } },
+            ]),
           ]
         } 
       }

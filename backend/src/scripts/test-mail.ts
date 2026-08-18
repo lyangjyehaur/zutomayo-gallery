@@ -5,7 +5,8 @@ type Purpose = 'login' | 'verify_email' | 'reset_password';
 
 const to = String(process.argv[2] || '').trim();
 const purpose = (String(process.argv[3] || 'verify_email').trim() || 'verify_email') as Purpose;
-const rawLink = String(process.argv[4] || 'https://ztmy.art').trim() || 'https://ztmy.art';
+const rawLink = String(process.argv[4] || process.env.PUBLIC_APP_ORIGIN || '').trim();
+if (!rawLink) throw new Error('PUBLIC_APP_ORIGIN or an explicit link argument is required');
 const link = rawLink.replaceAll('`', '');
 
 const isPurpose = (p: string): p is Purpose => p === 'login' || p === 'verify_email' || p === 'reset_password';

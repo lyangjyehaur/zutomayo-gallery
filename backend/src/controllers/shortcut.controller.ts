@@ -10,6 +10,7 @@ import { logger } from '../utils/logger.js';
 import { nanoid } from 'nanoid';
 import { Op } from 'sequelize';
 import crypto from 'crypto';
+import { isTwitterImageUrl } from '../utils/media-source.js';
 
 const mvService = new MVService();
 const generateShortId = () => nanoid(16);
@@ -125,7 +126,7 @@ export const submitFromShortcut = async (req: Request, res: Response) => {
   let group: any = null;
 
   // 確保同一推文共用一個 MediaGroup
-  const originalUrl = `https://x.com/i/status/${tweetId}`;
+  const originalUrl = `${String(process.env.TWITTER_WEB_ORIGIN || '').replace(/\/+$/, '')}/i/status/${tweetId}`;
   const firstMedia = mediaList[0];
 
   for (const assignment of activeAssignments) {
@@ -173,7 +174,7 @@ export const submitFromShortcut = async (req: Request, res: Response) => {
       // 下載媒體
       let finalR2Url: string | null = null;
       let fetchUrl = mediaUrl;
-      if (fetchUrl.includes('pbs.twimg.com')) {
+      if (isTwitterImageUrl(fetchUrl)) {
         fetchUrl = fetchUrl.replace(/&name=[a-z0-9]+/i, '');
         fetchUrl = fetchUrl.replace(/\?name=[a-z0-9]+/i, '?');
         fetchUrl = fetchUrl.includes('?') ? `${fetchUrl}&name=orig` : `${fetchUrl}?name=orig`;

@@ -62,7 +62,7 @@
 | `sameSite` | `lax` | `none`（跨域架構，允許跨站攜帶 cookie） |
 | `maxAge` | 7 天（可配置） | 7 天（可配置） |
 
-- 生產環境採用 `SameSite=None; Secure` 是為了支援 `gallery.ztmr.club` → `api.ztmr.club` 的跨域請求攜帶 session cookie。
+- 生產環境目前由 `zutomayo.art/api/*` 同源代理到 backend；若未來改回跨域 API origin，才需要 `SameSite=None; Secure` 讓瀏覽器攜帶 session cookie。
 - 若生產環境改為同域部署（nginx proxy），可將 `sameSite` 設回 `lax` 以獲得更好的 CSRF 保護。
 - 生產環境必須設定 `TRUST_PROXY=true`，使 Express 信任 nginx 反向代理層的 `X-Forwarded-Proto` 標頭，正確判斷 HTTPS。
 
@@ -194,8 +194,10 @@
 | **GET** | `/metadata` | 公開 | 取得全域的元資料 (例如所有獨立畫師清單等)。 |
 | **POST** | `/metadata` | 管理員 | 更新全域的元資料。 |
 | **POST** | `/probe` | 管理員 | 探測指定圖片網址的原始尺寸 (`width` 與 `height`)。<br>Body: `{ "url": "https://..." }` |
-| **POST** | `/twitter-resolve` | 管理員 | 解析 Twitter 貼文網址，自動提取出推文內的圖片直連網址與畫師文字資訊。<br>Body: `{ "url": "https://x.com/..." }` |
+| **POST** | `/twitter-resolve` | 管理員 | 解析 Twitter 貼文網址，自動提取圖片、影片或 GIF 及作者資訊。<br>Body: `{ "url": "https://x.com/..." }`。每個媒體項目以 `url` 表示原始媒體、`type` 表示 `image` / `video` / `gif`，影片與 GIF 可另帶 `thumbnail`；若 requested tweet 是轉推，會以 optional `retweeted_by_handle` 回傳可證實的轉推者。 |
 | **POST** | `/verify-admin` | 管理員 | 檢查目前登入的管理員是否仍在使用不安全的系統預設密碼。 |
+
+Twitter HTML/RSC 解析只接受 requested tweet，或 RSS 已明確證實的轉推原文所擁有的媒體；quoted tweet 的 media entity 不會混入結果。非 2xx HTML 必須含有與 requested tweet 綁定的結構化證據才可作為 fallback，任意 preload 圖片不構成推文身分證據。BlurredMediaTombstone/preload fallback 也只會在 tombstone 可綁定 requested tweet 時使用。
 
 ### MVItem 資料結構
 
@@ -236,11 +238,11 @@ interface MVItem {
 | **GET** | `/api/fanarts/gallery/summary` | 公開 | 取得 FanArt 畫廊的篩選統計資料（標籤計數、MV 計數）。 |
 | **GET** | `/api/fanarts/unorganized` | 管理員 | 取得爬蟲抓取但尚未被分類或整理的 Twitter 二創圖片 (Fanart) 列表。 |
 | **POST** | `/api/fanarts/:id/status` | 管理員 | 更新指定二創圖片的狀態 (例如標記為 `organized` 或 `rejected`)。<br>Body: `{ "status": "organized" }` |
-| **GET** | `/api/staging-fanarts` | 管理員 | 取得暫存二創審核清單。Query: `page`, `limit`, `status`，其中 `status` 支援 `pending` / `on_hold` / `approved` / `rejected`。 |
-| **GET** | `/api/staging-fanarts/progress` | 管理員 | 取得 crawler 進度與各狀態數量統計，包含 `pending` / `on_hold` / `approved` / `rejected`。 |
-| **POST** | `/api/staging-fanarts/:id/approve` | 管理員 | 將 `pending` 或 `on_hold` 暫存二創批准並 promote 至正式 `media_groups` / `media`。Body 可帶 `{ "mvs": ["mv_id", "tag:real"] }`。 |
+| **GET** | `/api/staging-fanarts` | 管理員 | 取得暫存二創審核清單。Query: `page`, `limit`, `status`，其中 `status` 支援 `pending` / `reviewed` / `on_hold` / `approved` / `rejected`。 |
+| **GET** | `/api/staging-fanarts/progress` | 管理員 | 取得 crawler 進度與各狀態數量統計，包含 `pending` / `reviewed` / `on_hold` / `approved` / `rejected`。 |
+| **POST** | `/api/staging-fanarts/:id/approve` | 管理員 | 將 `pending`、`reviewed` 或 `on_hold` 暫存內容批准並 promote 至正式媒體庫；Body 依 `content_type` 可帶 `mvs`、`mvId` 或 `artistId`。 |
 | **POST** | `/api/staging-fanarts/:id/hold` | 管理員 | 將待審核暫存二創標記為 `on_hold`，保留觀察，不升入正式媒體庫。 |
-| **POST** | `/api/staging-fanarts/:id/reject` | 管理員 | 將 `pending` 或 `on_hold` 暫存二創標記為 `rejected`。 |
+| **POST** | `/api/staging-fanarts/:id/reject` | 管理員 | 將 `pending`、`reviewed` 或 `on_hold` 暫存內容標記為 `rejected`。 |
 | **POST** | `/api/staging-fanarts/:id/restore` | 管理員 | 將 `rejected` 或 `on_hold` 暫存二創還原為 `pending`。 |
 | **POST** | `/api/staging-fanarts/batch-restore` | 管理員 | 批次將暫存二創還原為 `pending`。Body: `{ "ids": ["id1"], "statuses": ["rejected", "on_hold"] }`。 |
 | **POST** | `/api/webhook/telegram` | Telegram secret header | 接收 Telegram inline review callback。<br>Header: `X-Telegram-Bot-Api-Secret-Token: <TELEGRAM_WEBHOOK_SECRET>` |
@@ -271,21 +273,31 @@ Twitter Monitor 實際檢查來源會合併：
 
 Twitter Monitor 解析策略為 RSS-first：`TwitterService.extractMediaFromTweet` 會接收 RSSHub item，從雙重 escape 的 RSS HTML 中提取圖片、影片 source/poster、hashtag、作者與發布時間，並將 `pbs.twimg.com` 圖片正規化為 `name=orig`。服務會嘗試讀取 `https://x.com/i/status/{tweet_id}` 的頁面 JSON state 補強轉推原文 canonical tweet id、作者與互動數；若 x.com 補強失敗，仍會使用 RSS item 建立 staging 候選。非 RSS 的手動 URL-only 解析則使用 x.com JSON state，必要時降級到 OpenGraph/Twitter card meta media。
 
+`hashtag` 目標的資料模型與 URL 生成仍受支援，但實際抓取依賴 RSSHub `/twitter/keyword/*`。若該上游 route 因 X SearchTimeline 變更而不可用，應暫時將對應 target 設為 `enabled=false`，保留設定以便上游修復後重新啟用；不要讓已知的上游 503 持續進入 production error monitoring。
+
+### CORS 行為
+
+後端只對 `ALLOWED_ORIGINS` 中的來源回傳 CORS headers。未帶 `Origin` 的 server-to-server 請求照常允許；未列入允許清單的瀏覽器 Origin 會被拒絕取得 CORS headers，但不會被轉換為 API 500 或寫入 backend error log。
+
+歷史 RSS 轉推 metadata 使用 `backend/src/scripts/backfill-retweet-metadata.ts` 維護；唯一 operator 說明位於 `backend/src/scripts/README.md`。此工具預設 dry-run，`--apply` 才寫入；production/non-local DB 必須以資料庫名稱顯式確認。原推已存在時，工具會在 transaction 中合併 `retweeted_by_handle`、保留重複 staging row 並標為 `rejected`，不自動刪除。
+
 ### POST `/api/webhook/telegram` - Telegram 二創審核回調
 
 此端點由 Gallery backend 自己接收 Telegram Bot webhook。設定 Telegram `setWebhook` 時需提供 `secret_token`，Telegram 會在請求中帶上 `X-Telegram-Bot-Api-Secret-Token`，後端會與 `TELEGRAM_WEBHOOK_SECRET` 比對。
 
 支援的 inline button `callback_data`：
-- `fa:ok:<stagingId>`：批准，將 staging promote 至正式 `media_groups` / `media`。
+- `fa:ok:<stagingId>`：Telegram 初審通過，將 staging 狀態改為 `reviewed`，等待 review-app 補齊關聯後正式核准。
 - `fa:hold:<stagingId>`：暫存觀察，狀態改為 `on_hold`。
 - `fa:no:<stagingId>`：拒絕，狀態改為 `rejected`。
 
 狀態轉移規則：
 - `pending -> on_hold`
-- `pending/on_hold -> rejected`
-- `pending/on_hold -> approved`
-- `approved + approve`、`rejected + reject`、`on_hold + hold` 視為冪等重送，回傳 `alreadyProcessed: true`。
+- `pending/on_hold -> reviewed`
+- `pending/reviewed/on_hold -> rejected`
+- `reviewed + approve`、`rejected + reject`、`on_hold + hold` 視為冪等重送，回傳 `alreadyProcessed: true`。
 - `approved -> reject`、`rejected -> approve` 等危險轉移回 `409 INVALID_REVIEW_STATE_TRANSITION`。
+
+審核動作會在 DB transaction 中鎖定對應的 staging row，序列化同一候選的並行 callback；Telegram callback 不執行 R2 上傳或正式媒體 promotion。
 
 ## 5.5 Web Push 訂閱 (Push Subscriptions)
 *(路徑: `/api/push`)*
@@ -346,6 +358,8 @@ Twitter Monitor 解析策略為 RSS-first：`TwitterService.extractMediaFromTwee
 
 媒體標註功能用於在圖片上標記文字與位置，支援前端 Lightbox 顯示標註資訊。MV 詳細 API (`GET /api/mvs/:id`) 回傳的圖片資料中已自動包含 `annotations` 陣列。
 
+語言契約固定為：主欄位 `label` 代表 `zh-TW`；其他支援語言存入 `label_i18n`。`zh-TW` 不計入翻譯完成度，日文 `ja` 是一般可編輯翻譯。前台顯示順序為 requested language -> legacy `label_i18n['zh-TW']` -> `label`。
+
 | 請求方法 | 端點路徑 | 權限 | 功能說明 |
 | :--- | :--- | :--- | :--- |
 | **GET** | `/media/:mediaId` | 公開 | 取得指定媒體的所有標註，按 `sort_order` 升序排列。 |
@@ -361,6 +375,10 @@ Twitter Monitor 解析策略為 RSS-first：`TwitterService.extractMediaFromTwee
 {
   "media_id": "abc123",
   "label": "吉他手",
+  "label_i18n": {
+    "ja": "ギタリスト",
+    "en": "Guitarist"
+  },
   "x": 25.5,
   "y": 60.0,
   "style": "default",
@@ -371,7 +389,8 @@ Twitter Monitor 解析策略為 RSS-first：`TwitterService.extractMediaFromTwee
 | 欄位 | 類型 | 必填 | 說明 |
 | :--- | :--- | :--- | :--- |
 | `media_id` | string | 是 | 關聯的媒體 ID |
-| `label` | string | 是 | 標註文字 (1~500 字元) |
+| `label` | string | 是 | `zh-TW` 主標註文字 (1~500 字元) |
+| `label_i18n` | Record<string, string> | 否 | 非 `zh-TW` 翻譯映射；每個值 1~500 字元。更新時傳 `{}` 代表清空全部翻譯。 |
 | `x` | number | 是 | X 軸百分比位置 (0~100) |
 | `y` | number | 是 | Y 軸百分比位置 (0~100) |
 | `style` | string | 否 | 標註樣式類型 (最長 50 字元，預設 `default`) |
@@ -402,11 +421,12 @@ Twitter Monitor 解析策略為 RSS-first：`TwitterService.extractMediaFromTwee
 ```json
 {
   "label": "主唱",
+  "label_i18n": {},
   "x": 30.0
 }
 ```
 
-所有欄位皆為選填，僅更新提供的欄位。
+所有欄位皆為選填，僅更新提供的欄位。省略 `label_i18n` 會保留現有翻譯；明確傳入空物件 `{}` 會清空全部翻譯。
 
 ### GET `/api/annotations/mv/:mvId` - 取得 MV 所有標註
 

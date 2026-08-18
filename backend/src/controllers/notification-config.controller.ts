@@ -16,6 +16,10 @@ import { twitterQueue } from '../services/queue.service.js';
 import { refreshQueueConfig } from '../services/queue.service.js';
 import { refreshMonitorTargetConfig } from '../services/monitor-target.service.js';
 import { TwitterMonitorService } from '../services/twitter-monitor.service.js';
+import { joinConfiguredUrl, requireConfiguredUrl } from '../config/urls.js';
+
+const telegramApiUrl = (botToken: string, method: string) =>
+  joinConfiguredUrl(requireConfiguredUrl('TELEGRAM_API_BASE_URL'), `/bot${botToken}/${method}`);
 
 // ── Bark ──
 
@@ -67,7 +71,10 @@ export const testBark = async (_req: Request, res: Response) => {
     throw new AppError(400, 'BARK_NOT_CONFIGURED', '尚未設定 Bark URL 或 Key');
   }
 
-  const baseUrl = barkUrl || `https://api.day.app`;
+  const baseUrl = barkUrl || process.env.BARK_API_BASE_URL || '';
+  if (!baseUrl) {
+    throw new AppError(503, 'BARK_API_NOT_CONFIGURED', 'Bark API 位址尚未設定');
+  }
   const deviceKey = barkKey || '';
   // Bark URL: {base}/{device_key}/{title}/{body}
   const title = 'ZUTOMAYO Gallery';
@@ -313,7 +320,7 @@ export const updateTelegramConfig = async (req: Request, res: Response) => {
 
   // 自動註冊 Webhook（如果有 bot token 和 webhook secret）
   const finalBotToken = updated.bot_token || process.env.TELEGRAM_BOT_TOKEN || '';
-  const webhookBase = process.env.TELEGRAM_WEBHOOK_BASE_URL || 'https://api.ztmr.club';
+  const webhookBase = requireConfiguredUrl('TELEGRAM_WEBHOOK_BASE_URL');
   if (finalBotToken) {
     try {
       const webhookUrl = `${webhookBase}/api/webhook/telegram`;
@@ -332,7 +339,7 @@ export const updateTelegramConfig = async (req: Request, res: Response) => {
       if (webhookSecret) {
         params.secret_token = webhookSecret;
       }
-      const response = await fetch(`https://api.telegram.org/bot${finalBotToken}/setWebhook`, {
+      const response = await fetch(telegramApiUrl(finalBotToken, 'setWebhook'), {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(params),
@@ -371,7 +378,7 @@ export const testTelegramBot = async (_req: Request, res: Response) => {
   }
 
   try {
-    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    const response = await fetch(telegramApiUrl(botToken, 'sendMessage'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -411,7 +418,7 @@ export const getTelegramWebhookInfo = async (_req: Request, res: Response) => {
   }
 
   try {
-    const response = await fetch(`https://api.telegram.org/bot${botToken}/getWebhookInfo`);
+    const response = await fetch(telegramApiUrl(botToken, 'getWebhookInfo'));
     const result = await response.json() as any;
 
     if (!result.ok) {
@@ -433,7 +440,7 @@ export const setTelegramWebhook = async (req: Request, res: Response) => {
   const dbConfig = (row?.get('value') as any) || {};
   const botToken = dbConfig.bot_token || process.env.TELEGRAM_BOT_TOKEN || '';
   const webhookSecret = dbConfig.webhook_secret || process.env.TELEGRAM_WEBHOOK_SECRET || '';
-  const webhookBase = process.env.TELEGRAM_WEBHOOK_BASE_URL || 'https://api.ztmr.club';
+  const webhookBase = requireConfiguredUrl('TELEGRAM_WEBHOOK_BASE_URL');
 
   if (!botToken) {
     throw new AppError(400, 'TELEGRAM_BOT_NOT_CONFIGURED', '尚未設定 Telegram Bot Token');
@@ -446,7 +453,7 @@ export const setTelegramWebhook = async (req: Request, res: Response) => {
   }
 
   try {
-    const response = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
+    const response = await fetch(telegramApiUrl(botToken, 'setWebhook'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(params),

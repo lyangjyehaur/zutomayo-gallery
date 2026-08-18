@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { Sequelize } from 'sequelize';
 import { sequelize as newDb, ArtistModel, AlbumModel, SysConfigModel, MediaModel, ArtistMediaModel } from '../models/index.js';
 import { nanoid } from 'nanoid';
+import { isTwitterVideoUrl } from '../utils/media-source.js';
 const generateShortId = () => nanoid(16);
 
 const OLD_DB_NAME = process.env.OLD_DB_NAME || process.env.DB_NAME || 'zutomayo_gallery';
@@ -69,7 +70,7 @@ async function recover() {
           let mediaType = 'image';
           if (typeof item === 'object' && item.type) {
             mediaType = item.type === 'video' || item.type === 'animated_gif' ? 'video' : 'image';
-          } else if (url.includes('.mp4') || url.includes('video.twimg.com')) {
+          } else if (url.includes('.mp4') || isTwitterVideoUrl(url)) {
             mediaType = 'video';
           } else if (url.includes('.gif')) {
             mediaType = 'gif';
@@ -100,7 +101,7 @@ async function recover() {
             let updatedMediaType = media.get('media_type');
             if (item.type) {
               updatedMediaType = item.type === 'video' || item.type === 'animated_gif' ? 'video' : 'image';
-            } else if (url.includes('.mp4') || url.includes('video.twimg.com')) {
+            } else if (url.includes('.mp4') || isTwitterVideoUrl(url)) {
               updatedMediaType = 'video';
             } else if (url.includes('.gif')) {
               updatedMediaType = 'gif';

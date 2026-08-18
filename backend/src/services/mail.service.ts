@@ -8,7 +8,7 @@ type MailProvider = 'tencent_ses' | 'aliyun_dm' | 'brevo' | 'postmark';
 const tcSecretId = process.env.TENCENT_SECRET_ID;
 const tcSecretKey = process.env.TENCENT_SECRET_KEY;
 const tcRegion = process.env.TENCENT_SES_REGION || 'ap-guangzhou';
-const tcEndpoint = process.env.TENCENT_SES_ENDPOINT || 'ses.tencentcloudapi.com';
+const tcEndpoint = String(process.env.TENCENT_SES_ENDPOINT || '').trim();
 const defaultLocale = (process.env.TENCENT_SES_DEFAULT_LANG || 'zh-TW') as MailLocale;
 
 const supportedLocales: MailLocale[] = ['zh-TW', 'zh-CN', 'zh-HK', 'en', 'ja'];
@@ -19,7 +19,7 @@ const postmarkServerToken = process.env.POSTMARK_SERVER_TOKEN;
 const aliyunAccessKeyId = process.env.ALIYUN_ACCESS_KEY_ID;
 const aliyunAccessKeySecret = process.env.ALIYUN_ACCESS_KEY_SECRET;
 const aliyunDmRegionId = process.env.ALIYUN_DM_REGION_ID || 'cn-hangzhou';
-const aliyunDmEndpoint = process.env.ALIYUN_DM_ENDPOINT || 'dm.aliyuncs.com';
+const aliyunDmEndpoint = String(process.env.ALIYUN_DM_ENDPOINT || '').trim();
 
 const normalizeLocale = (v: string | null | undefined): MailLocale | null => {
   const s = String(v || '').trim();
@@ -40,25 +40,7 @@ const parseCsv = (v: string | undefined) =>
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
 
-const mainlandDomains = new Set<string>([
-  ...parseCsv(process.env.MAIL_MAINLAND_DOMAINS),
-  'qq.com',
-  'foxmail.com',
-  '163.com',
-  '126.com',
-  'yeah.net',
-  'vip.163.com',
-  'vip.126.com',
-  'sina.com',
-  'vip.sina.com',
-  'sina.cn',
-  'sohu.com',
-  '139.com',
-  '189.cn',
-  '21cn.com',
-  'aliyun.com',
-  'aliyun.cn',
-]);
+const mainlandDomains = new Set<string>(parseCsv(process.env.MAIL_MAINLAND_DOMAINS));
 
 const isMainlandMailbox = (to: string) => {
   const domain = getEmailDomain(to);
@@ -214,7 +196,9 @@ const isBrevoConfigured = () => Boolean(brevoApiKey && (process.env.BREVO_FROM_E
 
 const callBrevo = async (payload: any) => {
   if (!brevoApiKey) throw new Error('BREVO_API_KEY_MISSING');
-  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+  const brevoApiUrl = process.env.BREVO_API_URL;
+  if (!brevoApiUrl) throw new Error('BREVO_API_URL_MISSING');
+  const res = await fetch(brevoApiUrl, {
     method: 'POST',
     headers: {
       accept: 'application/json',
@@ -268,7 +252,9 @@ const getPostmarkFromByPurpose = (purpose: AuthMailPurpose) => {
 
 const callPostmark = async (payload: any) => {
   if (!postmarkServerToken) throw new Error('POSTMARK_SERVER_TOKEN_MISSING');
-  const res = await fetch('https://api.postmarkapp.com/email', {
+  const postmarkApiUrl = process.env.POSTMARK_API_URL;
+  if (!postmarkApiUrl) throw new Error('POSTMARK_API_URL_MISSING');
+  const res = await fetch(postmarkApiUrl, {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -340,6 +326,7 @@ const signAliyunRpc = (params: Record<string, string>, secret: string) => {
 
 const callAliyunDirectMail = async (action: string, params: Record<string, string>) => {
   if (!aliyunAccessKeyId || !aliyunAccessKeySecret) throw new Error('ALIYUN_CREDENTIALS_MISSING');
+  if (!aliyunDmEndpoint) throw new Error('ALIYUN_DM_ENDPOINT_MISSING');
 
   const baseParams: Record<string, string> = {
     Action: action,
@@ -435,6 +422,7 @@ const callTencentSes = async (action: string, payload: any) => {
   if (!tcSecretId || !tcSecretKey) {
     throw new Error('TENCENT_CREDENTIALS_MISSING');
   }
+  if (!tcEndpoint) throw new Error('TENCENT_SES_ENDPOINT_MISSING');
 
   const service = 'ses';
   const host = tcEndpoint;

@@ -4,6 +4,7 @@ import {
   __testResolveTopicIdForFanartReview,
   __testSetTelegramTopicState,
   buildFanartReviewCallbackData,
+  buildFanartReviewPhotoCaption,
   parseFanartReviewCallbackData,
   syncArtistTopicName,
 } from './telegram-bot.service.js';
@@ -37,6 +38,23 @@ test('parseFanartReviewCallbackData parses known formats and returns null for un
   assert.equal(parseFanartReviewCallbackData('fa:maybe:staging-4'), null);
   assert.equal(parseFanartReviewCallbackData('unknown'), null);
   assert.equal(parseFanartReviewCallbackData(undefined), null);
+});
+
+test('buildFanartReviewPhotoCaption keeps short messages and source links intact', () => {
+  assert.equal(
+    buildFanartReviewPhotoCaption('FanArt', 'body & more', 'https://example.test/tweet?id=1&lang=zh'),
+    '<b>FanArt</b>\n\nbody &amp; more\n\n<a href="https://example.test/tweet?id=1&amp;lang=zh">開啟原推文</a>'
+  );
+});
+
+test('buildFanartReviewPhotoCaption safely truncates long escaped bodies', () => {
+  const caption = buildFanartReviewPhotoCaption('FanArt', `內容 & ${'<'.repeat(1200)}`, 'https://example.test/tweet');
+
+  assert.ok(caption.length <= 1024);
+  assert.ok(caption.startsWith('<b>FanArt</b>\n\n'));
+  assert.ok(caption.endsWith('…'));
+  assert.equal(caption.includes('<a href='), false);
+  assert.equal(caption.endsWith('&…'), false);
 });
 
 test('syncArtistTopicName returns false when artist id or name is blank', async () => {

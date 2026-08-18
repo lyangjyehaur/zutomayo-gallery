@@ -5,10 +5,43 @@ import { MVModel } from '../models/index.js';
 import { sequelize } from '../models/index.js';
 import { errorEventEmitter } from './error-events.service.js';
 import { logger } from '../utils/logger.js';
+import { loadAfterCommit } from './post-commit-cache.js';
 
 // 運行時數據緩存，支持熱更新
 let runtimeData: MVItem[] | null = null;
 let runtimeDataMap: Map<string, MVItem> | null = null;
+
+type RuntimeDataLoader = () => Promise<MVItem[]>;
+type CacheRefreshErrorReporter = (error: unknown) => void;
+
+const reportCacheRefreshError: CacheRefreshErrorReporter = (error) => {
+  logger.error({ err: error }, '[MVService] Post-commit runtime cache refresh failed; cache invalidated');
+  errorEventEmitter.emitError({
+    source: 'request',
+    message: `MV update committed but runtime cache refresh failed: ${error instanceof Error ? error.message : String(error)}`,
+    stack: error instanceof Error ? error.stack : undefined,
+    code: 'MV_CACHE_REFRESH_FAILED',
+    details: { phase: 'mv-post-commit-cache-refresh' },
+  });
+};
+
+export async function refreshRuntimeCacheAfterCommit(
+  load: RuntimeDataLoader = getMVsFromDB,
+  reportError: CacheRefreshErrorReporter = reportCacheRefreshError,
+): Promise<boolean> {
+  const result = await loadAfterCommit(load);
+  if (result.ok) {
+    runtimeData = result.data;
+    runtimeDataMap = new Map(result.data.map((mv) => [mv.id, mv]));
+    return true;
+  }
+
+  runtimeData = null;
+  runtimeDataMap = null;
+  reportError(result.error);
+  return false;
+}
+
 const getRuntimeData = async (): Promise<MVItem[]> => {
   if (!runtimeData) {
     try {
@@ -176,9 +209,11 @@ export class MVService {
       }
     });
 
-    // 更新成功後，更新運行時緩存
-    runtimeData = finalData;
-    runtimeDataMap = new Map(finalData.map(mv => [mv.id, mv]));
+    // 更新成功後，從 DB 重新讀取以確保 runtime cache 與 DB 一致
+    // （前端傳來的 partial 資料可能缺少後端生成的欄位，例如新 media 的 id；
+    //  若直接用 finalData 寫入 cache，會導致後續 getMVs 回傳沒有 id 的 images，
+    //  進而讓 AdminAnnotationsPage 用 url fallback 當 media_id，造成 404。）
+    await refreshRuntimeCacheAfterCommit();
     
     // 背景同步至 Meilisearch (不阻塞 API 回應)
     syncDataToMeili().catch(err => {

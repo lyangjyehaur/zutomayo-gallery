@@ -258,7 +258,7 @@
 | `updated_at` | `TIMESTAMP` | | 更新時間 |
 
 ### 4.5. `staging_fanarts` (二創圖暫存表)
-暫存從 Twitter RSS / crawler 等來源爬取的二創圖。批准前資料停留在此表，不建立正式 `media_groups` / `media`；Telegram inline review 與後台審核共用同一套 promote 流程。`on_hold` 代表暫存觀察，之後可還原為 `pending`、拒絕或批准。`reviewed` 代表 Telegram 初審通過，等待 review-app 進行 MV 關聯後核准。
+暫存從 Twitter RSS / crawler 等來源爬取的候選媒體。批准前資料停留在此表，不建立正式 `media_groups` / `media`；Telegram inline review 只負責把候選標記為 `reviewed`，後續由 review-app 補齊關聯並呼叫後台批准流程進行 promotion。`on_hold` 代表暫存觀察，之後可還原為 `pending`、拒絕或批准。
 
 **content_type 分類與 promote 行為：**
 - `fanart`：二創，多選 MV（可選），R2 備份到 `fanart/`

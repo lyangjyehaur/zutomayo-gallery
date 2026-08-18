@@ -4,7 +4,7 @@ import { errorEventEmitter } from './error-events.service.js';
 import { logger } from '../utils/logger.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
-const MEILI_HOST = process.env.MEILI_HOST || 'http://localhost:7700';
+const MEILI_HOST = process.env.MEILI_HOST || '';
 const MEILI_MASTER_KEY = process.env.MEILI_MASTER_KEY || 'Ztmr_Meili_Master_Key_2026!';
 
 export const meiliClient = new Meilisearch({

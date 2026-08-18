@@ -24,8 +24,6 @@ const defaultMetadata: MetadataResponse = {
   showAutoAlbumDate: false,
 };
 
-let runtimeMetadata: MetadataResponse | null = null;
-
 const normalizeMetadata = (raw: unknown): MetadataResponse => {
   const base: MetadataResponse = JSON.parse(JSON.stringify(defaultMetadata));
   if (!raw || typeof raw !== 'object') return base;

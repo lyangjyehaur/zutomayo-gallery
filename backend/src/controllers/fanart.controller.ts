@@ -5,7 +5,7 @@ import { MVService } from '../services/mv.service.js';
 import { deleteKeysByPattern } from '../services/redis.service.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { FANART_ALLOWED_TAGS } from '../constants/fanart-tags.js';
-import { isYoutubeMediaUrl } from '../utils/media-source.js';
+import { getYoutubeHosts, isYoutubeMediaUrl, toSqlHostPatterns } from '../utils/media-source.js';
 import { logger } from '../utils/logger.js';
 import {
   assignFanartMediaSchema,
@@ -44,6 +44,21 @@ const isFanartYoutubeMedia = (media: any): boolean => {
   const originalUrl = String(media?.original_url || media?.originalUrl || '');
   return isYoutubeMediaUrl(url) || isYoutubeMediaUrl(originalUrl);
 };
+
+const youtubeSequelizeConditions = () => toSqlHostPatterns(getYoutubeHosts()).flatMap((pattern) => [
+  { url: { [Op.iLike]: pattern } },
+  { original_url: { [Op.iLike]: pattern } },
+]);
+
+const buildYoutubeSqlCondition = (
+  columns: string[],
+  replacements: Record<string, any>,
+  prefix: string,
+): string => toSqlHostPatterns(getYoutubeHosts()).map((pattern, index) => {
+  const key = `${prefix}_${index}`;
+  replacements[key] = pattern;
+  return `(${columns.map((column) => `${column} ILIKE :${key}`).join(' OR ')})`;
+}).join(' OR ');
 
 export const getUnorganizedFanarts = async (req: Request, res: Response) => {
   const mediaType = (req.query.type as string) || undefined;
@@ -170,14 +185,7 @@ export const getFanartGallery = async (req: Request, res: Response) => {
   const andConditions: any[] = [{ type: mediaType }];
   andConditions.push({
     [Op.not]: {
-      [Op.or]: [
-        { url: { [Op.iLike]: '%ytimg.com%' } },
-        { url: { [Op.iLike]: '%youtube.com%' } },
-        { url: { [Op.iLike]: '%youtu.be%' } },
-        { original_url: { [Op.iLike]: '%ytimg.com%' } },
-        { original_url: { [Op.iLike]: '%youtube.com%' } },
-        { original_url: { [Op.iLike]: '%youtu.be%' } },
-      ],
+      [Op.or]: youtubeSequelizeConditions(),
     },
   });
   if (source) andConditions.push({ source });
@@ -355,22 +363,21 @@ export const getFanartGallerySummary = async (req: Request, res: Response) => {
 
   // 合併 5 次 count() 為單條 SQL，避免 N+1 查詢
   const sourceFilter = source ? `AND m.source = :source` : '';
+  const tagCountReplacements: Record<string, any> = { tags: [...tags], mediaType, ...(source ? { source_for_tag: source } : {}) };
+  const tagYoutubeSql = buildYoutubeSqlCondition(['m.url', 'm.original_url'], tagCountReplacements, 'tag_youtube');
   const tagCountRows = await sequelize.query(
     `
     SELECT t.tag, COUNT(DISTINCT m.id)::int AS count
     FROM unnest(ARRAY[:tags]::text[]) AS t(tag)
     JOIN media m ON m.type = :mediaType
       AND m.tags @> to_jsonb(t.tag::text)
-      AND NOT (
-        m.url ILIKE '%ytimg.com%' OR m.url ILIKE '%youtube.com%' OR m.url ILIKE '%youtu.be%'
-        OR m.original_url ILIKE '%ytimg.com%' OR m.original_url ILIKE '%youtube.com%' OR m.original_url ILIKE '%youtu.be%'
-      )
+      AND NOT (${tagYoutubeSql})
     JOIN media_groups g ON g.id = m.group_id AND g.status = 'organized'
     ${sourceFilter.replace(':source', ':source_for_tag')}
     GROUP BY t.tag
     `,
     {
-      replacements: { tags: [...tags], mediaType, ...(source ? { source_for_tag: source } : {}) },
+      replacements: tagCountReplacements,
       type: QueryTypes.SELECT,
     }
   );
@@ -393,9 +400,7 @@ export const getFanartGallerySummary = async (req: Request, res: Response) => {
     whereParts.push(`m.source = :source`);
     replacements.source = source;
   }
-  whereParts.push(
-    `NOT (m.url ILIKE '%ytimg.com%' OR m.url ILIKE '%youtube.com%' OR m.url ILIKE '%youtu.be%' OR m.original_url ILIKE '%ytimg.com%' OR m.original_url ILIKE '%youtube.com%' OR m.original_url ILIKE '%youtu.be%')`,
-  );
+  whereParts.push(`NOT (${buildYoutubeSqlCondition(['m.url', 'm.original_url'], replacements, 'summary_youtube')})`);
 
   if (onlyCollab) {
     whereParts.push(`m.tags @> :collabTag::jsonb`);
@@ -448,14 +453,7 @@ export const getFanartsByTag = async (req: Request, res: Response) => {
         { type: mediaType },
         {
           [Op.not]: {
-            [Op.or]: [
-              { url: { [Op.iLike]: '%ytimg.com%' } },
-              { url: { [Op.iLike]: '%youtube.com%' } },
-              { url: { [Op.iLike]: '%youtu.be%' } },
-              { original_url: { [Op.iLike]: '%ytimg.com%' } },
-              { original_url: { [Op.iLike]: '%youtube.com%' } },
-              { original_url: { [Op.iLike]: '%youtu.be%' } },
-            ],
+            [Op.or]: youtubeSequelizeConditions(),
           },
         },
         {
@@ -478,6 +476,8 @@ export const getFanartTagSummary = async (req: Request, res: Response) => {
   const mediaType = (req.query.type as string) || 'fanart';
 
   // 合併 5 次 count() 為單條 SQL
+  const tagSummaryReplacements: Record<string, any> = { tags: [...tags], mediaType };
+  const tagSummaryYoutubeSql = buildYoutubeSqlCondition(['m.url', 'm.original_url'], tagSummaryReplacements, 'tag_summary_youtube');
   const tagSummaryRows = await sequelize.query(
     `
     SELECT t.tag AS full_tag,
@@ -489,14 +489,11 @@ export const getFanartTagSummary = async (req: Request, res: Response) => {
     ) t
     JOIN media m ON m.type = :mediaType
       AND (m.tags @> to_jsonb(t.tag::text) OR m.tags @> to_jsonb(t.legacy_tag::text))
-      AND NOT (
-        m.url ILIKE '%ytimg.com%' OR m.url ILIKE '%youtube.com%' OR m.url ILIKE '%youtu.be%'
-        OR m.original_url ILIKE '%ytimg.com%' OR m.original_url ILIKE '%youtube.com%' OR m.original_url ILIKE '%youtu.be%'
-      )
+      AND NOT (${tagSummaryYoutubeSql})
     GROUP BY t.tag, t.legacy_tag
     `,
     {
-      replacements: { tags: [...tags], mediaType },
+      replacements: tagSummaryReplacements,
       type: QueryTypes.SELECT,
     }
   );

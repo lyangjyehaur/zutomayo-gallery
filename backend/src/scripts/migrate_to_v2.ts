@@ -16,6 +16,7 @@ import {
   syncModels
 } from '../models/index.js';
 import { nanoid } from 'nanoid';
+import { isTwitterVideoUrl } from '../utils/media-source.js';
 const generateShortId = () => nanoid(16);
 
 async function migrate() {
@@ -163,7 +164,7 @@ async function migrate() {
             let currentMediaType = 'image';
             if (typeof img === 'object' && img.type) {
               currentMediaType = img.type === 'video' || img.type === 'animated_gif' ? 'video' : 'image';
-            } else if (url.includes('.mp4') || url.includes('video.twimg.com')) {
+            } else if (url.includes('.mp4') || isTwitterVideoUrl(url)) {
               currentMediaType = 'video';
             } else if (url.includes('.gif')) {
               currentMediaType = 'gif';
@@ -287,7 +288,7 @@ async function migrate() {
             let currentMediaType = 'image';
             if (typeof media === 'object' && media.type) {
               currentMediaType = media.type === 'video' || media.type === 'animated_gif' ? 'video' : 'image';
-            } else if (url.includes('.mp4') || url.includes('video.twimg.com')) {
+            } else if (url.includes('.mp4') || isTwitterVideoUrl(url)) {
               currentMediaType = 'video';
             } else if (url.includes('.gif')) {
               currentMediaType = 'gif';

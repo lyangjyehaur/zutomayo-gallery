@@ -20,16 +20,17 @@ const ACCOUNT_ID = process.env.R2_ACCOUNT_ID || '';
 const ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || '';
 const SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || '';
 const BUCKET_NAME = process.env.R2_BUCKET_NAME || '';
+const R2_ENDPOINT_URL = String(process.env.R2_ENDPOINT_URL || '').trim() || undefined;
 
-if (!ACCOUNT_ID || !ACCESS_KEY_ID || !SECRET_ACCESS_KEY || !BUCKET_NAME) {
+if (!ACCOUNT_ID || !ACCESS_KEY_ID || !SECRET_ACCESS_KEY || !BUCKET_NAME || !R2_ENDPOINT_URL) {
   console.error('❌ 缺少 R2 環境變數，請確認 backend/.env 檔案中是否已設定:');
-  console.error('R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME');
+  console.error('R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_ENDPOINT_URL');
   process.exit(1);
 }
 
 const s3Client = new S3Client({
   region: 'auto',
-  endpoint: `https://${ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  endpoint: R2_ENDPOINT_URL,
   credentials: {
     accessKeyId: ACCESS_KEY_ID,
     secretAccessKey: SECRET_ACCESS_KEY,
@@ -60,7 +61,9 @@ async function fetchAlbumsFromRegion(region: string) {
   try {
     const lang = getLangForRegion(region);
     // 使用 lookup API 抓取 album (退回原本抓 album，因為抓 song 的資料量太大且會遺漏純專輯)
-    const lookupUrl = `https://itunes.apple.com/lookup?id=${ARTIST_ID}&entity=album&country=${region}&lang=${lang}`;
+    const appleApiOrigin = String(process.env.APPLE_ITUNES_API_ORIGIN || '').replace(/\/+$/, '');
+    if (!appleApiOrigin) throw new Error('APPLE_ITUNES_API_ORIGIN is required');
+    const lookupUrl = `${appleApiOrigin}/lookup?id=${ARTIST_ID}&entity=album&country=${region}&lang=${lang}`;
     const response = await fetch(lookupUrl);
     if (!response.ok) return [];
     
@@ -76,7 +79,7 @@ async function fetchAlbumsFromRegion(region: string) {
         const terms = ['ずっと真夜中でいいのに。', 'ZUTOMAYO'];
         for (const term of terms) {
           // 額外搜尋特定中文或日文，確保沒有漏網之魚
-          const searchUrl = encodeURI(`https://itunes.apple.com/search?term=${term}&entity=song&country=jp&lang=ja_jp&limit=200`);
+          const searchUrl = encodeURI(`${appleApiOrigin}/search?term=${term}&entity=song&country=jp&lang=ja_jp&limit=200`);
           const searchRes = await fetch(searchUrl);
           if (searchRes.ok) {
             const searchData = await searchRes.json();
@@ -280,7 +283,8 @@ async function fetchAndUploadCovers() {
 
       try {
         let finalFileName = existingFileName;
-        const r2Url = `https://${process.env.R2_PUBLIC_DOMAIN || 'r2.dan.tw'}`;
+        const r2Url = String(process.env.R2_PUBLIC_DOMAIN || '').replace(/\/+$/, '');
+        if (!r2Url) throw new Error('R2_PUBLIC_DOMAIN is required');
 
         if (!needsDownload && existingFileName) {
           // 只更新 Metadata 與 DB

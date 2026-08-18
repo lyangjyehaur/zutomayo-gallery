@@ -53,9 +53,9 @@ graph TD
     Start([前端請求 getProxyImgUrl]) --> CheckVideo{1. 是影片嗎?}
     
     CheckVideo -- 是 (mp4/video.twimg.com) --> HandleVideo[影片處理邏輯]
-    HandleVideo -->|R2 影片 (大陸)| NginxR2[回傳 assets.ztmr.club/r2/...]
+    HandleVideo -->|R2 影片 (大陸)| NginxR2[回傳 VITE_ASSETS_ORIGIN/r2/...]
     HandleVideo -->|R2 影片 (海外)| DirectR2[直連 r2.dan.tw]
-    HandleVideo -->|Twitter 影片 (大陸)| NginxTV[回傳 assets.ztmr.club/tv/...]
+    HandleVideo -->|Twitter 影片 (大陸)| NginxTV[回傳 VITE_ASSETS_ORIGIN/tv/...]
     HandleVideo -->|Twitter 影片 (海外)| DirectTV[直連 video.twimg.com]
     NginxR2 --> EndVideo([結束: 影片不過 imgproxy])
     DirectR2 --> EndVideo
@@ -73,23 +73,23 @@ graph TD
     
     CheckOverseas -- 否 (大陸用戶/需要代理/下載模式) --> CheckMainland{3. 國內代理邏輯}
     
-    CheckMainland -->|Twitter 原生縮圖 (非 raw)| NginxTI[回傳 assets.ztmr.club/ti/... 節省 CPU]
+    CheckMainland -->|Twitter 原生縮圖 (非 raw)| NginxTI[回傳 VITE_ASSETS_ORIGIN/ti/... 節省 CPU]
     NginxTI --> EndMainland([結束: Nginx 反代推特])
     
-    CheckMainland -->|R2 大圖展示 (full)| NginxR2_3[回傳 assets.ztmr.club/r2/... 避免 imgproxy 處理大圖]
+    CheckMainland -->|R2 大圖展示 (full)| NginxR2_3[回傳 VITE_ASSETS_ORIGIN/r2/... 避免 imgproxy 處理大圖]
     NginxR2_3 --> EndMainland2([結束: Nginx 反代 R2 原圖])
     
     CheckMainland -->|需要產生縮圖 (thumb/small) 或 下載注入檔名 (raw)| ImgProxy[4. 統一送交 imgproxy]
     
     ImgProxy --> ProcessImgProxy[轉 Base64, 附加 rs:fit 或 filename 標頭]
-    ProcessImgProxy --> EndImgProxy([結束: 回傳 img.ztmr.club/...])
+    ProcessImgProxy --> EndImgProxy([結束: 回傳 VITE_IMGPROXY_ORIGIN/...])
 ```
 
 ---
 
 ## 4. 基礎設施：Nginx (OpenResty) 與 Imgproxy
 
-### 4.1 Nginx 代理層 (`assets.ztmr.club`)
+### 4.1 Nginx 代理層（`VITE_ASSETS_ORIGIN`）
 作為前端直連與被牆資源之間的橋樑，處理以下任務：
 *   **`/r2/` (代理 Cloudflare R2)**：
     *   解決 Cloudflare 原生網域無 CORS 的問題（注入 `Access-Control-Allow-Origin: "*"`）。
@@ -98,7 +98,7 @@ graph TD
 *   **`/ti/` (代理 Twitter 圖片)**：轉發至 `pbs.twimg.com`。
 *   **`/tv/` (代理 Twitter 影片)**：轉發至 `video.twimg.com`。
 
-### 4.2 動態影像處理 (`imgproxy` / `img.ztmr.club`)
+### 4.2 動態影像處理（`imgproxy` / `VITE_IMGPROXY_ORIGIN`）
 專注於處理需要耗費 CPU 計算的圖片操作：
 *   將 R2 中的 10MB 高畫質原圖，即時壓縮成 400px 的 WebP 縮圖，供瀑布流使用。
 *   在 `raw` 下載模式時，不改變圖片畫質，但透過參數（如 `filename:XXX`）在 HTTP 回應中注入 `Content-Disposition: attachment; filename="XXX.jpg"`，讓瀏覽器下載時自動使用正確的自訂檔名。

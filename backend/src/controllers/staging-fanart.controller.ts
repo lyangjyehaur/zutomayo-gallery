@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import { StagingFanartModel, MediaGroupModel, MediaModel, CrawlerStateModel, MVMediaModel, ArtistModel, ArtistMediaModel } from '../models/index.js';
+import { StagingFanartModel, MediaGroupModel, MediaModel, CrawlerStateModel, MVMediaModel, ArtistModel, ArtistMediaModel, sequelize } from '../models/index.js';
 import { MVService } from '../services/mv.service.js';
 import { nanoid } from 'nanoid';
 import { Op, Sequelize } from 'sequelize';
@@ -9,6 +9,8 @@ import { errorEventEmitter } from '../services/error-events.service.js';
 import crypto from 'crypto';
 import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
+import { isTwitterImageUrl } from '../utils/media-source.js';
+import { requireConfiguredUrl } from '../config/urls.js';
 
 const mvService = new MVService();
 
@@ -18,7 +20,7 @@ type StagingStatus = 'pending' | 'on_hold' | 'reviewed' | 'approved' | 'rejected
 
 async function fetchMediaToBuffer(url: string): Promise<{ buffer: Buffer; contentType: string; ext: string } | null> {
   let fetchUrl = url;
-  if (fetchUrl.includes('pbs.twimg.com')) {
+  if (isTwitterImageUrl(fetchUrl)) {
     fetchUrl = fetchUrl.replace(/&name=[a-z0-9]+/i, '');
     fetchUrl = fetchUrl.replace(/\?name=[a-z0-9]+/i, '?');
     fetchUrl = fetchUrl.includes('?') ? `${fetchUrl}&name=orig` : `${fetchUrl}?name=orig`;
@@ -556,9 +558,10 @@ export const reparseStagingFanart = async (req: Request, res: Response, next: Ne
     if (tweetIdChanged) {
       update.tweet_id = newTweetId;
       const handleForUrl = newAuthorHandle || currentAuthorHandle;
+      const twitterWebOrigin = requireConfiguredUrl('TWITTER_WEB_ORIGIN');
       update.original_url = handleForUrl
-        ? `https://x.com/${handleForUrl}/status/${newTweetId}`
-        : `https://x.com/i/status/${newTweetId}`;
+        ? `${twitterWebOrigin}/${handleForUrl}/status/${newTweetId}`
+        : `${twitterWebOrigin}/i/status/${newTweetId}`;
     }
 
     // author_handle: 如果解析到新的且跟現有不同才更新
@@ -615,56 +618,61 @@ export const reparseStagingFanart = async (req: Request, res: Response, next: Ne
 };
 
 export async function applyStagingReviewAction(id: string, action: StagingReviewAction) {
-  const staging = await StagingFanartModel.findByPk(id);
+  return sequelize.transaction(async (transaction) => {
+    const staging = await StagingFanartModel.findByPk(id, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
 
-  if (!staging) {
-    throw new AppError(404, 'STAGING_FANART_NOT_FOUND', 'Staging fanart not found');
-  }
-
-  const currentStatus = String(staging.get('status')) as StagingStatus;
-  let changed = false;
-  let alreadyProcessed = false;
-
-  if (action === 'hold') {
-    if (currentStatus === 'on_hold') {
-      alreadyProcessed = true;
-    } else if (currentStatus === 'pending' || currentStatus === 'reviewed') {
-      await staging.update({ status: 'on_hold' });
-      changed = true;
-    } else {
-      throw new AppError(409, 'INVALID_REVIEW_STATE_TRANSITION', 'Invalid review state transition');
+    if (!staging) {
+      throw new AppError(404, 'STAGING_FANART_NOT_FOUND', 'Staging fanart not found');
     }
-  } else if (action === 'reject') {
-    if (currentStatus === 'rejected') {
-      alreadyProcessed = true;
-    } else if (currentStatus === 'pending' || currentStatus === 'on_hold' || currentStatus === 'reviewed') {
-      await staging.update({ status: 'rejected' });
-      changed = true;
-    } else {
-      throw new AppError(409, 'INVALID_REVIEW_STATE_TRANSITION', 'Invalid review state transition');
-    }
-  } else if (action === 'approve') {
-    if (currentStatus === 'approved' || currentStatus === 'reviewed') {
-      alreadyProcessed = true;
-    } else if (currentStatus === 'pending' || currentStatus === 'on_hold') {
-      await staging.update({ status: 'reviewed' });
-      changed = true;
-    } else {
-      throw new AppError(409, 'INVALID_REVIEW_STATE_TRANSITION', 'Invalid review state transition');
-    }
-  } else {
-    throw new AppError(400, 'INVALID_REVIEW_ACTION', 'Invalid action');
-  }
 
-  await staging.reload();
+    const currentStatus = String(staging.get('status')) as StagingStatus;
+    let changed = false;
+    let alreadyProcessed = false;
 
-  return {
-    id,
-    action,
-    status: staging.get('status'),
-    changed,
-    alreadyProcessed,
-  };
+    if (action === 'hold') {
+      if (currentStatus === 'on_hold') {
+        alreadyProcessed = true;
+      } else if (currentStatus === 'pending' || currentStatus === 'reviewed') {
+        await staging.update({ status: 'on_hold' }, { transaction });
+        changed = true;
+      } else {
+        throw new AppError(409, 'INVALID_REVIEW_STATE_TRANSITION', 'Invalid review state transition');
+      }
+    } else if (action === 'reject') {
+      if (currentStatus === 'rejected') {
+        alreadyProcessed = true;
+      } else if (currentStatus === 'pending' || currentStatus === 'on_hold' || currentStatus === 'reviewed') {
+        await staging.update({ status: 'rejected' }, { transaction });
+        changed = true;
+      } else {
+        throw new AppError(409, 'INVALID_REVIEW_STATE_TRANSITION', 'Invalid review state transition');
+      }
+    } else if (action === 'approve') {
+      if (currentStatus === 'approved' || currentStatus === 'reviewed') {
+        alreadyProcessed = true;
+      } else if (currentStatus === 'pending' || currentStatus === 'on_hold') {
+        await staging.update({ status: 'reviewed' }, { transaction });
+        changed = true;
+      } else {
+        throw new AppError(409, 'INVALID_REVIEW_STATE_TRANSITION', 'Invalid review state transition');
+      }
+    } else {
+      throw new AppError(400, 'INVALID_REVIEW_ACTION', 'Invalid action');
+    }
+
+    await staging.reload({ transaction });
+
+    return {
+      id,
+      action,
+      status: staging.get('status'),
+      changed,
+      alreadyProcessed,
+    };
+  });
 }
 
 export const restoreStagingFanart = async (req: Request, res: Response) => {

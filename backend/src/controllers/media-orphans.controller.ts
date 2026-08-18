@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { Op } from 'sequelize';
 import { MediaGroupModel, MediaModel, MVModel } from '../models/index.js';
-import { isTweetSourceMedia } from '../utils/media-source.js';
+import { getTwitterMediaHosts, isTweetSourceMedia } from '../utils/media-source.js';
 
 const clampInt = (value: unknown, fallback: number, min: number, max: number): number => {
   const n = Number(value);
@@ -18,12 +18,10 @@ export const listOrphanMedia = async (req: Request, res: Response) => {
 
   const where: any = {
     group_id: { [Op.is]: null },
-    [Op.or]: [
-      { url: { [Op.iLike]: '%pbs.twimg.com%' } },
-      { url: { [Op.iLike]: '%video.twimg.com%' } },
-      { original_url: { [Op.iLike]: '%pbs.twimg.com%' } },
-      { original_url: { [Op.iLike]: '%video.twimg.com%' } },
-    ],
+    [Op.or]: getTwitterMediaHosts().flatMap((host) => [
+      { url: { [Op.iLike]: `%${host}%` } },
+      { original_url: { [Op.iLike]: `%${host}%` } },
+    ]),
   };
   if (type) where.type = type;
   if (q) {

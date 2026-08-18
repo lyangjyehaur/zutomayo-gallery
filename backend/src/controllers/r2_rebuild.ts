@@ -2,11 +2,13 @@ import { S3Client, ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/c
 import { getMVsFromDB, saveMVsToDB } from '../services/v2_mapper.js';
 import { MediaGroupModel, MediaModel } from '../models/index.js';
 import { backupImageToR2 } from '../services/r2.service.js';
+import { isTwitterImageUrl, isTwitterMediaUrl } from '../utils/media-source.js';
 
 const BUCKET_NAME = process.env.R2_BUCKET_NAME || 'zutomayo-gallery-archive';
+const R2_ENDPOINT_URL = String(process.env.R2_ENDPOINT_URL || '').trim() || undefined;
 const s3Client = new S3Client({
   region: 'auto',
-  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  endpoint: R2_ENDPOINT_URL,
   credentials: {
     accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
@@ -32,7 +34,7 @@ export const rebuildR2 = async (req: any, res: any) => {
           for (const imgObj of mv.images) {
             const originalUrl = typeof imgObj === 'string' ? imgObj : (imgObj.original_url || imgObj.url);
             
-            if (originalUrl && originalUrl.includes('pbs.twimg.com')) {
+            if (originalUrl && process.env.TWITTER_IMAGE_ORIGIN && originalUrl.includes(new URL(process.env.TWITTER_IMAGE_ORIGIN).hostname)) {
               console.log(`[R2 Rebuild] MV image: ${originalUrl}`);
               const r2Url = await backupImageToR2(originalUrl, `mvs/${mv.id}`, {
                 forceUpdate: true,
@@ -71,7 +73,7 @@ export const rebuildR2 = async (req: any, res: any) => {
         if (!data.images) continue;
         
         for (const media of data.images) {
-          if (!media.original_url || !(media.original_url.includes('pbs.twimg.com') || media.original_url.includes('video.twimg.com'))) {
+          if (!media.original_url || !isTwitterMediaUrl(media.original_url)) {
             continue;
           }
           
@@ -90,7 +92,7 @@ export const rebuildR2 = async (req: any, res: any) => {
               await MediaModel.update({ url: r2Url }, { where: { id: media.id } });
               
               // Backup thumbnail if video
-              if (media.media_type === 'video' && media.thumbnail_url && media.thumbnail_url.includes('pbs.twimg.com')) {
+              if (media.media_type === 'video' && media.thumbnail_url && isTwitterImageUrl(media.thumbnail_url)) {
                 const r2ThumbUrl = await backupImageToR2(media.thumbnail_url, `fanarts/videos/thumbs`, {
                   forceUpdate: true,
                   metadata: { 'fanart-id': data.id }

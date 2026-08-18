@@ -11,6 +11,7 @@ import {
   getRssHubBaseUrl,
   inferRssHubBaseFromFeedUrl,
 } from './monitor-target.service.js';
+import { getTwitterSourceHosts, isTwitterVideoUrl } from '../utils/media-source.js';
 
 const parser = new Parser();
 
@@ -51,7 +52,7 @@ export const resetTwitterMonitorServiceDepsForTest = () => {
 const resolveMediaType = (media: TwitterMedia, url: string) => {
   if (media.type === 'video') return 'video';
   if (media.type === 'animated_gif' || media.type === 'gif') return 'gif';
-  if (url.includes('.mp4') || url.includes('video.twimg.com')) return 'video';
+  if (url.includes('.mp4') || isTwitterVideoUrl(url)) return 'video';
   return 'image';
 };
 
@@ -77,10 +78,15 @@ const extractHandleFromRssItem = (item: RssTweetItem) => {
   const handleFromText = source.match(/@([A-Za-z0-9_]+)/)?.[1];
   if (handleFromText) return handleFromText;
 
-  // 2. 從 link URL 提取 handle（https://x.com/{handle}/status/{id}）
+  // 2. 從 link URL 提取 handle（TWITTER_WEB_ORIGIN/{handle}/status/{id}）
   const link = item.link || '';
-  const handleFromUrl = link.match(/(?:twitter\.com|x\.com)\/([A-Za-z0-9_]+)\/status/i)?.[1];
-  return handleFromUrl || '';
+  try {
+    const parsed = new URL(link);
+    if (!getTwitterSourceHosts().includes(parsed.hostname.toLowerCase())) return '';
+    return parsed.pathname.match(/^\/([A-Za-z0-9_]+)\/status\//i)?.[1] || '';
+  } catch {
+    return '';
+  }
 };
 
 const appendHandle = (currentHandle: unknown, tweetHandle: string) => {

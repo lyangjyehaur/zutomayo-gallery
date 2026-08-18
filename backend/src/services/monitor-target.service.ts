@@ -62,7 +62,7 @@ export const buildTwitterRssFeedUrl = (baseUrl: string, target: Pick<MonitorFeed
   return `${normalizedBase}/twitter/user/${encodeURIComponent(target.handle)}`;
 };
 
-let cachedRssHubBaseUrl = (process.env.TWITTER_RSSHUB_BASE_URL || process.env.RSSHUB_BASE_URL || 'https://rsshub.app').replace(/\/+$/, '');
+let cachedRssHubBaseUrl = (process.env.TWITTER_RSSHUB_BASE_URL || process.env.RSSHUB_BASE_URL || '').replace(/\/+$/, '');
 
 /**
  * 從 DB 載入 twitter_monitor_config，更新 RSSHub base URL。

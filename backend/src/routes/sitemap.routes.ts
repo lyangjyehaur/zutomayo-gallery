@@ -4,12 +4,16 @@ import { MediaGroupModel } from '../models/index.js';
 import { getMVsFromDB } from '../services/v2_mapper.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
+import { requireConfiguredUrl } from '../config/urls.js';
+import { encodeImgproxySourceUrl } from '../utils/imgproxy.js';
 
 const router = Router();
-const BASE_URL = process.env.SITEMAP_BASE_URL || 'https://gallery.ztmr.club';
-const SITEMAP_IMGPROXY_URL = (process.env.SITEMAP_IMGPROXY_URL || process.env.IMGPROXY_URL || 'https://img.ztmr.club').replace(/\/$/, '');
-const SITEMAP_TWITTER_ASSET_HOST = process.env.SITEMAP_TWITTER_ASSET_HOST || 'https://assets.ztmr.club/ti';
-const SITEMAP_YOUTUBE_ASSET_HOST = process.env.SITEMAP_YOUTUBE_ASSET_HOST || 'https://assets.ztmr.club/yi';
+const BASE_URL = requireConfiguredUrl('SITEMAP_BASE_URL');
+const SITEMAP_IMGPROXY_URL = requireConfiguredUrl('SITEMAP_IMGPROXY_URL');
+const SITEMAP_TWITTER_ASSET_HOST = requireConfiguredUrl('SITEMAP_TWITTER_ASSET_HOST');
+const SITEMAP_YOUTUBE_ASSET_HOST = requireConfiguredUrl('SITEMAP_YOUTUBE_ASSET_HOST');
+const TWITTER_IMAGE_ORIGIN = requireConfiguredUrl('TWITTER_IMAGE_ORIGIN');
+const YOUTUBE_IMAGE_ORIGIN = requireConfiguredUrl('YOUTUBE_IMAGE_ORIGIN');
 
 router.get('/sitemap.xml', asyncHandler(async (req: Request, res: Response) => {
   const [mvs, fanarts] = await Promise.all([
@@ -48,9 +52,11 @@ router.get('/sitemap.xml', asyncHandler(async (req: Request, res: Response) => {
       
       // MV 封面 (YouTube Thumbnail)
       if (mv.video_id) {
+        const sourceUrl = `${YOUTUBE_IMAGE_ORIGIN}/vi/${mv.video_id}/maxresdefault.jpg`;
+        const encodedSourceUrl = encodeImgproxySourceUrl(sourceUrl);
         imageTags += `
     <image:image>
-      <image:loc>${SITEMAP_IMGPROXY_URL}/f:webp/w:1280/aHR0cHM6Ly9pLnl0aW1nLmNvbS92aS8${Buffer.from(`https://i.ytimg.com/vi/${mv.video_id}/maxresdefault.jpg`).toString('base64').replace(/=/g, '')}/maxresdefault.jpg</image:loc>
+      <image:loc>${SITEMAP_IMGPROXY_URL}/f:webp/w:1280/${encodedSourceUrl}/maxresdefault.jpg</image:loc>
       <image:title>${(mv.title || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</image:title>
     </image:image>`;
       }
@@ -60,12 +66,12 @@ router.get('/sitemap.xml', asyncHandler(async (req: Request, res: Response) => {
         mv.images.forEach((img: any) => {
           const rawUrl = typeof img === 'string' ? img : img.url;
           let imgUrl = rawUrl;
-          if (rawUrl.includes('pbs.twimg.com')) {
-            imgUrl = rawUrl.replace('https://pbs.twimg.com', SITEMAP_TWITTER_ASSET_HOST);
-          } else if (rawUrl.includes('i.ytimg.com')) {
-            imgUrl = rawUrl.replace('https://i.ytimg.com', SITEMAP_YOUTUBE_ASSET_HOST);
+          if (rawUrl.includes(new URL(TWITTER_IMAGE_ORIGIN).hostname)) {
+            imgUrl = rawUrl.replace(TWITTER_IMAGE_ORIGIN, SITEMAP_TWITTER_ASSET_HOST);
+          } else if (rawUrl.includes(new URL(YOUTUBE_IMAGE_ORIGIN).hostname)) {
+            imgUrl = rawUrl.replace(YOUTUBE_IMAGE_ORIGIN, SITEMAP_YOUTUBE_ASSET_HOST);
           }
-          // R2 (r2.dan.tw) 直接使用原網址，不走 Nginx 反代
+          // R2 公開網址直接使用原值，不走 Nginx 反代
           
           imageTags += `
     <image:image>
@@ -96,12 +102,12 @@ router.get('/sitemap.xml', asyncHandler(async (req: Request, res: Response) => {
           if (!rawUrl) return;
 
           let proxyUrl = rawUrl;
-          if (rawUrl.includes('pbs.twimg.com')) {
-            proxyUrl = rawUrl.replace('https://pbs.twimg.com', SITEMAP_TWITTER_ASSET_HOST);
-          } else if (rawUrl.includes('i.ytimg.com')) {
-            proxyUrl = rawUrl.replace('https://i.ytimg.com', SITEMAP_YOUTUBE_ASSET_HOST);
+          if (rawUrl.includes(new URL(TWITTER_IMAGE_ORIGIN).hostname)) {
+            proxyUrl = rawUrl.replace(TWITTER_IMAGE_ORIGIN, SITEMAP_TWITTER_ASSET_HOST);
+          } else if (rawUrl.includes(new URL(YOUTUBE_IMAGE_ORIGIN).hostname)) {
+            proxyUrl = rawUrl.replace(YOUTUBE_IMAGE_ORIGIN, SITEMAP_YOUTUBE_ASSET_HOST);
           }
-          // R2 (r2.dan.tw) 直接使用原網址，不走 Nginx 反代
+          // R2 公開網址直接使用原值，不走 Nginx 反代
           
           fanartImages += `
     <image:image>

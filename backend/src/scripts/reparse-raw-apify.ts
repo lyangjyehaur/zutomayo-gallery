@@ -3,11 +3,13 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { StagingFanartModel, syncModels } from '../models/index.js';
+import { requireConfiguredUrl } from '../config/urls.js';
 
 // 需要先從 crawler/ 資料夾找出最新的 raw-apify-results 或 dataset_twitter 檔案
 const crawlerDir = path.join(process.cwd(), 'crawler');
 
 export async function reparseRawApify(filename?: string) {
+  const twitterWebOrigin = requireConfiguredUrl('TWITTER_WEB_ORIGIN');
   await syncModels();
   
   if (!fs.existsSync(crawlerDir)) {
@@ -92,7 +94,7 @@ export async function reparseRawApify(filename?: string) {
     }
     uniqueTweetIds.add(tweetId);
 
-    const originalUrl = targetTweet.url || `https://twitter.com/i/web/status/${tweetId}`;
+    const originalUrl = targetTweet.url || `${twitterWebOrigin}/i/web/status/${tweetId}`;
     const crawledAt = new Date();
     const postDate = targetTweet.created_at ? new Date(targetTweet.created_at) : (targetTweet.createdAt ? new Date(targetTweet.createdAt) : crawledAt);
     const sourceText = targetTweet.full_text || targetTweet.text || '';

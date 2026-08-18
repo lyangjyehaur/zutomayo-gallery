@@ -51,7 +51,7 @@ export const requestMagicLink = async (req: Request, res: Response) => {
     created_at: new Date(),
   });
 
-  const origin = process.env.PUBLIC_APP_ORIGIN || 'http://localhost:5173';
+  const origin = process.env.PUBLIC_APP_ORIGIN || '';
   const redirect = parsed.redirectUrl || '/';
   const link = `${origin.replace(/\/$/, '')}/auth/magic?token=${encodeURIComponent(token)}&redirect=${encodeURIComponent(redirect)}`;
 
@@ -218,7 +218,7 @@ export const register = async (req: Request, res: Response) => {
     created_at: new Date(),
   });
 
-  const origin = process.env.PUBLIC_APP_ORIGIN || 'http://localhost:5173';
+  const origin = process.env.PUBLIC_APP_ORIGIN || '';
   const redirect = parsed.redirectUrl || '/';
   const link = `${origin.replace(/\/$/, '')}/auth/verify-email?token=${encodeURIComponent(token)}&redirect=${encodeURIComponent(redirect)}`;
 
@@ -319,7 +319,7 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
       created_at: new Date(),
     });
 
-    const origin = process.env.PUBLIC_APP_ORIGIN || 'http://localhost:5173';
+    const origin = process.env.PUBLIC_APP_ORIGIN || '';
     const link = `${origin.replace(/\/$/, '')}/auth/reset-password?token=${encodeURIComponent(token)}&redirect=${encodeURIComponent(redirect)}`;
     await sendAuthLinkEmail(email, { purpose: 'reset_password', link }).catch(() => false);
   } catch (error) {

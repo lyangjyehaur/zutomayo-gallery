@@ -224,7 +224,7 @@ export const StagingFanartModel = sequelize.define('StagingFanart', {
   crawled_at: { type: DataTypes.DATE, comment: '爬取時間' },
   post_date: { type: DataTypes.DATE, comment: '發布時間' },
   source_text: { type: DataTypes.TEXT, comment: '來源內容' },
-  status: { type: DataTypes.STRING, defaultValue: 'pending', comment: '處理狀態 (pending/approved/rejected)' },
+  status: { type: DataTypes.STRING, defaultValue: 'pending', comment: '處理狀態 (pending/reviewed/on_hold/approved/rejected)' },
   source: { type: DataTypes.STRING, comment: '資料來源 (crawler/rss)' },
   like_count: { type: DataTypes.INTEGER, defaultValue: 0, comment: '喜歡數' },
   retweet_count: { type: DataTypes.INTEGER, defaultValue: 0, comment: '轉推數' },
@@ -232,7 +232,7 @@ export const StagingFanartModel = sequelize.define('StagingFanart', {
   media_width: { type: DataTypes.INTEGER, allowNull: true, comment: '媒體寬度' },
   media_height: { type: DataTypes.INTEGER, allowNull: true, comment: '媒體高度' },
   hashtags: { type: DataTypes.JSONB, defaultValue: [], comment: '推文標籤' },
-  content_type: { type: DataTypes.STRING(20), defaultValue: 'fanart', comment: '內容分類 (fanart/official/cosplay)' },
+  content_type: { type: DataTypes.STRING(20), defaultValue: 'fanart', comment: '內容分類 (fanart/official/collaboration/cosplay)' },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '建立時間' },
   updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, comment: '更新時間' },
 }, { 
