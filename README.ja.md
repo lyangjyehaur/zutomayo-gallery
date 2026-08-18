@@ -253,11 +253,11 @@ cp review-app/.env.example review-app/.env
 | 名前 | 説明 | 既定値 |
 |---|---|---|
 | `VITE_API_URL` | backend API の URL。frontend と backend を分離デプロイする場合は明示的に設定 | `/api/mvs` |
-| `VITE_TWITTER_IMG_PROXY` | 任意の画像プロキシ / 高速化サービス | `https://img.ztmr.club` |
+| `VITE_TWITTER_IMG_PROXY` | 任意の画像プロキシ / 高速化サービス | `.env` で設定 |
 | `VITE_R2_DOMAIN` | 任意の Cloudflare R2 カスタムドメイン | `https://r2.dan.tw` |
-| `VITE_WALINE_SERVER_URL` | 予約用。現在のコードは `https://comments.ztmr.club` を使用 | `https://wl.danndann.cn` |
+| `VITE_WALINE_SERVER_URL` | Waline サーバー URL。明示的な設定が必要 | なし |
 | `VITE_UMAMI_SECONDARY_WEBSITE_ID` | 任意の commons Umami website ID | なし |
-| `VITE_UMAMI_SECONDARY_HOST_URL` | 任意の commons Umami host URL | `https://gallery.ztmr.club/commons` |
+| `VITE_UMAMI_SECONDARY_HOST_URL` | 任意の commons Umami host URL | `.env` で設定 |
 | `VITE_UMAMI_SECONDARY_BASE_SCRIPT` | 任意の commons Umami base script path | `/commons` |
 
 ### モバイル審査フロントエンド (`review-app/.env`)
@@ -279,7 +279,7 @@ cp review-app/.env.example review-app/.env
 | `ADMIN_PASSWORD` | 管理画面のパスワード（本番では変更を強く推奨） | `zutomayo` |
 | `EXPECTED_ORIGIN` | WebAuthn の origin。frontend と一致させる必要あり | `http://localhost:5173` |
 | `RP_ID` | WebAuthn の relying party ID。通常はサイトのドメイン名（プロトコルなし） | `EXPECTED_ORIGIN` から導出 |
-| `IMGPROXY_URL` | Imgproxy サーバー URL | `https://img.ztmr.club` |
+| `IMGPROXY_URL` | Imgproxy サーバー URL。明示的な設定が必要 | なし |
 | `IMGPROXY_KEY` | Imgproxy 署名用の Hex key | なし |
 | `IMGPROXY_SALT` | Imgproxy 署名用の Hex salt | なし |
 | `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASS` | PostgreSQL 接続設定 | `backend/.env.example` を参照 |
@@ -300,7 +300,7 @@ cp review-app/.env.example review-app/.env
 
 ### オプション A: `deploy.sh`（サーバー向け推奨）
 
-対話式の `deploy.sh` は、依存のインストール、frontend のビルド、PM2 による backend の起動 / 再起動、frontend 静的ファイルと backend データの自動バックアップをサポートします。
+対話式の `deploy.sh` は、依存のインストール、frontend のビルド、Docker による backend コンテナの起動 / 再作成、frontend 静的ファイルと backend データの自動バックアップをサポートします。コンテナ名、network、Node image、port、restart policy、health origin は `deploy.conf` で設定します。
 
 1. サーバー上で実行します。
    ```bash
@@ -317,7 +317,7 @@ cp review-app/.env.example review-app/.env
 
 ### オプション B: `update.sh`（日常更新向け）
 
-`update.sh` は `git pull`、依存のインストール、ビルド、migrations 実行、PM2 再起動を自動化します。
+`update.sh` は `git pull`、依存のインストール、ビルド、migrations 実行、`deploy.conf` で指定した Docker backend コンテナの再起動を自動化します。
 
 ```bash
 ./update.sh
@@ -339,7 +339,7 @@ cp review-app/.env.example review-app/.env
 
 1. frontend の `dist` をビルドし、Nginx で静的配信します。
 2. Nginx の `/api` を `http://localhost:5010` の backend に reverse proxy します。
-3. backend は `pm2` または `systemd` で常駐させます。
+3. backend は Docker コンテナで常駐させ、デプロイ設定は `deploy.conf` に保存します。
 
 ---
 

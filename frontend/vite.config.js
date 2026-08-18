@@ -39,11 +39,17 @@ const normalizeOrigin = (value, fallback) => {
   return (raw || fallback).replace(/\/+$/, '');
 }
 
+const requireOrigin = (env, key) => {
+  const value = normalizeOrigin(env[key], '');
+  if (!value) throw new Error(`${key} is required`);
+  return value;
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, '');
-  const apiOrigin = normalizeOrigin(env.VITE_API_ORIGIN, 'https://api.ztmr.club');
-  const imgproxyOrigin = normalizeOrigin(env.VITE_IMGPROXY_ORIGIN, 'https://img.ztmr.club');
+  const apiOrigin = requireOrigin(env, 'VITE_API_ORIGIN');
+  const imgproxyOrigin = requireOrigin(env, 'VITE_IMGPROXY_ORIGIN');
 
   return {
     base: env.VITE_BASE || '/',
@@ -133,10 +139,10 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         '/api': {
-          target: 'http://localhost:5010', // 你的後端實際運行位址
+          target: requireOrigin(env, 'VITE_DEV_API_ORIGIN'),
           changeOrigin: true,
           // 如果後端 API 本身就有 /api 前綴，則不需要 rewrite
-          // 如果後端是 http://localhost:5000/mvs，則需要：
+          // 若後端 path 與前端 proxy path 不同，可在此加入 rewrite。
           // rewrite: (path) => path.replace(/^\/api/, '')
         }
       }

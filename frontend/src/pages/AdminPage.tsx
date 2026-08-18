@@ -21,13 +21,16 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MVItem } from '@/lib/types';
 import { getProxyImgUrl, isMediaVideo } from '@/lib/image';
+import { getConfiguredUrl, isTwitterMediaUrl, isTwitterVideoUrl, isYoutubeMediaUrl } from '@/config/urls';
 import {
   getAdminChangedData,
   getAdminVisibleImageCount,
   getAdminVisibleImages,
+  getTwitterMediaIdentity,
   isAdminFieldIncomplete,
   isAdminMVIncomplete,
   isAdminVideoPreview,
+  mapTwitterMediaToMVMedia,
 } from '@/lib/admin-page-helpers';
 import Editor from '@monaco-editor/react';
 import {
@@ -956,10 +959,13 @@ export function AdminPage() {
   );
 
   const getAdminImagePreviewUrl = (img: any) => {
-    const raw = img.thumbnail || img.url || '';
+    const raw = isAdminVideoPreview(img)
+      ? (img.url || '')
+      : (img.thumbnail_url || img.thumbnail || img.url || '');
     const original = img.original_url || img.originalUrl || '';
-    const prefer = original && (original.includes('twimg.com') || original.includes('ytimg.com')) ? original : raw;
-    const mode = String(prefer).includes('r2.dan.tw') ? 'full' : 'thumb';
+    const prefer = original && (isTwitterMediaUrl(original) || isYoutubeMediaUrl(original)) ? original : raw;
+    const r2Origin = getConfiguredUrl('VITE_R2_DOMAIN');
+    const mode = r2Origin && String(prefer).startsWith(`${r2Origin}/`) ? 'full' : 'thumb';
     return getProxyImgUrl(prefer, mode as any);
   };
 
@@ -1205,18 +1211,6 @@ export function AdminPage() {
     let existingImagesModified = false;
     let newImagesData = [...(currentMV.images || [])];
 
-    // 輔助函數：提取 Twitter 媒體核心 ID 進行比對
-    const getTwitterMediaId = (url: string) => {
-      if (!url) return null;
-      // 比對圖片: pbs.twimg.com/media/XXXXX
-      const imgMatch = url.match(/\/media\/([a-zA-Z0-9_-]+)/);
-      if (imgMatch) return imgMatch[1];
-      // 比對影片: ext_tw_video/XXXXX
-      const vidMatch = url.match(/\/ext_tw_video\/([a-zA-Z0-9_-]+)/);
-      if (vidMatch) return vidMatch[1];
-      return url; // 如果不是推特，就回傳原網址
-    };
-
     for (let i = 0; i < urls.length; i++) {
       const url = urls[i];
       try {
@@ -1233,10 +1227,10 @@ export function AdminPage() {
         if (json.success && json.data && json.data.length > 0) {
           for (const media of json.data) {
             // 使用核心 ID 比對，忽略推特網址尾綴參數的干擾
-            const targetMediaId = getTwitterMediaId(media.url);
+            const targetMediaId = getTwitterMediaIdentity(media.url);
             const existingIdx = newImagesData.findIndex(img => {
               if (targetMediaId) {
-                const imgId = getTwitterMediaId(img.url);
+                const imgId = getTwitterMediaIdentity(img.url);
                 return imgId === targetMediaId;
               }
               return img.url === media.url;
@@ -1245,19 +1239,11 @@ export function AdminPage() {
             if (existingIdx !== -1) {
               // 若已存在，補充缺少的資訊並加入群組
               existingImagesModified = true;
-              newImagesData[existingIdx] = {
-                ...newImagesData[existingIdx],
-                thumbnail: newImagesData[existingIdx].thumbnail || media.thumbnail || '',
-                group: {
-                  ...(newImagesData[existingIdx].group || {}),
-                  source_url: newImagesData[existingIdx].group?.source_url || url,
-                  source_text: newImagesData[existingIdx].group?.source_text || media.text,
-                  author_name: newImagesData[existingIdx].group?.author_name || media.user_name,
-                  author_handle: newImagesData[existingIdx].group?.author_handle || media.user_screen_name,
-                  post_date: newImagesData[existingIdx].group?.post_date || media.date,
-                  status: newImagesData[existingIdx].group?.status || 'organized',
-                },
-              };
+              newImagesData[existingIdx] = mapTwitterMediaToMVMedia(media, {
+                classification: imageTypeTab,
+                sourceUrl: url,
+                existing: newImagesData[existingIdx],
+              });
               markFieldChanged(targetId, `images.${existingIdx}`);
             } else {
               // 若不存在，加入到新圖片列表並探測尺寸
@@ -1271,24 +1257,17 @@ export function AdminPage() {
                 // ignore probe error
               }
               
-              newExtractedImages.push({
-                url: media.url,
-                thumbnail: media.thumbnail || '',
-                type: imageTypeTab === 'fanart' ? 'fanart' : 'official',
-                group: {
-                  source_url: url,
-                  source_text: media.text,
-                  author_name: media.user_name,
-                  author_handle: media.user_screen_name,
-                  post_date: media.date,
-                  status: 'organized',
-                },
+              newExtractedImages.push(mapTwitterMediaToMVMedia(media, {
+                classification: imageTypeTab,
+                sourceUrl: url,
+                defaults: {
                 caption: '',
                 alt: '',
                 richText: '',
                 width,
                 height,
-              });
+                },
+              }));
             }
           }
         } else {
@@ -1427,44 +1406,26 @@ export function AdminPage() {
       const newImages = [...(currentMV.images || [])];
       
       // 更新當前索引的圖片為第一個解析出的媒體
-      const updateData = {
-        url: firstMedia.url,
-        thumbnail: firstMedia.thumbnail || '', // 如果是影片會有縮圖
-        group: {
-          source_url: url,
-          source_text: firstMedia.text,
-          author_name: firstMedia.user_name,
-          author_handle: firstMedia.user_screen_name,
-          post_date: firstMedia.date,
-          status: 'organized',
-        },
-      };
-
-      newImages[imgIdx] = { 
-        ...newImages[imgIdx], 
-        ...updateData
-      };
+      newImages[imgIdx] = mapTwitterMediaToMVMedia(firstMedia, {
+        classification: newImages[imgIdx]?.type === 'fanart' ? 'fanart' : 'official',
+        sourceUrl: url,
+        existing: newImages[imgIdx],
+      });
       
       // 如果推文有多張圖片/影片，將後續的媒體插入到當前圖片後面
       if (resolvedMediaList.length > 1) {
         for (let i = 1; i < resolvedMediaList.length; i++) {
-          newImages.splice(imgIdx + i, 0, {
-            url: resolvedMediaList[i].url,
-            thumbnail: resolvedMediaList[i].thumbnail || '',
-            caption: newImages[imgIdx].caption || '',
-            alt: newImages[imgIdx].alt || '',
-            richText: newImages[imgIdx].richText || '',
-            group: {
-              source_url: url,
-              source_text: resolvedMediaList[i].text,
-              author_name: resolvedMediaList[i].user_name,
-              author_handle: resolvedMediaList[i].user_screen_name,
-              post_date: resolvedMediaList[i].date,
-              status: 'organized',
+          newImages.splice(imgIdx + i, 0, mapTwitterMediaToMVMedia(resolvedMediaList[i], {
+            classification: newImages[imgIdx]?.type === 'fanart' ? 'fanart' : 'official',
+            sourceUrl: url,
+            defaults: {
+              caption: newImages[imgIdx].caption || '',
+              alt: newImages[imgIdx].alt || '',
+              richText: newImages[imgIdx].richText || '',
+              width: 0,
+              height: 0,
             },
-            width: 0,
-            height: 0
-          });
+          }));
         }
       }
       
@@ -2112,7 +2073,7 @@ export function AdminPage() {
                     <Input 
                       value={currentMV.heroVideo || ''} 
                       onChange={(e) => updateField('heroVideo', e.target.value)} 
-                      placeholder="https://r2.dan.tw/hero-videos/..."
+                      placeholder={`${String(import.meta.env.VITE_R2_DOMAIN || '').replace(/\/+$/, '')}/hero-videos/...`}
                       className="font-sans"
                     />
                     {currentMV.heroVideo && (
@@ -2743,7 +2704,7 @@ export function AdminPage() {
                                       </div>
                                     ) : null}
                                     {(!isAdminVideoPreview(currentMV.images[editingImageIdx]) && (currentMV.images[editingImageIdx].url?.match(/\.(mp4|webm)$/i) ||
-                                      currentMV.images[editingImageIdx].url?.includes("video.twimg.com") ||
+                                      isTwitterVideoUrl(currentMV.images[editingImageIdx].url) ||
                                       (currentMV.images[editingImageIdx].thumbnail &&
                                         currentMV.images[editingImageIdx].thumbnail !== currentMV.images[editingImageIdx].url)) &&
                                       !(
@@ -2968,7 +2929,7 @@ export function AdminPage() {
                                           ) : null}
                                         </label>
                                         <Input
-                                          placeholder="https://x.com/.../status/..."
+                                          placeholder={`${String(import.meta.env.VITE_X_ORIGIN || '').replace(/\/+$/, '')}/.../status/...`}
                                           value={currentMV.images[editingImageIdx].group?.source_url || ""}
                                           onChange={(e) => updateImageGroupField(editingImageIdx, "source_url", e.target.value)}
                                         />
@@ -3269,7 +3230,7 @@ export function AdminPage() {
           </DialogHeader>
           <div className="p-6 space-y-4">
             <Textarea
-              placeholder="https://x.com/...&#10;https://x.com/..."
+              placeholder={`${String(import.meta.env.VITE_X_ORIGIN || '').replace(/\/+$/, '')}/...\n${String(import.meta.env.VITE_X_ORIGIN || '').replace(/\/+$/, '')}/...`}
               value={batchTweetUrls}
               onChange={(e) => setBatchTweetUrls(e.target.value)}
               disabled={batchAddStatus?.isProcessing}
@@ -3361,7 +3322,7 @@ export function AdminPage() {
           </DialogHeader>
           <div className="flex flex-col gap-2">
             <div className="text-xs font-mono opacity-60">source_url</div>
-            <Input value={sourceUrlDraft} onChange={(e) => setSourceUrlDraft(e.target.value)} placeholder="https://x.com/.../status/..." />
+            <Input value={sourceUrlDraft} onChange={(e) => setSourceUrlDraft(e.target.value)} placeholder={`${String(import.meta.env.VITE_X_ORIGIN || '').replace(/\/+$/, '')}/.../status/...`} />
           </div>
           <DialogFooter className="flex gap-2 sm:justify-end">
             <Button variant="outline" onClick={() => setSourceUrlDialogOpen(false)}>

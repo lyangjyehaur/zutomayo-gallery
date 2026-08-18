@@ -17,6 +17,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { requireConfiguredUrl } from '@/config';
+import { getConfiguredHostname } from '@/config/urls';
 
 interface AboutDialogProps {
   isAboutOpen: boolean;
@@ -120,25 +122,25 @@ export function AboutDialog({ isAboutOpen, setIsAboutOpen }: AboutDialogProps) {
                     <li className="flex items-start gap-2 group">
                       <span className="text-main font-black">►</span>
                       <div>
-                        <a href="https://space.bilibili.com/531797444" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">深夜大活躍_WAKE_03</a><br /><span className="opacity-70 ml-2 text-sm">{t("app.thanks_wake_03", "感謝對 ZUTOMAYO 粉絲社群的巨大貢獻，以及提供評論區像素 Nira 醬表情的授權")}</span>
+                        <a href={requireConfiguredUrl('VITE_BILIBILI_CREATOR_URL')} target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">深夜大活躍_WAKE_03</a><br /><span className="opacity-70 ml-2 text-sm">{t("app.thanks_wake_03", "感謝對 ZUTOMAYO 粉絲社群的巨大貢獻，以及提供評論區像素 Nira 醬表情的授權")}</span>
                       </div>
                     </li>
                     <li className="flex items-start gap-2 group">
                       <span className="text-main font-black">►</span>
                       <div>
-                        <a href="https://jhenty.cn" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">立花</a><br /><span className="opacity-70 ml-2 text-sm">{t("app.thanks_rikka", "立花老師的像素風 favicon 換上去真的很加分，不愧是專業的出手，感謝支援門面")}</span>
+                        <a href={requireConfiguredUrl('VITE_RIKKA_URL')} target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">立花</a><br /><span className="opacity-70 ml-2 text-sm">{t("app.thanks_rikka", "立花老師的像素風 favicon 換上去真的很加分，不愧是專業的出手，感謝支援門面")}</span>
                       </div>
                     </li>
                     <li className="flex items-start gap-2 group">
                       <span className="text-main font-black">►</span>
                       <div>
-                        <a href="https://github.com/TakWolf/fusion-pixel-font" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">縫合像素字體 / Fusion Pixel Font</a><br /><span className="opacity-70 ml-2 text-sm">{t("app.thanks_fusion_pixel", "提供完整「泛中日韓語言特定字形」開源字型支援")}</span>
+                        <a href={requireConfiguredUrl('VITE_FUSION_PIXEL_FONT_URL')} target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">縫合像素字體 / Fusion Pixel Font</a><br /><span className="opacity-70 ml-2 text-sm">{t("app.thanks_fusion_pixel", "提供完整「泛中日韓語言特定字形」開源字型支援")}</span>
                       </div>
                     </li>
                     <li className="flex items-start gap-2 group">
                       <span className="text-main font-black">►</span>
                       <div>
-                        <a href="https://fancyapps.com/fancybox/" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">
+                        <a href={requireConfiguredUrl('VITE_FANCYBOX_URL')} target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">
                           Fancybox
                         </a><br /><span className="opacity-70 ml-2 text-sm">{t("app.thanks_fancybox", "無可挑剔的圖片燈箱解決方案（雖然覆寫官方的樣式真的超累）")}</span>
                       </div>
@@ -146,7 +148,7 @@ export function AboutDialog({ isAboutOpen, setIsAboutOpen }: AboutDialogProps) {
                     <li className="flex items-start gap-2 group">
                       <span className="text-main font-black">►</span>
                       <div>
-                        <a href="https://gemini.google.com/" target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">
+                        <a href={requireConfiguredUrl('VITE_GEMINI_URL')} target="_blank" rel="noopener noreferrer" className="font-bold border-b-2 border-transparent hover:border-main hover:bg-main hover:text-black transition-all px-1">
                           Google Gemini
                         </a><br /><span className="opacity-70 ml-2 text-sm">{t("app.thanks_react", "幫助實現專案從靜態網頁到 React 工程化的轉型")}</span>
                       </div>
@@ -167,20 +169,20 @@ export function AboutDialog({ isAboutOpen, setIsAboutOpen }: AboutDialogProps) {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mt-4 md:mt-6 shrink-0 pb-2 px-1">
               <a
-                href="https://zutomayo.net/"
+                href={requireConfiguredUrl('VITE_ZUTOMAYO_OFFICIAL_URL')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-between p-3 md:p-4 border-2 border-black bg-background hover:bg-main hover:text-black active:bg-main active:text-black transition-all duration-150 group shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-[0px_0px_0px_0px_var(--border)] active:translate-x-boxShadowX active:translate-y-boxShadowY active:shadow-[0px_0px_0px_0px_var(--border)]"
               >
                 <div className="flex flex-col">
                   <span className="font-black text-sm uppercase">Official Site</span>
-                  <span className="font-mono text-[10px] opacity-60">zutomayo.net</span>
+                  <span className="font-mono text-[10px] opacity-60">{getConfiguredHostname('VITE_ZUTOMAYO_OFFICIAL_URL')}</span>
                 </div>
                 <i className="hn hn-arrow-right transform group-hover:translate-x-1 transition-transform"></i>
               </a>
 
               <a
-                href="https://github.com/lyangjyehaur/zutomayo-gallery"
+                href={requireConfiguredUrl('VITE_PROJECT_REPOSITORY_URL')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-between p-3 md:p-4 border-2 border-black bg-background hover:bg-main hover:text-black active:bg-main active:text-black transition-all duration-150 group shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-[0px_0px_0px_0px_var(--border)] active:translate-x-boxShadowX active:translate-y-boxShadowY active:shadow-[0px_0px_0px_0px_var(--border)]"

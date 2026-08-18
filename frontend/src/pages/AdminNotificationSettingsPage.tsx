@@ -290,7 +290,7 @@ export function AdminNotificationSettingsPage() {
               type="text"
               value={barkUrl}
               onChange={(e) => setBarkUrl(e.target.value)}
-              placeholder={barkHasUrl ? "已設定，留空則保留" : "https://api.day.app/your-server-key"}
+              placeholder={barkHasUrl ? "已設定，留空則保留" : `${String(import.meta.env.VITE_BARK_API_BASE_URL || '')}/your-server-key`}
               className="border-2 border-black"
             />
           </div>
@@ -334,7 +334,7 @@ export function AdminNotificationSettingsPage() {
               type="text"
               value={rsshubBaseUrl}
               onChange={(e) => setRsshubBaseUrl(e.target.value)}
-              placeholder="https://rsshub.app"
+              placeholder={String(import.meta.env.VITE_RSSHUB_BASE_URL || '')}
               className="border-2 border-black"
             />
           </div>

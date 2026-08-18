@@ -37,14 +37,20 @@ const splitHostList = (value: unknown, fallback: string[]) => {
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const getAssetsOrigin = () => normalizeBaseUrl(env.VITE_ASSETS_ORIGIN, 'https://assets.ztmr.club');
-const getR2Domain = () => normalizeBaseUrl(env.VITE_R2_DOMAIN, 'https://r2.dan.tw');
-const getTwitterImageSourceHost = () => normalizeBaseUrl(env.VITE_TWITTER_IMAGE_SOURCE_HOST, 'https://pbs.twimg.com');
-const getTwitterVideoSourceHost = () => normalizeBaseUrl(env.VITE_TWITTER_VIDEO_SOURCE_HOST, 'https://video.twimg.com');
+const getRequiredOrigin = (key: string) => {
+  const value = normalizeBaseUrl(env[key], '');
+  if (!value) throw new Error(`${key} is required`);
+  return value;
+};
+
+const getAssetsOrigin = () => getRequiredOrigin('VITE_ASSETS_ORIGIN');
+const getR2Domain = () => getRequiredOrigin('VITE_R2_DOMAIN');
+const getTwitterImageSourceHost = () => getRequiredOrigin('VITE_TWITTER_IMAGE_SOURCE_HOST');
+const getTwitterVideoSourceHost = () => getRequiredOrigin('VITE_TWITTER_VIDEO_SOURCE_HOST');
 const getTwitterProxyPath = () => normalizePath(env.VITE_TWITTER_PROXY_PATH, '/ti');
 const getTwitterVideoProxyPath = () => normalizePath(env.VITE_TWITTER_VIDEO_PROXY_PATH, '/tv');
 const getYoutubeProxyPath = () => normalizePath(env.VITE_YOUTUBE_PROXY_PATH, '/yi');
-const getYoutubeSourceHosts = () => splitHostList(env.VITE_YOUTUBE_SOURCE_HOSTS, ['i.ytimg.com', 'img.youtube.com', 'youtube.com']);
+const getYoutubeSourceHosts = () => splitHostList(env.VITE_YOUTUBE_SOURCE_HOSTS, []);
 
 const isHostMatch = (url: string, origin: string) => {
   try {
@@ -85,7 +91,7 @@ export const isMediaVideo = (url?: string, type?: string): boolean => {
   if (hasVideoExtension) return true;
   
   // Twitter 影片的網址不一定都有 .mp4 副檔名，有時候是一串 hash 或是 m3u8。
-  // 只要來自 video.twimg.com，且「不是」圖片結尾，且「不是」tweet_video_thumb (推特用來存 GIF 縮圖的路徑)，就視為影片
+  // 只要來自已配置的 Twitter 影片來源，且「不是」圖片結尾與 GIF 縮圖路徑，就視為影片
   if (isTwitterVideoDomain && !isImageExtension && !url.includes('tweet_video_thumb')) return true;
   
   return false;
@@ -93,7 +99,7 @@ export const isMediaVideo = (url?: string, type?: string): boolean => {
 
 /**
  * 專為 Apple Music Gallery 設計的圖片處理邏輯
- * 小圖與燈箱大圖一律強制走 img.ztmr.club 進行壓縮，無論海內外
+ * 小圖與燈箱大圖一律強制走已配置的 Imgproxy 服務進行壓縮，無論海內外
  * 下載原圖 (raw) 則直接回傳 R2 的 Nginx 代理位址，不浪費伺服器效能
  */
 export const getAppleMusicImgUrl = (rawUrl: string, mode: ProxyMode = 'thumb'): string => {

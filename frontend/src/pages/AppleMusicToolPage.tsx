@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Search, Image as ImageIcon, Download, Loader2, AlertCircle, Music } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { requireConfiguredUrl } from '@/config';
 
 export default function AppleMusicToolPage() {
   const { t } = useTranslation();
@@ -24,10 +25,7 @@ export default function AppleMusicToolPage() {
       setError('');
       setResult(null);
 
-      // Extract ID from URL
-      // Examples: 
-      // https://music.apple.com/jp/album/hunch-gray-single/1551139414
-      // https://music.apple.com/us/album/time-left/1614948834\?i\=1614948835
+      // Extract an album or song ID from the configured Apple Music URL shape.
       const urlObj = new URL(inputUrl);
       const pathParts = urlObj.pathname.split('/');
       const idMatch = pathParts[pathParts.length - 1].match(/\d+/);
@@ -43,7 +41,7 @@ export default function AppleMusicToolPage() {
       }
 
       const entity = songId ? 'song' : 'album';
-      const fetchUrl = `https://itunes.apple.com/lookup?id=${targetId}&entity=${entity}&country=jp`;
+      const fetchUrl = `${requireConfiguredUrl('VITE_ITUNES_API_ORIGIN')}/lookup?id=${targetId}&entity=${entity}&country=jp`;
 
       const response = await fetch(fetchUrl);
       const data = await response.json();
@@ -127,7 +125,7 @@ export default function AppleMusicToolPage() {
         <Input
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder={t('timeline.fetcher_placeholder', "e.g. https://music.apple.com/jp/album/hunch-gray-single/1551139414")}
+          placeholder={`${requireConfiguredUrl('VITE_APPLE_MUSIC_ORIGIN')}/jp/album/...`}
           className="flex-1 text-base h-14 border-4 border-black focus-visible:ring-0 focus-visible:border-black rounded-none shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] bg-white dark:bg-zinc-950 px-4"
           onKeyDown={(e) => {
             if (e.key === 'Enter' && url) {

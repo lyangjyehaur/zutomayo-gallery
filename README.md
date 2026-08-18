@@ -296,7 +296,7 @@ Vite 在 `vite build` 時會以 production mode 載入 `frontend/.env.production
 | `VITE_YOUTUBE_SOURCE_HOSTS`        | YouTube 圖片來源主機列表（逗號分隔）                               | `i.ytimg.com,img.youtube.com,youtube.com` |
 | `VITE_YOUTUBE_PROXY_PATH`          | YouTube 圖片反代路徑                                       | `/yi`                                     |
 | `VITE_R2_DOMAIN`                   | (選填) Cloudflare R2 自訂網域                              | `https://r2.dan.tw`                       |
-| `VITE_WALINE_SERVER_URL`           | Waline 伺服器位址；開發時可直接沿用正式站                             | `https://comments.ztmr.club`              |
+| `VITE_WALINE_SERVER_URL`           | Waline 伺服器位址；必須透過環境變數明確設定                             | 無                                        |
 | `VITE_WALINE_EMOJI_ORIGIN`         | Waline 表情 CDN 原始網域                                   | `https://unpkg.com`                       |
 | `VITE_WALINE_EMOJI_FASTLY_ORIGIN`  | Waline 表情 CDN 備援網域                                   | `https://fastly.jsdelivr.net/npm`         |
 | `VITE_WALINE_AVATAR_ORIGIN`        | Waline 頭像來源                                          | `https://gravatar.com/avatar`             |
@@ -310,6 +310,8 @@ Vite 在 `vite build` 時會以 production mode 載入 `frontend/.env.production
 
 ### 後端環境變數 (`backend/.env`)
 
+所有自架服務與第三方 runtime endpoint 都集中在各模組的 `.env` / `.env.production`；程式碼不再內建正式域名 fallback。遷移時應以 `frontend/.env.production`、`review-app/.env.production`、`backend/.env` 與部署設定檔為單一修改入口。
+
 
 | 變數名稱                                                      | 說明                                            | 預設值                       |
 | --------------------------------------------------------- | --------------------------------------------- | ------------------------- |
@@ -320,7 +322,7 @@ Vite 在 `vite build` 時會以 production mode 載入 `frontend/.env.production
 | `ADMIN_PASSWORD`                                          | 管理後台登入密碼 (⚠️**生產環境強烈建議修改**)                   | `zutomayo`                |
 | `EXPECTED_ORIGIN`                                         | WebAuthn (通行密鑰) 驗證的來源域名 (需與前端一致)              | `http://localhost:5173`   |
 | `RP_ID`                                                   | WebAuthn 依賴方 ID (通常為網站主網域，不含 http)            | 解析自 `EXPECTED_ORIGIN`     |
-| `IMGPROXY_URL`                                            | Imgproxy 伺服器位址                                | `https://img.ztmr.club`   |
+| `IMGPROXY_URL`                                            | Imgproxy 伺服器位址；必須明確設定                       | 無                        |
 | `IMGPROXY_KEY`                                            | Imgproxy 簽名用的 Hex 金鑰                          | 無                         |
 | `IMGPROXY_SALT`                                           | Imgproxy 簽名用的 Hex 鹽值                          | 無                         |
 | `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASS` | PostgreSQL 連線設定（主資料庫）                         | 參考 `backend/.env.example` |
@@ -343,7 +345,7 @@ Vite 在 `vite build` 時會以 production mode 載入 `frontend/.env.production
 ### 部署方式參考
 
 **選項 A：自動化部署腳本 (推薦伺服器使用)**
-本專案提供了一個互動式的部署腳本 `deploy.sh`，支援安裝依賴、編譯前端、透過 PM2 啟動/重啟後端服務，並內建前端靜態檔案與後端資料庫的自動備份機制。
+本專案提供了一個互動式的部署腳本 `deploy.sh`，支援安裝依賴、編譯前端、透過 Docker 啟動/重建後端服務，並內建前端靜態檔案與後端資料庫的自動備份機制。容器名稱、network、Node image、port、restart policy 與 health origin 都由 `deploy.conf` 提供。
 
 1. 在伺服器上執行腳本：
   ```bash
@@ -359,7 +361,7 @@ Vite 在 `vite build` 時會以 production mode 載入 `frontend/.env.production
   ```
 
 **選項 B：線上增量更新腳本 (推薦日常更新)**
-本專案提供 `update.sh`，會自動 `git pull`、安裝依賴、build、執行 migrations 並重啟 PM2：
+本專案提供 `update.sh`，會自動 `git pull`、安裝依賴、build、執行 migrations 並重啟 `deploy.conf` 指定的 Docker 後端容器：
 
 ```bash
 ./update.sh
@@ -381,7 +383,7 @@ Vite 在 `vite build` 時會以 production mode 載入 `frontend/.env.production
 
 1. 前端編譯出 `dist`，由 Nginx 提供靜態文件服務。
 2. Nginx 配置 `/api` 路徑反向代理 (Reverse Proxy) 至本地後端 `http://localhost:5010`。
-3. 後端可使用 `pm2` 或 `systemd` 常駐運行。
+3. 後端由 Docker 容器常駐運行，部署參數放在 `deploy.conf`。
 
 ---
 

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { shouldShowSecondaryLang } from "@/i18n";
 import { VERSION_CONFIG } from "@/config/version";
 import { useGeoLabel } from "@/hooks/useGeoLabel";
+import { requireConfiguredUrl } from "@/config";
 import {
   Tooltip,
   TooltipContent,
@@ -136,14 +137,14 @@ export function MaintenancePage({ type = 'ui', eta }: MaintenancePageProps) {
       
       <div className="mt-12 text-[10px] uppercase tracking-[0.2em] text-center flex flex-col items-center gap-1">
         <a
-          href="https://dan.tw"
+          href={requireConfiguredUrl('VITE_PROJECT_OWNER_URL')}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-3 font-black border-2 border-main px-4 py-2 bg-black text-main group transition-all hover:bg-main hover:text-black mb-4"
           title="前往開發者個人網站"
         >
           <img 
-            src={`https://${geoInfo.isChinaIP ? 'cravatar.cn' : 'gravatar.com'}/avatar/2ad947c5152cd8d6d2f9b5bd450d939b?s=80&d=retro`} 
+            src={`${requireConfiguredUrl(geoInfo.isChinaIP ? 'VITE_WALINE_AVATAR_MIRROR_ORIGIN' : 'VITE_WALINE_AVATAR_ORIGIN')}/2ad947c5152cd8d6d2f9b5bd450d939b?s=80&d=retro`}
             alt="DANERSAKA" 
             className="w-8 h-8 rounded-sm border-2 border-current group-hover:border-black transition-colors"
           />

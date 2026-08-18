@@ -740,7 +740,7 @@ export function AdminSystemConfigPage() {
             label="Bark URL"
             value={barkUrl}
             onChange={setBarkUrl}
-            placeholder={barkHasUrl ? "已設定，留空則保留" : "https://api.day.app/your-server-key"}
+            placeholder={barkHasUrl ? "已設定，留空則保留" : `${String(import.meta.env.VITE_BARK_API_BASE_URL || '')}/your-server-key`}
             hasConfiguredValue={barkHasUrl}
           />
 
@@ -775,7 +775,7 @@ export function AdminSystemConfigPage() {
             label="RSSHub Base URL"
             value={rsshubBaseUrl}
             onChange={setRsshubBaseUrl}
-            placeholder="https://rsshub.app"
+            placeholder={String(import.meta.env.VITE_RSSHUB_BASE_URL || '')}
             hasConfiguredValue={!!rsshubBaseUrl}
             configuredDisplay={rsshubBaseUrl}
           />

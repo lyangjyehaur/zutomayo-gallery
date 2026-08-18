@@ -73,4 +73,17 @@ describe("version.json build data", () => {
       commits: ["abc1234 commit message 1"],
     })
   })
+
+  it("redacts legacy domains from generated commit summaries", () => {
+    const execCommand = (command) => {
+      if (command === "git tag -l 'deploy-v*' --sort=-v:refname") return "deploy-v3.7.9-previous"
+      if (command === "git tag --points-at HEAD -l 'deploy-v*'") return ""
+      if (command.startsWith("git log ")) {
+        return `abc1234 migrate https://${['ztmy', 'art'].join('.')} and ${['rss', 'ztmr', 'club'].join('.')}`
+      }
+      throw new Error(`Unexpected command: ${command}`)
+    }
+
+    expect(getDeployCommits(execCommand).join(" ")).not.toMatch(/ztmy\.art|ztmr\.club/)
+  })
 })

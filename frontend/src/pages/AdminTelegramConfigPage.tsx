@@ -466,7 +466,7 @@ export function AdminTelegramConfigPage() {
               type="text"
               value={webhookUrl}
               onChange={(e) => setWebhookUrl(e.target.value)}
-              placeholder="https://your-domain.com/api/telegram/webhook"
+              placeholder={`${String(import.meta.env.VITE_API_ORIGIN || '').replace(/\/+$/, '')}/api/telegram/webhook`}
               className="border-2 border-black"
             />
           </div>

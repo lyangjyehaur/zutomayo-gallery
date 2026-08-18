@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { shouldShowSecondaryLang } from '@/i18n'
 import { VERSION_CONFIG } from '@/config/version'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { requireConfiguredUrl } from '@/config'
 
 interface AppFooterProps {
   is404Route: boolean;
@@ -113,7 +114,7 @@ export const AppFooter = memo(function AppFooter({ is404Route, isGeoTooltipOpen,
                   <div className="flex flex-col gap-3">
                     <div className="flex flex-col gap-1 text-[10px] font-bold text-left">
                       <a
-                        href="https://pixeliconlibrary.com/"
+                        href={requireConfiguredUrl('VITE_PIXEL_ICON_LIBRARY_URL')}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="hover:text-main transition-colors flex items-center gap-2 group"
@@ -130,7 +131,7 @@ export const AppFooter = memo(function AppFooter({ is404Route, isGeoTooltipOpen,
                         </span>
                       </a>
                       <a
-                        href="https://creativecommons.org/licenses/by/4.0/"
+                        href={requireConfiguredUrl('VITE_CREATIVE_COMMONS_URL')}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="opacity-50 hover:opacity-100 hover:text-main transition-all ml-7 flex items-baseline gap-1.5"
@@ -147,7 +148,7 @@ export const AppFooter = memo(function AppFooter({ is404Route, isGeoTooltipOpen,
 
                     <div className="flex flex-col gap-1 text-[10px] font-bold text-left">
                       <a
-                        href="https://github.com/TakWolf/fusion-pixel-font"
+                        href={requireConfiguredUrl('VITE_FUSION_PIXEL_FONT_URL')}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="hover:text-main transition-colors flex items-center gap-2 group"
@@ -164,7 +165,7 @@ export const AppFooter = memo(function AppFooter({ is404Route, isGeoTooltipOpen,
                         </span>
                       </a>
                       <a
-                        href="https://openfontlicense.org/"
+                        href={requireConfiguredUrl('VITE_OPEN_FONT_LICENSE_URL')}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="opacity-50 hover:opacity-100 hover:text-main transition-all ml-7 flex items-baseline gap-1.5"
@@ -181,7 +182,7 @@ export const AppFooter = memo(function AppFooter({ is404Route, isGeoTooltipOpen,
 
                     <div className="flex flex-col gap-1 text-[10px] font-bold text-left">
                       <a
-                        href="https://www.neobrutalism.dev/"
+                        href={requireConfiguredUrl('VITE_NEOBRUTALISM_URL')}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="hover:text-main transition-colors flex items-center gap-2 group"
@@ -212,7 +213,7 @@ export const AppFooter = memo(function AppFooter({ is404Route, isGeoTooltipOpen,
 
                     <div className="flex flex-col gap-1 text-[10px] font-bold text-left">
                       <a
-                        href="https://fancyapps.com/fancybox/"
+                        href={requireConfiguredUrl('VITE_FANCYBOX_URL')}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="hover:text-main transition-colors flex items-center gap-2 group"
@@ -319,7 +320,7 @@ export const AppFooter = memo(function AppFooter({ is404Route, isGeoTooltipOpen,
 
             <div className="flex flex-col items-center gap-4 order-first md:order-none md:flex-none">
               <a
-                href="https://dan.tw"
+                href={requireConfiguredUrl('VITE_PROJECT_OWNER_URL')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-3 font-black border-2 border-main px-4 py-2 bg-black text-main group transition-all hover:bg-main hover:text-black ztmy-avatar-trigger mb-2"
@@ -340,7 +341,7 @@ export const AppFooter = memo(function AppFooter({ is404Route, isGeoTooltipOpen,
                 }}
               >
                 <img
-                  src={`https://${geoInfo.isChinaIP ? 'cravatar.cn' : 'gravatar.com'}/avatar/2ad947c5152cd8d6d2f9b5bd450d939b?s=80&d=retro`}
+                  src={`${requireConfiguredUrl(geoInfo.isChinaIP ? 'VITE_WALINE_AVATAR_MIRROR_ORIGIN' : 'VITE_WALINE_AVATAR_ORIGIN')}/2ad947c5152cd8d6d2f9b5bd450d939b?s=80&d=retro`}
                   alt="DANERSAKA"
                   className="w-8 h-8 rounded-sm border-2 border-current group-hover:border-black transition-colors origin-bottom"
                 />
@@ -358,7 +359,7 @@ export const AppFooter = memo(function AppFooter({ is404Route, isGeoTooltipOpen,
               </a>
 
               <a
-                href="https://github.com/lyangjyehaur/zutomayo-gallery"
+                href={requireConfiguredUrl('VITE_PROJECT_REPOSITORY_URL')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-main transition-colors flex items-center gap-2 group opacity-50 hover:opacity-100"
@@ -376,7 +377,7 @@ export const AppFooter = memo(function AppFooter({ is404Route, isGeoTooltipOpen,
 
             <div className="opacity-30 text-center md:text-right flex flex-col leading-tight items-center md:items-end md:flex-1 md:basis-0">
               <span>
-                {t("app.fan_made", "本專案為粉絲自製 所有媒體資源版權歸屬")} <a href="https://zutomayo.net" target="_blank" rel="noopener noreferrer" className="hover:text-main underline decoration-dashed underline-offset-2 transition-colors">ZUTOMAYO</a>
+                {t("app.fan_made", "本專案為粉絲自製 所有媒體資源版權歸屬")} <a href={requireConfiguredUrl('VITE_ZUTOMAYO_OFFICIAL_URL')} target="_blank" rel="noopener noreferrer" className="hover:text-main underline decoration-dashed underline-offset-2 transition-colors">ZUTOMAYO</a>
               </span>
               <span className="text-[8px] mt-1 opacity-60 normal-case">
                 FAN_MADE_PROJECT MEDIA_COPYRIGHT_BELONGS_TO_ZUTOMAYO

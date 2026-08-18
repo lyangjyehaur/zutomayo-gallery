@@ -253,11 +253,11 @@ cp review-app/.env.example review-app/.env
 | Name | Description | Default |
 |---|---|---|
 | `VITE_API_URL` | Backend API server URL; set it explicitly when the frontend and backend are deployed separately | `/api/mvs` |
-| `VITE_TWITTER_IMG_PROXY` | Optional image proxy / acceleration service | `https://img.ztmr.club` |
+| `VITE_TWITTER_IMG_PROXY` | Optional image proxy / acceleration service | configured in `.env` |
 | `VITE_R2_DOMAIN` | Optional Cloudflare R2 custom domain | `https://r2.dan.tw` |
-| `VITE_WALINE_SERVER_URL` | Reserved. The code currently uses `https://comments.ztmr.club`; this env var is kept for future replacement | `https://wl.danndann.cn` |
+| `VITE_WALINE_SERVER_URL` | Waline server URL; must be configured explicitly | none |
 | `VITE_UMAMI_SECONDARY_WEBSITE_ID` | Optional commons Umami website ID | none |
-| `VITE_UMAMI_SECONDARY_HOST_URL` | Optional commons Umami host URL | `https://gallery.ztmr.club/commons` |
+| `VITE_UMAMI_SECONDARY_HOST_URL` | Optional commons Umami host URL | configured in `.env` |
 | `VITE_UMAMI_SECONDARY_BASE_SCRIPT` | Optional commons Umami base script path | `/commons` |
 
 ### Mobile Review Frontend (`review-app/.env`)
@@ -279,7 +279,7 @@ cp review-app/.env.example review-app/.env
 | `ADMIN_PASSWORD` | Admin login password (strongly recommended to change in production) | `zutomayo` |
 | `EXPECTED_ORIGIN` | WebAuthn origin, must match the frontend | `http://localhost:5173` |
 | `RP_ID` | WebAuthn relying party ID, usually the site domain without protocol | derived from `EXPECTED_ORIGIN` |
-| `IMGPROXY_URL` | Imgproxy server URL | `https://img.ztmr.club` |
+| `IMGPROXY_URL` | Imgproxy server URL; must be configured explicitly | none |
 | `IMGPROXY_KEY` | Imgproxy signing key in hex | none |
 | `IMGPROXY_SALT` | Imgproxy signing salt in hex | none |
 | `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASS` | PostgreSQL connection settings | see `backend/.env.example` |
@@ -300,7 +300,7 @@ cp review-app/.env.example review-app/.env
 
 ### Option A: `deploy.sh` (recommended for servers)
 
-The interactive `deploy.sh` script supports dependency installation, frontend builds, PM2 backend restart/start, and automatic backups for static assets and backend data.
+The interactive `deploy.sh` script supports dependency installation, frontend builds, Docker backend container recreation, and automatic backups for static assets and backend data. Container name, network, Node image, port, restart policy, and health origin come from `deploy.conf`.
 
 1. Run the script on the server:
    ```bash
@@ -317,7 +317,7 @@ The interactive `deploy.sh` script supports dependency installation, frontend bu
 
 ### Option B: `update.sh` (recommended for routine updates)
 
-`update.sh` performs `git pull`, installs dependencies, builds the project, runs migrations, and restarts PM2:
+`update.sh` performs `git pull`, installs dependencies, builds the project, runs migrations, and restarts the Docker backend container configured in `deploy.conf`:
 
 ```bash
 ./update.sh
@@ -339,7 +339,7 @@ The interactive `deploy.sh` script supports dependency installation, frontend bu
 
 1. Build the frontend `dist` files and let Nginx serve them statically.
 2. Configure Nginx to reverse proxy `/api` to the local backend at `http://localhost:5010`.
-3. Keep the backend process alive with `pm2` or `systemd`.
+3. Keep the backend running in Docker, with deployment parameters stored in `deploy.conf`.
 
 ---
 

@@ -11,6 +11,7 @@ import { MODAL_THEME } from '@/lib/theme';
 import { useTranslation } from 'react-i18next';
 import { MVItem, ArtistMeta } from '@/lib/types';
 import FancyboxViewer from '@/components/FancyboxViewer';
+import { requireConfiguredUrl } from '@/config';
 
 interface IllustratorDetailsModalProps {
   illustrator: { name: string; twitter?: string; mvs: MVItem[]; meta?: ArtistMeta } | null;
@@ -134,7 +135,7 @@ export function IllustratorDetailsModal({ illustrator, onClose }: IllustratorDet
               <div className="flex items-center gap-2 flex-wrap">
                 {illustrator.twitter && (
                   <a 
-                    href={`https://x.com/${illustrator.twitter.replace('@', '')}`}
+                    href={`${requireConfiguredUrl('VITE_X_ORIGIN')}/${illustrator.twitter.replace('@', '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 bg-black text-white px-3 py-2 text-xs font-bold hover:bg-main hover:text-black transition-colors border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none"
@@ -145,7 +146,7 @@ export function IllustratorDetailsModal({ illustrator, onClose }: IllustratorDet
                 )}
                 {illustrator.meta?.instagram && (
                   <a 
-                    href={illustrator.meta.instagram.startsWith('http') ? illustrator.meta.instagram : `https://instagram.com/${illustrator.meta.instagram.replace('@', '')}`}
+                    href={illustrator.meta.instagram.startsWith('http') ? illustrator.meta.instagram : `${requireConfiguredUrl('VITE_INSTAGRAM_ORIGIN')}/${illustrator.meta.instagram.replace('@', '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center bg-black text-white p-2 text-sm hover:bg-main hover:text-black transition-colors border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none"
@@ -178,7 +179,7 @@ export function IllustratorDetailsModal({ illustrator, onClose }: IllustratorDet
                 )}
                 {illustrator.meta?.tiktok && (
                   <a 
-                    href={illustrator.meta.tiktok.startsWith('http') ? illustrator.meta.tiktok : `https://tiktok.com/${illustrator.meta.tiktok.startsWith('@') ? '' : '@'}${illustrator.meta.tiktok}`}
+                    href={illustrator.meta.tiktok.startsWith('http') ? illustrator.meta.tiktok : `${requireConfiguredUrl('VITE_TIKTOK_ORIGIN')}/${illustrator.meta.tiktok.startsWith('@') ? '' : '@'}${illustrator.meta.tiktok}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center bg-black text-white px-2.5 py-2 text-xs font-bold hover:bg-main hover:text-black transition-colors border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none"

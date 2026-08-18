@@ -116,7 +116,7 @@ export function DemoCDCasePage() {
     // 3. 封面紙張 (Paper) - 夾在中間
     const loader = new THREE.TextureLoader();
     loader.setCrossOrigin('anonymous');
-    const imgUrl = 'https://is1-ssl.mzstatic.com/image/thumb/Music113/v4/b7/fe/4c/b7fe4cb4-fb88-578c-d58d-f650043ff298/19UMGIM82675.rgb.jpg/1000x1000.jpg';
+    const imgUrl = String(import.meta.env.VITE_DEMO_CD_IMAGE_URL || '');
     
     // 封面稍微小於外殼 (3.0 x 2.9)，確保留有邊框
     const paperWidth = 2.9; 

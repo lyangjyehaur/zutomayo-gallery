@@ -6,10 +6,14 @@ import './WalineComments.css';
 import { useTranslation } from 'react-i18next';
 
 const env = (import.meta as any).env || {};
-const getEnvUrl = (key: string, fallback: string) => {
+const getEnvUrl = (key: string) => {
   const raw = typeof env[key] === 'string' ? String(env[key]).trim() : '';
-  return (raw || fallback).replace(/\/+$/, '');
+  if (!raw) throw new Error(`${key} is required`);
+  return raw.replace(/\/+$/, '');
 };
+const getEnvHosts = (key: string) => String(env[key] || '').split(',').map((value) => {
+  try { return new URL(value.trim()).hostname.toLowerCase(); } catch { return ''; }
+}).filter(Boolean);
 
 interface WalineCommentsProps {
   path: string;
@@ -130,19 +134,20 @@ export function WalineComments({
           const geoInfo = await initGeo();
           if (!isMounted) return;
           
-          // 優先讀取環境變數，未設定時 fallback 到既有正式站服務
-          const serverURL = getEnvUrl('VITE_WALINE_SERVER_URL', 'https://comments.ztmr.club');
+          // 從環境變數讀取留言服務來源
+          const serverURL = getEnvUrl('VITE_WALINE_SERVER_URL');
             
-          // 針對大陸用戶，unpkg.com 經常被干擾，改用 jsDelivr 的 Fastly 節點作為替代方案
+          // 針對大陸用戶，改用已配置的備用 emoji CDN
           const unpkgHost = geoInfo.isChinaIP
-            ? getEnvUrl('VITE_WALINE_EMOJI_FASTLY_ORIGIN', 'https://fastly.jsdelivr.net/npm')
-            : getEnvUrl('VITE_WALINE_EMOJI_ORIGIN', 'https://unpkg.com');
+            ? getEnvUrl('VITE_WALINE_EMOJI_FASTLY_ORIGIN')
+            : getEnvUrl('VITE_WALINE_EMOJI_ORIGIN');
           
           // 針對大陸用戶，Gravatar 頭像可能被牆，改用 Cravatar 鏡像 (透過 DOM 攔截)
-          // Cravatar.cn 是專為中國大陸優化的 Gravatar 替代方案
+          // 大陸用戶使用已配置的頭像鏡像
           const gravatarHost = geoInfo.isChinaIP
-            ? getEnvUrl('VITE_WALINE_AVATAR_MIRROR_ORIGIN', 'https://cravatar.cn/avatar')
-            : getEnvUrl('VITE_WALINE_AVATAR_ORIGIN', 'https://gravatar.com/avatar');
+            ? getEnvUrl('VITE_WALINE_AVATAR_MIRROR_ORIGIN')
+            : getEnvUrl('VITE_WALINE_AVATAR_ORIGIN');
+          const avatarSourceHosts = getEnvHosts('VITE_WALINE_AVATAR_SOURCE_ORIGINS');
         
         walineInstance = init({
           el: currentContainer,
@@ -205,21 +210,23 @@ export function WalineComments({
         });
         
         // 修改 Waline 實例中的 gravatar 預設行為
-        // Waline v3 預設會使用 gravatar.com，如果沒有提供自訂 imageUploader 或 avatar 配置
+        // Waline v3 會用外部頭像來源，這裡統一改寫到已配置的來源
         // 但由於 Waline v3 API 移除了直接的 avatar CDN 設定，我們透過動態修改 DOM 來處理
         observer = new MutationObserver((mutations) => {
           mutations.forEach((mutation) => {
             if (mutation.type === 'childList') {
               const imgs = currentContainer.querySelectorAll('img') as NodeListOf<HTMLImageElement>;
               imgs?.forEach(img => {
-                if (img.src && (img.src.includes('gravatar.com') || img.src.includes('seccdn.alipay.com') || img.src.includes('sdn.geekzu.org'))) {
+                let shouldRewriteAvatar = false;
+                try { shouldRewriteAvatar = avatarSourceHosts.includes(new URL(img.src).hostname.toLowerCase()); } catch { /* ignore invalid URL */ }
+                if (img.src && shouldRewriteAvatar) {
                   const originalUrl = new URL(img.src);
                   const queryParams = originalUrl.search;
                   const pathParts = originalUrl.pathname.split('/');
                   const hash = pathParts[pathParts.length - 1]; // 取得 MD5 hash
                   
                   // 根據 IP 地區動態切換頭像 CDN
-                  img.src = `https://${gravatarHost}/${hash}${queryParams}`;
+                  img.src = `${gravatarHost}/${hash}${queryParams}`;
                 }
               });
 

@@ -199,7 +199,13 @@ slide.panzoomRef.on('render', renderFn);
 **Cover 圖片過濾：**
 - 標注功能僅針對畫廊圖片（`usage !== 'cover'`）
 - 後台 AdminAnnotationsPage 的 `mediaItems` 和 `loadAnnotations` 均已過濾 cover 圖片
+- 後台座標選擇器只列出 `media_type` 為 `image`（或舊資料未填類型）的媒體；video / gif 不進入圖片座標標註流程
 - 前台 MVDetailsModal 的 `galleryImages` 已過濾 cover 圖片，標注不會出現在封面圖上
+
+**語言契約：**
+- `label` 一律代表 `zh-TW` 主標註；`zh-TW` 不存入新的 `label_i18n`，也不計入翻譯完成度
+- `label_i18n` 保存其他六種支援語言，包含可編輯的 `ja`；更新時送出 `{}` 可明確清空全部翻譯
+- Fancybox 顯示 fallback 為 requested language -> legacy `label_i18n['zh-TW']` -> `label`
 
 ### E. 數據流
 

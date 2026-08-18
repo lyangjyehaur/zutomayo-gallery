@@ -1,6 +1,75 @@
-import type { MVItem } from './types';
+import type { MVItem, MVMedia } from './types';
 
 export type AdminImageTypeTab = 'official' | 'fanart';
+
+export interface ResolvedTwitterMedia {
+  url: string;
+  type?: string;
+  thumbnail?: string;
+  text?: string;
+  user_name?: string;
+  user_screen_name?: string;
+  date?: string;
+}
+
+const TWITTER_MEDIA_PATHS = [
+  { family: 'image', pattern: /\/media\/([a-zA-Z0-9_-]+)/ },
+  { family: 'ext-video', pattern: /\/(?:ext_tw_video|ext_tw_video_thumb)\/([a-zA-Z0-9_-]+)/ },
+  { family: 'amplify-video', pattern: /\/(?:amplify_video|amplify_video_thumb)\/([a-zA-Z0-9_-]+)/ },
+  { family: 'tweet-video', pattern: /\/(?:tweet_video|tweet_video_thumb)\/([a-zA-Z0-9_-]+)/ },
+] as const;
+
+export const getTwitterMediaIdentity = (url: string): string | null => {
+  if (!url) return null;
+  for (const { family, pattern } of TWITTER_MEDIA_PATHS) {
+    const match = url.match(pattern);
+    if (match) return `${family}:${match[1]}`;
+  }
+
+  try {
+    const parsed = new URL(url);
+    parsed.hash = '';
+    return `url:${parsed.toString()}`;
+  } catch {
+    return `url:${url}`;
+  }
+};
+
+const normalizeTwitterMediaType = (type: string | undefined): 'image' | 'video' | 'gif' => {
+  if (type === 'video' || type === 'gif') return type;
+  return 'image';
+};
+
+export const mapTwitterMediaToMVMedia = (
+  media: ResolvedTwitterMedia,
+  options: {
+    classification: AdminImageTypeTab;
+    sourceUrl: string;
+    existing?: Partial<MVMedia>;
+    defaults?: Partial<MVMedia>;
+  },
+): MVMedia => {
+  const existing = options.existing || {};
+  const thumbnailUrl = media.thumbnail || existing.thumbnail_url;
+
+  return {
+    ...options.defaults,
+    ...existing,
+    url: media.url,
+    type: existing.type || options.classification,
+    media_type: normalizeTwitterMediaType(media.type),
+    thumbnail_url: thumbnailUrl || undefined,
+    group: {
+      ...(existing.group || {}),
+      source_url: existing.group?.source_url || options.sourceUrl,
+      source_text: existing.group?.source_text || media.text,
+      author_name: existing.group?.author_name || media.user_name,
+      author_handle: existing.group?.author_handle || media.user_screen_name,
+      post_date: existing.group?.post_date || media.date,
+      status: existing.group?.status || 'organized',
+    },
+  } as MVMedia;
+};
 
 export const isAdminFieldIncomplete = (val: any) => {
   if (val === undefined || val === null) return true;

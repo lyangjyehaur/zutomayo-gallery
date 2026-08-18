@@ -17,7 +17,13 @@ export const getDeployCommits = (execCommand = runGitCommand) => {
 
     const log = execCommand(`git log ${previousTag}..HEAD --oneline --no-merges -10`)
     return log
-      ? log.split('\n').map((commit) => commit.trim()).filter(Boolean)
+      ? log.split('\n').map((commit) => commit.trim())
+        .filter(Boolean)
+        .map((commit) => commit
+          .replace(/https?:\/\/ztmy\.art/gi, 'the previous site domain')
+          .replace(/https?:\/\/[^\s]*ztmr\.club/gi, 'the previous service domain')
+          .replace(/\bztmy\.art\b/gi, 'the previous site domain')
+          .replace(/\b[^\s]*ztmr\.club\b/gi, 'the previous service domain'))
       : []
   } catch (e) {
     return []

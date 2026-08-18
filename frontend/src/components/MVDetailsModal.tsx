@@ -26,9 +26,10 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 const env = (import.meta as any).env || {};
-const getEnvUrl = (key: string, fallback: string) => {
+const getEnvUrl = (key: string) => {
   const raw = typeof env[key] === 'string' ? String(env[key]).trim() : '';
-  return (raw || fallback).replace(/\/+$/, '');
+  if (!raw) throw new Error(`${key} is required`);
+  return raw.replace(/\/+$/, '');
 };
 
 
@@ -931,7 +932,7 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata, view
                       {mv?.youtube && (
                         <TabsContent value="youtube" className="w-full h-full m-0 border-0 p-0 shadow-none outline-none">
                           <iframe
-                            src={`${getEnvUrl('VITE_YOUTUBE_EMBED_ORIGIN', 'https://www.youtube.com/embed')}/${mv.youtube}?autoplay=1&rel=0`}
+                            src={`${getEnvUrl('VITE_YOUTUBE_EMBED_ORIGIN')}/${mv.youtube}?autoplay=1&rel=0`}
                             className="w-full h-full"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                             allowFullScreen
@@ -944,7 +945,7 @@ export function MVDetailsModal({ mv, onClose, isFav, onToggleFav, metadata, view
                       {mv?.bilibili && (
                         <TabsContent value="bilibili" className="w-full h-full m-0 border-0 p-0 shadow-none outline-none">
                           <iframe 
-                            src={`${getEnvUrl('VITE_BILIBILI_EMBED_ORIGIN', 'https://player.bilibili.com/player.html')}?bvid=${mv.bilibili}&page=1&high_quality=1&autoplay=1`}
+                            src={`${getEnvUrl('VITE_BILIBILI_EMBED_ORIGIN')}?bvid=${mv.bilibili}&page=1&high_quality=1&autoplay=1`}
                             className="w-full h-full"
                             scrolling="no"
                             frameBorder="0"

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { SUPPORTED_LANGS, type SupportedLang } from "@/i18n"
+import { SUPPORTED_LANGS } from "@/i18n"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   Table,
@@ -54,9 +54,9 @@ const LANG_LABELS: Record<string, string> = {
   "es": "西",
 }
 
-const getI18nStatus = (labelI18n?: Record<string, string>) => {
-  if (!labelI18n) return { done: 0, total: SUPPORTED_LANGS.length - 1 }
-  const targetLangs = SUPPORTED_LANGS.filter((l) => l !== 'ja')
+export const getI18nStatus = (labelI18n?: Record<string, string>) => {
+  const targetLangs = SUPPORTED_LANGS.filter((lang) => lang !== 'zh-TW')
+  if (!labelI18n) return { done: 0, total: targetLangs.length }
   const done = targetLangs.filter((lang) => labelI18n[lang]?.trim()).length
   return { done, total: targetLangs.length }
 }
@@ -114,7 +114,7 @@ function CoordinatePicker({
   )
 }
 
-function AnnotationForm({
+export function AnnotationForm({
   annotation,
   mediaItems,
   mvData,
@@ -203,13 +203,13 @@ function AnnotationForm({
     onSave({
       media_id: mediaId,
       label: label.trim(),
-      label_i18n: Object.keys(labelI18n).length > 0 ? labelI18n : undefined,
+      label_i18n: labelI18n,
       x,
       y,
       style: style || "default",
       sort_order: sortOrder,
     })
-  }, [label, mediaId, onSave, sortOrder, style, x, y])
+  }, [label, labelI18n, mediaId, onSave, sortOrder, style, x, y])
 
   if (step === 0) {
     return (
@@ -338,20 +338,23 @@ function AnnotationForm({
         <div className="flex flex-col gap-2 md:col-span-2">
           <div className="text-[10px] font-black uppercase opacity-70">多語言翻譯</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {SUPPORTED_LANGS.filter((l) => l !== "zh-TW" && l !== "ja").map((lang) => (
+            {SUPPORTED_LANGS.filter((lang) => lang !== "zh-TW").map((lang) => (
               <div key={lang} className="flex flex-col gap-0.5">
                 <div className="text-[9px] font-mono opacity-50">{LANG_LABELS[lang]} ({lang})</div>
                 <Textarea
                   value={labelI18n[lang] || ""}
-                  onChange={(e) => setLabelI18n((prev) => {
-                    const next = { ...prev }
-                    if (e.target.value.trim()) {
-                      next[lang] = e.target.value
-                    } else {
-                      delete next[lang]
-                    }
-                    return next
-                  })}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    setLabelI18n((prev) => {
+                      const next = { ...prev }
+                      if (value.trim()) {
+                        next[lang] = value
+                      } else {
+                        delete next[lang]
+                      }
+                      return next
+                    })
+                  }}
                   className="border border-black/30 font-bold min-h-[50px] resize-y text-xs"
                   placeholder={`${LANG_LABELS[lang]}翻譯`}
                   rows={2}
@@ -426,6 +429,24 @@ function AnnotationForm({
   )
 }
 
+export function buildAnnotationMediaItems(mvData: MVItem[]) {
+  return mvData.flatMap((mv) =>
+    (mv.images || [])
+      .filter((img) => img.usage !== 'cover'
+        && img.type !== 'fanart'
+        && (!img.media_type || img.media_type === 'image')
+        && img.id)
+      .map((img) => ({
+        id: img.id as string,
+        url: img.url,
+        thumbnail_url: img.thumbnail_url,
+        caption: img.caption,
+        mvTitle: mv.title,
+        mvId: mv.id,
+      })),
+  )
+}
+
 export function AdminAnnotationsPage() {
   const mvList = useList<MVItem>({ resource: "mvs", hasPagination: false })
 
@@ -440,30 +461,14 @@ export function AdminAnnotationsPage() {
 
   const mvData = useMemo(() => mvList.data?.data || [], [mvList.data])
 
+  // 永遠包含所有 MV 的圖片，不受 selectedMvId 影響；
+  // selectedMvId 只用於列表頁的標註過濾與 AnnotationForm 的 initialMvId 預選。
+  // 若用 selectedMvId 過濾 mediaItems，會導致新增標註時選別的 MV 顯示「此 MV 無可用媒體」。
+  // 只納入有 id 的 image：標註需要 DB 裡的 media id，無 id 代表尚未儲存到 DB，
+  // 選取會導致後端 findByPk 404（過去用 img.id || img.url fallback 曾造成此 bug）。
   const mediaItems = useMemo(() => {
-    if (!selectedMvId) {
-      return mvData.flatMap((mv) =>
-        (mv.images || []).filter((img) => img.usage !== 'cover' && img.type !== 'fanart').map((img) => ({
-          id: img.id || img.url,
-          url: img.url,
-          thumbnail_url: img.thumbnail_url,
-          caption: img.caption,
-          mvTitle: mv.title,
-          mvId: mv.id,
-        })),
-      )
-    }
-    const mv = mvData.find((m) => m.id === selectedMvId)
-    if (!mv) return []
-    return (mv.images || []).filter((img) => img.usage !== 'cover' && img.type !== 'fanart').map((img) => ({
-      id: img.id || img.url,
-      url: img.url,
-      thumbnail_url: img.thumbnail_url,
-      caption: img.caption,
-      mvTitle: mv.title,
-      mvId: mv.id,
-    }))
-  }, [mvData, selectedMvId])
+    return buildAnnotationMediaItems(mvData)
+  }, [mvData])
 
   const mediaLookup = useMemo(() => {
     const map = new Map<string, { url?: string; thumbnail_url?: string; caption?: string; mvTitle?: string; mvId?: string }>()
@@ -490,7 +495,7 @@ export function AdminAnnotationsPage() {
         const mv = mvData.find((m) => m.id === selectedMvId)
         const all: AnnotationWithMedia[] = []
         for (const [mediaId, items] of Object.entries(grouped)) {
-          const media = mv?.images?.find((img) => (img.id || img.url) === mediaId)
+          const media = mv?.images?.find((img) => img.id === mediaId)
           if (media?.usage === 'cover' || media?.type === 'fanart') continue
           for (const a of items) {
             all.push({
@@ -508,9 +513,18 @@ export function AdminAnnotationsPage() {
         const grouped = await getAllAnnotations()
         const all: AnnotationWithMedia[] = []
         for (const [mediaId, items] of Object.entries(grouped)) {
-          let foundMedia: { url?: string; thumbnail_url?: string; caption?: string; mvTitle?: string; mvId?: string; usage?: string } | undefined
+          let foundMedia: {
+            url?: string
+            thumbnail_url?: string
+            caption?: string
+            mvTitle?: string
+            mvId?: string
+            usage?: string
+            type?: string
+            media_type?: string | null
+          } | undefined
           for (const mv of mvData) {
-            const media = mv.images?.find((img) => (img.id || img.url) === mediaId)
+            const media = mv.images?.find((img) => img.id === mediaId)
             if (media) {
               foundMedia = { ...media, mvTitle: mv.title, mvId: mv.id }
               break
@@ -540,7 +554,7 @@ export function AdminAnnotationsPage() {
   useEffect(() => {
     if (mvData.length === 0) return
     loadAnnotations()
-  }, [mvData.length, selectedMvId])
+  }, [loadAnnotations, mvData.length])
 
   const groupedByMv = useMemo(() => {
     const map = new Map<string, AnnotationWithMedia[]>()

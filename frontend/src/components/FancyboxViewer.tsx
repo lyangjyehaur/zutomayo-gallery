@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { shouldShowSecondaryLang, isSupportedLang } from '@/i18n';
 import { toast } from 'sonner';
 import { copyToClipboard } from '@/lib/clipboard';
+import { isTwitterImageUrl, isTwitterMediaUrl, isTwitterVideoUrl, isYoutubeMediaUrl } from '@/config/urls';
 
 const FANCYBOX_HASH_PREFIX = 'img-';
 
@@ -162,7 +163,7 @@ const getExtensionFromUrl = (urlStr: string): string => {
     const urlObj = new URL(urlStr);
     
     // 處理 Twitter 圖片
-    if (urlObj.hostname === 'pbs.twimg.com') {
+    if (isTwitterImageUrl(urlStr)) {
       const format = urlObj.searchParams.get('format');
       if (format) return format;
     }
@@ -172,7 +173,7 @@ const getExtensionFromUrl = (urlStr: string): string => {
     if (match) return match[1].toLowerCase();
 
     // 如果沒有副檔名但網域是 Twitter 影片，預設為 mp4
-    if (urlObj.hostname === 'video.twimg.com') {
+    if (isTwitterVideoUrl(urlStr)) {
       return 'mp4';
     }
     
@@ -663,10 +664,10 @@ export default function FancyboxViewer({
         // ==== 全局優先載入原圖策略 (Global Direct First Strategy) ====
         // 注意：影片的 original_url 是 .mp4，不能拿來當縮圖的 original_url！
         const originalThumbUrl = isVideo ? (img.original_thumbnail_url || img.thumbnail_url) : img.original_url;
-        const hasOriginalThumb = originalThumbUrl && (originalThumbUrl.includes('twimg.com') || originalThumbUrl.includes('ytimg.com'));
+        const hasOriginalThumb = originalThumbUrl && (isTwitterMediaUrl(originalThumbUrl) || isYoutubeMediaUrl(originalThumbUrl));
         const preferredThumbUrl = hasOriginalThumb ? originalThumbUrl : baseThumbUrl;
         
-        const hasOriginalFull = img.original_url && (img.original_url.includes('twimg.com') || img.original_url.includes('ytimg.com'));
+        const hasOriginalFull = img.original_url && (isTwitterMediaUrl(img.original_url) || isYoutubeMediaUrl(img.original_url));
         const preferredFullUrl = hasOriginalFull ? img.original_url : baseFullUrl;
 
         const hasVideoThumb = !!(img.original_thumbnail_url || img.thumbnail_url);

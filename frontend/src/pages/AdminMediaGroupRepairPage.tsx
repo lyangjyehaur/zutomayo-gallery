@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { requireConfiguredUrl } from "@/config"
 
 type RepairGroupRow = {
   id: string
@@ -150,9 +151,9 @@ export function AdminMediaGroupRepairPage() {
       if (!hit) continue
       const finalHandle = hit.handle || handle
       if (finalHandle) {
-        return { url: `https://x.com/${finalHandle}/status/${hit.tweetId}`, confidence: "high" as const }
+        return { url: `${requireConfiguredUrl('VITE_X_ORIGIN')}/${finalHandle}/status/${hit.tweetId}`, confidence: "high" as const }
       }
-      return { url: `https://x.com/i/web/status/${hit.tweetId}`, confidence: "medium" as const }
+      return { url: `${requireConfiguredUrl('VITE_X_ORIGIN')}/i/web/status/${hit.tweetId}`, confidence: "medium" as const }
     }
 
     return { url: "", confidence: "none" as const }

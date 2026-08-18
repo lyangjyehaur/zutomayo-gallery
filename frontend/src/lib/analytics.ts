@@ -11,8 +11,33 @@ declare global {
 let isInitialized = false;
 
 const SECONDARY_WEBSITE_ID = import.meta.env.VITE_UMAMI_SECONDARY_WEBSITE_ID || '76cef12d-6b0a-4b5c-882b-36d87912e4f5';
-const SECONDARY_HOST_URL = import.meta.env.VITE_UMAMI_SECONDARY_HOST_URL || 'https://gallery.ztmr.club/commons';
+const SECONDARY_HOST_URL = import.meta.env.VITE_UMAMI_SECONDARY_HOST_URL || '';
 const SECONDARY_BASE_SCRIPT = import.meta.env.VITE_UMAMI_SECONDARY_BASE_SCRIPT || '/commons';
+const TRACKER_SCRIPT_NAME = import.meta.env.VITE_UMAMI_TRACKER_SCRIPT_NAME || 'commons.js';
+const RECORDER_SCRIPT_NAME = import.meta.env.VITE_UMAMI_RECORDER_SCRIPT_NAME || 'telemetry.js';
+
+export const appendUmamiScripts = (targetDocument: Document = document): number => {
+  const scripts = [
+    { role: 'tracker', file: TRACKER_SCRIPT_NAME },
+    { role: 'recorder', file: RECORDER_SCRIPT_NAME },
+  ];
+
+  let appended = 0;
+  scripts.forEach(({ role, file }) => {
+    if (targetDocument.querySelector(`script[data-umami-script="${role}"]`)) return;
+
+    const script = targetDocument.createElement('script');
+    script.src = `${SECONDARY_BASE_SCRIPT}/${file}`;
+    script.defer = true;
+    script.setAttribute('data-website-id', SECONDARY_WEBSITE_ID);
+    script.setAttribute('data-host-url', SECONDARY_HOST_URL);
+    script.setAttribute('data-umami-script', role);
+    targetDocument.head.appendChild(script);
+    appended++;
+  });
+
+  return appended;
+};
 
 export const initAnalytics = () => {
   if (isInitialized) return;
@@ -81,28 +106,8 @@ export const initAnalytics = () => {
 
     // 注意：這裡不 return，讓下面的事件監聽器也能綁定上去
   } else {
-    // 避免重複載入 (只在非本地環境載入真實的 script)
-    if (!document.querySelector(`script[data-website-id="${SECONDARY_WEBSITE_ID}"]`)) {
-      // 第一部分：基礎數據追蹤 (commons.js)
-      const script2 = document.createElement('script');
-      script2.src = `${SECONDARY_BASE_SCRIPT}/commons.js`;
-      script2.defer = true;
-      script2.setAttribute('data-website-id', SECONDARY_WEBSITE_ID);
-      // 確保新版實例佔用 window.umami，並且使用 /commons/api/send 發送數據
-      script2.setAttribute('data-host-url', SECONDARY_HOST_URL);
-      document.head.appendChild(script2);
-
-      // 第二部分：螢幕錄影回放 (偽裝為 telemetry.js)
-      const script3 = document.createElement('script');
-      script3.src = `${SECONDARY_BASE_SCRIPT}/telemetry.js`;
-      script3.defer = true;
-      script3.setAttribute('data-website-id', SECONDARY_WEBSITE_ID);
-      script3.setAttribute('data-sample-rate', '0.50'); // 50% 的訪客會被錄影
-      script3.setAttribute('data-mask-level', 'moderate'); // 適度遮罩敏感資訊
-      script3.setAttribute('data-max-duration', '300000'); // 最大錄影時長：5分鐘
-      script3.setAttribute('data-host-url', SECONDARY_HOST_URL);
-      document.head.appendChild(script3);
-    }
+    // Umami 3.x 基礎追蹤與 Session Replay；recorder 對外檔名可配置以降低被隱私擴充誤攔截的機率。
+    appendUmamiScripts();
   }
 
   // 全域事件代理，追蹤所有可交互元素的點擊

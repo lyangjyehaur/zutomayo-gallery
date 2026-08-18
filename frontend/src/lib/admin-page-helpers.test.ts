@@ -4,11 +4,72 @@ import {
   getAdminChangedData,
   getAdminVisibleImageCount,
   getAdminVisibleImages,
+  getTwitterMediaIdentity,
   isAdminFieldIncomplete,
   isAdminMVIncomplete,
+  mapTwitterMediaToMVMedia,
 } from './admin-page-helpers';
 
 describe('admin page helpers', () => {
+  it.each([
+    ['https://pbs.twimg.com/media/ABC123?format=jpg&name=orig', 'image:ABC123'],
+    ['https://video.twimg.com/ext_tw_video/111/pu/vid/video.mp4', 'ext-video:111'],
+    ['https://pbs.twimg.com/ext_tw_video_thumb/111/pu/img/poster.jpg', 'ext-video:111'],
+    ['https://video.twimg.com/amplify_video/222/vid/video.mp4', 'amplify-video:222'],
+    ['https://pbs.twimg.com/amplify_video_thumb/222/img/poster.jpg', 'amplify-video:222'],
+    ['https://video.twimg.com/tweet_video/GIF_ID.mp4', 'tweet-video:GIF_ID'],
+    ['https://pbs.twimg.com/tweet_video_thumb/GIF_ID.jpg', 'tweet-video:GIF_ID'],
+  ])('normalizes Twitter media identity for %s', (url, expected) => {
+    expect(getTwitterMediaIdentity(url)).toBe(expected);
+  });
+
+  it.each(['image', 'video', 'gif'] as const)('maps resolved Twitter %s media to the MV contract', (mediaType) => {
+    const mapped = mapTwitterMediaToMVMedia({
+      url: `https://example.com/${mediaType}`,
+      type: mediaType,
+      thumbnail: 'https://example.com/poster.jpg',
+      text: 'tweet text',
+      user_screen_name: 'artist',
+    }, {
+      classification: 'fanart',
+      sourceUrl: 'https://x.com/artist/status/1',
+    });
+
+    expect(mapped).toMatchObject({
+      url: `https://example.com/${mediaType}`,
+      thumbnail_url: 'https://example.com/poster.jpg',
+      media_type: mediaType,
+      type: 'fanart',
+      group: {
+        source_url: 'https://x.com/artist/status/1',
+        source_text: 'tweet text',
+        author_handle: 'artist',
+        status: 'organized',
+      },
+    });
+    expect(mapped).not.toHaveProperty('thumbnail');
+  });
+
+  it('uses the same mapper to enrich an existing item without changing gallery classification', () => {
+    const mapped = mapTwitterMediaToMVMedia({
+      url: 'https://video.twimg.com/ext_tw_video/1/vid/video.mp4',
+      type: 'video',
+      thumbnail: 'https://pbs.twimg.com/ext_tw_video_thumb/1/poster.jpg',
+    }, {
+      classification: 'official',
+      sourceUrl: 'https://x.com/artist/status/1',
+      existing: { type: 'fanart', url: 'old.jpg', caption: 'keep me' },
+    });
+
+    expect(mapped).toMatchObject({
+      type: 'fanart',
+      media_type: 'video',
+      url: 'https://video.twimg.com/ext_tw_video/1/vid/video.mp4',
+      thumbnail_url: 'https://pbs.twimg.com/ext_tw_video_thumb/1/poster.jpg',
+      caption: 'keep me',
+    });
+  });
+
   it('keeps cosplay images out of the official image tab', () => {
     const images = [
       { id: 'official', type: 'official', url: 'official.jpg' },

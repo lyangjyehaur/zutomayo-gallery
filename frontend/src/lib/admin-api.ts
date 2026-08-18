@@ -1,4 +1,4 @@
-const normalizeBaseUrl = (value: unknown, fallback: string) => {
+const normalizeBaseUrl = (value: unknown, fallback = "") => {
   const raw = typeof value === "string" ? value.trim() : ""
   return (raw || fallback).replace(/\/+$/, "")
 }
@@ -17,8 +17,9 @@ const normalizeApiPathRoot = (value: unknown) => {
 
 export const getApiOrigin = () => {
   const env = (import.meta as any).env || {}
-  const fallback = import.meta.env.DEV ? "http://localhost:5010" : "https://api.ztmr.club"
-  return normalizeBaseUrl(env.VITE_API_ORIGIN, fallback)
+  const origin = normalizeBaseUrl(env.VITE_API_ORIGIN)
+  if (!origin) throw new Error("VITE_API_ORIGIN is required")
+  return origin
 }
 
 export const getApiPathRoot = () => {
@@ -55,7 +56,12 @@ export const getMonitorTargetsApiBase = () => joinApiPath("monitor-targets")
 export const getSubmissionsApiBase = () => joinApiPath("submissions")
 export const getAnnotationsApiBase = () => joinApiPath("annotations")
 export const getSystemConfigApiBase = () => joinApiPath("system-config")
-export const getR2Domain = () => normalizeApiRoot((import.meta as any).env?.VITE_R2_DOMAIN || "https://r2.dan.tw")
+export const getTelegramConfigApiBase = () => joinApiPath("system-config", "telegram")
+export const getR2Domain = () => {
+  const domain = normalizeApiRoot((import.meta as any).env?.VITE_R2_DOMAIN)
+  if (domain === "/api") throw new Error("VITE_R2_DOMAIN is required")
+  return domain
+}
 
 export const adminFetch = (input: RequestInfo | URL, init: RequestInit = {}) => {
   return fetch(input, { ...init, credentials: "include" })

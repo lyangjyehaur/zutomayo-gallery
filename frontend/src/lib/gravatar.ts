@@ -1,3 +1,5 @@
+import { requireConfiguredUrl } from '@/config';
+
 const toUtf8 = (str: string) => {
   const out: number[] = []
   for (let i = 0; i < str.length; i++) {
@@ -160,7 +162,7 @@ export const getGravatarUrl = (email: string, size = 80) => {
   const normalized = String(email || "").trim().toLowerCase()
   if (!normalized) return ""
   const hash = md5(normalized)
-  return `https://www.gravatar.com/avatar/${hash}?s=${encodeURIComponent(String(size))}&d=identicon`
+  return `${requireConfiguredUrl('VITE_GRAVATAR_ORIGIN')}/${hash}?s=${encodeURIComponent(String(size))}&d=identicon`
 }
 
 export const resolveUserAvatarUrl = (input: { email?: string | null; avatar_url?: string | null }, size = 80) => {
@@ -169,4 +171,3 @@ export const resolveUserAvatarUrl = (input: { email?: string | null; avatar_url?
   const email = typeof input.email === "string" ? input.email : ""
   return getGravatarUrl(email, size)
 }
-

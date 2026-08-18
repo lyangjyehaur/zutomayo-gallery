@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { MVItem } from '@/lib/types';
 import { WalineComments } from '@/components/WalineComments';
 import { getProxyImgUrl } from '@/lib/image';
+import { requireConfiguredUrl } from '@/config';
 
 interface IllustratorsPageProps {
   mvData: MVItem[];
@@ -93,7 +94,7 @@ export function IllustratorsPage({ mvData, metadata }: IllustratorsPageProps) {
           // 取得頭像網址並經過代理 (如果有 twitter 才顯示)
           const hasSnsId = !!artist.twitter;
           const username = hasSnsId ? artist.twitter!.replace('@', '') : '';
-          const avatarUrl = hasSnsId ? `https://unavatar.io/x/${username}` : '';
+          const avatarUrl = hasSnsId ? `${requireConfiguredUrl('VITE_UNAVATAR_X_ORIGIN')}/${username}` : '';
           const safeAvatarUrl = hasSnsId ? getProxyImgUrl(avatarUrl, 'small') : '';
           
           // 從 metadata 中取得畫師額外資料

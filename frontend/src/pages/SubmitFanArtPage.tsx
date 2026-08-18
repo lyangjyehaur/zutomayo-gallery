@@ -331,7 +331,7 @@ export function SubmitFanArtPage({ mvData }: SubmitFanArtPageProps) {
         <div className="mt-6 border-t-2 border-black/20 pt-6 space-y-3">
           <div className="text-sm font-black">Tweet 來源</div>
           <div className="flex flex-col md:flex-row gap-3">
-            <Input value={tweetUrl} onChange={(e) => setTweetUrl(e.target.value)} placeholder="https://x.com/.../status/..." />
+            <Input value={tweetUrl} onChange={(e) => setTweetUrl(e.target.value)} placeholder={`${String(import.meta.env.VITE_X_ORIGIN || '').replace(/\/+$/, '')}/.../status/...`} />
             <Button onClick={addTweet} disabled={!draftId || isBusy || status !== 'draft' && status !== 'rejected'}>加入 Tweet</Button>
           </div>
         </div>

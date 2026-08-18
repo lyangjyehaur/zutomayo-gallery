@@ -8,6 +8,7 @@ import { getProxyImgUrl, isMediaVideo } from '@/lib/image';
 import { adminFetch, getApiRoot } from '@/lib/admin-api';
 import { useConfirmDialog } from '@/components/admin/useConfirmDialog';
 import { buildMvTagOptions, normalizeTagId, normalizeTags } from '@/lib/admin-media';
+import { isYoutubeMediaUrl } from '@/config/urls';
 
 export function AdminCosplayPage() {
   const [confirm, ConfirmDialog] = useConfirmDialog();
@@ -167,8 +168,7 @@ export function AdminCosplayPage() {
   }, [mvData]);
 
   const isYoutubeLike = (url?: string) => {
-    if (!url) return false;
-    return url.includes('ytimg.com') || url.includes('youtube.com') || url.includes('img.youtube.com');
+    return isYoutubeMediaUrl(url);
   };
 
   const formatPostDateTime = (value?: string) => {

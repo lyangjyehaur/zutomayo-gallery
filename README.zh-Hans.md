@@ -253,11 +253,11 @@ cp review-app/.env.example review-app/.env
 | 名称 | 说明 | 默认值 |
 |---|---|---|
 | `VITE_API_URL` | 后端 API 地址；前后端分离部署时请明确配置 | `/api/mvs` |
-| `VITE_TWITTER_IMG_PROXY` | 可选图片代理 / 加速服务 | `https://img.ztmr.club` |
+| `VITE_TWITTER_IMG_PROXY` | 可选图片代理 / 加速服务 | 在 `.env` 中配置 |
 | `VITE_R2_DOMAIN` | 可选 Cloudflare R2 自定义域名 | `https://r2.dan.tw` |
-| `VITE_WALINE_SERVER_URL` | 保留变量。当前代码固定使用 `https://comments.ztmr.club` | `https://wl.danndann.cn` |
+| `VITE_WALINE_SERVER_URL` | Waline 服务器地址，必须明确配置 | 无 |
 | `VITE_UMAMI_SECONDARY_WEBSITE_ID` | 可选 commons Umami 网站 ID | 无 |
-| `VITE_UMAMI_SECONDARY_HOST_URL` | 可选 commons Umami 主机地址 | `https://gallery.ztmr.club/commons` |
+| `VITE_UMAMI_SECONDARY_HOST_URL` | 可选 commons Umami 主机地址 | 在 `.env` 中配置 |
 | `VITE_UMAMI_SECONDARY_BASE_SCRIPT` | 可选 commons Umami 基础脚本路径 | `/commons` |
 
 ### 移动审核前端 (`review-app/.env`)
@@ -279,7 +279,7 @@ cp review-app/.env.example review-app/.env
 | `ADMIN_PASSWORD` | 管理后台密码（生产环境强烈建议修改） | `zutomayo` |
 | `EXPECTED_ORIGIN` | WebAuthn 来源，必须与前端一致 | `http://localhost:5173` |
 | `RP_ID` | WebAuthn 依赖方 ID，通常为站点域名，不含协议 | 从 `EXPECTED_ORIGIN` 推导 |
-| `IMGPROXY_URL` | Imgproxy 服务器地址 | `https://img.ztmr.club` |
+| `IMGPROXY_URL` | Imgproxy 服务器地址，必须明确配置 | 无 |
 | `IMGPROXY_KEY` | Imgproxy 签名用 Hex Key | 无 |
 | `IMGPROXY_SALT` | Imgproxy 签名用 Hex Salt | 无 |
 | `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASS` | PostgreSQL 连接配置 | 参考 `backend/.env.example` |
@@ -300,7 +300,7 @@ cp review-app/.env.example review-app/.env
 
 ### 选项 A：`deploy.sh`（推荐服务器使用）
 
-`deploy.sh` 是一个交互式部署脚本，支持安装依赖、构建前端、通过 PM2 启动/重启后端，并包含前端静态文件与后端数据的自动备份。
+`deploy.sh` 是一个交互式部署脚本，支持安装依赖、构建前端、通过 Docker 启动/重建后端容器，并包含前端静态文件与后端数据的自动备份。容器名、network、Node image、port、restart policy 和 health origin 均由 `deploy.conf` 提供。
 
 1. 在服务器上运行脚本：
    ```bash
@@ -317,7 +317,7 @@ cp review-app/.env.example review-app/.env
 
 ### 选项 B：`update.sh`（推荐日常更新）
 
-`update.sh` 会自动执行 `git pull`、安装依赖、构建项目、运行 migrations，并重启 PM2：
+`update.sh` 会自动执行 `git pull`、安装依赖、构建项目、运行 migrations，并重启 `deploy.conf` 指定的 Docker 后端容器：
 
 ```bash
 ./update.sh
@@ -339,7 +339,7 @@ cp review-app/.env.example review-app/.env
 
 1. 前端构建 `dist` 后由 Nginx 提供静态文件服务。
 2. 将 Nginx 的 `/api` 路径反向代理到本地后端 `http://localhost:5010`。
-3. 后端可使用 `pm2` 或 `systemd` 常驻运行。
+3. 后端由 Docker 容器常驻运行，部署参数放在 `deploy.conf`。
 
 ---
 
