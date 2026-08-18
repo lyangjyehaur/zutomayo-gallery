@@ -73,7 +73,8 @@ npm run preview
 - 未設定 `VITE_API_URL` 時，會以 `VITE_API_ORIGIN + VITE_API_ROOT` 組合 API base
 - `VITE_API_URL` 若有設定，會直接視為完整 API base URL 使用
 - 開發環境未設定 `VITE_API_ORIGIN` 時，預設走相對路徑 `/api`
-- production fallback 為 `https://api.ztmr.club/api`
+- production 必須透過 `VITE_API_ORIGIN` 明確設定 API origin；目前正式設定為 `https://zutomayo.art`，搭配 `VITE_API_ROOT=/api`
+- `VITE_TWITTER_SOURCE_ORIGINS` 控制分享/剪貼簿中可辨識的推文來源，`VITE_TWITTER_IMAGE_ORIGIN` 控制 service worker 圖片快取來源
 - 所有請求固定帶 `credentials: 'include'`，以共用 admin session
 
 ## 結構摘要
@@ -99,6 +100,7 @@ review-app/
 │   │   ├── api.ts
 │   │   ├── media.ts
 │   │   ├── moderation-boundaries.ts
+│   │   ├── safe-storage.ts
 │   │   └── workspaces.ts
 │   ├── pages/
 │   │   ├── HomePage.tsx
@@ -143,6 +145,9 @@ review-app/
 - 各頁仍可保留 toast 作為即時回饋，但首次載入失敗或無資料時要顯示可見的頁面內狀態區塊
 - 工作區切換與各頁篩選條件由 `WorkspaceProvider` 寫入 localStorage，鍵值為 `ztmr-review-workspace`
 - 分頁模式設定（無限滾動啟用與否、當前頁碼）也透過同一個 context 持久化，刷新後自動恢復
+- 所有 localStorage / sessionStorage 存取集中經過 `src/lib/safe-storage.ts`；瀏覽器拒絕存取或 storage API 拋錯時，讀取視為未保存、寫入/刪除安全失敗，不中斷頁面渲染。Settings 的 API token 寫入失敗會顯示提示。
+- Web Share Target 會先安全暫存分享 URL，再由 ParsePage 一次性讀取並移除；即使 sessionStorage 不可用，query parameter 仍可直接完成解析。
+- `collaboration` staging 項目不需 MV sheet，會直接 approve；切換排序會立即重載，mutation callback 必須持有最新 reload、狀態與排序邏輯，完成後按當前列表條件刷新。
 - `src/lib/moderation-boundaries.ts` 需要與 `CODE_WIKI.md`、`frontend-memory.md`、`docs-index.md`、`.trae/specs/companion-review-app/` 中的描述一起維護，避免接管邊界失真
 
 ## PWA 快取與自動更新策略

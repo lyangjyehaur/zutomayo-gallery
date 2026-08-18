@@ -43,6 +43,7 @@ import {
 
 const PAGE_SIZE = 30
 const STATUS_OPTIONS = ['organized', 'unorganized', 'pending', 'deleted', 'rejected']
+const X_ORIGIN = String(import.meta.env.VITE_X_ORIGIN || '').replace(/\/+$/, '')
 
 interface InferredSource {
   url: string
@@ -78,7 +79,7 @@ const inferSource = (row: RepairGroup): InferredSource => {
     if (hit) {
       const finalHandle = hit.handle || handle
       if (finalHandle) {
-        return { url: `https://x.com/${finalHandle}/status/${hit.tweetId}`, confidence: 'high' }
+        return { url: `${X_ORIGIN}/${finalHandle}/status/${hit.tweetId}`, confidence: 'high' }
       }
       return { url: sourceUrl, confidence: 'high' }
     }
@@ -93,9 +94,9 @@ const inferSource = (row: RepairGroup): InferredSource => {
     if (!hit) continue
     const finalHandle = hit.handle || handle
     if (finalHandle) {
-      return { url: `https://x.com/${finalHandle}/status/${hit.tweetId}`, confidence: 'high' }
+      return { url: `${X_ORIGIN}/${finalHandle}/status/${hit.tweetId}`, confidence: 'high' }
     }
-    return { url: `https://x.com/i/web/status/${hit.tweetId}`, confidence: 'medium' }
+    return { url: `${X_ORIGIN}/i/web/status/${hit.tweetId}`, confidence: 'medium' }
   }
 
   return { url: '', confidence: 'none' }

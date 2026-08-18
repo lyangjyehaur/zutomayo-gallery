@@ -8,6 +8,7 @@ import { useAuth } from './hooks/useAuth'
 import { useWorkspace } from './hooks/useWorkspace'
 import { WORKSPACES } from './lib/workspaces'
 import LoginPage from './pages/LoginPage'
+import { safeStorageSet } from './lib/safe-storage'
 
 type PreloaderDialogInstance = ReturnType<Framework7['dialog']['preloader']>
 
@@ -58,7 +59,7 @@ function AppShell() {
       const params = new URLSearchParams(window.location.search)
       const sharedUrl = params.get('url') || params.get('text') || ''
       if (sharedUrl) {
-        sessionStorage.setItem('ztmr_shared_url', sharedUrl)
+        safeStorageSet('session', 'ztmr_shared_url', sharedUrl)
         console.log('[ShareTarget] AppShell got URL:', sharedUrl)
       } else {
         console.log('[ShareTarget] AppShell: no url/text param in', window.location.href)

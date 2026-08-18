@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { WorkspaceContext, type WorkspaceContextValue, type WorkspaceFilters, type WorkspaceState } from './WorkspaceContext'
 import type { WorkspaceKey } from '../lib/workspaces'
+import { safeStorageGet, safeStorageSet } from '../lib/safe-storage'
 
 const STORAGE_KEY = 'ztmr-review-workspace'
 
@@ -24,10 +25,10 @@ const readStoredState = (): WorkspaceState => {
     return DEFAULT_STATE
   }
 
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (!raw) return DEFAULT_STATE
+  const raw = safeStorageGet('local', STORAGE_KEY)
+  if (!raw) return DEFAULT_STATE
 
+  try {
     let parsed: unknown
     try {
       parsed = JSON.parse(raw)
@@ -79,9 +80,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-    } catch {}
+    safeStorageSet('local', STORAGE_KEY, JSON.stringify(state))
   }, [state])
 
   const visitWorkspace = useCallback((workspace: WorkspaceKey) => {

@@ -8,6 +8,7 @@ import { useAuth } from '../hooks/useAuth'
 import { usePushSubscription } from '../hooks/usePushSubscription'
 import { useWorkspace } from '../hooks/useWorkspace'
 import { updateNotificationPreferences, type NotificationPreferences } from '../lib/api'
+import { safeStorageGet, safeStorageSet } from '../lib/safe-storage'
 
 const DEFAULT_PREFS: NotificationPreferences = {
   staging: true,
@@ -20,7 +21,7 @@ export default function SettingsPage() {
   const { user, logout, setUser } = useAuth()
   const { visitWorkspace, pagination, setPagination } = useWorkspace()
   const push = usePushSubscription()
-  const [apiToken, setApiToken] = useState(() => localStorage.getItem('ztmr_api_token') || '')
+  const [apiToken, setApiToken] = useState(() => safeStorageGet('local', 'ztmr_api_token') || '')
   const prefs: NotificationPreferences = user?.notification_preferences || DEFAULT_PREFS
 
   useEffect(() => {
@@ -54,7 +55,10 @@ export default function SettingsPage() {
   }
 
   const handleSaveToken = () => {
-    localStorage.setItem('ztmr_api_token', apiToken)
+    if (!safeStorageSet('local', 'ztmr_api_token', apiToken)) {
+      f7.toast.create({ text: 'Token 無法儲存，請檢查瀏覽器儲存權限', closeTimeout: 2500 }).open()
+      return
+    }
     f7.toast.create({ text: 'Token 已儲存', closeTimeout: 2000 }).open()
   }
 

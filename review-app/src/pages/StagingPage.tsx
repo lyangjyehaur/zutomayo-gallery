@@ -168,11 +168,16 @@ export default function StagingPage({ f7router }: StagingPageProps) {
     }
   }, [])
 
-  const loadItems = useCallback(async (nextStatus: StagingStatus, pageNum: number, reset = false) => {
+  const loadItems = useCallback(async (
+    nextStatus: StagingStatus,
+    pageNum: number,
+    reset = false,
+    nextSort = sortBy,
+  ) => {
     setLoading(true)
     setLoadError('')
     try {
-      const response = await fetchStagingFanarts(nextStatus, pageNum, PAGE_SIZE, sortBy)
+      const response = await fetchStagingFanarts(nextStatus, pageNum, PAGE_SIZE, nextSort)
       const newItems = Array.isArray(response.data) ? response.data : []
       setItems((prev) => (reset ? newItems : [...prev, ...newItems]))
 
@@ -294,7 +299,7 @@ export default function StagingPage({ f7router }: StagingPageProps) {
     setItems([])
     setStatus(nextStatus)
     setStagingFilter({ status: nextStatus })
-    void loadItems(nextStatus, pagination.currentPage, true)
+    void loadItems(nextStatus, 1, true)
     void loadProgress(true)
   }
 
@@ -322,13 +327,13 @@ export default function StagingPage({ f7router }: StagingPageProps) {
       setSelection(new Set())
       setItems([])
       setStatus(filters.staging.status)
-      void loadItems(filters.staging.status, pagination.currentPage, true)
+      void loadItems(filters.staging.status, 1, true)
       return
     }
 
     if (loading || items.length > 0) return
     resetPagination()
-    void loadItems(status, pagination.currentPage, true)
+    void loadItems(status, 1, true)
   }
 
   const handleInfinite = () => {
@@ -369,30 +374,7 @@ export default function StagingPage({ f7router }: StagingPageProps) {
     })
   }
 
-  const openApproveSheet = useCallback((ids: string[]) => {
-    if (ids.length === 0) return
-
-    // 檢查是否有 collaboration 類型，直接 approve 不需 MV
-    const targetItems = ids.map(id => items.find(i => i.id === id)).filter(Boolean) as StagingFanart[]
-    const collaborationIds = targetItems.filter(i => i.content_type === 'collaboration').map(i => i.id)
-    const nonCollaborationIds = ids.filter(id => !collaborationIds.includes(id))
-
-    // collaboration 直接 approve
-    if (collaborationIds.length > 0) {
-      void handleDirectApprove(collaborationIds)
-    }
-
-    // 其他類型開 MV sheet
-    if (nonCollaborationIds.length > 0) {
-      if (mvs.length === 0) {
-        void loadMvs()
-      }
-      setMvSheetTargets(nonCollaborationIds)
-      setMvSheetOpened(true)
-    }
-  }, [loadMvs, mvs.length, items])
-
-  const handleDirectApprove = async (ids: string[]) => {
+  const handleDirectApprove = useCallback(async (ids: string[]) => {
     if (ids.length === 0) return
 
     f7.dialog.preloader('正在處理...')
@@ -424,7 +406,27 @@ export default function StagingPage({ f7router }: StagingPageProps) {
       failCount,
       ids.length === 1 ? '已通過（自動關聯畫師）' : `已批次通過 ${successCount} 筆（自動關聯畫師）`,
     )
-  }
+  }, [finalizeMutations, setBusyForIds])
+
+  const openApproveSheet = useCallback((ids: string[]) => {
+    if (ids.length === 0) return
+
+    const targetItems = ids.map(id => items.find(i => i.id === id)).filter(Boolean) as StagingFanart[]
+    const collaborationIds = targetItems.filter(i => i.content_type === 'collaboration').map(i => i.id)
+    const nonCollaborationIds = ids.filter(id => !collaborationIds.includes(id))
+
+    if (collaborationIds.length > 0) {
+      void handleDirectApprove(collaborationIds)
+    }
+
+    if (nonCollaborationIds.length > 0) {
+      if (mvs.length === 0) {
+        void loadMvs()
+      }
+      setMvSheetTargets(nonCollaborationIds)
+      setMvSheetOpened(true)
+    }
+  }, [handleDirectApprove, items, loadMvs, mvs.length])
 
   const handleMvConfirm = async (mvIds: string[], tags: string[]) => {
     if (mvSheetTargets.length === 0) return
@@ -457,13 +459,9 @@ export default function StagingPage({ f7router }: StagingPageProps) {
         try {
           const targetItem = items.find(i => i.id === id)
           const ct = targetItem?.content_type || 'fanart'
-          let result: any
-          if (ct === 'official' && mvIds.length > 0) {
-            // official 類型：單選 MV
-            result = await approveStagingFanart(id, [], mvIds[0])
-          } else {
-            result = await approveStagingFanart(id, payload)
-          }
+          const result = ct === 'official' && mvIds.length > 0
+            ? await approveStagingFanart(id, [], mvIds[0])
+            : await approveStagingFanart(id, payload)
           if (!result?.success) throw new Error('APPROVE_FAILED')
           successCount += 1
           successfulIds.push(id)
@@ -683,8 +681,10 @@ export default function StagingPage({ f7router }: StagingPageProps) {
           <select
             value={sortBy}
             onChange={(e) => {
-              setSortBy(e.target.value)
+              const nextSort = e.target.value
+              setSortBy(nextSort)
               resetPagination()
+              void loadItems(status, 1, true, nextSort)
             }}
             style={{ border: '2px solid #000', fontWeight: 700, padding: '4px 8px', fontSize: 13, borderRadius: 6 }}
           >
@@ -714,7 +714,7 @@ export default function StagingPage({ f7router }: StagingPageProps) {
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <span>手動分頁模式：</span>
-                <Button small outline onClick={() => handleManualPageChange(pageRef.current - 1)} disabled={pageRef.current <= 1 || loading}>上一頁</Button>
+                <Button small outline onClick={() => handleManualPageChange(pagination.currentPage - 1)} disabled={pagination.currentPage <= 1 || loading}>上一頁</Button>
                 <input
                   type="number"
                   min={1}
@@ -739,7 +739,7 @@ export default function StagingPage({ f7router }: StagingPageProps) {
                   style={{ width: 60, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--f7-border-color)', textAlign: 'center' }}
                 />
                 <span>/ {totalPages}</span>
-                <Button small outline onClick={() => handleManualPageChange(pageRef.current + 1)} disabled={pageRef.current >= totalPages || loading}>下一頁</Button>
+                <Button small outline onClick={() => handleManualPageChange(pagination.currentPage + 1)} disabled={pagination.currentPage >= totalPages || loading}>下一頁</Button>
               </div>
             )}
             <div style={{ marginTop: 10 }}>

@@ -2,7 +2,27 @@ interface ImportMetaEnv {
   VITE_API_ORIGIN?: string
   VITE_API_ROOT?: string
   VITE_API_URL?: string
+  VITE_TWITTER_SOURCE_ORIGINS?: string
+  VITE_TWITTER_IMAGE_ORIGIN?: string
   DEV: boolean
+}
+
+const configuredHosts = (value: string | undefined) => String(value || '')
+  .split(',')
+  .map((item) => item.trim())
+  .filter(Boolean)
+  .map((item) => {
+    try { return new URL(item).hostname.toLowerCase() } catch { return '' }
+  })
+  .filter(Boolean)
+
+export const isConfiguredTwitterSourceUrl = (value: string) => {
+  try {
+    const env = import.meta.env as unknown as ImportMetaEnv
+    return configuredHosts(env.VITE_TWITTER_SOURCE_ORIGINS).includes(new URL(value).hostname.toLowerCase())
+  } catch {
+    return false
+  }
 }
 
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, '')
@@ -335,7 +355,7 @@ export async function fetchStagingProgress() {
 
 export async function approveStagingFanart(id: string, mvs: string[] = [], mvId?: string, artistId?: string) {
   const base = getApiBase()
-  const body: any = {}
+  const body: { mvId?: string; artistId?: string; mvs?: string[] } = {}
   if (mvId) body.mvId = mvId
   else if (artistId) body.artistId = artistId
   else if (mvs.length > 0) body.mvs = mvs

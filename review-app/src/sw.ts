@@ -10,8 +10,12 @@ import { CacheableResponsePlugin } from 'workbox-cacheable-response'
 
 precacheAndRoute(self.__WB_MANIFEST)
 
+const twitterImageHost = (() => {
+  try { return new URL(import.meta.env.VITE_TWITTER_IMAGE_ORIGIN || '').hostname.toLowerCase() } catch { return '' }
+})()
+
 registerRoute(
-  ({ url }) => url.hostname === 'pbs.twimg.com',
+  ({ url }) => Boolean(twitterImageHost && url.hostname.toLowerCase() === twitterImageHost),
   new CacheFirst({
     cacheName: 'twitter-images',
     plugins: [

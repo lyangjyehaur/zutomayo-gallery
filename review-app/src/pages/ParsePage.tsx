@@ -19,7 +19,9 @@ import {
   shortcutFetchArtists,
   type ShortcutParseResult,
   type ShortcutSubmitPayload,
+  isConfiguredTwitterSourceUrl,
 } from '../lib/api'
+import { safeStorageGet, safeStorageRemove } from '../lib/safe-storage'
 
 type ContentType = 'fanart' | 'official' | 'cosplay' | 'collaboration'
 type MvMode = 'same' | 'per-image' | 'none'
@@ -37,8 +39,8 @@ export default function ParsePage() {
   const [{ url: initialUrl, fromShare: initialFromShare }] = useState(() => {
     const params = new URLSearchParams(window.location.search)
     const fromQuery = params.get('url') || params.get('text')
-    const fromStorage = sessionStorage.getItem('ztmr_shared_url')
-    sessionStorage.removeItem('ztmr_shared_url')
+    const fromStorage = safeStorageGet('session', 'ztmr_shared_url')
+    safeStorageRemove('session', 'ztmr_shared_url')
     console.log('[ShareTarget] ParsePage init:', { fromQuery, fromStorage, href: window.location.href })
     return { url: fromQuery || fromStorage || '', fromShare: !!(fromQuery || fromStorage) }
   })
@@ -67,44 +69,18 @@ export default function ParsePage() {
   const [mvSheetOpened, setMvSheetOpened] = useState(false)
   const [perImageIndex, setPerImageIndex] = useState<number | null>(null)
 
-  const getToken = useCallback(() => localStorage.getItem('ztmr_api_token') || '', [])
+  const getToken = useCallback(() => safeStorageGet('local', 'ztmr_api_token') || '', [])
 
-  // On mount: check URL params, sessionStorage (from AppShell), or clipboard
+  // Query/session values are consumed by the state initializer. Clipboard lookup remains asynchronous.
   useEffect(() => {
-    // 1. Check query param (direct navigation or share target)
-    const params = new URLSearchParams(window.location.search)
-    const urlParam = params.get('url')
-    if (urlParam) {
-      setUrl(urlParam)
-      sessionStorage.removeItem('ztmr_shared_url')
-      return
-    }
-    // 2. Check sessionStorage (set by AppShell when share target redirects to /parse/)
-    const sharedUrl = sessionStorage.getItem('ztmr_shared_url')
-    if (sharedUrl) {
-      setUrl(sharedUrl)
-      sessionStorage.removeItem('ztmr_shared_url')
-      return
-    }
-    // 3. Try clipboard
     if (navigator.clipboard?.readText) {
       navigator.clipboard.readText().then((text) => {
-        if (text && (text.includes('x.com/') || text.includes('twitter.com/'))) {
+        if (text && isConfiguredTwitterSourceUrl(text)) {
           setClipboardUrl(text)
         }
       }).catch(() => { /* clipboard permission denied */ })
     }
   }, [])
-
-  // Auto-parse when URL is pre-filled from share target (only once per mount)
-  useEffect(() => {
-    if (url && isFromShare && !parseResult && !parsing && !autoParseDone.current) {
-      autoParseDone.current = true
-      f7.toast.create({ text: '自動解析中...', closeTimeout: 2000 }).open()
-      handleParse()
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url, isFromShare])
 
   // Dismiss any stuck preloader when ParsePage mounts with data
   useEffect(() => {
@@ -152,6 +128,14 @@ export default function ParsePage() {
       setParsing(false)
     }
   }, [url, getToken])
+
+  useEffect(() => {
+    if (url && isFromShare && !parseResult && !parsing && !autoParseDone.current) {
+      autoParseDone.current = true
+      f7.toast.create({ text: '自動解析中...', closeTimeout: 2000 }).open()
+      void handleParse()
+    }
+  }, [handleParse, isFromShare, parseResult, parsing, url])
 
   // Load MVs and Artists when content type is selected
   useEffect(() => {
@@ -271,7 +255,7 @@ export default function ParsePage() {
         <ListInput
           label="推文 URL"
           type="url"
-          placeholder="https://x.com/.../status/..."
+          placeholder={`${String(import.meta.env.VITE_X_ORIGIN || '').replace(/\/+$/, '')}/.../status/...`}
           value={url}
           onInput={(e) => setUrl((e.target as HTMLInputElement).value)}
           clearButton
